@@ -6,10 +6,17 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LIMEONE">
+<meta name="apple-mobile-web-app-title" content="LIME One">
 <meta name="format-detection" content="telephone=yes">
 <meta name="theme-color" content="#1E3A2B">
-<title>LIMEONE — レンタカー現場</title>
+<title>LIME One — ライムレンタカー現場</title>
+<!-- ホーム画面アイコン (ライムレンタカー OKINAWA のロゴ) -->
+<link rel="apple-touch-icon" sizes="180x180" href="logo.png">
+<link rel="apple-touch-icon" sizes="167x167" href="logo.png">
+<link rel="apple-touch-icon" sizes="152x152" href="logo.png">
+<link rel="apple-touch-icon" sizes="120x120" href="logo.png">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-startup-image" href="logo.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" onerror="window._cdnFailed=true"></script>
 <style>
 :root{
@@ -78,12 +85,11 @@ a{color:var(--info);text-decoration:none}
   transition:background .12s,transform .08s;
 }
 .m-header-back:active{background:rgba(255,255,255,.18);transform:scale(.92)}
-.m-header-brand{flex:1;display:flex;align-items:center;gap:8px;overflow:hidden}
+.m-header-brand{flex:1;display:flex;align-items:center;gap:10px;overflow:hidden}
 .m-brand-mark{
-  width:10px;height:10px;border-radius:50%;
-  background:radial-gradient(circle at 30% 30%,#C8FF88,var(--lime) 55%,#7DAE48 100%);
-  box-shadow:0 0 8px rgba(160,212,104,.6),inset 0 0 2px rgba(255,255,255,.5);
-  flex-shrink:0;color:transparent;font-size:0;
+  width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  object-fit:cover;background:#000;
+  box-shadow:0 0 0 1px rgba(160,212,104,.3),0 2px 6px rgba(0,0,0,.25);
 }
 .m-header-title{flex:1;font-size:17px;font-weight:800;letter-spacing:.12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   background:linear-gradient(180deg,#fff 0%,#E0F0D0 100%);
@@ -138,6 +144,11 @@ a{color:var(--info);text-decoration:none}
 
 /* === ONBOARDING === */
 .m-onboard-hero{text-align:center;padding:40px 20px 24px}
+.m-onboard-hero .logo-img{
+  display:block;width:160px;height:160px;object-fit:cover;margin:0 auto 18px;
+  border-radius:28px;background:#000;
+  box-shadow:0 12px 32px rgba(30,58,43,.28),0 0 0 2px rgba(160,212,104,.25);
+}
 .m-onboard-hero .logo-wrap{
   display:inline-flex;align-items:center;justify-content:center;
   width:80px;height:80px;border-radius:24px;margin-bottom:14px;
@@ -439,23 +450,33 @@ a{color:var(--info);text-decoration:none}
 
 /* === HISTORY === */
 .m-hist-card{
-  background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;
-  margin-bottom:10px;display:flex;gap:10px;align-items:flex-start;
+  background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;
+  margin-bottom:8px;display:flex;gap:12px;align-items:center;
+  box-shadow:var(--shadow-card);
+  transition:transform .1s,background .12s;cursor:pointer;
 }
-.m-hist-thumb{flex-shrink:0}
-.m-hist-thumb img{
-  width:60px;height:60px;border-radius:6px;object-fit:cover;
-  border:1px solid var(--border);
+.m-hist-card:active{transform:scale(.985);background:#F8FAF5}
+.m-hist-ico{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:linear-gradient(135deg,#E8F0E0,#D8EAC8);
 }
 .m-hist-info{flex:1;min-width:0}
-.m-hist-info .ttl{font-size:13px;font-weight:bold;color:var(--navy);margin-bottom:3px}
-.m-hist-info .meta{font-size:11px;color:var(--muted);line-height:1.5}
-.m-hist-tag{
-  display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;
-  background:#E5EBDD;color:var(--deep);font-weight:600;margin-right:4px;
+.m-hist-info .ttl{
+  font-size:13px;font-weight:700;color:var(--navy);margin-bottom:3px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
 }
-.m-hist-tag.t-dispatch{background:#CFE3FF;color:#0B3D7E}
-.m-hist-tag.t-recovery{background:#D8F5C5;color:#2D5F1F}
+.m-hist-info .ttl .caseno{font-weight:700}
+.m-hist-info .meta{font-size:12px;color:var(--text);line-height:1.5}
+.m-hist-info .meta-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.m-hist-arrow{color:#BBB;font-size:18px;flex-shrink:0}
+.m-hist-tag{
+  display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;
+  background:#E5EBDD;color:var(--deep);font-weight:700;letter-spacing:.04em;
+}
+.m-hist-tag.t-dispatch{background:#D8EAC8;color:var(--deep)}
+.m-hist-tag.t-recovery{background:#E5D4F0;color:#3D2459}
+.m-hist-tag.t-fax{background:#FFE89D;color:#7A4500}
 
 /* === HOME / DASHBOARD === */
 .m-home-greet{
@@ -674,6 +695,45 @@ a{color:var(--info);text-decoration:none}
 .m-fab:active{transform:scale(.92);box-shadow:0 3px 10px rgba(79,138,62,.4)}
 .m-fab.fab-recovery{background:linear-gradient(135deg,#6B3F8C,#4D2D66)}
 
+/* === VEHICLE LIST (車両管理画面) === */
+.m-veh-card{
+  background:#fff;border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;
+  box-shadow:var(--shadow-card);border-left:4px solid var(--green);
+  transition:transform .1s,background .12s;
+}
+.m-veh-card.maint{border-left-color:var(--orange);background:#FFF8E8}
+.m-veh-card.sold,.m-veh-card.scrap{opacity:.55;border-left-color:#999;background:#F8F8F5}
+.m-veh-card .v-ico{
+  width:42px;height:42px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  background:linear-gradient(135deg,#E8F0E0,#D8EAC8);
+}
+.m-veh-card.maint .v-ico{background:linear-gradient(135deg,#FFE89D,#F4C84A)}
+.m-veh-card .v-body{flex:1;min-width:0}
+.m-veh-card .v-head{display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap}
+.m-veh-card .v-plate{font-weight:700;color:var(--navy);font-size:14px;letter-spacing:.02em}
+.m-veh-card .v-status{
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;letter-spacing:.04em;
+  background:#D8F5C5;color:var(--deep);border:1px solid var(--lime-d);
+}
+.m-veh-card .v-status.maint{background:linear-gradient(135deg,#FFE89D,#F4C84A);color:#7A4500;border-color:#E69E50}
+.m-veh-card .v-status.sold,.m-veh-card .v-status.scrap{background:#E0E0E0;color:#666;border-color:#C8C8C8}
+.m-veh-card .v-meta{font-size:11.5px;color:var(--muted);line-height:1.4}
+.m-veh-card .v-action{
+  flex-shrink:0;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;
+  letter-spacing:.04em;transition:transform .08s,box-shadow .12s;
+}
+.m-veh-card .v-action:active{transform:scale(.94)}
+.m-veh-card .v-action.act-maint{
+  background:linear-gradient(180deg,#F39A4D,#E67E22);color:#fff;
+  box-shadow:0 2px 6px rgba(230,126,34,.32);
+}
+.m-veh-card .v-action.act-restore{
+  background:linear-gradient(180deg,#5FA04D,#4F8A3E);color:#fff;
+  box-shadow:0 2px 6px rgba(79,138,62,.32);
+}
+
 /* === VEHICLE PICKER === */
 .m-vehicle-item{
   background:#fff;border:1.5px solid var(--border);border-radius:11px;
@@ -767,8 +827,8 @@ a{color:var(--info);text-decoration:none}
   <header class="m-header">
     <button class="m-header-back" id="m-btn-back" style="display:none" onclick="goBack()">←</button>
     <div class="m-header-brand">
-      <span class="m-brand-mark">●</span>
-      <span class="m-header-title" id="m-header-title">LIMEONE</span>
+      <img class="m-brand-mark" src="logo.png" alt="" onerror="this.style.display='none'">
+      <span class="m-header-title" id="m-header-title">LIME One</span>
     </div>
     <button class="m-sync-btn" id="m-sync-btn" onclick="syncNow()">
       <span class="m-sync-dot"></span><span id="m-sync-text">同期</span>
@@ -779,10 +839,11 @@ a{color:var(--info);text-decoration:none}
     <!-- (1) Onboarding -->
     <section id="m-screen-onboard" class="m-screen active">
       <div class="m-onboard-hero">
-        <div class="logo-wrap">
+        <img class="logo-img" src="logo.png" alt="ライムレンタカー OKINAWA" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'">
+        <div class="logo-wrap" style="display:none">
           <div class="logo-mark"></div>
         </div>
-        <h1 class="brand-h1">LIME<span class="accent">ONE</span></h1>
+        <h1 class="brand-h1">LIME <span class="accent">One</span></h1>
         <p class="brand-sub">レンタカー現場アプリ</p>
         <p style="margin-top:12px">配車・回収を写真付きで記録し、<br>手配書FAX送信までを1フローで。</p>
       </div>
@@ -810,6 +871,15 @@ a{color:var(--info);text-decoration:none}
         <div class="date" id="m-home-date"></div>
         <div class="name" id="m-home-name">こんにちは</div>
       </div>
+
+      <!-- グローバル検索 -->
+      <div class="m-search-box">
+        <span class="m-search-ico">🔍</span>
+        <input type="search" id="m-home-search" placeholder="案件検索: 受付No / 契約者 / 運転者 / 配車先 / 車両ナンバー" oninput="renderHomeSearch()" autocomplete="off">
+        <button class="m-search-clear" onclick="clearSearch('m-home-search', renderHomeSearch)" aria-label="クリア">✕</button>
+      </div>
+      <div id="m-home-search-results"></div>
+
       <div class="m-stat-grid">
         <div class="m-stat-card" onclick="showScreen('dispatch')">
           <div class="num" id="m-stat-dispatch">0</div>
@@ -845,8 +915,8 @@ a{color:var(--info);text-decoration:none}
           <button class="m-btn m-btn-secondary" onclick="showScreen('recovery')">
             <span class="ico">🚛</span>回収予定
           </button>
-          <button class="m-btn m-btn-secondary" onclick="showScreen('history')">
-            <span class="ico">📜</span>履歴
+          <button class="m-btn m-btn-secondary" onclick="showScreen('vehicles')">
+            <span class="ico">🔧</span>点検
           </button>
         </div>
       </div>
@@ -855,11 +925,6 @@ a{color:var(--info);text-decoration:none}
     <!-- (3) Dispatch list -->
     <section id="m-screen-dispatch" class="m-screen">
       <div class="m-date-bar" id="m-disp-date"></div>
-      <div class="m-search-box">
-        <span class="m-search-ico">🔍</span>
-        <input type="search" id="m-disp-search" placeholder="検索: 受付No / 契約者 / 運転者 / 配車先 / 車両ナンバー" oninput="renderDispatchList()" autocomplete="off">
-        <button class="m-search-clear" onclick="clearSearch('m-disp-search', renderDispatchList)" aria-label="クリア">✕</button>
-      </div>
       <div class="m-tabs">
         <button class="active" data-disp-tab="today" onclick="setDispTab('today')">📅 今日</button>
         <button data-disp-tab="tomorrow" onclick="setDispTab('tomorrow')">📆 明日</button>
@@ -872,11 +937,6 @@ a{color:var(--info);text-decoration:none}
     <!-- (4) Recovery list -->
     <section id="m-screen-recovery" class="m-screen">
       <div class="m-date-bar" id="m-rec-date"></div>
-      <div class="m-search-box">
-        <span class="m-search-ico">🔍</span>
-        <input type="search" id="m-rec-search" placeholder="検索: 受付No / 契約者 / 運転者 / 回収場所 / 車両ナンバー" oninput="renderRecoveryList()" autocomplete="off">
-        <button class="m-search-clear" onclick="clearSearch('m-rec-search', renderRecoveryList)" aria-label="クリア">✕</button>
-      </div>
       <div class="m-tabs">
         <button class="active" data-rec-tab="today" onclick="setRecTab('today')">📅 今日</button>
         <button data-rec-tab="upcoming" onclick="setRecTab('upcoming')">📆 直近</button>
@@ -962,6 +1022,14 @@ a{color:var(--info);text-decoration:none}
       </div>
     </section>
 
+    <!-- (7b) Case Detail (案件詳細・読み取り専用 + ショートカット) -->
+    <section id="m-screen-case-detail" class="m-screen">
+      <div class="m-info-box" id="m-cd-info"></div>
+      <div id="m-cd-vehicle"></div>
+      <div id="m-cd-history"></div>
+      <div id="m-cd-actions" style="margin-top:18px"></div>
+    </section>
+
     <!-- (8) History -->
     <section id="m-screen-history" class="m-screen">
       <div class="m-date-bar">📜 操作履歴</div>
@@ -974,8 +1042,29 @@ a{color:var(--info);text-decoration:none}
       <div id="m-hist-list"></div>
     </section>
 
+    <!-- (8b) Vehicle management (車両一覧 + 点検入庫/復帰) -->
+    <section id="m-screen-vehicles" class="m-screen">
+      <div class="m-date-bar">🚗 車両管理</div>
+      <div class="m-search-box">
+        <span class="m-search-ico">🔍</span>
+        <input type="search" id="m-veh-search" placeholder="検索: ナンバー / 車種 / クラス" oninput="renderVehiclesList()" autocomplete="off">
+        <button class="m-search-clear" onclick="clearSearch('m-veh-search', renderVehiclesList)" aria-label="クリア">✕</button>
+      </div>
+      <div class="m-tabs">
+        <button class="active" data-veh-tab="all" onclick="setVehTab('all')">📋 全て</button>
+        <button data-veh-tab="active" onclick="setVehTab('active')">✅ 稼働可</button>
+        <button data-veh-tab="maint" onclick="setVehTab('maint')">🔧 点検中</button>
+      </div>
+      <div id="m-veh-list"></div>
+    </section>
+
     <!-- (9) Menu -->
     <section id="m-screen-menu" class="m-screen">
+      <div class="m-menu-item" onclick="showScreen('history')">
+        <span class="ico">📜</span>
+        <div class="body"><div class="ttl">操作履歴</div><div class="desc">配車・回収・FAX送信の履歴 / 案件詳細</div></div>
+        <span class="arrow">›</span>
+      </div>
       <div class="m-menu-item" onclick="showScreen('settings')">
         <span class="ico">⚙</span>
         <div class="body"><div class="ttl">設定</div><div class="desc">Dropbox連携・編集者名・GAS設定</div></div>
@@ -988,7 +1077,7 @@ a{color:var(--info);text-decoration:none}
       </div>
       <div class="m-menu-item" onclick="showAbout()">
         <span class="ico">ℹ</span>
-        <div class="body"><div class="ttl">バージョン情報</div><div class="desc">LIMEONE v2.2 (2026-05)</div></div>
+        <div class="body"><div class="ttl">バージョン情報</div><div class="desc">LIME One v2.3 (2026-05)</div></div>
         <span class="arrow">›</span>
       </div>
     </section>
@@ -1023,6 +1112,16 @@ a{color:var(--info);text-decoration:none}
           <button class="m-btn m-btn-outline" onclick="dbxDiagnose()">🔧 Dropbox診断</button>
         </div>
       </div>
+
+      <div class="m-settings-row">
+        <div class="lbl">🔑 手動アクセストークン <span style="font-weight:normal;color:var(--muted);font-size:10px">(上級・複数台共有用)</span></div>
+        <div class="val muted" style="font-size:11px;margin-bottom:8px">本番申請をスキップして複数iPhoneで共有する場合に使用。Dropbox開発者コンソールの「生成する」ボタンで取得したトークンを貼り付け → 適用すると以降このアプリは手動トークンで動作。</div>
+        <textarea id="m-set-manual-token" rows="3" placeholder="sl.B... で始まる長い英数字を貼り付け" style="font-family:monospace;font-size:11px;width:100%;word-break:break-all"></textarea>
+        <div class="actions" style="flex-wrap:wrap">
+          <button class="m-btn m-btn-primary" onclick="saveManualToken()">💾 トークンを適用</button>
+          <button class="m-btn m-btn-outline" onclick="showCurrentToken()">📋 現在のトークン表示</button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -1030,7 +1129,7 @@ a{color:var(--info);text-decoration:none}
     <button data-nav="home" class="active" onclick="showScreen('home')"><span class="m-nav-ico">🏠</span>ホーム</button>
     <button data-nav="dispatch" onclick="showScreen('dispatch')"><span class="m-nav-ico">🚗</span>配車</button>
     <button data-nav="recovery" onclick="showScreen('recovery')"><span class="m-nav-ico">🚛</span>回収</button>
-    <button data-nav="history" onclick="showScreen('history')"><span class="m-nav-ico">📜</span>履歴</button>
+    <button data-nav="vehicles" onclick="showScreen('vehicles')"><span class="m-nav-ico">🔧</span>点検</button>
     <button data-nav="menu" onclick="showScreen('menu')"><span class="m-nav-ico">≡</span>メニュー</button>
   </nav>
 </div>
@@ -1052,6 +1151,32 @@ a{color:var(--info);text-decoration:none}
 <div class="m-lightbox" id="m-lightbox" onclick="closeLightbox()">
   <button class="close" onclick="event.stopPropagation();closeLightbox()">✕</button>
   <img id="m-lightbox-img">
+</div>
+
+<!-- 🔧 車両復帰 モーダル (点検入庫中 → 稼働可) -->
+<div class="m-modal" id="m-vrestore-modal">
+  <div class="m-modal-body" style="max-height:85%">
+    <h2>🔧 点検完了 → 稼働可に復帰</h2>
+    <div id="m-vr-summary" style="background:#F4FBF6;border-left:3px solid var(--green);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:13px"></div>
+    <div class="m-form-grp">
+      <label>📅 次回点検予定日 <span class="muted">(6ヶ月後を自動サジェスト)</span></label>
+      <input type="date" id="m-vr-lastInspectionAt">
+      <div style="font-size:11px;color:var(--muted);margin-top:5px">次回点検アラートの基準日 (30日前から通知)</div>
+    </div>
+    <div class="m-form-grp">
+      <label>🚨 次回車検満了日 <span class="muted">(更新された場合のみ変更)</span></label>
+      <input type="date" id="m-vr-inspectionDate">
+      <div style="font-size:11px;color:var(--muted);margin-top:5px">点検のみなら変更不要</div>
+    </div>
+    <div class="m-form-grp">
+      <label>📝 点検内容メモ <span class="muted">(任意)</span></label>
+      <textarea id="m-vr-note" rows="2" placeholder="例: 6ヶ月点検実施。ブレーキパッド交換"></textarea>
+    </div>
+    <div class="m-modal-actions" style="margin-top:14px;flex-direction:column;gap:8px">
+      <button class="m-btn m-btn-success m-btn-full" onclick="confirmVehicleRestore()">✅ 復帰して保存 + LINE通知</button>
+      <button class="m-btn m-btn-outline m-btn-full" onclick="closeVehicleRestoreModal()">キャンセル</button>
+    </div>
+  </div>
 </div>
 
 <!-- 簡易版 新規案件登録 モーダル -->
@@ -1934,6 +2059,7 @@ function renderHome(){
   const today = todayISO();
   $('m-home-date').textContent = fmtJaDate(today);
   $('m-home-name').textContent = (localStorage.getItem(LS_KEYS.editor) || 'スタッフ') + ' さん、お疲れさまです';
+  renderHomeSearch();
 
   if(!DATA){
     $('m-stat-dispatch').textContent = '-';
@@ -1999,17 +2125,63 @@ function clearSearch(inputId, refreshFn){
   const el = $(inputId);
   if(el){ el.value = ''; if(typeof refreshFn === 'function') refreshFn(); el.focus(); }
 }
+
+// ホーム グローバル検索 (空欄なら統計グリッド表示、入力中は検索結果のみ)
+function renderHomeSearch(){
+  const q = ($('m-home-search')?.value || '').trim();
+  const resultsHost = $('m-home-search-results');
+  // 検索中は統計とクイックを隠す
+  document.querySelectorAll('#m-screen-home .m-stat-grid, #m-screen-home .m-home-quick').forEach(el => {
+    el.style.display = q ? 'none' : '';
+  });
+  if(!q){ resultsHost.innerHTML = ''; return; }
+  if(!DATA){ resultsHost.innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
+  const list = (DATA.cases || [])
+    .filter(_isActive)
+    .filter(c => _caseMatchesSearch(c, q))
+    .sort((a,b) => (b.receivedAt||'').localeCompare(a.receivedAt||''));
+  const hint = `<div class="m-search-hint">🔍 検索: <b>${esc(q)}</b> — ${list.length}件ヒット</div>`;
+  if(list.length === 0){
+    resultsHost.innerHTML = hint + `<div class="m-empty"><div class="ico">🔍</div><div class="ttl">「${esc(q)}」に一致する案件はありません</div></div>`;
+    return;
+  }
+  resultsHost.innerHTML = hint + list.map(c => _renderSearchResultCard(c)).join('');
+}
+
+// 検索結果用のカード (状態によって配車/回収/詳細へのルートを選ぶ)
+function _renderSearchResultCard(c){
+  const ins = findInsurer(c.insurerId) || {};
+  const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  // どの導線へ:
+  //   配車待ち → 配車フロー
+  //   利用中・回収待ち → 回収フロー
+  //   それ以外 → 案件詳細
+  const canDispatch = ['受付','確認中','配車予定'].includes(c.status) && !c.dispatchDoneAt;
+  const canRecovery = ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted;
+  let kind = 'detail', flowFn = `openCaseDetail('${c.id}')`;
+  if(canDispatch){ kind = 'dispatch'; flowFn = `enterDispatchFlow('${c.id}')`; }
+  else if(canRecovery){ kind = 'recovery'; flowFn = `enterRecoveryFlow('${c.id}')`; }
+  const badgeCls = statusBadgeClass(c, kind === 'recovery' ? 'recovery' : 'dispatch');
+  const badgeTxt = c.status || '';
+  return `
+    <div class="m-card flow-${kind === 'dispatch' ? 'dispatch' : (kind === 'recovery' ? 'recovery' : 'dispatch')}" onclick="${flowFn}">
+      <div class="m-card-left">
+        <div class="m-card-row1">
+          <span class="m-card-caseno">${esc(c.caseNo||'(No未設定)')}</span>
+          <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
+        </div>
+        <div class="m-card-row"><span class="lbl">契約者</span><span class="val"><b>${esc(c.contractorName||c.driverName||'')}</b></span></div>
+        ${ins.name ? `<div class="m-card-row"><span class="lbl">保険</span><span class="val">${esc(ins.name)}</span></div>` : ''}
+        ${c.dispatchToName ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${esc(c.dispatchToName)}</span></div>` : ''}
+        ${c.dispatchAt ? `<div class="m-card-row"><span class="lbl">配車予約</span><span class="val">${esc(fmtDateTime(c.dispatchAt))}</span></div>` : ''}
+        ${plate ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${esc(plate)}</span></div>` : ''}
+      </div>
+      <div class="m-card-right">›</div>
+    </div>
+  `;
+}
 function getDispatchCases(tab){
   const cases = (DATA?.cases || []).filter(_isActive);
-  const q = ($('m-disp-search')?.value || '').trim();
-
-  // 検索モード: タブを無視して全アクティブ案件から検索 (受付日新しい順)
-  if(q){
-    return cases.filter(c => _caseMatchesSearch(c, q))
-      .sort((a,b) => (b.receivedAt||'').localeCompare(a.receivedAt||''));
-  }
-
-  // 通常モード: タブで絞り込み
   const today = todayISO(), tomorrow = tomorrowISO();
   if(tab === 'today'){
     return cases.filter(c => (c.dispatchAt||'').startsWith(today))
@@ -2030,17 +2202,13 @@ function renderDispatchList(){
   const tab = localStorage.getItem(LS_KEYS.dispTab) || 'today';
   document.querySelectorAll('[data-disp-tab]').forEach(b => b.classList.toggle('active', b.dataset.dispTab === tab));
   if(!DATA){ $('m-disp-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
-  const q = ($('m-disp-search')?.value || '').trim();
   const list = getDispatchCases(tab);
-  const searchHint = q ? `<div class="m-search-hint">🔍 全アクティブ案件から検索: <b>${esc(q)}</b> — ${list.length}件ヒット</div>` : '';
   if(list.length === 0){
-    const msg = q
-      ? `「${esc(q)}」に一致する案件はありません`
-      : (tab === 'today' ? '今日の配車予定はありません' : tab === 'tomorrow' ? '明日の配車予定はありません' : '未対応の配車案件はありません');
-    $('m-disp-list').innerHTML = `${searchHint}<div class="m-empty"><div class="ico">${q?'🔍':'✨'}</div><div class="ttl">${msg}</div></div>`;
+    const msg = tab === 'today' ? '今日の配車予定はありません' : tab === 'tomorrow' ? '明日の配車予定はありません' : '未対応の配車案件はありません';
+    $('m-disp-list').innerHTML = `<div class="m-empty"><div class="ico">✨</div><div class="ttl">${msg}</div><div class="sub">案件を探すには、ホームの検索を使ってください</div></div>`;
     return;
   }
-  $('m-disp-list').innerHTML = searchHint + list.map(c => renderDispatchCard(c)).join('');
+  $('m-disp-list').innerHTML = list.map(c => renderDispatchCard(c)).join('');
 }
 function renderDispatchCard(c){
   return _renderCaseCard(c, 'dispatch');
@@ -2117,15 +2285,6 @@ function setRecTab(tab){
 }
 function getRecoveryCases(tab){
   const cases = (DATA?.cases || []).filter(_isActive);
-  const q = ($('m-rec-search')?.value || '').trim();
-
-  // 検索モード: タブを無視して全アクティブ案件から検索 (受付日新しい順)
-  if(q){
-    return cases.filter(c => _caseMatchesSearch(c, q))
-      .sort((a,b) => (b.receivedAt||'').localeCompare(a.receivedAt||''));
-  }
-
-  // 通常モード: タブで絞り込み
   const today = todayISO();
   if(tab === 'today'){
     return cases.filter(c => (c.recoveryCalledAt||'').startsWith(today) && !c.recoveryCompleted)
@@ -2151,17 +2310,13 @@ function renderRecoveryList(){
   const tab = localStorage.getItem(LS_KEYS.recTab) || 'today';
   document.querySelectorAll('[data-rec-tab]').forEach(b => b.classList.toggle('active', b.dataset.recTab === tab));
   if(!DATA){ $('m-rec-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
-  const q = ($('m-rec-search')?.value || '').trim();
   const list = getRecoveryCases(tab);
-  const searchHint = q ? `<div class="m-search-hint">🔍 全アクティブ案件から検索: <b>${esc(q)}</b> — ${list.length}件ヒット</div>` : '';
   if(list.length === 0){
-    const msg = q
-      ? `「${esc(q)}」に一致する案件はありません`
-      : (tab === 'today' ? '今日の回収予定はありません' : tab === 'upcoming' ? '近日の回収予定はありません' : '未対応の回収案件はありません');
-    $('m-rec-list').innerHTML = `${searchHint}<div class="m-empty"><div class="ico">${q?'🔍':'✨'}</div><div class="ttl">${msg}</div></div>`;
+    const msg = tab === 'today' ? '今日の回収予定はありません' : tab === 'upcoming' ? '近日の回収予定はありません' : '未対応の回収案件はありません';
+    $('m-rec-list').innerHTML = `<div class="m-empty"><div class="ico">✨</div><div class="ttl">${msg}</div><div class="sub">案件を探すには、ホームの検索を使ってください</div></div>`;
     return;
   }
-  $('m-rec-list').innerHTML = searchHint + list.map(c => renderRecoveryCard(c)).join('');
+  $('m-rec-list').innerHTML = list.map(c => renderRecoveryCard(c)).join('');
 }
 
 // ============================================================
@@ -3349,45 +3504,284 @@ async function renderHistory(){
   document.querySelectorAll('[data-hist-tab]').forEach(b => b.classList.toggle('active', b.dataset.histTab === tab));
   if(!DATA){ $('m-hist-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
   const all = buildHistoryEntries();
-  const list = all.filter(e => tab==='all' || e.kind===tab).slice(0, 60); // 最新60件
+  const list = all.filter(e => tab==='all' || e.kind===tab).slice(0, 80);
   if(list.length === 0){
     $('m-hist-list').innerHTML = '<div class="m-empty"><div class="ico">📭</div><div class="ttl">履歴がありません</div></div>';
     return;
   }
-  // 一旦テキスト先行レンダリング → 画像URLは非同期取得
-  $('m-hist-list').innerHTML = list.map((e,i) => renderHistCard(e, i)).join('');
-  // サムネ画像URLを取得して差し替え
-  for(let i = 0; i < list.length; i++){
-    const e = list[i];
-    if(e.type === 'photo' && e.path){
-      const url = await _resolvePhotoUrl(e.path);
-      if(url){
-        const el = document.getElementById(`m-hist-img-${i}`);
-        if(el){ el.src = url; el.style.cursor='pointer'; el.onclick = () => openLightbox(url); }
-      }
-    }
-  }
+  $('m-hist-list').innerHTML = list.map(e => renderHistCard(e)).join('');
 }
-function renderHistCard(e, i){
+function renderHistCard(e){
   const kindTag = e.kind === 'dispatch' ? '<span class="m-hist-tag t-dispatch">🚗 配車</span>' :
                   e.kind === 'recovery' ? '<span class="m-hist-tag t-recovery">🚛 回収</span>' :
-                  '<span class="m-hist-tag">📠 FAX</span>';
+                  '<span class="m-hist-tag t-fax">📠 FAX</span>';
+  const typeIco = e.type === 'photo' ? '📷' :
+                  e.type === 'fax' ? '📠' : '⚪';
   const typeTxt = e.type === 'photo' ? 'チェックシート撮影' :
-                  e.type === 'fax' ? `FAX送信 (${esc(fmtFaxDisplay(e.to))}) [${esc(e.flow==='dispatch'?'配車後':e.flow==='recovery'?'回収後':'-')}]` :
+                  e.type === 'fax' ? `FAX送信 ${e.to?'('+esc(fmtFaxDisplay(e.to))+')':''} ${e.flow==='dispatch'?'[配車後]':e.flow==='recovery'?'[回収後]':''}` :
                   '操作';
-  const thumb = e.type === 'photo'
-    ? `<div class="m-hist-thumb"><img id="m-hist-img-${i}" alt="読込中" src=""></div>`
-    : `<div class="m-hist-thumb"><div style="width:60px;height:60px;background:#F0F2EC;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px">📠</div></div>`;
   return `
-    <div class="m-hist-card">
-      ${thumb}
+    <div class="m-hist-card" onclick="openCaseDetail('${esc(e.caseId)}')">
+      <div class="m-hist-ico">${typeIco}</div>
       <div class="m-hist-info">
-        <div class="ttl">${kindTag}${esc(e.caseNo||'')} ${esc(e.contractor||'')}</div>
+        <div class="ttl">${kindTag}<span class="caseno">${esc(e.caseNo||'')}</span> ${esc(e.contractor||'')}</div>
         <div class="meta">${esc(typeTxt)}</div>
-        <div class="meta">${esc(fmtDateTime(e.time)||'')} ・ ${esc(e.by||'')}</div>
+        <div class="meta-sub">${esc(fmtDateTime(e.time)||'')}${e.by?' ・ '+esc(e.by):''}</div>
       </div>
+      <div class="m-hist-arrow">›</div>
     </div>
   `;
+}
+
+// ============================================================
+// VEHICLE MANAGEMENT (車両管理: 点検入庫 / 復帰)
+// ============================================================
+let _vrPendingId = null;  // 復帰モーダル対象の車両ID
+
+function setVehTab(tab){
+  localStorage.setItem('limeMob_vehTab', tab);
+  document.querySelectorAll('[data-veh-tab]').forEach(b => b.classList.toggle('active', b.dataset.vehTab === tab));
+  renderVehiclesList();
+}
+
+function getVehiclesList(){
+  const tab = localStorage.getItem('limeMob_vehTab') || 'all';
+  const q = ($('m-veh-search')?.value || '').trim().toLowerCase();
+  let list = (DATA?.vehicles || []).slice();
+  if(tab === 'active') list = list.filter(v => v.status === '稼働可' || !v.status);
+  else if(tab === 'maint') list = list.filter(v => v.status === '点検入庫中' || v.status === '整備中');
+  // 売却済/廃車 は通常表示しない (allタブでも除外)
+  list = list.filter(v => v.status !== '売却済' && v.status !== '廃車');
+  if(q){
+    list = list.filter(v => {
+      const pl = v.plate || {};
+      const target = [v.name, v.maker, v.class, v.vehicleClass, v.grade,
+        pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ').toLowerCase();
+      return target.includes(q);
+    });
+  }
+  // ナンバー順
+  list.sort((a,b) => {
+    const an = (a.plate?.tail||'') + (a.plate?.no||''), bn = (b.plate?.tail||'') + (b.plate?.no||'');
+    return an.localeCompare(bn);
+  });
+  return list;
+}
+
+function renderVehiclesList(){
+  if(!DATA){ $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
+  const tab = localStorage.getItem('limeMob_vehTab') || 'all';
+  document.querySelectorAll('[data-veh-tab]').forEach(b => b.classList.toggle('active', b.dataset.vehTab === tab));
+  const list = getVehiclesList();
+  if(list.length === 0){
+    $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">🚗</div><div class="ttl">車両がありません</div></div>';
+    return;
+  }
+  $('m-veh-list').innerHTML = list.map(v => _renderVehicleCard(v)).join('');
+}
+
+function _renderVehicleCard(v){
+  const pl = v.plate || {};
+  const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ') || v.plateDisplay || '';
+  const isMaint = v.status === '点検入庫中' || v.status === '整備中';
+  const isSold = v.status === '売却済';
+  const isScrap = v.status === '廃車';
+  const cls = isMaint ? 'maint' : isSold ? 'sold' : isScrap ? 'scrap' : '';
+  const statusLbl = isMaint ? '🔧 点検入庫中' : (v.status || '稼働可');
+  // 次回点検日 (lastInspectionAt として保存されている) と車検満了日
+  const nextIns = v.lastInspectionAt ? fmtDate(v.lastInspectionAt) : '';
+  const shaken = v.inspectionDate ? fmtDate(v.inspectionDate) : '';
+  // アクションボタン
+  let actionHtml = '';
+  if(isMaint){
+    actionHtml = `<button class="v-action act-restore" onclick="openVehicleRestoreModal('${esc(v.id)}')">✅ 復帰</button>`;
+  } else if(!isSold && !isScrap){
+    actionHtml = `<button class="v-action act-maint" onclick="confirmVehicleMaintenance('${esc(v.id)}')">🔧 点検入庫</button>`;
+  }
+  return `
+    <div class="m-veh-card ${cls}">
+      <div class="v-ico">${isMaint?'🔧':'🚗'}</div>
+      <div class="v-body">
+        <div class="v-head">
+          <span class="v-plate">${esc(plate||'(ナンバー未設定)')}</span>
+          <span class="v-status ${cls}">${esc(statusLbl)}</span>
+        </div>
+        <div class="v-meta">${esc(v.name||v.maker||'')}${v.class||v.vehicleClass?` ・ ${esc(v.class||v.vehicleClass)}`:''}</div>
+        ${nextIns||shaken ? `<div class="v-meta" style="margin-top:3px">${nextIns?`📅 次回点検: ${esc(nextIns)}`:''}${nextIns&&shaken?' / ':''}${shaken?`🚨 車検: ${esc(shaken)}`:''}</div>` : ''}
+      </div>
+      ${actionHtml}
+    </div>
+  `;
+}
+
+// 🔧 点検入庫 (確認ダイアログのみ)
+async function confirmVehicleMaintenance(id){
+  const v = (DATA?.vehicles || []).find(x => x.id === id);
+  if(!v){ toast('車両が見つかりません', 'error'); return; }
+  const pl = v.plate || {};
+  const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
+  const ok = await confirmModal('🔧 点検入庫',
+    `<b>${esc(plate)}</b> ${v.name?`<span style="color:var(--muted)">(${esc(v.name)})</span>`:''}<br><br>` +
+    `この車両を「点検入庫中」にしますか?<br>` +
+    `<span style="font-size:12px;color:var(--muted)">配車割当不可になります。LINE通知も送信されます。</span>`,
+    '点検入庫する', 'm-btn-primary');
+  if(!ok) return;
+  v.status = '点検入庫中';
+  v.updatedAt = Date.now();
+  v.updatedBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
+  // 履歴に追記
+  const ts = todayISO();
+  v.repairHistory = (v.repairHistory ? v.repairHistory + '\n' : '') + `[${ts}] 点検入庫 (モバイル)`;
+  showSpinner('点検入庫を記録中...');
+  try {
+    await saveToDropbox();
+    try { await sendExternalNotify('vehicleMaintenance', _buildVehiclePayload(v)); } catch(e){}
+    hideSpinner();
+    toast(`🔧 ${plate} を点検入庫中に設定しました`, 'success');
+    renderVehiclesList();
+  } catch(e){
+    hideSpinner();
+    toast('保存エラー: '+e.message, 'error');
+  }
+}
+
+// ✅ 復帰モーダルを開く
+function openVehicleRestoreModal(id){
+  _vrPendingId = id;
+  const v = (DATA?.vehicles || []).find(x => x.id === id);
+  if(!v){ toast('車両が見つかりません', 'error'); return; }
+  const pl = v.plate || {};
+  const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
+  $('m-vr-summary').innerHTML = `<b>${esc(plate)}</b> ${v.name?`<span style="color:var(--muted)">(${esc(v.name)})</span>`:''}<br><span style="font-size:11.5px;color:var(--muted)">次回スケジュールを入力してください</span>`;
+  // 6ヶ月後を自動セット
+  const six = new Date(); six.setMonth(six.getMonth()+6);
+  const tz = six.getTimezoneOffset()*60000;
+  $('m-vr-lastInspectionAt').value = new Date(six - tz).toISOString().slice(0,10);
+  $('m-vr-inspectionDate').value = v.inspectionDate || '';
+  $('m-vr-note').value = '';
+  $('m-vrestore-modal').classList.add('active');
+}
+function closeVehicleRestoreModal(){
+  _vrPendingId = null;
+  $('m-vrestore-modal').classList.remove('active');
+}
+
+async function confirmVehicleRestore(){
+  if(!_vrPendingId){ closeVehicleRestoreModal(); return; }
+  const v = (DATA?.vehicles || []).find(x => x.id === _vrPendingId);
+  if(!v){ toast('車両が見つかりません', 'error'); closeVehicleRestoreModal(); return; }
+  const nextIns = $('m-vr-lastInspectionAt').value || '';
+  const nextShaken = $('m-vr-inspectionDate').value || '';
+  const note = $('m-vr-note').value.trim();
+  v.status = '稼働可';
+  if(nextIns) v.lastInspectionAt = nextIns;
+  if(nextShaken) v.inspectionDate = nextShaken;
+  if(note){
+    const ts = todayISO();
+    v.repairHistory = (v.repairHistory ? v.repairHistory + '\n' : '') + `[${ts}] 点検完了 (モバイル): ${note}`;
+  } else {
+    const ts = todayISO();
+    v.repairHistory = (v.repairHistory ? v.repairHistory + '\n' : '') + `[${ts}] 点検完了 → 稼働可復帰 (モバイル)`;
+  }
+  v.updatedAt = Date.now();
+  v.updatedBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
+  showSpinner('復帰を記録中...');
+  try {
+    await saveToDropbox();
+    try { await sendExternalNotify('vehicleRestore', _buildVehiclePayload(v, { nextInspection: nextIns, nextShaken, note })); } catch(e){}
+    hideSpinner();
+    const pl = v.plate || {};
+    const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
+    toast(`✅ ${plate} を稼働可に復帰しました`, 'success');
+    closeVehicleRestoreModal();
+    renderVehiclesList();
+  } catch(e){
+    hideSpinner();
+    toast('保存エラー: '+e.message, 'error');
+  }
+}
+
+function _buildVehiclePayload(v, extra){
+  const pl = v.plate || {};
+  return Object.assign({
+    plate: [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' '),
+    name: v.name || '', class: v.class || v.vehicleClass || '',
+    maker: v.maker || '', grade: v.grade || '',
+    status: v.status || '',
+    by: localStorage.getItem(LS_KEYS.editor) || 'mobile'
+  }, extra || {});
+}
+
+// ============================================================
+// CASE DETAIL (読み取り専用 + 配車/回収フローへのショートカット)
+// ============================================================
+async function openCaseDetail(caseId){
+  const c = findCaseById(caseId);
+  if(!c){ toast('案件が見つかりません', 'error'); return; }
+  _activeCaseId = caseId;
+  showScreen('case-detail');
+  await renderCaseDetail(c);
+}
+
+async function renderCaseDetail(c){
+  // 1. 案件情報 (renderInfoBox を流用)
+  renderInfoBox(c, 'm-cd-info', 'dispatch');
+
+  // 2. 車両情報
+  const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  const vehHtml = (c.vehicleName || plate) ? `
+    <div class="m-detail-section">
+      <h3>🚗 車両情報</h3>
+      <div class="m-kv"><span class="k">車種</span><span class="v">${esc(c.vehicleName||'')||'<span class="empty">―</span>'}</span></div>
+      <div class="m-kv"><span class="k">クラス</span><span class="v">${esc(c.vehicleClass||'')||'<span class="empty">―</span>'}</span></div>
+      <div class="m-kv"><span class="k">ナンバー</span><span class="v">${esc(plate)||'<span class="empty">―</span>'}</span></div>
+      ${c.unitPrice ? `<div class="m-kv"><span class="k">日額</span><span class="v">${fmtNum(c.unitPrice)} 円 (税込)</span></div>` : ''}
+      ${c.useStart ? `<div class="m-kv"><span class="k">利用開始</span><span class="v">${fmtDateFull(c.useStart)}</span></div>` : ''}
+      ${c.useEnd ? `<div class="m-kv"><span class="k">利用終了</span><span class="v">${fmtDateFull(c.useEnd)}</span></div>` : ''}
+    </div>
+  ` : '';
+
+  // 3. チェックシート (配車時) + FAX 履歴
+  const dispSheet = latestCheckSheet(c, 'dispatch');
+  let sheetHtml = '';
+  if(dispSheet?.path){
+    const url = await _resolvePhotoUrl(dispSheet.path);
+    sheetHtml = `
+      <div class="m-detail-section">
+        <h3>📷 配車時チェックシート</h3>
+        ${url
+          ? `<div style="text-align:center"><img src="${url}" style="max-width:100%;max-height:240px;border-radius:8px;cursor:pointer;border:1px solid var(--border)" onclick="openLightbox('${url}')"><div style="font-size:11px;color:var(--muted);margin-top:6px">${esc(dispSheet.photographedAt||'')}${dispSheet.by?' / '+esc(dispSheet.by):''}</div></div>`
+          : `<div class="m-photo-empty">読込失敗 (オフライン or デモ)</div>`
+        }
+      </div>
+    `;
+  }
+  const faxHistHtml = (c.faxHistory && c.faxHistory.length) ? `
+    <div class="m-detail-section">
+      <h3>📠 FAX送信履歴</h3>
+      ${c.faxHistory.slice().reverse().map(h => `
+        <div class="m-kv">
+          <span class="k">${esc(h.flow==='dispatch'?'配車後':h.flow==='recovery'?'回収後':'-')}</span>
+          <span class="v">${esc(h.sentAt||'')} ${h.to?'→ '+esc(fmtFaxDisplay(h.to)):''}${h.by?' / '+esc(h.by):''}</span>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+  $('m-cd-vehicle').innerHTML = vehHtml;
+  $('m-cd-history').innerHTML = sheetHtml + faxHistHtml;
+
+  // 4. アクションボタン (状態に応じて)
+  const canDispatch = ['受付','確認中','配車予定'].includes(c.status) && !c.dispatchDoneAt;
+  const canRecovery = ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted;
+  const acts = [];
+  if(canDispatch) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterDispatchFlow('${c.id}')">🚗 配車フローへ進む</button>`);
+  if(canRecovery) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterRecoveryFlow('${c.id}')">🚛 回収フローへ進む</button>`);
+  if(c.dispatchToTel || c.driverTel){
+    const tel = c.dispatchToContactTel || c.dispatchToTel || c.driverTel;
+    acts.push(`<a class="m-btn m-btn-outline m-btn-block" href="tel:${esc(String(tel).replace(/[^0-9+]/g,''))}">☎ 電話する (${esc(tel)})</a>`);
+  }
+  acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="goBack()">← 戻る</button>`);
+  $('m-cd-actions').innerHTML = acts.join('');
 }
 
 // ============================================================
@@ -3404,17 +3798,19 @@ function showScreen(name){
     el.classList.toggle('active', navMatch);
   });
   const titles = {
-    home: 'LIMEONE', dispatch: '配車予定', recovery: '回収予定',
+    home: 'LIME One', dispatch: '配車予定', recovery: '回収予定',
     history: '操作履歴', menu: 'メニュー', settings: '設定',
-    'flow-prep': '配車準備', 'flow-photo': 'チェックシート', 'flow-confirm': '完了確認', 'flow-fax': 'FAX送信'
+    'flow-prep': '配車準備', 'flow-photo': 'チェックシート', 'flow-confirm': '完了確認', 'flow-fax': 'FAX送信',
+    'case-detail': '案件詳細', vehicles: '🔧 車両管理'
   };
-  $('m-header-title').textContent = titles[name] || 'LIMEONE';
-  $('m-btn-back').style.display = (['home','dispatch','recovery','history','menu'].includes(name)) ? 'none' : '';
+  $('m-header-title').textContent = titles[name] || 'LIME One';
+  $('m-btn-back').style.display = (['home','dispatch','recovery','vehicles','menu'].includes(name)) ? 'none' : '';
   if(name === 'home') renderHome();
   if(name === 'dispatch') renderDispatchList();
   if(name === 'recovery') renderRecoveryList();
   if(name === 'history') renderHistory();
   if(name === 'settings') refreshSettings();
+  if(name === 'vehicles') renderVehiclesList();
 }
 
 function goBack(){
@@ -3467,10 +3863,46 @@ function saveEditorName(){
   localStorage.setItem(LS_KEYS.editor, v);
   toast('保存しました', 'success');
 }
+
+// 🔑 手動アクセストークンを適用 (本番申請をスキップしたい場合・複数台共有時)
+async function saveManualToken(){
+  const token = ($('m-set-manual-token').value || '').trim();
+  if(!token){ toast('トークンを入力してください', 'error'); return; }
+  if(token.length < 20){
+    if(!await confirmModal('警告', 'トークンが短すぎる可能性があります。本当に適用しますか?', '適用')) return;
+  }
+  // OAuth で取得した refresh_token は手動トークン適用後は無効化
+  localStorage.removeItem(LS_KEYS.refresh);
+  DBX_REFRESH = null;
+  localStorage.setItem(LS_KEYS.token, token);
+  DBX_TOKEN = token;
+  $('m-set-manual-token').value = '';
+  toast('✅ トークンを適用しました', 'success');
+  // すぐに同期試行
+  showSpinner('トークンで接続中...');
+  const ok = await loadFromDropbox();
+  hideSpinner();
+  if(ok){
+    toast('✅ 同期成功 — このトークンで動作します', 'success');
+    refreshSettings();
+  } else {
+    toast('❌ 同期失敗 — トークンを確認してください', 'error');
+  }
+}
+
+// 現在のトークン表示 (別iPhoneにコピペするため)
+async function showCurrentToken(){
+  const t = localStorage.getItem(LS_KEYS.token);
+  if(!t){ await alertModal('トークン未保存', 'まだトークンが保存されていません。'); return; }
+  await alertModal('現在のアクセストークン',
+    `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">⚠️ このトークンは Dropbox アクセス権を持ちます。社外に漏らさないでください。</div>` +
+    `<textarea readonly style="width:100%;font-family:monospace;font-size:11px;height:90px;padding:8px;word-break:break-all" onclick="this.select()">${esc(t)}</textarea>` +
+    `<div style="font-size:11px;color:var(--muted);margin-top:8px">📋 上のテキストをタップ→全選択→コピーして、別iPhoneの設定→「手動アクセストークン」欄に貼り付けてください。</div>`);
+}
 async function showAbout(){
-  await alertModal('LIMEONE',
-    '<b>LIME<span style="color:var(--green)">ONE</span></b> — レンタカー現場アプリ<br>' +
-    'バージョン: 2.2 (2026-05)<br><br>' +
+  await alertModal('LIME One',
+    '<b>LIME <span style="color:var(--green)">One</span></b> — ライムレンタカー現場アプリ<br>' +
+    'バージョン: 2.3 (2026-05)<br><br>' +
     'PC版とdata.jsonを共有する現場用クライアント。<br>' +
     '配車・回収を写真付きで記録し、手配書FAX送信までを1フローで完結。<br><br>' +
     '対応: iOS Safari 15+');
@@ -3635,7 +4067,7 @@ function activateDemoMode(){
     const bn = document.createElement('div');
     bn.id = 'm-demo-banner';
     bn.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9990;background:linear-gradient(90deg,#A0D468,#7DAE48);color:#1E3A2B;text-align:center;padding:6px 10px;font-size:11px;font-weight:bold;letter-spacing:.06em;box-shadow:0 2px 6px rgba(30,58,43,.15);pointer-events:none';
-    bn.textContent = '🧪 LIMEONE DEMO — サンプルデータ表示中 (?demo=1)';
+    bn.textContent = '🧪 LIME One DEMO — サンプルデータ表示中 (?demo=1)';
     document.body.appendChild(bn);
     document.querySelector('.m-header').style.marginTop = '24px';
   }
