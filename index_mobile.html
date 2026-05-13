@@ -937,11 +937,11 @@ a{color:var(--info);text-decoration:none}
       <div class="m-stat-grid">
         <div class="m-stat-card" onclick="showScreen('dispatch')">
           <div class="num" id="m-stat-dispatch">0</div>
-          <div class="lbl">🚗 今日の配車</div>
+          <div class="lbl">🚙 今日の配車</div>
         </div>
         <div class="m-stat-card green" onclick="showScreen('recovery')">
           <div class="num" id="m-stat-recovery">0</div>
-          <div class="lbl">🚛 今日の回収</div>
+          <div class="lbl">🛻 今日の回収</div>
         </div>
         <div class="m-stat-card orange" onclick="showScreen('dispatch')">
           <div class="num" id="m-stat-pending">0</div>
@@ -954,24 +954,24 @@ a{color:var(--info);text-decoration:none}
       </div>
 
       <div class="m-home-quick">
-        <h3>🔧 クイック</h3>
+        <h3>🛠️ クイック</h3>
         <div class="m-quick-row">
           <button class="m-btn m-btn-success" onclick="openNewCaseModal()">
             <span class="ico">📝</span>新規案件
           </button>
           <button class="m-btn m-btn-success" onclick="openQuickRecModal()" style="background:linear-gradient(180deg,#8453B1,#6B3F8C);box-shadow:0 3px 10px rgba(107,63,140,.32),inset 0 1px 0 rgba(255,255,255,.2)">
-            <span class="ico">🚛</span>回収登録
+            <span class="ico">🛻</span>回収登録
           </button>
         </div>
         <div class="m-quick-row" style="margin-top:8px">
           <button class="m-btn m-btn-secondary" onclick="showScreen('dispatch')">
-            <span class="ico">🚗</span>配車予定
+            <span class="ico">🚙</span>配車予定
           </button>
           <button class="m-btn m-btn-secondary" onclick="showScreen('recovery')">
-            <span class="ico">🚛</span>回収予定
+            <span class="ico">🛻</span>回収予定
           </button>
           <button class="m-btn m-btn-secondary" onclick="showScreen('vehicles')">
-            <span class="ico">🔧</span>点検
+            <span class="ico">🛠️</span>点検
           </button>
         </div>
       </div>
@@ -1007,7 +1007,7 @@ a{color:var(--info);text-decoration:none}
       <div class="m-info-box" id="m-prep-info"></div>
       <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openHandoverPreview()">📄 手配書（配車予約情報まで）を見る</button>
       <div class="m-detail-section">
-        <h3>🚗 配車する車両</h3>
+        <h3>🚙 配車する車両</h3>
         <div id="m-prep-vehicle"></div>
       </div>
       <div class="m-detail-section">
@@ -1096,8 +1096,8 @@ a{color:var(--info);text-decoration:none}
       <div class="m-date-bar">📜 操作履歴</div>
       <div class="m-tabs">
         <button class="active" data-hist-tab="all" onclick="setHistTab('all')">全て</button>
-        <button data-hist-tab="dispatch" onclick="setHistTab('dispatch')">🚗 配車</button>
-        <button data-hist-tab="recovery" onclick="setHistTab('recovery')">🚛 回収</button>
+        <button data-hist-tab="dispatch" onclick="setHistTab('dispatch')">🚙 配車</button>
+        <button data-hist-tab="recovery" onclick="setHistTab('recovery')">🛻 回収</button>
         <button data-hist-tab="fax" onclick="setHistTab('fax')">📠 FAX</button>
       </div>
       <div id="m-hist-list"></div>
@@ -1105,7 +1105,7 @@ a{color:var(--info);text-decoration:none}
 
     <!-- (8b) Vehicle management (車両一覧 + 点検入庫/復帰) -->
     <section id="m-screen-vehicles" class="m-screen">
-      <div class="m-date-bar">🚗 車両管理</div>
+      <div class="m-date-bar">🚙 車両管理</div>
       <div class="m-search-box">
         <span class="m-search-ico">🔍</span>
         <input type="search" id="m-veh-search" placeholder="検索: ナンバー / 車種 / クラス" oninput="renderVehiclesList()" autocomplete="off">
@@ -1114,7 +1114,7 @@ a{color:var(--info);text-decoration:none}
       <div class="m-tabs">
         <button class="active" data-veh-tab="all" onclick="setVehTab('all')">📋 全て</button>
         <button data-veh-tab="active" onclick="setVehTab('active')">✅ 稼働可</button>
-        <button data-veh-tab="maint" onclick="setVehTab('maint')">🔧 点検中</button>
+        <button data-veh-tab="maint" onclick="setVehTab('maint')">🛠️ 点検中</button>
       </div>
       <div id="m-veh-list"></div>
     </section>
@@ -1176,7 +1176,7 @@ a{color:var(--info);text-decoration:none}
         <div class="val" id="m-set-data-stats">未読込</div>
         <div class="actions">
           <button class="m-btn m-btn-outline" onclick="syncNow()">🔄 強制リロード</button>
-          <button class="m-btn m-btn-outline" onclick="dbxDiagnose()">🔧 Dropbox診断</button>
+          <button class="m-btn m-btn-outline" onclick="dbxDiagnose()">🛠️ Dropbox診断</button>
         </div>
       </div>
 
@@ -1184,11 +1184,11 @@ a{color:var(--info);text-decoration:none}
   </main>
 
   <nav class="m-bottom-nav" id="m-bottom-nav" style="display:none">
-    <button data-nav="home" class="active" onclick="showScreen('home')"><span class="m-nav-ico">🏠</span>ホーム</button>
-    <button data-nav="dispatch" onclick="showScreen('dispatch')"><span class="m-nav-ico">🚗</span>配車</button>
-    <button data-nav="recovery" onclick="showScreen('recovery')"><span class="m-nav-ico">🚛</span>回収</button>
-    <button data-nav="vehicles" onclick="showScreen('vehicles')"><span class="m-nav-ico">🔧</span>点検</button>
-    <button data-nav="menu" onclick="showScreen('menu')"><span class="m-nav-ico">≡</span>メニュー</button>
+    <button data-nav="home" class="active" onclick="showScreen('home')"><span class="m-nav-ico">🏡</span>ホーム</button>
+    <button data-nav="dispatch" onclick="showScreen('dispatch')"><span class="m-nav-ico">🚙</span>配車</button>
+    <button data-nav="recovery" onclick="showScreen('recovery')"><span class="m-nav-ico">🛻</span>回収</button>
+    <button data-nav="vehicles" onclick="showScreen('vehicles')"><span class="m-nav-ico">🛠️</span>点検</button>
+    <button data-nav="menu" onclick="showScreen('menu')"><span class="m-nav-ico">📋</span>メニュー</button>
   </nav>
 </div>
 
@@ -1211,10 +1211,10 @@ a{color:var(--info);text-decoration:none}
   <img id="m-lightbox-img">
 </div>
 
-<!-- 🔧 車両復帰 モーダル (点検入庫中 → 稼働可) -->
+<!-- 🛠️ 車両復帰 モーダル (点検入庫中 → 稼働可) -->
 <div class="m-modal" id="m-vrestore-modal">
   <div class="m-modal-body" style="max-height:85%">
-    <h2>🔧 点検完了 → 稼働可に復帰</h2>
+    <h2>🛠️ 点検完了 → 稼働可に復帰</h2>
     <div id="m-vr-summary" style="background:#F4FBF6;border-left:3px solid var(--green);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:13px"></div>
     <div class="m-form-grp">
       <label>📅 次回点検予定日 <span class="muted">(6ヶ月後を自動サジェスト)</span></label>
@@ -1292,7 +1292,7 @@ a{color:var(--info);text-decoration:none}
       <label>担当者 TEL</label>
       <input type="tel" id="m-nc-dispatchContactTel" placeholder="090-xxx-xxxx">
     </div>
-    <div class="m-section-divider">🚗 配車予約・車両</div>
+    <div class="m-section-divider">🚙 配車予約・車両</div>
     <div class="m-form-grp">
       <label>配車予約日時</label>
       <input type="datetime-local" id="m-nc-dispatchAt" step="600">
@@ -1334,7 +1334,7 @@ a{color:var(--info);text-decoration:none}
 <!-- 簡易版 回収登録 モーダル -->
 <div class="m-modal" id="m-quickrec-modal">
   <div class="m-modal-body" style="max-height:88%">
-    <h2>🚛 回収予定 登録 (簡易版)</h2>
+    <h2>🛻 回収予定 登録 (簡易版)</h2>
     <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px">利用中の案件に回収予定日を設定します</div>
     <div class="m-form-grp">
       <label>🔍 案件を検索</label>
@@ -1370,7 +1370,7 @@ a{color:var(--info);text-decoration:none}
 <!-- 車両ピッカー モーダル -->
 <div class="m-modal" id="m-vehicle-modal">
   <div class="m-modal-body" style="max-height:85%">
-    <h2>🚗 車両を選択</h2>
+    <h2>🚙 車両を選択</h2>
     <input type="text" id="m-vehicle-search" placeholder="🔍 車種・ナンバー・クラスで検索" oninput="filterVehicleList()" style="margin-bottom:12px">
     <div id="m-vehicle-list" style="max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="m-modal-actions" style="margin-top:14px">
@@ -2264,8 +2264,8 @@ function renderHomeCalendar(){
         const dowCls = it.dow === 0 ? 'sun' : it.dow === 6 ? 'sat' : '';
         const todayCls = it.isToday ? 'today' : '';
         const counts = [];
-        if(it.dispCount > 0) counts.push(`<span class="m-week-cnt disp">🚗${it.dispCount}</span>`);
-        if(it.recCount > 0) counts.push(`<span class="m-week-cnt rec">🚛${it.recCount}</span>`);
+        if(it.dispCount > 0) counts.push(`<span class="m-week-cnt disp">🚙${it.dispCount}</span>`);
+        if(it.recCount > 0) counts.push(`<span class="m-week-cnt rec">🛻${it.recCount}</span>`);
         const body = counts.length
           ? `<div class="m-week-counts">${counts.join('')}</div>`
           : `<div class="m-week-counts"><span class="m-week-empty">–</span></div>`;
@@ -2628,7 +2628,7 @@ function renderPrepVehicleSection(c){
   if(hasVehicle){
     host.innerHTML = `
       <div class="m-vehicle-current">
-        <div class="v-ico-big">🚗</div>
+        <div class="v-ico-big">🚙</div>
         <div class="v-info">
           <div class="v-name">${esc(c.vehicleName||c.vehicleClass||'(車種未設定)')}</div>
           <div class="v-plate">${esc(plate)||'<span style="color:#BBB">ナンバー未設定</span>'}</div>
@@ -2689,7 +2689,7 @@ function filterVehicleList(){
     const inUse = inUseIds.has(v.id);
     return `
       <div class="m-vehicle-item ${inUse?'assigned':''}" onclick="selectVehicle('${esc(v.id)}')">
-        <div class="v-ico">🚗</div>
+        <div class="v-ico">🚙</div>
         <div class="v-body">
           <div class="v-name">${esc(v.name||v.maker||'(車種名なし)')}</div>
           <div class="v-meta">${esc(plate)} ${v.class?`・${esc(v.class)}`:''}</div>
@@ -2720,7 +2720,7 @@ async function selectVehicle(vehicleId){
   try {
     await saveToDropbox();
     hideSpinner();
-    toast(`🚗 車両「${v.name||v.maker||''}」を登録しました`, 'success');
+    toast(`🚙 車両「${v.name||v.maker||''}」を登録しました`, 'success');
     // 画面再描画
     if(_currentScreen === 'flow-prep') await renderFlowPrepScreen();
   } catch(e){
@@ -3020,7 +3020,7 @@ async function onConfirmDo(){
     } catch(e){}
 
     hideSpinner();
-    toast((_flow.kind==='recovery'?'🚛 回収':'🚗 配車')+'完了を記録しました', 'success');
+    toast((_flow.kind==='recovery'?'🛻 回収':'🚙 配車')+'完了を記録しました', 'success');
 
     // 5. FAX画面へ
     _flow.step = 2;
@@ -3756,8 +3756,8 @@ async function renderHistory(){
   $('m-hist-list').innerHTML = list.map(e => renderHistCard(e)).join('');
 }
 function renderHistCard(e){
-  const kindTag = e.kind === 'dispatch' ? '<span class="m-hist-tag t-dispatch">🚗 配車</span>' :
-                  e.kind === 'recovery' ? '<span class="m-hist-tag t-recovery">🚛 回収</span>' :
+  const kindTag = e.kind === 'dispatch' ? '<span class="m-hist-tag t-dispatch">🚙 配車</span>' :
+                  e.kind === 'recovery' ? '<span class="m-hist-tag t-recovery">🛻 回収</span>' :
                   '<span class="m-hist-tag t-fax">📠 FAX</span>';
   const typeIco = e.type === 'photo' ? '📷' :
                   e.type === 'fax' ? '📠' : '⚪';
@@ -3829,7 +3829,7 @@ function renderVehiclesList(){
   document.querySelectorAll('[data-veh-tab]').forEach(b => b.classList.toggle('active', b.dataset.vehTab === tab));
   const list = getVehiclesList();
   if(list.length === 0){
-    $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">🚗</div><div class="ttl">車両がありません</div></div>';
+    $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">🚙</div><div class="ttl">車両がありません</div></div>';
     return;
   }
   $('m-veh-list').innerHTML = list.map(v => _renderVehicleCard(v)).join('');
@@ -3842,7 +3842,7 @@ function _renderVehicleCard(v){
   const isSold = v.status === '売却済';
   const isScrap = v.status === '廃車';
   const cls = isMaint ? 'maint' : isSold ? 'sold' : isScrap ? 'scrap' : '';
-  const statusLbl = isMaint ? '🔧 点検入庫中' : (v.status || '稼働可');
+  const statusLbl = isMaint ? '🛠️ 点検入庫中' : (v.status || '稼働可');
   // 次回点検日 (lastInspectionAt として保存されている) と車検満了日
   const nextIns = v.lastInspectionAt ? fmtDate(v.lastInspectionAt) : '';
   const shaken = v.inspectionDate ? fmtDate(v.inspectionDate) : '';
@@ -3851,11 +3851,11 @@ function _renderVehicleCard(v){
   if(isMaint){
     actionHtml = `<button class="v-action act-restore" onclick="openVehicleRestoreModal('${esc(v.id)}')">✅ 復帰</button>`;
   } else if(!isSold && !isScrap){
-    actionHtml = `<button class="v-action act-maint" onclick="confirmVehicleMaintenance('${esc(v.id)}')">🔧 点検入庫</button>`;
+    actionHtml = `<button class="v-action act-maint" onclick="confirmVehicleMaintenance('${esc(v.id)}')">🛠️ 点検入庫</button>`;
   }
   return `
     <div class="m-veh-card ${cls}">
-      <div class="v-ico">${isMaint?'🔧':'🚗'}</div>
+      <div class="v-ico">${isMaint?'🛠️':'🚙'}</div>
       <div class="v-body">
         <div class="v-head">
           <span class="v-plate">${esc(plate||'(ナンバー未設定)')}</span>
@@ -3869,13 +3869,13 @@ function _renderVehicleCard(v){
   `;
 }
 
-// 🔧 点検入庫 (確認ダイアログのみ)
+// 🛠️ 点検入庫 (確認ダイアログのみ)
 async function confirmVehicleMaintenance(id){
   const v = (DATA?.vehicles || []).find(x => x.id === id);
   if(!v){ toast('車両が見つかりません', 'error'); return; }
   const pl = v.plate || {};
   const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
-  const ok = await confirmModal('🔧 点検入庫',
+  const ok = await confirmModal('🛠️ 点検入庫',
     `<b>${esc(plate)}</b> ${v.name?`<span style="color:var(--muted)">(${esc(v.name)})</span>`:''}<br><br>` +
     `この車両を「点検入庫中」にしますか?<br>` +
     `<span style="font-size:12px;color:var(--muted)">配車割当不可になります。LINE通知も送信されます。</span>`,
@@ -3892,7 +3892,7 @@ async function confirmVehicleMaintenance(id){
     await saveToDropbox();
     try { await sendExternalNotify('vehicleMaintenance', _buildVehiclePayload(v)); } catch(e){}
     hideSpinner();
-    toast(`🔧 ${plate} を点検入庫中に設定しました`, 'success');
+    toast(`🛠️ ${plate} を点検入庫中に設定しました`, 'success');
     renderVehiclesList();
   } catch(e){
     hideSpinner();
@@ -3986,7 +3986,7 @@ async function renderCaseDetail(c){
   const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
   const vehHtml = (c.vehicleName || plate) ? `
     <div class="m-detail-section">
-      <h3>🚗 車両情報</h3>
+      <h3>🚙 車両情報</h3>
       <div class="m-kv"><span class="k">車種</span><span class="v">${esc(c.vehicleName||'')||'<span class="empty">―</span>'}</span></div>
       <div class="m-kv"><span class="k">クラス</span><span class="v">${esc(c.vehicleClass||'')||'<span class="empty">―</span>'}</span></div>
       <div class="m-kv"><span class="k">ナンバー</span><span class="v">${esc(plate)||'<span class="empty">―</span>'}</span></div>
@@ -4029,8 +4029,8 @@ async function renderCaseDetail(c){
   const canDispatch = ['受付','確認中','配車予定'].includes(c.status) && !c.dispatchDoneAt;
   const canRecovery = ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted;
   const acts = [];
-  if(canDispatch) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterDispatchFlow('${c.id}')">🚗 配車フローへ進む</button>`);
-  if(canRecovery) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterRecoveryFlow('${c.id}')">🚛 回収フローへ進む</button>`);
+  if(canDispatch) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterDispatchFlow('${c.id}')">🚙 配車フローへ進む</button>`);
+  if(canRecovery) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterRecoveryFlow('${c.id}')">🛻 回収フローへ進む</button>`);
   if(c.dispatchToTel || c.driverTel){
     const tel = c.dispatchToContactTel || c.dispatchToTel || c.driverTel;
     acts.push(`<a class="m-btn m-btn-outline m-btn-block" href="tel:${esc(String(tel).replace(/[^0-9+]/g,''))}">☎ 電話する (${esc(tel)})</a>`);
@@ -4056,7 +4056,7 @@ function showScreen(name){
     home: 'LIME One', dispatch: '配車予定', recovery: '回収予定',
     history: '操作履歴', menu: 'メニュー', settings: '設定',
     'flow-prep': '配車準備', 'flow-photo': 'チェックシート', 'flow-confirm': '完了確認', 'flow-fax': 'FAX送信',
-    'case-detail': '案件詳細', vehicles: '🔧 車両管理'
+    'case-detail': '案件詳細', vehicles: '🛠️ 車両管理'
   };
   $('m-header-title').textContent = titles[name] || 'LIME One';
   $('m-btn-back').style.display = (['home','dispatch','recovery','vehicles','menu'].includes(name)) ? 'none' : '';
