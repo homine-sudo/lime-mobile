@@ -9,6 +9,10 @@
 <meta name="apple-mobile-web-app-title" content="LIME One">
 <meta name="format-detection" content="telephone=yes">
 <meta name="theme-color" content="#1E3A2B">
+<!-- キャッシュを最小化 (新版を素早く取得) -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>LIME One — ライムレンタカー現場</title>
 <!-- ホーム画面アイコン (ライムレンタカー OKINAWA のロゴ) -->
 <link rel="apple-touch-icon" sizes="180x180" href="logo.png">
@@ -1077,7 +1081,12 @@ a{color:var(--info);text-decoration:none}
       </div>
       <div class="m-menu-item" onclick="syncNow()">
         <span class="ico">🔄</span>
-        <div class="body"><div class="ttl">強制リロード</div><div class="desc">Dropboxから最新のdata.jsonを再取得</div></div>
+        <div class="body"><div class="ttl">データ同期</div><div class="desc">Dropboxから最新のdata.jsonを再取得</div></div>
+        <span class="arrow">›</span>
+      </div>
+      <div class="m-menu-item" onclick="forceAppUpdate()" style="border:1.5px solid var(--green);background:#F4FBF6">
+        <span class="ico">⬇️</span>
+        <div class="body"><div class="ttl" style="color:var(--green)">アプリ更新</div><div class="desc">最新版アプリを強制取得 (ホーム画面アイコンから開いた場合の更新用)</div></div>
         <span class="arrow">›</span>
       </div>
       <div class="m-menu-item" onclick="showAbout()">
@@ -2157,17 +2166,32 @@ function renderHomeSearch(){
 function _renderSearchResultCard(c){
   const ins = findInsurer(c.insurerId) || {};
   const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
-  // どの導線へ:
-  //   配車待ち → 配車フロー
-  //   利用中・回収待ち → 回収フロー
-  //   それ以外 → 案件詳細
   const canDispatch = ['受付','確認中','配車予定'].includes(c.status) && !c.dispatchDoneAt;
   const canRecovery = ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted;
+  // 回収完了済み: 返却済/仮請求/請求済/入金済 or recoveryCompleted=true
+  const isCompleted = c.recoveryCompleted || ['返却済','仮請求','請求済','入金済'].includes(c.status);
   let kind = 'detail', flowFn = `openCaseDetail('${c.id}')`;
   if(canDispatch){ kind = 'dispatch'; flowFn = `enterDispatchFlow('${c.id}')`; }
   else if(canRecovery){ kind = 'recovery'; flowFn = `enterRecoveryFlow('${c.id}')`; }
   const badgeCls = statusBadgeClass(c, kind === 'recovery' ? 'recovery' : 'dispatch');
   const badgeTxt = c.status || '';
+
+  // 回収完了済の場合: 利用期間・利用金額を計算して表示
+  let completedHtml = '';
+  if(isCompleted){
+    const days = calcDays(c.useStart, c.useEnd);
+    const unitIn = Number(c.unitPrice||0);
+    const usageAmount = days && unitIn ? days * unitIn : 0;
+    const finalAmount = Math.max(0, usageAmount - Number(c.discount||0));
+    const periodLabel = c.useStart && c.useEnd
+      ? `${fmtDate(c.useStart)} 〜 ${fmtDate(c.useEnd)}${days?` (${days}日)`:''}`
+      : (c.useStart ? `${fmtDate(c.useStart)} 〜 ―` : '―');
+    completedHtml = `
+      <div class="m-card-row" style="background:#F4FBF6;border-radius:6px;padding:6px 8px;margin-top:6px"><span class="lbl">利用期間</span><span class="val">${esc(periodLabel)}</span></div>
+      ${finalAmount ? `<div class="m-card-row" style="background:#F4FBF6;border-radius:6px;padding:6px 8px;margin-top:3px"><span class="lbl">利用金額</span><span class="val"><b style="color:var(--green)">${fmtNum(finalAmount)} 円</b> <span style="font-size:11px;color:var(--muted)">(税込)</span>${c.discount?` <span style="font-size:11px;color:var(--muted)">/ 値引 ${fmtNum(c.discount)}</span>`:''}</span></div>` : ''}
+    `;
+  }
+
   return `
     <div class="m-card flow-${kind === 'dispatch' ? 'dispatch' : (kind === 'recovery' ? 'recovery' : 'dispatch')}" onclick="${flowFn}">
       <div class="m-card-left">
@@ -2180,6 +2204,7 @@ function _renderSearchResultCard(c){
         ${c.dispatchToName ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${esc(c.dispatchToName)}</span></div>` : ''}
         ${c.dispatchAt ? `<div class="m-card-row"><span class="lbl">配車予約</span><span class="val">${esc(fmtDateTime(c.dispatchAt))}</span></div>` : ''}
         ${plate ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${esc(plate)}</span></div>` : ''}
+        ${completedHtml}
       </div>
       <div class="m-card-right">›</div>
     </div>
@@ -2784,6 +2809,15 @@ async function onConfirmDo(){
       c.status = '配車済';
     } else {
       if(!c.recoveryCalledAt) c.recoveryCalledAt = todayISO();
+      // 利用終了日 (useEnd) が空なら回収日と同じ日付を自動セット
+      if(!c.useEnd){
+        c.useEnd = c.recoveryCalledAt;
+        const d = parseDate(c.useEnd);
+        if(d){
+          if(!c.salesYear) c.salesYear = d.getFullYear();
+          if(!c.salesMonth) c.salesMonth = d.getMonth()+1;
+        }
+      }
       c.recoveryCompleted = true;
       c.status = '返却済';
     }
@@ -3266,6 +3300,15 @@ async function saveQuickRecovery(){
   if(!date){ toast('回収予定日を入力してください','error'); return; }
 
   c.recoveryCalledAt = date;
+  // 利用終了日 (useEnd) が空なら回収日と同じ日付を自動セット
+  if(!c.useEnd){
+    c.useEnd = date;
+    const d = parseDate(date);
+    if(d){
+      if(!c.salesYear) c.salesYear = d.getFullYear();
+      if(!c.salesMonth) c.salesMonth = d.getMonth()+1;
+    }
+  }
   // 状態は「回収連絡」へ (まだ実回収していなければ)
   if(c.status === '利用中') c.status = '回収連絡';
   _stampUpdated(c);
@@ -3904,6 +3947,18 @@ async function showCurrentToken(){
     `<textarea readonly style="width:100%;font-family:monospace;font-size:11px;height:90px;padding:8px;word-break:break-all" onclick="this.select()">${esc(t)}</textarea>` +
     `<div style="font-size:11px;color:var(--muted);margin-top:8px">📋 上のテキストをタップ→全選択→コピーして、別iPhoneの設定→「手動アクセストークン」欄に貼り付けてください。</div>`);
 }
+// アプリを強制更新 (キャッシュをバイパスして最新HTMLを取得)
+async function forceAppUpdate(){
+  const ok = await confirmModal('🔄 アプリを更新',
+    `LIME One アプリの最新版を強制取得します。<br><br>` +
+    `この操作は <b>Safari のキャッシュをバイパス</b> して、GitHub Pages から最新の HTML を読み込みます。<br><br>` +
+    `<small>Dropboxとの連携・編集者名・トークンは保持されます。</small>`, '更新する');
+  if(!ok) return;
+  // 現在のURLに動的なタイムスタンプを付与してリロード
+  const url = location.pathname + '?v=' + Date.now();
+  location.replace(url);
+}
+
 async function showAbout(){
   await alertModal('LIME One',
     '<b>LIME <span style="color:var(--green)">One</span></b> — ライムレンタカー現場アプリ<br>' +
