@@ -70,7 +70,7 @@ a{color:var(--info);text-decoration:none}
 /* === APP SHELL === */
 #app{
   display:flex;flex-direction:column;height:100%;
-  padding-top:var(--safe-top);padding-bottom:var(--safe-bottom);
+  padding-top:var(--safe-top);
 }
 .m-header{
   background:linear-gradient(135deg,#253E1F 0%,#1E3A2B 60%,#2D5034 100%);
@@ -125,7 +125,9 @@ a{color:var(--info);text-decoration:none}
 
 /* === BOTTOM NAV === */
 .m-bottom-nav{
-  height:64px;background:rgba(255,255,255,.92);
+  height:calc(64px + var(--safe-bottom));
+  padding-bottom:var(--safe-bottom);
+  background:rgba(255,255,255,.92);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   border-top:1px solid rgba(212,222,202,.6);
   display:flex;flex-shrink:0;
@@ -902,11 +904,6 @@ a{color:var(--info);text-decoration:none}
         <h3><span class="step-num">1</span>Dropbox と連携</h3>
         <div class="desc">PC版と同じ data.json と写真フォルダを共有します。初回のみDropboxの認証画面で「許可」をタップしてください。</div>
         <button class="m-btn m-btn-primary m-btn-full" onclick="dbxAuthorize()">📦 Dropbox と連携する</button>
-        <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">🔑 認証エラーが出る場合 — 別iPhone用の手動トークン</div>
-          <textarea id="m-onb-manual-token" rows="3" placeholder="管理者から受け取ったアクセストークン (sl.B...) を貼り付け" style="font-family:monospace;font-size:11px;width:100%;word-break:break-all;margin-bottom:8px"></textarea>
-          <button class="m-btn m-btn-outline m-btn-full" onclick="onboardManualToken()">🔑 トークンで連携</button>
-        </div>
       </div>
       <div class="m-onboard-step" id="m-onb-step-name" style="display:none">
         <h3><span class="step-num">2</span>編集者名を入力</h3>
@@ -1184,15 +1181,6 @@ a{color:var(--info);text-decoration:none}
         </div>
       </div>
 
-      <div class="m-settings-row">
-        <div class="lbl">🔑 手動アクセストークン <span style="font-weight:normal;color:var(--muted);font-size:10px">(上級・複数台共有用)</span></div>
-        <div class="val muted" style="font-size:11px;margin-bottom:8px">本番申請をスキップして複数iPhoneで共有する場合に使用。Dropbox開発者コンソールの「生成する」ボタンで取得したトークンを貼り付け → 適用すると以降このアプリは手動トークンで動作。</div>
-        <textarea id="m-set-manual-token" rows="3" placeholder="sl.B... で始まる長い英数字を貼り付け" style="font-family:monospace;font-size:11px;width:100%;word-break:break-all"></textarea>
-        <div class="actions" style="flex-wrap:wrap">
-          <button class="m-btn m-btn-primary" onclick="saveManualToken()">💾 トークンを適用</button>
-          <button class="m-btn m-btn-outline" onclick="showCurrentToken()">📋 現在のトークン表示</button>
-        </div>
-      </div>
     </section>
   </main>
 
@@ -1703,8 +1691,24 @@ async function dbxRefreshToken(){
     const data = await res.json();
     DBX_TOKEN = data.access_token;
     localStorage.setItem(LS_KEYS.token, DBX_TOKEN);
+    _lastTokenRefresh = Date.now();
     return true;
   } catch(e){ return false; }
+}
+
+// 先回りリフレッシュ: アクセストークン4時間期限の前に自動更新して401を未然に防ぐ
+// - 3時間ごとの定期実行
+// - アプリ復帰 (visibility) 時、最終更新から2時間以上経っていれば即更新
+let _lastTokenRefresh = Date.now();
+function _startProactiveRefresh(){
+  if(!localStorage.getItem(LS_KEYS.refresh)) return;
+  setInterval(() => { dbxRefreshToken(); }, 3 * 60 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden) return;
+    if(Date.now() - _lastTokenRefresh < 2 * 60 * 60 * 1000) return;
+    if(!localStorage.getItem(LS_KEYS.refresh)) return;
+    dbxRefreshToken();
+  });
 }
 
 function dbxLogout(){
@@ -4116,41 +4120,6 @@ function saveEditorName(){
   toast('保存しました', 'success');
 }
 
-// 🔑 手動アクセストークンを適用 (本番申請をスキップしたい場合・複数台共有時)
-async function saveManualToken(){
-  const token = ($('m-set-manual-token').value || '').trim();
-  if(!token){ toast('トークンを入力してください', 'error'); return; }
-  if(token.length < 20){
-    if(!await confirmModal('警告', 'トークンが短すぎる可能性があります。本当に適用しますか?', '適用')) return;
-  }
-  // OAuth で取得した refresh_token は手動トークン適用後は無効化
-  localStorage.removeItem(LS_KEYS.refresh);
-  DBX_REFRESH = null;
-  localStorage.setItem(LS_KEYS.token, token);
-  DBX_TOKEN = token;
-  $('m-set-manual-token').value = '';
-  toast('✅ トークンを適用しました', 'success');
-  // すぐに同期試行
-  showSpinner('トークンで接続中...');
-  const ok = await loadFromDropbox();
-  hideSpinner();
-  if(ok){
-    toast('✅ 同期成功 — このトークンで動作します', 'success');
-    refreshSettings();
-  } else {
-    toast('❌ 同期失敗 — トークンを確認してください', 'error');
-  }
-}
-
-// 現在のトークン表示 (別iPhoneにコピペするため)
-async function showCurrentToken(){
-  const t = localStorage.getItem(LS_KEYS.token);
-  if(!t){ await alertModal('トークン未保存', 'まだトークンが保存されていません。'); return; }
-  await alertModal('現在のアクセストークン',
-    `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">⚠️ このトークンは Dropbox アクセス権を持ちます。社外に漏らさないでください。</div>` +
-    `<textarea readonly style="width:100%;font-family:monospace;font-size:11px;height:90px;padding:8px;word-break:break-all" onclick="this.select()">${esc(t)}</textarea>` +
-    `<div style="font-size:11px;color:var(--muted);margin-top:8px">📋 上のテキストをタップ→全選択→コピーして、別iPhoneの設定→「手動アクセストークン」欄に貼り付けてください。</div>`);
-}
 // アプリを強制更新 (キャッシュをバイパスして最新HTMLを取得)
 async function forceAppUpdate(){
   const ok = await confirmModal('🔄 アプリを更新',
@@ -4198,28 +4167,6 @@ function onboardSaveName(){
   showOnboarding();
 }
 
-// オンボーディング時に手動トークンで連携 (Dropbox認証エラーの回避用)
-async function onboardManualToken(){
-  const token = ($('m-onb-manual-token').value || '').trim();
-  if(!token){ toast('トークンを入力してください', 'error'); return; }
-  if(token.length < 20){
-    if(!await confirmModal('警告', 'トークンが短すぎる可能性があります。本当に適用しますか?', '適用')) return;
-  }
-  // refreshTokenは手動トークンには無い
-  localStorage.removeItem(LS_KEYS.refresh);
-  DBX_REFRESH = null;
-  localStorage.setItem(LS_KEYS.token, token);
-  DBX_TOKEN = token;
-  showSpinner('トークンで接続中...');
-  const ok = await loadFromDropbox();
-  hideSpinner();
-  if(ok){
-    toast('✅ トークン連携成功', 'success');
-    showOnboarding();  // 次のステップ (編集者名入力) へ進む
-  } else {
-    toast('❌ トークン無効 or 通信エラー', 'error');
-  }
-}
 function finishOnboarding(){
   $('m-bottom-nav').style.display = '';
   showScreen('home');
@@ -4395,6 +4342,8 @@ async function init(){
   } catch(e){}
 
   if(DBX_TOKEN){ await loadFromDropbox(); }
+
+  _startProactiveRefresh();
 
   const hasName = !!localStorage.getItem(LS_KEYS.editor);
   if(DBX_TOKEN && hasName){
