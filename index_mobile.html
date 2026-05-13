@@ -998,6 +998,12 @@ a{color:var(--info);text-decoration:none}
         <h3>📷 チェックシート</h3>
         <div id="m-confirm-photo"></div>
       </div>
+      <!-- 配車完了時刻の編集欄 (配車フローのみ表示・回収では非表示) -->
+      <div class="m-photo-section" id="m-confirm-time-section" style="display:none">
+        <h3 id="m-confirm-time-label">🕐 配車完了日時</h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">通常は現在時刻でOK。変更したい場合だけ修正してください。</div>
+        <input type="datetime-local" id="m-confirm-time" step="60" style="width:100%;font-size:16px">
+      </div>
       <div style="text-align:center;font-size:16px;font-weight:bold;color:var(--navy);margin:18px 0;padding:14px;background:#FFF8E0;border-radius:10px;border:1.5px solid var(--orange)" id="m-confirm-question">
         この内容で完了しますか？
       </div>
@@ -2011,6 +2017,40 @@ function latestCheckSheet(c, kind){
 
 // PC版 index_v3.html:9062 と同一ロジック
 // 全角数字対応・0081/81プレフィックス正規化・先頭0除去・81付与
+// 手配書を A4 1ページに正確にフィットさせて PDF Blob を生成
+//   html2pdf のデフォルト動作だと iPhone 上で右端が見切れることがあるため、
+//   PC版と同じく html2canvas + jsPDF を直接使って手動配置する
+async function _genHandoverPDF(sheetEl, opt){
+  const html2canvasFn = window.html2canvas;
+  const jsPDFCls = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if(!html2canvasFn || !jsPDFCls){
+    // ライブラリが揃わない場合は html2pdf のフォールバックを使う
+    return await html2pdf().from(sheetEl).set(opt).output('blob');
+  }
+  const canvas = await html2canvasFn(sheetEl, {
+    scale: opt.html2canvas.scale || 2,
+    useCORS: true,
+    letterRendering: true,
+    windowWidth: 820,  // ★ 820px の元レイアウトを忠実に再現
+    width: 820         // ★ キャンバスの絶対幅を 820px に固定
+  });
+  const pdf = new jsPDFCls(opt.jsPDF);
+  const pageW = 210, pageH = 297;  // A4 mm
+  const m = opt.margin || [5,5,5,5];
+  const availW = pageW - m[1] - m[3];
+  const availH = pageH - m[0] - m[2];
+  const cw = canvas.width, ch = canvas.height;
+  // キャンバスをページ印刷可能領域に収まる最大サイズに縮小
+  const scale = Math.min(availW / cw, availH / ch);
+  const w = cw * scale;
+  const h = ch * scale;
+  // 横は中央寄せ・縦は上揃え
+  const x = m[3] + (availW - w) / 2;
+  const y = m[0];
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, y, w, h);
+  return pdf.output('blob');
+}
+
 function toEfaxNumber(fax){
   if(!fax) return '';
   const normalized = String(fax)
@@ -2780,9 +2820,24 @@ async function renderFlowConfirmScreen(){
   }
   $('m-confirm-question').textContent = _flow.kind === 'recovery' ? '回収を完了しますか？' : '配車を完了しますか？';
   $('m-confirm-do-btn').textContent = _flow.kind === 'recovery' ? '回収完了する' : '配車完了する';
-  // 回収はセクションタイトル変更
+  // セクションタイトル変更
   const sectionTitle = document.querySelector('#m-screen-flow-confirm .m-photo-section h3');
   if(sectionTitle) sectionTitle.textContent = _flow.kind === 'recovery' ? '📷 配車時のチェックシート (参考)' : '📷 チェックシート';
+  // 完了日時の編集欄 (配車=datetime-local / 回収=date)
+  const timeSection = $('m-confirm-time-section');
+  const timeInput = $('m-confirm-time');
+  timeSection.style.display = '';
+  if(_flow.kind === 'dispatch'){
+    $('m-confirm-time-label').textContent = '🕐 配車完了日時';
+    timeInput.type = 'datetime-local';
+    timeInput.step = '60';
+    timeInput.value = c.dispatchDoneAt || nowDateTimeLocal();
+  } else {
+    $('m-confirm-time-label').textContent = '📅 回収日';
+    timeInput.type = 'date';
+    timeInput.removeAttribute('step');
+    timeInput.value = c.recoveryCalledAt || todayISO();
+  }
 }
 
 async function onConfirmDo(){
@@ -2802,13 +2857,19 @@ async function onConfirmDo(){
       });
     }
 
-    // 2. 状態更新
+    // 2. 状態更新 — 確認画面の時刻入力欄で編集された値を採用
+    const enteredTime = ($('m-confirm-time')?.value || '').trim();
     if(_flow.kind === 'dispatch'){
-      if(!c.dispatchDoneAt) c.dispatchDoneAt = nowDateTimeLocal();
-      if(!c.useStart) c.useStart = todayISO();
+      // 入力されていればその値、なければ現在時刻
+      c.dispatchDoneAt = enteredTime || nowDateTimeLocal();
+      // 利用開始日は dispatchDoneAt の日付部分から取得 (空ならtoday)
+      if(!c.useStart){
+        c.useStart = enteredTime ? enteredTime.slice(0,10) : todayISO();
+      }
       c.status = '配車済';
     } else {
-      if(!c.recoveryCalledAt) c.recoveryCalledAt = todayISO();
+      // 入力されていればその値、なければ今日
+      c.recoveryCalledAt = enteredTime || todayISO();
       // 利用終了日 (useEnd) が空なら回収日と同じ日付を自動セット
       if(!c.useEnd){
         c.useEnd = c.recoveryCalledAt;
@@ -2924,11 +2985,12 @@ async function onFaxSend(){
     const opt = {
       filename: filename,
       margin: [5,5,5,5],
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 820 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all'] }
     };
-    const pdfBlob = await html2pdf().from(sheetEl).set(opt).output('blob');
+    // PC版と同じく、手動でA4 1ページにフィットさせる (右端見切れ防止)
+    const pdfBlob = await _genHandoverPDF(sheetEl, opt);
     renderedHost.innerHTML = '';
 
     // PDFをDropboxに保存 (PC版同様の運用) — デモモードではスキップ
@@ -3207,6 +3269,11 @@ async function saveNewCase(enterFlow){
     useDeadline: $('m-nc-useDeadline').value || '',
     internalMemo: $('m-nc-memo').value.trim(),
     note1:'', note2:'', note3:'', negotiationLog:'',
+    // PC版 defaultCase() との整合性のため、boolean/履歴フィールドを明示初期化
+    recoveryCompleted: false,
+    confirmCalledAt:'', faxSentAtDispatch:'', faxSentAtReturn:'',
+    recoveryCalledAt:'', dispatchDoneAt:'', dispatchDoneNote:'',
+    departedAt:'',
     faxHistory: [], checkSheets: [],
     createdAt: Date.now(),
     createdBy: localStorage.getItem(LS_KEYS.editor) || 'mobile'
@@ -3335,11 +3402,17 @@ function openHandoverPreview(){
   const c = findCaseById(_flow?.caseId || _activeCaseId); if(!c){ toast('案件が見つかりません','error'); return; }
   const ins = findInsurer(c.insurerId) || {};
   const settings = getSettings();
+  // モーダル幅に合わせてスケールを動的計算 (見切れ防止)
+  const modalUsable = Math.min(window.innerWidth - 60, 380); // モーダルpaddingを差し引いた表示幅
+  const scale = Math.max(0.30, Math.min(0.5, modalUsable / 820));
+  const visualW = Math.round(820 * scale);
+  const visualH = Math.round(1160 * scale);
   $('m-handover-preview').innerHTML = `
-    <div style="transform:scale(.46);transform-origin:top left;width:820px;height:auto">
-      ${buildHandoverHTML(c, ins, settings, true)}
+    <div style="width:${visualW}px;height:${visualH}px;position:relative;overflow:hidden;margin:0 auto">
+      <div style="transform:scale(${scale});transform-origin:top left;width:820px;height:1160px;position:absolute;top:0;left:0">
+        ${buildHandoverHTML(c, ins, settings, true)}
+      </div>
     </div>
-    <div style="width:380px;height:520px"></div>
   `;
   $('m-handover-modal').classList.add('active');
 }
