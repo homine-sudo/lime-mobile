@@ -1002,13 +1002,20 @@ function dbxLogout(){
 // ============================================================
 // DROPBOX API (Files)
 // ============================================================
+// Dropbox-API-Arg ヘッダー用: 非ASCII文字を \uXXXX エスケープしないと
+// ブラウザの fetch がTypeErrorを投げる (HTTPヘッダはASCII必須のため)
+function _asciiSafeJson(obj){
+  return JSON.stringify(obj).replace(/[-￿]/g, c =>
+    '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4));
+}
 async function dbxApi(endpoint, args, body, contentType){
   if(!DBX_TOKEN) throw new Error('未認証');
   const doRequest = async () => {
-    const headers = {
-      'Authorization': 'Bearer ' + DBX_TOKEN,
-      'Dropbox-API-Arg': JSON.stringify(args)
-    };
+    const headers = { 'Authorization': 'Bearer ' + DBX_TOKEN };
+    // RPCエンドポイント (body にJSON送信) では Dropbox-API-Arg は不要
+    if(args !== null && args !== undefined){
+      headers['Dropbox-API-Arg'] = _asciiSafeJson(args);
+    }
     if(contentType) headers['Content-Type'] = contentType;
     return await fetch(endpoint, { method: 'POST', headers, body });
   };
@@ -1066,8 +1073,9 @@ async function dbxGetTempLink(path){
   // 4時間キャッシュ
   const cached = _imgUrlCache.get(path);
   if(cached && cached.expires > Date.now()) return cached.url;
+  // RPCエンドポイント: Dropbox-API-Arg ヘッダは使わず、JSON を body で送る
   const res = await dbxApi('https://api.dropboxapi.com/2/files/get_temporary_link',
-    { path }, JSON.stringify({ path }), 'application/json');
+    null, JSON.stringify({ path }), 'application/json');
   if(!res.ok) throw new Error('一時リンク取得失敗: '+res.status);
   const data = await res.json();
   _imgUrlCache.set(path, { url: data.link, expires: Date.now() + 3.5*60*60*1000 });
