@@ -125,7 +125,7 @@ a{color:var(--info);text-decoration:none}
 
 /* === BOTTOM NAV === */
 .m-bottom-nav{
-  height:calc(64px + var(--safe-bottom));
+  height:calc(52px + var(--safe-bottom));
   padding-bottom:var(--safe-bottom);
   background:rgba(255,255,255,.92);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
@@ -135,17 +135,17 @@ a{color:var(--info);text-decoration:none}
 }
 .m-bottom-nav button{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;color:var(--muted);font-size:10.5px;font-weight:600;
+  gap:2px;color:var(--muted);font-size:10px;font-weight:600;
   transition:color .15s,transform .08s;position:relative;
 }
 .m-bottom-nav button:active{transform:scale(.93)}
 .m-bottom-nav button.active{color:var(--green)}
 .m-bottom-nav button.active::before{
   content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
-  width:32px;height:3px;border-radius:0 0 3px 3px;
+  width:28px;height:3px;border-radius:0 0 3px 3px;
   background:linear-gradient(90deg,var(--lime),var(--green));
 }
-.m-bottom-nav button .m-nav-ico{font-size:23px;line-height:1;transition:transform .15s}
+.m-bottom-nav button .m-nav-ico{font-size:20px;line-height:1;transition:transform .15s}
 .m-bottom-nav button.active .m-nav-ico{transform:translateY(-1px) scale(1.08)}
 
 /* === ONBOARDING === */
