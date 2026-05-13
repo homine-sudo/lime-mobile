@@ -522,6 +522,48 @@ a{color:var(--info);text-decoration:none}
   background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;
   box-shadow:var(--shadow-card);
 }
+/* === ホーム 今週の予定 === */
+.m-home-week-wrap{
+  background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;
+  box-shadow:var(--shadow-card);
+}
+.m-week-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;
+}
+.m-week-title{font-size:13px;font-weight:700;color:var(--navy);letter-spacing:.02em}
+.m-week-sub{font-size:11px;color:var(--muted)}
+.m-week-grid{display:flex;flex-direction:column;gap:6px}
+.m-week-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border:1px solid var(--border);border-radius:10px;
+  background:#FAFAF7;cursor:pointer;transition:background .15s;
+}
+.m-week-item:active{background:#F0F0EA}
+.m-week-item.today{
+  background:linear-gradient(135deg,#F4F8E8 0%,#EAF3D8 100%);
+  border-color:#C8DCA0;
+}
+.m-week-item.weekend{background:#FFF8F0}
+.m-week-item.weekend.today{background:linear-gradient(135deg,#F4F8E8 0%,#EAF3D8 100%)}
+.m-week-day{
+  flex:0 0 auto;min-width:54px;display:flex;flex-direction:column;align-items:center;
+  padding:4px 6px;border-radius:8px;background:#fff;border:1px solid var(--border);
+}
+.m-week-day .lbl{font-size:10px;color:var(--muted);font-weight:600;line-height:1}
+.m-week-day .md{font-size:15px;font-weight:700;color:var(--navy);line-height:1.2;margin-top:2px}
+.m-week-day .dow{font-size:11px;font-weight:700;line-height:1}
+.m-week-day .dow.sun{color:#C53030}
+.m-week-day .dow.sat{color:#2A6FCB}
+.m-week-item.today .m-week-day{background:#fff;border-color:#7BAE2D}
+.m-week-counts{flex:1;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.m-week-count{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:14px;font-size:12px;font-weight:700;
+}
+.m-week-count.disp{background:#E5F0FB;color:#2A6FCB}
+.m-week-count.rec{background:#FCE5E5;color:#C53030}
+.m-week-empty{font-size:11.5px;color:var(--muted);font-style:italic}
+.m-week-arrow{flex:0 0 auto;color:#BBB;font-size:18px}
 .m-home-quick h3{font-size:13px;color:var(--navy);margin-bottom:12px;font-weight:700;letter-spacing:.02em}
 .m-quick-row{display:flex;gap:8px}
 .m-quick-row .m-btn{flex:1;min-height:64px;flex-direction:column;gap:3px;font-size:12px;padding:8px;border-radius:11px}
@@ -907,6 +949,9 @@ a{color:var(--info);text-decoration:none}
           <div class="lbl">✓ 本日の完了</div>
         </div>
       </div>
+      <!-- 今週の予定 (7日分の配車/回収件数) -->
+      <div class="m-home-week-wrap" id="m-home-week-wrap" style="margin-bottom:14px"></div>
+
       <div class="m-home-quick">
         <h3>🔧 クイック</h3>
         <div class="m-quick-row">
@@ -1124,6 +1169,7 @@ a{color:var(--info);text-decoration:none}
           <button class="m-btn m-btn-outline" onclick="testNotify()">🧪 テスト通知</button>
         </div>
       </div>
+
       <div class="m-settings-row">
         <div class="lbl">データ</div>
         <div class="val" id="m-set-data-stats">未読込</div>
@@ -2114,6 +2160,7 @@ function renderHome(){
   $('m-home-date').textContent = fmtJaDate(today);
   $('m-home-name').textContent = (localStorage.getItem(LS_KEYS.editor) || 'スタッフ') + ' さん、お疲れさまです';
   renderHomeSearch();
+  renderHomeCalendar();
 
   if(!DATA){
     $('m-stat-dispatch').textContent = '-';
@@ -2178,6 +2225,82 @@ function _caseMatchesSearch(c, q){
 function clearSearch(inputId, refreshFn){
   const el = $(inputId);
   if(el){ el.value = ''; if(typeof refreshFn === 'function') refreshFn(); el.focus(); }
+}
+
+// ============================================================
+// ホーム 今週の予定 (7日分の配車/回収件数)
+// ============================================================
+function renderHomeCalendar(){
+  const wrap = $('m-home-week-wrap');
+  if(!wrap) return;
+  const cases = (DATA?.cases || []).filter(_isActive);
+  const today = todayISO();
+  const days = ['日','月','火','水','木','金','土'];
+  const items = [];
+  for(let i=0; i<7; i++){
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const tz = d.getTimezoneOffset()*60000;
+    const iso = new Date(d - tz).toISOString().slice(0,10);
+    const dow = d.getDay();
+    const dispCount = cases.filter(c => (c.dispatchAt||'').startsWith(iso) && !c.dispatchDoneAt).length;
+    const recCount = cases.filter(c => (c.recoveryCalledAt||'').startsWith(iso) && !c.recoveryCompleted).length;
+    let lbl = '';
+    if(i === 0) lbl = '今日';
+    else if(i === 1) lbl = '明日';
+    items.push({iso, dow, md: `${d.getMonth()+1}/${d.getDate()}`, lbl, dispCount, recCount, isToday: iso===today});
+  }
+  const html = `
+    <div class="m-week-header">
+      <span class="m-week-title">📅 今週の予定</span>
+      <span class="m-week-sub">タップで配車/回収へ</span>
+    </div>
+    <div class="m-week-grid">
+      ${items.map(it => {
+        const dowCls = it.dow === 0 ? 'sun' : it.dow === 6 ? 'sat' : '';
+        const weCls = (it.dow === 0 || it.dow === 6) ? 'weekend' : '';
+        const todayCls = it.isToday ? 'today' : '';
+        const counts = [];
+        if(it.dispCount > 0) counts.push(`<span class="m-week-count disp">🚗 ${it.dispCount}</span>`);
+        if(it.recCount > 0) counts.push(`<span class="m-week-count rec">🚛 ${it.recCount}</span>`);
+        const body = counts.length
+          ? `<div class="m-week-counts">${counts.join('')}</div>`
+          : `<div class="m-week-counts"><span class="m-week-empty">予定なし</span></div>`;
+        return `
+          <div class="m-week-item ${weCls} ${todayCls}" onclick="openWeekDay('${it.iso}')">
+            <div class="m-week-day">
+              ${it.lbl ? `<span class="lbl">${it.lbl}</span>` : ''}
+              <span class="md">${it.md}</span>
+              <span class="dow ${dowCls}">${days[it.dow]}</span>
+            </div>
+            ${body}
+            <div class="m-week-arrow">›</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+  wrap.innerHTML = html;
+}
+// 日付タップ: 配車/回収のどちらか件数の多い方へ遷移 (今日/明日は対応タブが選ばれる)
+function openWeekDay(iso){
+  if(!DATA){ showScreen('dispatch'); return; }
+  const cases = (DATA.cases || []).filter(_isActive);
+  const dispCount = cases.filter(c => (c.dispatchAt||'').startsWith(iso) && !c.dispatchDoneAt).length;
+  const recCount = cases.filter(c => (c.recoveryCalledAt||'').startsWith(iso) && !c.recoveryCompleted).length;
+  const today = todayISO();
+  const tomorrow = tomorrowISO();
+  // 配車優先 (件数が同じか配車のほうが多い場合)
+  if(dispCount >= recCount){
+    if(iso === today) localStorage.setItem(LS_KEYS.dispTab, 'today');
+    else if(iso === tomorrow) localStorage.setItem(LS_KEYS.dispTab, 'tomorrow');
+    else localStorage.setItem(LS_KEYS.dispTab, 'pending');
+    showScreen('dispatch');
+  } else {
+    if(iso === today) localStorage.setItem(LS_KEYS.recTab, 'today');
+    else localStorage.setItem(LS_KEYS.recTab, 'upcoming');
+    showScreen('recovery');
+  }
 }
 
 // ホーム グローバル検索 (空欄なら統計グリッド表示、入力中は検索結果のみ)
@@ -3681,8 +3804,19 @@ function getVehiclesList(){
       return target.includes(q);
     });
   }
-  // ナンバー順
+  // 点検が近い順に並び替え:
+  //   - 次回点検予定日 (lastInspectionAt) または 車検満了日 (inspectionDate) のどちらか近い方が先
+  //   - 両方未設定の車両は最後尾
   list.sort((a,b) => {
+    // 車検満了 / 次回点検 のうち最も近い日付を取得 (空はInfinity扱い)
+    const nearest = v => {
+      const d1 = v.lastInspectionAt || '9999-99-99';
+      const d2 = v.inspectionDate || '9999-99-99';
+      return d1 < d2 ? d1 : d2;
+    };
+    const da = nearest(a), db = nearest(b);
+    if(da !== db) return da.localeCompare(db);
+    // 同じ点検日 (or 両方未設定) ならナンバー順で安定化
     const an = (a.plate?.tail||'') + (a.plate?.no||''), bn = (b.plate?.tail||'') + (b.plate?.no||'');
     return an.localeCompare(bn);
   });
