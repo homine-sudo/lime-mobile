@@ -851,6 +851,11 @@ a{color:var(--info);text-decoration:none}
         <h3><span class="step-num">1</span>Dropbox と連携</h3>
         <div class="desc">PC版と同じ data.json と写真フォルダを共有します。初回のみDropboxの認証画面で「許可」をタップしてください。</div>
         <button class="m-btn m-btn-primary m-btn-full" onclick="dbxAuthorize()">📦 Dropbox と連携する</button>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">🔑 認証エラーが出る場合 — 別iPhone用の手動トークン</div>
+          <textarea id="m-onb-manual-token" rows="3" placeholder="管理者から受け取ったアクセストークン (sl.B...) を貼り付け" style="font-family:monospace;font-size:11px;width:100%;word-break:break-all;margin-bottom:8px"></textarea>
+          <button class="m-btn m-btn-outline m-btn-full" onclick="onboardManualToken()">🔑 トークンで連携</button>
+        </div>
       </div>
       <div class="m-onboard-step" id="m-onb-step-name" style="display:none">
         <h3><span class="step-num">2</span>編集者名を入力</h3>
@@ -3932,6 +3937,29 @@ function onboardSaveName(){
   if(!v){ toast('名前を入力してください', 'error'); return; }
   localStorage.setItem(LS_KEYS.editor, v);
   showOnboarding();
+}
+
+// オンボーディング時に手動トークンで連携 (Dropbox認証エラーの回避用)
+async function onboardManualToken(){
+  const token = ($('m-onb-manual-token').value || '').trim();
+  if(!token){ toast('トークンを入力してください', 'error'); return; }
+  if(token.length < 20){
+    if(!await confirmModal('警告', 'トークンが短すぎる可能性があります。本当に適用しますか?', '適用')) return;
+  }
+  // refreshTokenは手動トークンには無い
+  localStorage.removeItem(LS_KEYS.refresh);
+  DBX_REFRESH = null;
+  localStorage.setItem(LS_KEYS.token, token);
+  DBX_TOKEN = token;
+  showSpinner('トークンで接続中...');
+  const ok = await loadFromDropbox();
+  hideSpinner();
+  if(ok){
+    toast('✅ トークン連携成功', 'success');
+    showOnboarding();  // 次のステップ (編集者名入力) へ進む
+  } else {
+    toast('❌ トークン無効 or 通信エラー', 'error');
+  }
 }
 function finishOnboarding(){
   $('m-bottom-nav').style.display = '';
