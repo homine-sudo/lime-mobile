@@ -95,6 +95,29 @@ a{color:var(--info);text-decoration:none}
   object-fit:cover;background:#000;
   box-shadow:0 0 0 1px rgba(160,212,104,.3),0 2px 6px rgba(0,0,0,.25);
 }
+.m-header-ver{
+  font-size:9.5px;color:rgba(255,255,255,.55);letter-spacing:.04em;
+  margin-left:6px;padding:1px 6px;border-radius:8px;
+  background:rgba(255,255,255,.08);flex-shrink:0;font-weight:600;
+}
+/* 新バージョン通知バナー */
+.m-update-banner{
+  display:none;align-items:center;gap:8px;flex-shrink:0;
+  background:linear-gradient(135deg,#F9D976 0%,#F39F18 100%);
+  color:#3A2400;padding:8px 12px;font-size:12.5px;font-weight:700;
+  border-bottom:1px solid rgba(0,0,0,.1);
+  box-shadow:0 2px 6px rgba(243,159,24,.18);
+}
+.m-update-banner.active{display:flex}
+.m-update-banner .m-ub-ico{font-size:18px;line-height:1}
+.m-update-banner .m-ub-msg{flex:1;letter-spacing:.02em}
+.m-update-banner .m-ub-btn{
+  background:rgba(255,255,255,.6);color:#3A2400;border:none;
+  padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;
+  transition:background .15s,transform .08s;
+}
+.m-update-banner .m-ub-btn:active{transform:scale(.94)}
+.m-update-banner .m-ub-btn.primary{background:#2D5034;color:#fff}
 .m-header-title{flex:1;font-size:17px;font-weight:800;letter-spacing:.12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   background:linear-gradient(180deg,#fff 0%,#E0F0D0 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
@@ -830,7 +853,7 @@ a{color:var(--info);text-decoration:none}
 .m-vehicle-empty .ico{font-size:30px;margin-bottom:6px}
 
 /* === 手配書 (handover) - FAX用、画面外でレンダリング === */
-#m-fax-host{position:absolute;left:-9999px;top:0;width:820px}
+#m-fax-host{position:absolute;left:-9999px;top:0;width:900px}
 .sheet.handover{
   background:#fff;color:#000;font-family:"Yu Gothic","Hiragino Sans","メイリオ",sans-serif;
   max-width:820px;width:820px;margin:0 auto;padding:16px 22px;border:1px solid #000;
@@ -881,11 +904,19 @@ a{color:var(--info);text-decoration:none}
     <div class="m-header-brand">
       <img class="m-brand-mark" src="logo.png" alt="" onerror="this.style.display='none'">
       <span class="m-header-title" id="m-header-title">LIME One</span>
+      <span class="m-header-ver" id="m-header-ver"></span>
     </div>
     <button class="m-sync-btn" id="m-sync-btn" onclick="syncNow()">
       <span class="m-sync-dot"></span><span id="m-sync-text">同期</span>
     </button>
   </header>
+  <!-- 新バージョン通知バナー (バックグラウンドチェックでヒットしたら表示) -->
+  <div class="m-update-banner" id="m-update-banner">
+    <span class="m-ub-ico">🆕</span>
+    <span class="m-ub-msg">新しいバージョンがあります</span>
+    <button class="m-ub-btn primary" onclick="forceAppUpdate()">更新</button>
+    <button class="m-ub-btn" onclick="dismissUpdateBanner()" aria-label="閉じる">✕</button>
+  </div>
 
   <main id="m-screens">
     <!-- (1) Onboarding -->
@@ -1385,6 +1416,11 @@ a{color:var(--info);text-decoration:none}
    ライム レンタカー モバイル現場版 (v2.0)
    配車・回収を写真付きで記録し、手配書FAX送信までを1フローで完結
    ============================================================ */
+
+// アプリバージョン (アップデートチェックで比較する)
+//   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
+//   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
+const APP_VERSION = '2026-05-14a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2069,11 +2105,14 @@ function latestCheckSheet(c, kind){
   return list[list.length - 1];
 }
 
-// PC版 index_v3.html:9062 と同一ロジック
-// 全角数字対応・0081/81プレフィックス正規化・先頭0除去・81付与
 // 手配書を A4 1ページに正確にフィットさせて PDF Blob を生成
 //   html2pdf のデフォルト動作だと iPhone 上で右端が見切れることがあるため、
 //   PC版と同じく html2canvas + jsPDF を直接使って手動配置する
+//
+//   ★ 右端見切れバグ対策 (2026-05-14):
+//     .sheet.handover は width:820px + padding 44px + border 2px = 866px。
+//     html2canvas に width:820 を固定指定すると右46pxがクリップされてしまう。
+//     要素の実寸 (padding+border込み) を毎回測って渡すことで根本解決。
 async function _genHandoverPDF(sheetEl, opt){
   const html2canvasFn = window.html2canvas;
   const jsPDFCls = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
@@ -2081,12 +2120,16 @@ async function _genHandoverPDF(sheetEl, opt){
     // ライブラリが揃わない場合は html2pdf のフォールバックを使う
     return await html2pdf().from(sheetEl).set(opt).output('blob');
   }
+  // 要素の実寸を取得 (padding+border 含む)。overflow している場合は scrollWidth が大きい
+  const elementWidth = Math.max(sheetEl.offsetWidth || 0, sheetEl.scrollWidth || 0) || 820;
+  const elementHeight = Math.max(sheetEl.offsetHeight || 0, sheetEl.scrollHeight || 0) || 0;
   const canvas = await html2canvasFn(sheetEl, {
     scale: opt.html2canvas.scale || 2,
     useCORS: true,
     letterRendering: true,
-    windowWidth: 820,  // ★ 820px の元レイアウトを忠実に再現
-    width: 820         // ★ キャンバスの絶対幅を 820px に固定
+    windowWidth: elementWidth,
+    width: elementWidth,
+    height: elementHeight || undefined
   });
   const pdf = new jsPDFCls(opt.jsPDF);
   const pageW = 210, pageH = 297;  // A4 mm
@@ -2376,13 +2419,16 @@ function _renderSearchResultCard(c){
 function getDispatchCases(tab){
   const cases = (DATA?.cases || []).filter(_isActive);
   const today = todayISO(), tomorrow = tomorrowISO();
+  // 完了済みもリストに残し、未完了→完了の順でソート (完了済みは薄表示)
   if(tab === 'today'){
     return cases.filter(c => (c.dispatchAt||'').startsWith(today))
-      .sort((a,b) => (a.dispatchAt||'').localeCompare(b.dispatchAt||''));
+      .sort((a,b) => Number(!!a.dispatchDoneAt) - Number(!!b.dispatchDoneAt)
+        || (a.dispatchAt||'').localeCompare(b.dispatchAt||''));
   }
   if(tab === 'tomorrow'){
     return cases.filter(c => (c.dispatchAt||'').startsWith(tomorrow))
-      .sort((a,b) => (a.dispatchAt||'').localeCompare(b.dispatchAt||''));
+      .sort((a,b) => Number(!!a.dispatchDoneAt) - Number(!!b.dispatchDoneAt)
+        || (a.dispatchAt||'').localeCompare(b.dispatchAt||''));
   }
   // pending: 配車予定だが未配車完了
   return cases.filter(c =>
@@ -2449,6 +2495,18 @@ function _renderCaseCard(c, kind){
     tel(c.driverTel)
   ].filter(Boolean).join(' ');
 
+  // 車両情報: 回収時のみ表示 (配車時はまだ車両未割当のことが多い)
+  let vehicleLine = '';
+  if(kind === 'recovery'){
+    const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+    const classOrName = c.vehicleClass || c.vehicleName || '';
+    const parts = [];
+    if(plate) parts.push(`<b>${esc(plate)}</b>`);
+    if(classOrName) parts.push(esc(classOrName));
+    if(c.vehicleName && c.vehicleClass) parts.push(esc(c.vehicleName));
+    vehicleLine = parts.join(' / ');
+  }
+
   return `
     <div class="m-card flow-${kind} ${isDone?'done':''}" onclick="enter${kind==='dispatch'?'Dispatch':'Recovery'}Flow('${c.id}')">
       <div class="m-card-left">
@@ -2458,6 +2516,7 @@ function _renderCaseCard(c, kind){
           <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
         </div>
         <div class="m-card-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val">${dispatchInfo}</span></div>
+        ${vehicleLine ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${vehicleLine}</span></div>` : ''}
         ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
         ${toLine ? `<div class="m-card-row"><span class="lbl">${kind==='recovery'?'回収先':'配車先'}</span><span class="val">${toLine}</span></div>` : ''}
         ${c.dispatchToAddress ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsLink}</span></div>` : ''}
@@ -2479,9 +2538,11 @@ function setRecTab(tab){
 function getRecoveryCases(tab){
   const cases = (DATA?.cases || []).filter(_isActive);
   const today = todayISO();
+  // 完了済みの案件も表示する (カードに done クラスがついて薄表示になる)
   if(tab === 'today'){
-    return cases.filter(c => (c.recoveryCalledAt||'').startsWith(today) && !c.recoveryCompleted)
-      .sort((a,b) => (a.recoveryCalledAt||'').localeCompare(b.recoveryCalledAt||''));
+    return cases.filter(c => (c.recoveryCalledAt||'').startsWith(today))
+      .sort((a,b) => Number(!!a.recoveryCompleted) - Number(!!b.recoveryCompleted)
+        || (a.recoveryCalledAt||'').localeCompare(b.recoveryCalledAt||''));
   }
   if(tab === 'upcoming'){
     const limit = new Date(); limit.setDate(limit.getDate()+7);
@@ -2489,8 +2550,9 @@ function getRecoveryCases(tab){
     const limitISO = new Date(limit-tz).toISOString().slice(0,10);
     return cases.filter(c => {
       const d = c.recoveryCalledAt||'';
-      return d && d >= today && d <= limitISO && !c.recoveryCompleted;
-    }).sort((a,b) => (a.recoveryCalledAt||'').localeCompare(b.recoveryCalledAt||''));
+      return d && d >= today && d <= limitISO;
+    }).sort((a,b) => Number(!!a.recoveryCompleted) - Number(!!b.recoveryCompleted)
+      || (a.recoveryCalledAt||'').localeCompare(b.recoveryCalledAt||''));
   }
   // pending
   return cases.filter(c =>
@@ -4131,10 +4193,53 @@ async function forceAppUpdate(){
   location.replace(url);
 }
 
+// ============================================================
+// アップデートチェック (GitHub Pages から最新HTMLを取得 → APP_VERSION 比較)
+// ============================================================
+let _updateCheckInFlight = false;
+async function checkForUpdate(silent){
+  // ユーザーが「後で」を押して同じバージョンを無視中の場合はスキップ
+  const dismissed = localStorage.getItem('limeMob_updateDismissed') || '';
+  if(_updateCheckInFlight) return;
+  _updateCheckInFlight = true;
+  try {
+    // 自分自身のHTMLをキャッシュバイパスで取得
+    const url = location.pathname + '?_ucheck=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    if(!res.ok) return;
+    const html = await res.text();
+    // const APP_VERSION = 'xxxx'; の値を抽出
+    const m = html.match(/const\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    if(!m) return;
+    const remoteVer = m[1];
+    if(remoteVer && remoteVer !== APP_VERSION && remoteVer !== dismissed){
+      const banner = $('m-update-banner');
+      if(banner){
+        banner.classList.add('active');
+        const msg = banner.querySelector('.m-ub-msg');
+        if(msg) msg.textContent = `新しいバージョンがあります (${remoteVer})`;
+      }
+    }
+  } catch(e){
+    // オフライン等は静かに無視
+    if(!silent) console.warn('checkForUpdate failed:', e);
+  } finally {
+    _updateCheckInFlight = false;
+  }
+}
+function dismissUpdateBanner(){
+  // この新バージョン番号を無視リストに入れて、次回更新があるまで非表示
+  const banner = $('m-update-banner');
+  if(!banner) return;
+  const m = (banner.querySelector('.m-ub-msg')?.textContent || '').match(/\(([^)]+)\)/);
+  if(m) localStorage.setItem('limeMob_updateDismissed', m[1]);
+  banner.classList.remove('active');
+}
+
 async function showAbout(){
   await alertModal('LIME One',
     '<b>LIME <span style="color:var(--green)">One</span></b> — ライムレンタカー現場アプリ<br>' +
-    'バージョン: 2.3 (2026-05)<br><br>' +
+    'バージョン: ' + APP_VERSION + '<br><br>' +
     'PC版とdata.jsonを共有する現場用クライアント。<br>' +
     '配車・回収を写真付きで記録し、手配書FAX送信までを1フローで完結。<br><br>' +
     '対応: iOS Safari 15+');
@@ -4316,6 +4421,10 @@ function activateDemoMode(){
 window.addEventListener('load', init);
 
 async function init(){
+  // ヘッダーにバージョン表示
+  const verEl = $('m-header-ver');
+  if(verEl) verEl.textContent = 'v' + APP_VERSION;
+
   // デモモード: Dropbox連携をスキップしてサンプルデータでUI表示
   if(isDemoMode()){
     activateDemoMode();
@@ -4343,6 +4452,13 @@ async function init(){
   if(DBX_TOKEN){ await loadFromDropbox(); }
 
   _startProactiveRefresh();
+
+  // アップデートチェック: 起動5秒後・30分ごと・アプリ復帰時 (静かに動作・新版があればバナー表示)
+  setTimeout(() => checkForUpdate(true), 5000);
+  setInterval(() => checkForUpdate(true), 30 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden) checkForUpdate(true);
+  });
 
   const hasName = !!localStorage.getItem(LS_KEYS.editor);
   if(DBX_TOKEN && hasName){
