@@ -1433,7 +1433,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-14c';
+const APP_VERSION = '2026-05-14d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3438,18 +3438,31 @@ function closeNewCaseModal(){ $('m-newcase-modal').classList.remove('active'); }
 function _genMobileCaseId(){
   return 'mob-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,6);
 }
-function _genMobileCaseNo(){
-  // 形式: M{YYMMDD}-{seq3} — PC版で再採番されることを想定した暫定No
-  const d = new Date();
-  const ymd = String(d.getFullYear()).slice(2) + pad2(d.getMonth()+1) + pad2(d.getDate());
-  // 同日内のモバイル発行案件をカウント
-  const prefix = 'M' + ymd + '-';
-  const used = (DATA?.cases || [])
-    .filter(c => (c.caseNo||'').startsWith(prefix))
-    .map(c => parseInt((c.caseNo||'').slice(prefix.length), 10))
-    .filter(n => !isNaN(n));
-  const next = (used.length ? Math.max(...used) : 0) + 1;
-  return prefix + String(next).padStart(3, '0');
+// PC版 nextCaseNo() と完全同一のルール:
+//   形式: YYYY-MM-NNNN
+//     YYYY = 年度 (4月始まり。1-3月は前年度)
+//     MM   = 受付月 (01-12)
+//     NNNN = 年度内通し連番 (既存案件の末尾4桁の最大値 + 1)
+function _genMobileCaseNo(forDate){
+  const d = forDate ? new Date(forDate) : new Date();
+  const useD = isNaN(d.getTime()) ? new Date() : d;
+  const mm = pad2(useD.getMonth() + 1);
+  // 年度判定: 1-3月は前年度
+  const nendo = (useD.getMonth() + 1 < 4) ? useD.getFullYear() - 1 : useD.getFullYear();
+  let max = 0;
+  (DATA?.cases || []).forEach(c => {
+    if(!c.caseNo) return;
+    // 受付日が対象年度かどうかで判定 (日付無しの旧データはcaseNo本体で判定)
+    const cd = c.receivedAt ? new Date(c.receivedAt) : null;
+    const inFiscal = (cd && !isNaN(cd.getTime()))
+      ? (((cd.getMonth() + 1 < 4) ? cd.getFullYear() - 1 : cd.getFullYear()) === nendo)
+      : (/^(\d{4})-\d{2}-\d{4}$/.test(c.caseNo) && Number(c.caseNo.split('-')[0]) === nendo);
+    if(!inFiscal) return;
+    // 末尾4桁を連番として抽出 (新形式/旧形式 両対応)
+    const m = c.caseNo.match(/(\d{4})$/);
+    if(m) max = Math.max(max, Number(m[1]));
+  });
+  return `${nendo}-${mm}-${String(max + 1).padStart(4, '0')}`;
 }
 
 async function saveNewCase(enterFlow){
@@ -3462,10 +3475,11 @@ async function saveNewCase(enterFlow){
   const ins = insurerId ? (findInsurer(insurerId) || {}) : {};
   // 配車予定日時が入っていれば '配車予定'、入っていなければ '受付' (PC版で後から進める)
   const initialStatus = dispatchAt ? '配車予定' : '受付';
+  const receivedAt = $('m-nc-receivedAt').value || todayISO();
   const c = {
     id: _genMobileCaseId(),
-    caseNo: _genMobileCaseNo(),
-    receivedAt: $('m-nc-receivedAt').value || todayISO(),
+    caseNo: _genMobileCaseNo(receivedAt),
+    receivedAt: receivedAt,
     staff: localStorage.getItem(LS_KEYS.editor) || '',
     category: '損保', callType: '保険', target: '対物',
     status: initialStatus,
