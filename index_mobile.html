@@ -338,7 +338,20 @@ a{color:var(--info);text-decoration:none}
 .m-card:active .m-card-right{color:var(--green);transform:translateX(2px)}
 .m-card.flow-dispatch{border-left-color:var(--green)}
 .m-card.flow-recovery{border-left-color:var(--purple)}
-.m-card.done{opacity:.6;border-left-color:#A0A0A0;background:#FAFAF8}
+.m-card.done{
+  opacity:.55;border-left-color:#7AAE2D;background:#F6F9F0;
+  position:relative;
+}
+.m-card.done::after{
+  content:'✓ 完了';
+  position:absolute;top:8px;right:14px;
+  background:#7AAE2D;color:#fff;
+  font-size:10px;font-weight:800;letter-spacing:.06em;
+  padding:2px 8px;border-radius:10px;
+  box-shadow:0 1px 3px rgba(122,174,45,.3);
+  pointer-events:none;
+}
+.m-card.done .m-card-right{display:none}
 .m-card-row1{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .m-card-time{
   font-weight:700;color:var(--navy);font-size:15px;
@@ -1420,7 +1433,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-14b';
+const APP_VERSION = '2026-05-14c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2462,9 +2475,12 @@ function renderRecoveryCard(c){
 function _renderCaseCard(c, kind){
   const badgeCls = statusBadgeClass(c, kind);
   const badgeTxt = statusBadgeText(c, kind);
+  // 完了判定: 物理的に対応が終わっていればフェード表示する (FAX送信は別管理)
+  // - 配車: 配車完了時刻が入っていれば done
+  // - 回収: recoveryCompleted フラグが true なら done
   const isDone = kind === 'dispatch'
-    ? (c.dispatchDoneAt && c.faxSentAtDispatch)
-    : (c.recoveryCompleted && c.faxSentAtReturn);
+    ? !!c.dispatchDoneAt
+    : !!c.recoveryCompleted;
   const time = kind === 'dispatch'
     ? (fmtTime(c.dispatchAt) || '--:--')
     : (c.recoveryCalledAt ? (fmtTime(c.recoveryCalledAt) || fmtDate(c.recoveryCalledAt)) : '--:--');
