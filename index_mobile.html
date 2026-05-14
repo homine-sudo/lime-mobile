@@ -1420,7 +1420,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-14a';
+const APP_VERSION = '2026-05-14b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2507,6 +2507,27 @@ function _renderCaseCard(c, kind){
     vehicleLine = parts.join(' / ');
   }
 
+  // 回収カードは指定の5項目のみ: 受付No / 車両 / 運転者 / 回収先 / 社内メモ
+  // (配車カードは従来どおり 配車予約・住所マップリンクも表示)
+  if(kind === 'recovery'){
+    return `
+      <div class="m-card flow-${kind} ${isDone?'done':''}" onclick="enterRecoveryFlow('${c.id}')">
+        <div class="m-card-left">
+          <div class="m-card-row1">
+            <span class="m-card-time">${time}</span>
+            <span class="m-card-caseno">${esc(c.caseNo||'(No未設定)')}</span>
+            <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
+          </div>
+          ${vehicleLine ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${vehicleLine}</span></div>` : ''}
+          ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
+          ${toLine ? `<div class="m-card-row"><span class="lbl">回収先</span><span class="val">${toLine}</span></div>` : ''}
+          ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">📝</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
+        </div>
+        <div class="m-card-right">›</div>
+      </div>
+    `;
+  }
+
   return `
     <div class="m-card flow-${kind} ${isDone?'done':''}" onclick="enter${kind==='dispatch'?'Dispatch':'Recovery'}Flow('${c.id}')">
       <div class="m-card-left">
@@ -2515,10 +2536,9 @@ function _renderCaseCard(c, kind){
           <span class="m-card-caseno">${esc(c.caseNo||'(No未設定)')}</span>
           <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
         </div>
-        <div class="m-card-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val">${dispatchInfo}</span></div>
-        ${vehicleLine ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${vehicleLine}</span></div>` : ''}
+        <div class="m-card-row"><span class="lbl">配車予約</span><span class="val">${dispatchInfo}</span></div>
         ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
-        ${toLine ? `<div class="m-card-row"><span class="lbl">${kind==='recovery'?'回収先':'配車先'}</span><span class="val">${toLine}</span></div>` : ''}
+        ${toLine ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${toLine}</span></div>` : ''}
         ${c.dispatchToAddress ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsLink}</span></div>` : ''}
         ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">📝</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
       </div>
