@@ -1433,7 +1433,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-14d';
+const APP_VERSION = '2026-05-15a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3205,7 +3205,9 @@ async function onFaxSend(){
     showSpinner('PDF生成中...(数秒)');
     const opt = {
       filename: filename,
-      margin: [5,5,5,5],
+      // FAX送信時の右端見切れ対策: eFax→送信先FAX機で5-10mm程度クリップされるため
+      // PDFのマージンを12mmに広げて安全領域を確保 (PC版と同設定)
+      margin: [10,12,10,12],
       html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 820 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all'] }
