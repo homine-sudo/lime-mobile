@@ -1547,7 +1547,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-16a';
+const APP_VERSION = '2026-05-16b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2246,6 +2246,23 @@ function _validatePdfPlacement(label, p){
   if(canvas && canvas.width > sheetW * 2.5){
     issues.push(`キャンバス幅異常 (${canvas.width}px, 元要素 ${sheetW}px)`);
   }
+  // ★フェイルクローズ: 捕捉canvasのアスペクト比が要素実寸と乖離 = 右端クリップ等の
+  //   不完全捕捉。スケール非依存で検出し、不完全FAXの送信を物理的に阻止する。
+  //   (旧コードは過大のみ検知。過小=クリップを素通りさせ取引先誤送信に至った)
+  if(canvas && sheetEl){
+    const elW = sheetEl.scrollWidth || sheetEl.offsetWidth || 0;
+    const elH = sheetEl.scrollHeight || sheetEl.offsetHeight || 0;
+    if(elW > 0 && elH > 0 && canvas.width > 0 && canvas.height > 0){
+      const elAspect = elW / elH;
+      const cvAspect = canvas.width / canvas.height;
+      const ratio = cvAspect / elAspect;
+      if(ratio < 0.92){
+        issues.push(`捕捉幅不足(右端クリップの疑い): canvas比 ${cvAspect.toFixed(3)} < 要素比 ${elAspect.toFixed(3)} (${(ratio*100).toFixed(0)}%) / canvas ${canvas.width}x${canvas.height}, 要素 ${elW}x${elH}`);
+      } else if(ratio > 1.08){
+        issues.push(`捕捉幅過大(レイアウト崩れの疑い): canvas比 ${cvAspect.toFixed(3)} > 要素比 ${elAspect.toFixed(3)} (${(ratio*100).toFixed(0)}%)`);
+      }
+    }
+  }
   if((x + w) > (pageW + 0.5)){
     issues.push(`PDF右端はみ出し: x=${x.toFixed(1)} + w=${w.toFixed(1)} = ${(x+w).toFixed(1)}mm > ${pageW}mm`);
   }
@@ -2274,34 +2291,79 @@ function _validatePdfPlacement(label, p){
 //   #m-fax-host の幅を 900px に広げてあるので、positioned absolute の
 //   sheet は完全描画される。html2canvas はデフォルト動作で問題なし。
 async function _genHandoverPDF(sheetEl, opt){
-  const html2canvasFn = window.html2canvas;
-  const jsPDFCls = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-  if(!html2canvasFn || !jsPDFCls){
-    return await html2pdf().from(sheetEl).set(opt).output('blob');
+  // canvas と jsPDF を確実に取得する。
+  // html2pdf.bundle(0.10) は window.html2canvas / window.jspdf を露出しないため、
+  // 旧コードは常に「未検証の生 html2pdf フォールバック」に落ち、A4 1ページfit縮小・
+  // _validatePdfPlacement・_lastFaxPdfImg が全て死にコードになっていた
+  // (= 右端見切れFAXが検証も送信前実画像確認も素通りで送られた根本原因)。
+  // ここでは window 露出が無くても html2pdf のワーカー経由で内蔵 html2canvas の
+  // canvas と jsPDF を取り出し、必ず fit縮小+検証+実画像保持を通す。
+  if(typeof html2pdf === 'undefined'){
+    throw new Error('PDFライブラリ未読込のため生成中止 (FAX誤送信防止)');
   }
-  const canvas = await html2canvasFn(sheetEl, {
-    scale: opt.html2canvas.scale || 2,
+  // ① 生canvasを取得 (window.html2canvas が無くても html2pdf ワーカー経由で取得)
+  //   ★捕捉幅是正: スマホの狭ビューポートでは固定820px要素が画面幅で
+  //   クリップ捕捉される。html2canvas に「要素の実 scrollWidth」(=動的な
+  //   正しい値。ハードコード820ではない) を windowWidth/width として渡し、
+  //   端末幅に依存せず全幅を捕捉させる。万一ずれても直後の
+  //   _validatePdfPlacement がアスペクト乖離(過大/過小)で throw する安全網。
+  const capW = sheetEl.scrollWidth || sheetEl.offsetWidth || 820;
+  const capH = sheetEl.scrollHeight || sheetEl.offsetHeight || 0;
+  const h2cBase = {
+    scale: (opt.html2canvas && opt.html2canvas.scale) || 2,
     useCORS: true,
-    letterRendering: true
-  });
-  const pdf = new jsPDFCls(opt.jsPDF);
+    letterRendering: true,
+    windowWidth: capW,
+    width: capW
+  };
+  if(capH > 0){ h2cBase.windowHeight = capH; h2cBase.height = capH; }
+  let rawCanvas = null;
+  const winH2C = window.html2canvas;
+  if(typeof winH2C === 'function'){
+    rawCanvas = await winH2C(sheetEl, h2cBase);
+  } else {
+    const opt2 = Object.assign({}, opt, { html2canvas: h2cBase });
+    const w0 = html2pdf().set(opt2).from(sheetEl);
+    await w0.toCanvas();
+    rawCanvas = w0.prop && w0.prop.canvas;
+  }
+  if(!rawCanvas || !rawCanvas.width || !rawCanvas.height){
+    throw new Error('PDF用canvas取得失敗のため生成中止 (FAX誤送信防止)');
+  }
+  // ② ★最重要: 捕捉canvasを検証。右端クリップ等の不完全捕捉なら throw して送信を阻止
   const pageW = 210, pageH = 297;  // A4 mm
   const m = opt.margin || [10,12,10,12];
   const availW = pageW - m[1] - m[3];
   const availH = pageH - m[0] - m[2];
-  const cw = canvas.width, ch = canvas.height;
-  const scale = Math.min(availW / cw, availH / ch);
-  const w = cw * scale;
-  const h = ch * scale;
-  const x = m[3] + (availW - w) / 2;
-  const y = m[0];
-  // ★ 整合性チェック (はみ出し検出時は throw して送信を阻止)
-  _validatePdfPlacement('モバイル手配書', { canvas, sheetEl, pageW, pageH, x, y, w, h });
-  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  const cw = rawCanvas.width, ch = rawCanvas.height;
+  const fit = Math.min(availW / cw, availH / ch);
+  const wMm = cw * fit, hMm = ch * fit;
+  const xMm = m[3] + (availW - wMm) / 2, yMm = m[0];
+  _validatePdfPlacement('モバイル手配書', { canvas: rawCanvas, sheetEl, pageW, pageH, x: xMm, y: yMm, w: wMm, h: hMm });
+  // ③ A4縦比率の合成canvasを作り、生canvasを fit 配置で焼く (余白=白)。
+  //    これを html2pdf に canvas として渡せば 1ページに正確に収まり右端見切れが起きない。
+  const PXMM = 300 / 25.4;  // 300dpi 相当
+  const pageCv = document.createElement('canvas');
+  pageCv.width = Math.round(pageW * PXMM);
+  // 高さを数px詰める: A4ぴったりだと html2pdf の mm 換算丸めで
+  // ごく僅かに溢れ、ほぼ空白の2ページ目が出る。下マージン内で吸収。
+  pageCv.height = Math.round(pageH * PXMM) - 6;
+  const g = pageCv.getContext('2d');
+  g.fillStyle = '#FFFFFF';
+  g.fillRect(0, 0, pageCv.width, pageCv.height);
+  g.drawImage(rawCanvas,
+    Math.round(xMm * PXMM), Math.round(yMm * PXMM),
+    Math.round(wMm * PXMM), Math.round(hMm * PXMM));
   // 送信前確認モーダル用: PDFに焼かれる実画像を保持 (iOS Safariはiframe-PDFが不安定なためimgで見せる)
-  window._lastFaxPdfImg = imgData;
-  pdf.addImage(imgData, 'JPEG', x, y, w, h);
-  return pdf.output('blob');
+  window._lastFaxPdfImg = pageCv.toDataURL('image/jpeg', 0.95);
+  // ④ A4比率canvasを html2pdf で 1ページPDF化 (margin0・pagebreakなし=分割/クリップ無し)
+  const blob = await html2pdf().set({
+    margin: 0,
+    image: { type: 'jpeg', quality: 0.95 },
+    jsPDF: opt.jsPDF || { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all'] }
+  }).from(pageCv, 'canvas').outputPdf('blob');
+  return blob;
 }
 
 // 送信前 実PDF画像確認 (FAX誤送信防止の最重要チェックポイント)
