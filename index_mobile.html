@@ -169,6 +169,19 @@ a{color:var(--info);text-decoration:none}
 }
 .m-bottom-nav button .m-nav-ico{font-size:20px;line-height:1;transition:transform .15s}
 .m-bottom-nav button.active .m-nav-ico{transform:translateY(-1px) scale(1.08)}
+/* 中央「＋新規」ボタン (常時アクセス可能・浮き出しデザイン) */
+.m-bottom-nav .m-nav-new{color:var(--green);gap:3px}
+.m-bottom-nav .m-nav-new .m-nav-new-circle{
+  width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,#5FA04D 0%,#3E7A2E 100%);
+  color:#fff;font-size:26px;font-weight:700;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  margin-top:-20px;
+  box-shadow:0 4px 12px rgba(62,122,46,.45),inset 0 1px 0 rgba(255,255,255,.25);
+  border:3px solid #fff;
+}
+.m-bottom-nav .m-nav-new .m-nav-new-lbl{font-size:10px;font-weight:700;color:var(--green);margin-top:-2px}
+.m-bottom-nav .m-nav-new:active .m-nav-new-circle{transform:scale(.92)}
 
 /* === ONBOARDING === */
 .m-onboard-hero{text-align:center;padding:40px 20px 24px}
@@ -373,6 +386,12 @@ a{color:var(--info);text-decoration:none}
 .m-badge-done{background:#D8F5C5;color:var(--deep);border:1px solid var(--lime-d)}
 .m-badge-fax-done{background:linear-gradient(135deg,#5FA04D,#4F8A3E);color:#fff;border:1px solid #3E6E2E}
 .m-badge-cancel{background:#E0E0E0;color:#666;border:1px solid #C8C8C8}
+.m-pending-badge{
+  display:inline-block;background:#FEF3C7;color:#92400E;
+  border:1px solid #FCD34D;border-radius:8px;
+  padding:1px 6px;font-size:10px;font-weight:700;
+  margin-left:4px;letter-spacing:.02em;
+}
 .m-card-row{
   font-size:13px;color:var(--text);margin:4px 0;line-height:1.55;
   display:flex;align-items:flex-start;gap:8px;
@@ -738,6 +757,9 @@ a{color:var(--info);text-decoration:none}
 
 /* === FORM (新規登録モーダル等) === */
 .m-form-grp{margin-bottom:12px}
+/* 2カラム行 (受付日+区分 など 短い項目を横並びにして縦長を抑える) */
+.m-form-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m-form-row2 .m-form-grp{margin-bottom:12px}
 .m-form-grp label{
   display:block;font-size:11px;color:var(--muted);font-weight:700;
   margin-bottom:5px;letter-spacing:.04em;
@@ -783,6 +805,14 @@ a{color:var(--info);text-decoration:none}
 .m-fab:active{transform:scale(.92);box-shadow:0 3px 10px rgba(79,138,62,.4)}
 .m-fab.fab-recovery{background:linear-gradient(135deg,#6B3F8C,#4D2D66)}
 
+/* 点検復帰モーダル クイック日付ボタン */
+.m-vr-quick{
+  background:#EEF3EA;border:1px solid #C8D6BB;border-radius:8px;
+  padding:7px 12px;font-size:12px;font-weight:700;color:var(--deep);
+  cursor:pointer;transition:background .15s,transform .08s;
+}
+.m-vr-quick:active{transform:scale(.94)}
+.m-vr-quick.strong{background:linear-gradient(135deg,#A0D468,#7DAE48);color:#1E3A2B;border-color:#7DAE48}
 /* === VEHICLE LIST (車両管理画面) === */
 .m-veh-card{
   background:#fff;border:1px solid var(--border);border-radius:12px;
@@ -820,6 +850,11 @@ a{color:var(--info);text-decoration:none}
 .m-veh-card .v-action.act-restore{
   background:linear-gradient(180deg,#5FA04D,#4F8A3E);color:#fff;
   box-shadow:0 2px 6px rgba(79,138,62,.32);
+}
+.m-veh-card .v-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.m-veh-card .v-actions .v-action{width:100%;padding:7px 10px;font-size:11px;white-space:nowrap}
+.m-veh-card .v-action.act-edit{
+  background:#fff;color:var(--deep);border:1.5px solid #C8D6BB;
 }
 
 /* === VEHICLE PICKER === */
@@ -998,25 +1033,17 @@ a{color:var(--info);text-decoration:none}
       </div>
 
       <div class="m-home-quick">
-        <h3>🛠️ クイック</h3>
+        <h3>⚡ クイック登録</h3>
         <div class="m-quick-row">
           <button class="m-btn m-btn-success" onclick="openNewCaseModal()">
             <span class="ico">📝</span>新規案件
           </button>
           <button class="m-btn m-btn-success" onclick="openQuickRecModal()" style="background:linear-gradient(180deg,#8453B1,#6B3F8C);box-shadow:0 3px 10px rgba(107,63,140,.32),inset 0 1px 0 rgba(255,255,255,.2)">
-            <span class="ico">🛻</span>回収登録
+            <span class="ico">🛻</span>回収予定登録
           </button>
         </div>
-        <div class="m-quick-row" style="margin-top:8px">
-          <button class="m-btn m-btn-secondary" onclick="showScreen('dispatch')">
-            <span class="ico">🚙</span>配車予定
-          </button>
-          <button class="m-btn m-btn-secondary" onclick="showScreen('recovery')">
-            <span class="ico">🛻</span>回収予定
-          </button>
-          <button class="m-btn m-btn-secondary" onclick="showScreen('vehicles')">
-            <span class="ico">🛠️</span>点検
-          </button>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px">
+          配車・回収・点検は下のメニューバーから
         </div>
       </div>
     </section>
@@ -1073,7 +1100,8 @@ a{color:var(--info);text-decoration:none}
       <div class="m-flow-prog" id="m-flow-prog-photo"></div>
       <div class="m-info-box" id="m-photo-info"></div>
       <div id="m-photo-host"></div>
-      <input type="file" class="m-camera-input" id="m-camera-input" accept="image/*" capture="environment" onchange="onCameraCapture(event)">
+      <!-- capture属性を外す → iOS/Androidが「カメラ撮影 / フォトライブラリ / ファイル」の選択を出す -->
+      <input type="file" class="m-camera-input" id="m-camera-input" accept="image/*" onchange="onCameraCapture(event)">
       <div style="margin-top:20px">
         <button class="m-btn m-btn-success m-btn-block" id="m-photo-next-btn" onclick="onPhotoNext()" disabled>次へ（完了確認へ） →</button>
         <button class="m-btn m-btn-outline m-btn-block" onclick="goBack()">キャンセル</button>
@@ -1165,6 +1193,11 @@ a{color:var(--info);text-decoration:none}
 
     <!-- (9) Menu -->
     <section id="m-screen-menu" class="m-screen">
+      <div class="m-menu-item" onclick="showScreen('vehicles')">
+        <span class="ico">🛠️</span>
+        <div class="body"><div class="ttl">車両管理・点検</div><div class="desc">車両一覧 / 点検入庫・稼働可復帰</div></div>
+        <span class="arrow">›</span>
+      </div>
       <div class="m-menu-item" onclick="showScreen('history')">
         <span class="ico">📜</span>
         <div class="body"><div class="ttl">操作履歴</div><div class="desc">配車・回収・FAX送信の履歴 / 案件詳細</div></div>
@@ -1230,8 +1263,8 @@ a{color:var(--info);text-decoration:none}
   <nav class="m-bottom-nav" id="m-bottom-nav" style="display:none">
     <button data-nav="home" class="active" onclick="showScreen('home')"><span class="m-nav-ico">🏡</span>ホーム</button>
     <button data-nav="dispatch" onclick="showScreen('dispatch')"><span class="m-nav-ico">🚙</span>配車</button>
+    <button class="m-nav-new" onclick="openNewCaseModal()" aria-label="新規案件登録"><span class="m-nav-new-circle">＋</span><span class="m-nav-new-lbl">新規</span></button>
     <button data-nav="recovery" onclick="showScreen('recovery')"><span class="m-nav-ico">🛻</span>回収</button>
-    <button data-nav="vehicles" onclick="showScreen('vehicles')"><span class="m-nav-ico">🛠️</span>点検</button>
     <button data-nav="menu" onclick="showScreen('menu')"><span class="m-nav-ico">📋</span>メニュー</button>
   </nav>
 </div>
@@ -1261,14 +1294,25 @@ a{color:var(--info);text-decoration:none}
     <h2>🛠️ 点検完了 → 稼働可に復帰</h2>
     <div id="m-vr-summary" style="background:#F4FBF6;border-left:3px solid var(--green);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:13px"></div>
     <div class="m-form-grp">
-      <label>📅 次回点検予定日 <span class="muted">(6ヶ月後を自動サジェスト)</span></label>
-      <input type="date" id="m-vr-lastInspectionAt">
-      <div style="font-size:11px;color:var(--muted);margin-top:5px">次回点検アラートの基準日 (30日前から通知)</div>
+      <label>📅 次回点検予定日</label>
+      <input type="date" id="m-vr-lastInspectionAt" oninput="_vrSyncWareki()">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+        <button type="button" class="m-vr-quick" onclick="_vrSetDate('m-vr-lastInspectionAt',{months:6})">+6ヶ月</button>
+        <button type="button" class="m-vr-quick" onclick="_vrSetDate('m-vr-lastInspectionAt',{years:1})">+1年</button>
+      </div>
+      <div id="m-vr-wareki-ins" style="font-size:12px;color:#2563EB;font-weight:700;margin-top:5px;min-height:16px"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">次回点検アラートの基準日 (30日前から通知)</div>
     </div>
     <div class="m-form-grp">
-      <label>🚨 次回車検満了日 <span class="muted">(更新された場合のみ変更)</span></label>
-      <input type="date" id="m-vr-inspectionDate">
-      <div style="font-size:11px;color:var(--muted);margin-top:5px">点検のみなら変更不要</div>
+      <label>🚨 次回車検満了日 <span class="muted">(車検証の令和表記で照合)</span></label>
+      <input type="date" id="m-vr-inspectionDate" oninput="_vrSyncWareki()">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+        <button type="button" class="m-vr-quick strong" onclick="_vrSetDate('m-vr-inspectionDate',{years:2})">+2年</button>
+        <button type="button" class="m-vr-quick" onclick="_vrSetDate('m-vr-inspectionDate',{years:3})">+3年(新車初回)</button>
+        <button type="button" class="m-vr-quick" onclick="_vrSetDate('m-vr-inspectionDate',{years:1})">+1年</button>
+      </div>
+      <div id="m-vr-wareki-shaken" style="font-size:12px;color:#DC2626;font-weight:700;margin-top:5px;min-height:16px"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">基準日から起算。車検証の和暦と一致するか上の表示で確認</div>
     </div>
     <div class="m-form-grp">
       <label>📝 点検内容メモ <span class="muted">(任意)</span></label>
@@ -1284,11 +1328,36 @@ a{color:var(--info);text-decoration:none}
 <!-- 簡易版 新規案件登録 モーダル -->
 <div class="m-modal" id="m-newcase-modal">
   <div class="m-modal-body" style="max-height:92%">
-    <h2>📝 新規案件登録 (簡易版)</h2>
+    <h2>📝 新規案件登録</h2>
     <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px">必須項目なし — 入力した項目だけが登録されます</div>
-    <div class="m-form-grp">
-      <label>受付日</label>
-      <input type="date" id="m-nc-receivedAt">
+    <div class="m-form-row2">
+      <div class="m-form-grp">
+        <label>受付日</label>
+        <input type="date" id="m-nc-receivedAt">
+      </div>
+      <div class="m-form-grp">
+        <label>区分</label>
+        <select id="m-nc-category">
+          <option value="損保">損保</option>
+          <option value="工場">工場</option>
+          <option value="一般">一般</option>
+        </select>
+      </div>
+    </div>
+    <div class="m-form-row2">
+      <div class="m-form-grp">
+        <label>対象事故</label>
+        <select id="m-nc-target">
+          <option value="対物">対物</option>
+          <option value="対人">対人</option>
+          <option value="車両">車両</option>
+          <option value="">―</option>
+        </select>
+      </div>
+      <div class="m-form-grp">
+        <label>自社担当者</label>
+        <input type="text" id="m-nc-staff" placeholder="例: 金城">
+      </div>
     </div>
     <div class="m-form-grp">
       <label>契約者名</label>
@@ -1304,16 +1373,33 @@ a{color:var(--info);text-decoration:none}
     </div>
     <div class="m-section-divider">🏢 保険会社</div>
     <div class="m-form-grp">
-      <label>保険会社</label>
-      <select id="m-nc-insurer"><option value="">-- 選択してください --</option></select>
+      <label>保険会社 <span class="muted">(一覧候補から選ぶ or 直接入力)</span></label>
+      <input type="text" id="m-nc-insurer" list="m-nc-insurer-list" placeholder="保険会社名を入力">
+      <datalist id="m-nc-insurer-list"></datalist>
     </div>
     <div class="m-form-grp">
       <label>担当者</label>
       <input type="text" id="m-nc-insurerContact" placeholder="例: 佐藤">
     </div>
-    <div class="m-form-grp">
-      <label>担当者 TEL</label>
-      <input type="tel" id="m-nc-insurerContactTel" placeholder="03-1234-5678">
+    <div class="m-form-row2">
+      <div class="m-form-grp">
+        <label>担当者 TEL</label>
+        <input type="tel" id="m-nc-insurerContactTel" placeholder="03-1234-5678">
+      </div>
+      <div class="m-form-grp">
+        <label>担当者 FAX</label>
+        <input type="tel" id="m-nc-insurerContactFax" placeholder="03-1234-5679">
+      </div>
+    </div>
+    <div class="m-form-row2">
+      <div class="m-form-grp">
+        <label>事故受付No</label>
+        <input type="text" id="m-nc-accidentNo" placeholder="保険会社の受付番号">
+      </div>
+      <div class="m-form-grp">
+        <label>事故日</label>
+        <input type="date" id="m-nc-accidentDate">
+      </div>
     </div>
     <div class="m-section-divider">📍 配車先</div>
     <div class="m-form-grp">
@@ -1340,6 +1426,20 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-grp">
       <label>配車予約日時</label>
       <input type="datetime-local" id="m-nc-dispatchAt" step="600">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="m-nc-dispatchTimePending" style="margin:0;cursor:pointer;width:auto">
+          📞 工場と調整中
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="m-nc-dispatchTimePendingDriver" style="margin:0;cursor:pointer;width:auto">
+          📞 運転者と調整中
+        </label>
+      </div>
+    </div>
+    <div class="m-form-grp">
+      <label>予約備考 <span class="muted">(例: 12時迄 / 至急 など)</span></label>
+      <input type="text" id="m-nc-dispatchNote" placeholder="自由記入">
     </div>
     <div class="m-form-grp">
       <label>車両クラス</label>
@@ -1357,6 +1457,16 @@ a{color:var(--info);text-decoration:none}
       <label>日額 (税込・円)</label>
       <input type="number" id="m-nc-unitPrice" placeholder="例: 7000" inputmode="numeric">
     </div>
+    <div class="m-form-row2">
+      <div class="m-form-grp">
+        <label>利用開始日</label>
+        <input type="date" id="m-nc-useStart">
+      </div>
+      <div class="m-form-grp">
+        <label>利用終了日</label>
+        <input type="date" id="m-nc-useEnd">
+      </div>
+    </div>
     <div class="m-form-grp">
       <label>利用期限 (予定)</label>
       <input type="date" id="m-nc-useDeadline">
@@ -1365,6 +1475,10 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-grp">
       <label>社内メモ</label>
       <textarea id="m-nc-memo" rows="2" placeholder="特記事項など"></textarea>
+    </div>
+    <div class="m-form-grp">
+      <label>交渉記録 <span class="muted">(保険会社とのやりとり等)</span></label>
+      <textarea id="m-nc-negotiationLog" rows="2" placeholder="例: 5/15 30日限度で連絡済"></textarea>
     </div>
 
     <div class="m-modal-actions" style="margin-top:18px;flex-direction:column;gap:8px">
@@ -1433,7 +1547,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-15a';
+const APP_VERSION = '2026-05-16a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2118,47 +2232,103 @@ function latestCheckSheet(c, kind){
   return list[list.length - 1];
 }
 
+// ============================================================
+// PDF配置 整合性チェック (再発防止)
+//   2026-05-15: html2canvas に windowWidth/width を渡したことで
+//   キャンバスがページ幅を超え、PDF右端が大幅に見切れて取引先に不完全な
+//   FAXが届く事態になった。今後は PDF を生成した瞬間に画像配置を検証し、
+//   ページ境界をはみ出していたら例外を投げて送信そのものを阻止する。
+// ============================================================
+function _validatePdfPlacement(label, p){
+  const { canvas, sheetEl, pageW, pageH, x, y, w, h } = p;
+  const issues = [];
+  const sheetW = (sheetEl && sheetEl.offsetWidth) || 820;
+  if(canvas && canvas.width > sheetW * 2.5){
+    issues.push(`キャンバス幅異常 (${canvas.width}px, 元要素 ${sheetW}px)`);
+  }
+  if((x + w) > (pageW + 0.5)){
+    issues.push(`PDF右端はみ出し: x=${x.toFixed(1)} + w=${w.toFixed(1)} = ${(x+w).toFixed(1)}mm > ${pageW}mm`);
+  }
+  if((y + h) > (pageH + 0.5)){
+    issues.push(`PDF下端はみ出し: ${(y+h).toFixed(1)}mm > ${pageH}mm`);
+  }
+  if(x < -0.5){
+    issues.push(`PDF左端マイナス: x=${x.toFixed(1)}mm`);
+  }
+  if(issues.length){
+    const msg = `❌ PDF整合性エラー (${label}):\n  ・` + issues.join('\n  ・') +
+      `\n\n取引先への誤送信を防ぐため PDF生成を中止しました。`;
+    console.error(msg);
+    try { toast('❌ PDF生成エラー - FAX中止', 'error'); } catch(_){}
+    throw new Error(msg);
+  }
+}
+
 // 手配書を A4 1ページに正確にフィットさせて PDF Blob を生成
-//   html2pdf のデフォルト動作だと iPhone 上で右端が見切れることがあるため、
-//   PC版と同じく html2canvas + jsPDF を直接使って手動配置する
 //
-//   ★ 右端見切れバグ対策 (2026-05-14):
-//     .sheet.handover は width:820px + padding 44px + border 2px = 866px。
-//     html2canvas に width:820 を固定指定すると右46pxがクリップされてしまう。
-//     要素の実寸 (padding+border込み) を毎回測って渡すことで根本解決。
+// ⚠️ ⚠️ ⚠️ 絶対に追加してはいけないオプション ⚠️ ⚠️ ⚠️
+//   html2canvas() の引数に windowWidth / width / height を明示指定するな!!
+//   ブラウザの内部レイアウト計算がずれてキャンバスがページ幅を超えるサイズで
+//   生成され、PDF右端が大幅に見切れて FAX 送信先に多大な迷惑がかかる。
+//   2026-05-15 に同じバグを2度発生させ取引先に不完全なFAXを送る事態に。
+//   #m-fax-host の幅を 900px に広げてあるので、positioned absolute の
+//   sheet は完全描画される。html2canvas はデフォルト動作で問題なし。
 async function _genHandoverPDF(sheetEl, opt){
   const html2canvasFn = window.html2canvas;
   const jsPDFCls = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
   if(!html2canvasFn || !jsPDFCls){
-    // ライブラリが揃わない場合は html2pdf のフォールバックを使う
     return await html2pdf().from(sheetEl).set(opt).output('blob');
   }
-  // 要素の実寸を取得 (padding+border 含む)。overflow している場合は scrollWidth が大きい
-  const elementWidth = Math.max(sheetEl.offsetWidth || 0, sheetEl.scrollWidth || 0) || 820;
-  const elementHeight = Math.max(sheetEl.offsetHeight || 0, sheetEl.scrollHeight || 0) || 0;
   const canvas = await html2canvasFn(sheetEl, {
     scale: opt.html2canvas.scale || 2,
     useCORS: true,
-    letterRendering: true,
-    windowWidth: elementWidth,
-    width: elementWidth,
-    height: elementHeight || undefined
+    letterRendering: true
   });
   const pdf = new jsPDFCls(opt.jsPDF);
   const pageW = 210, pageH = 297;  // A4 mm
-  const m = opt.margin || [5,5,5,5];
+  const m = opt.margin || [10,12,10,12];
   const availW = pageW - m[1] - m[3];
   const availH = pageH - m[0] - m[2];
   const cw = canvas.width, ch = canvas.height;
-  // キャンバスをページ印刷可能領域に収まる最大サイズに縮小
   const scale = Math.min(availW / cw, availH / ch);
   const w = cw * scale;
   const h = ch * scale;
-  // 横は中央寄せ・縦は上揃え
   const x = m[3] + (availW - w) / 2;
   const y = m[0];
-  pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, y, w, h);
+  // ★ 整合性チェック (はみ出し検出時は throw して送信を阻止)
+  _validatePdfPlacement('モバイル手配書', { canvas, sheetEl, pageW, pageH, x, y, w, h });
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  // 送信前確認モーダル用: PDFに焼かれる実画像を保持 (iOS Safariはiframe-PDFが不安定なためimgで見せる)
+  window._lastFaxPdfImg = imgData;
+  pdf.addImage(imgData, 'JPEG', x, y, w, h);
   return pdf.output('blob');
+}
+
+// 送信前 実PDF画像確認 (FAX誤送信防止の最重要チェックポイント)
+//   PDFに焼かれる実ビットマップをそのまま見せ、人間が取引先と同じ物を確認して確定
+function confirmPdfBeforeSend(meta){
+  return new Promise(resolve => {
+    const img = window._lastFaxPdfImg || '';
+    $('m-modal-title').textContent = '🔍 送信前確認';
+    $('m-modal-msg').innerHTML = `
+      <div style="font-size:12.5px;line-height:1.7;color:var(--text);background:#FFF7E6;border-left:3px solid #E69E50;padding:8px 10px;border-radius:6px;margin-bottom:10px">
+        <b>⚠️ 取引先に届くのは下の内容そのものです。</b><br>
+        右端の見切れ・項目欠け・ページを確認してから送信してください。
+      </div>
+      ${meta&&meta.to?`<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">📧 送信先: ${esc(meta.to)}</div>`:''}
+      ${img
+        ? `<div style="border:1px solid #999;border-radius:6px;overflow:auto;max-height:56vh;background:#fff"><img src="${img}" style="width:100%;display:block" alt="送信PDFプレビュー"></div>`
+        : `<div style="border:1px solid #C53030;border-radius:6px;padding:14px;background:#FEF2F2;color:#C53030;font-size:12.5px;text-align:center">プレビュー画像を生成できませんでした。<br>不安な場合は中止して、Dropboxに保存されたPDFを確認してください。</div>`}`;
+    const acts = $('m-modal-actions'); acts.innerHTML = '';
+    const cancel = document.createElement('button');
+    cancel.className = 'm-btn m-btn-outline'; cancel.textContent = '✕ 中止';
+    cancel.onclick = () => { $('m-modal').classList.remove('active'); resolve(false); };
+    const ok = document.createElement('button');
+    ok.className = 'm-btn m-btn-success'; ok.textContent = '✅ この内容で送信';
+    ok.onclick = () => { $('m-modal').classList.remove('active'); resolve(true); };
+    acts.appendChild(cancel); acts.appendChild(ok);
+    $('m-modal').classList.add('active');
+  });
 }
 
 function toEfaxNumber(fax){
@@ -2493,9 +2663,15 @@ function _renderCaseCard(c, kind){
     ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.dispatchToAddress)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 地図</a>`
     : '';
 
+  const _pp = [];
+  if(c.dispatchTimePending) _pp.push('工場');
+  if(c.dispatchTimePendingDriver) _pp.push('運転者');
+  const pendingBadge = _pp.length
+    ? ` <span class="m-pending-badge" title="${_pp.join('/')}と時間調整中">📞${_pp.join('/')}調整中</span>`
+    : '';
   const dispatchInfo = c.dispatchAt
-    ? `${fmtDateTime(c.dispatchAt)}${c.dispatchNote?` ・${esc(c.dispatchNote)}`:''}`
-    : '<span class="muted">未設定</span>';
+    ? `${fmtDateTime(c.dispatchAt)}${pendingBadge}${c.dispatchNote?` ・${esc(c.dispatchNote)}`:''}`
+    : `<span class="muted">未設定</span>${pendingBadge}`;
 
   // 配車先1行: 名前 / 担当 / TEL
   const toLine = [
@@ -2846,17 +3022,44 @@ async function onDeparture(){
     await saveToDropbox();
     // LINE通知 (失敗しても続行)
     try {
-      await sendExternalNotify('departed', _buildCasePayload(c));
+      await sendExternalNotify('departed', _buildNotifyPayload(c, 'departed'));
     } catch(e){}
     hideSpinner();
     toast('🚀 出発を記録 / LINE通知済', 'success');
-    // 次画面 (撮影) へ
+    // 安全運転の案内を表示してから次画面へ
+    await _showSafeDrivingNotice();
     await renderFlowPhotoScreen();
     showScreen('flow-photo');
   } catch(e){
     hideSpinner();
     toast('保存エラー: '+e.message,'error');
   }
+}
+
+// 出発時の安全運転案内
+function _showSafeDrivingNotice(){
+  return new Promise(resolve => {
+    $('m-modal-title').textContent = '🚗 いってらっしゃい';
+    $('m-modal-msg').innerHTML = `
+      <div style="text-align:center;padding:6px 0">
+        <div style="font-size:46px;line-height:1;margin-bottom:14px">🛡️</div>
+        <div style="font-size:17px;font-weight:800;color:var(--navy);letter-spacing:.04em;margin-bottom:14px">安全運転でお願いします</div>
+        <div style="text-align:left;display:inline-block;font-size:13.5px;line-height:2;color:var(--text)">
+          ✅ シートベルト確認<br>
+          ✅ 余裕をもった車間距離<br>
+          ✅ スマホは停車してから<br>
+          ✅ 焦らず・無理せず・安全第一
+        </div>
+        <div style="margin-top:16px;font-size:12px;color:var(--muted)">事故ゼロで戻ってきてください 🙏</div>
+      </div>`;
+    const acts = $('m-modal-actions'); acts.innerHTML = '';
+    const ok = document.createElement('button');
+    ok.className = 'm-btn m-btn-success'; ok.style.flex = '1';
+    ok.textContent = '🚙 出発します';
+    ok.onclick = () => { $('m-modal').classList.remove('active'); resolve(); };
+    acts.appendChild(ok);
+    $('m-modal').classList.add('active');
+  });
 }
 
 // ============================================================
@@ -2918,15 +3121,15 @@ async function renderFlowPhotoScreen(){
         <div class="ph-meta">📅 ${nowDateTimeLocal().replace('T',' ')} ・ ${Math.round((_flow.photoBlob?.size||0)/1024)} KB</div>
       </div>
       <div class="m-photo-actions">
-        <button class="m-btn m-btn-outline" onclick="retakePhoto()">📷 撮り直す</button>
+        <button class="m-btn m-btn-outline" onclick="retakePhoto()">📷 撮り直す / 選び直す</button>
         <button class="m-btn m-btn-danger" onclick="discardPhoto()">削除</button>
       </div>
     `;
   } else {
     currentHtml = `
-      <div class="m-photo-prompt">${prompt}<br><small style="color:var(--muted)">JPEG ≤500KB に自動圧縮されます</small></div>
-      <div class="m-photo-empty">📷 まだ撮影されていません</div>
-      <button class="m-btn m-btn-primary m-btn-block" style="margin-top:10px" onclick="triggerCamera()">📷 撮影する</button>
+      <div class="m-photo-prompt">${prompt}<br><small style="color:var(--muted)">撮影 または 端末の画像から選択 / JPEG ≤500KB に自動圧縮</small></div>
+      <div class="m-photo-empty">🖼️ まだ選択されていません</div>
+      <button class="m-btn m-btn-primary m-btn-block" style="margin-top:10px" onclick="triggerCamera()">📷 撮影 / 🖼️ 画像を選ぶ</button>
     `;
   }
 
@@ -3111,9 +3314,9 @@ async function onConfirmDo(){
     // 4. LINE通知 (失敗してもフロー継続)
     try {
       if(_flow.kind === 'dispatch'){
-        await sendExternalNotify('dispatchDone', _buildCasePayload(c));
+        await sendExternalNotify('dispatchDone', _buildNotifyPayload(c, 'dispatchDone'));
       } else {
-        await sendExternalNotify('recoveryDone', _buildRecoveryPayload(c));
+        await sendExternalNotify('recoveryDone', _buildNotifyPayload(c, 'recoveryDone'));
       }
     } catch(e){}
 
@@ -3208,7 +3411,7 @@ async function onFaxSend(){
       // FAX送信時の右端見切れ対策: eFax→送信先FAX機で5-10mm程度クリップされるため
       // PDFのマージンを12mmに広げて安全領域を確保 (PC版と同設定)
       margin: [10,12,10,12],
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 820 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all'] }
     };
@@ -3230,6 +3433,12 @@ async function onFaxSend(){
     }
 
     hideSpinner();
+    // ★ 送信前に実PDF画像を人間が確認 (見切れ・欠け・ページを最終チェック)
+    const okToSend = await confirmPdfBeforeSend({ to: toEmail });
+    if(!okToSend){
+      toast('FAX送信を中止しました (PDFは保存済み)', 'error');
+      return;
+    }
     // メール送信方法: GAS自動送信を優先 (1タップ完結) → 失敗時のみWeb Share/.emlにフォールバック
     await sendFaxSmart(pdfBlob, toEmail, subject, body, filename, c, fax);
   } catch(e){
@@ -3420,19 +3629,36 @@ function _finishFaxFlow(c){
 // 簡易版 新規案件登録
 // ============================================================
 function openNewCaseModal(){
-  // 保険会社プルダウン
-  const sel = $('m-nc-insurer');
-  const insurers = (DATA?.insurers || []).slice().sort((a,b) => (a.name||'').localeCompare(b.name||'','ja'));
-  sel.innerHTML = '<option value="">-- 選択してください --</option>' +
-    insurers.map(i => `<option value="${esc(i.id)}">${esc(i.name||'')}</option>`).join('');
+  // 保険会社 候補(datalist): 利用頻度順・支社支店も表示。直接入力も可
+  const useCount = {};
+  (DATA?.cases || []).forEach(c => {
+    if(c.insurerId) useCount[c.insurerId] = (useCount[c.insurerId] || 0) + 1;
+  });
+  const insurers = (DATA?.insurers || []).slice().sort((a,b) => {
+    const ca = useCount[a.id] || 0, cb = useCount[b.id] || 0;
+    if(cb !== ca) return cb - ca;                       // 頻度が多い順
+    return (a.name||'').localeCompare(b.name||'','ja'); // 同数なら名前順
+  });
+  const insLabel = i => (i.name||'') + (i.branch ? ` ${i.branch}` : '');
+  const dl = $('m-nc-insurer-list');
+  if(dl) dl.innerHTML = insurers.map(i => `<option value="${esc(insLabel(i))}"></option>`).join('');
+  if($('m-nc-insurer')) $('m-nc-insurer').value = '';
   // 初期値
   $('m-nc-receivedAt').value = todayISO();
   ['m-nc-contractor','m-nc-driver','m-nc-driverTel','m-nc-insurerContact','m-nc-insurerContactTel',
+   'm-nc-insurerContactFax','m-nc-accidentNo','m-nc-accidentDate',
    'm-nc-dispatchTo','m-nc-dispatchToAddr','m-nc-dispatchToTel','m-nc-dispatchContact','m-nc-dispatchContactTel',
-   'm-nc-unitPrice','m-nc-memo'].forEach(id => { const el=$(id); if(el) el.value = ''; });
+   'm-nc-dispatchNote','m-nc-useStart','m-nc-useEnd','m-nc-unitPrice','m-nc-memo','m-nc-negotiationLog'
+  ].forEach(id => { const el=$(id); if(el) el.value = ''; });
+  // 自社担当者は編集者名を初期値に
+  if($('m-nc-staff')) $('m-nc-staff').value = localStorage.getItem(LS_KEYS.editor) || '';
+  if($('m-nc-category')) $('m-nc-category').value = '損保';
+  if($('m-nc-target')) $('m-nc-target').value = '対物';
   $('m-nc-dispatchAt').value = nowDateTimeLocal();
   $('m-nc-vehicleClass').value = '';
   $('m-nc-useDeadline').value = '';
+  if($('m-nc-dispatchTimePending')) $('m-nc-dispatchTimePending').checked = false;
+  if($('m-nc-dispatchTimePendingDriver')) $('m-nc-dispatchTimePendingDriver').checked = false;
   $('m-newcase-modal').classList.add('active');
 }
 function closeNewCaseModal(){ $('m-newcase-modal').classList.remove('active'); }
@@ -3470,42 +3696,73 @@ function _genMobileCaseNo(forDate){
 async function saveNewCase(enterFlow){
   // バリデーション無し — 全項目空のままでも登録可能 (PC版で後から編集する想定)
   const contractor = $('m-nc-contractor').value.trim();
-  const insurerId = $('m-nc-insurer').value;
+  const insurerText = ($('m-nc-insurer').value || '').trim();
   const dispatchTo = $('m-nc-dispatchTo').value.trim();
   const dispatchAt = $('m-nc-dispatchAt').value;
 
+  // 保険会社: 入力テキストから マスタを find-or-create してリンク
+  let insurerId = '';
+  if(insurerText){
+    const insLabel = i => (i.name||'') + (i.branch ? ` ${i.branch}` : '');
+    let found = (DATA?.insurers || []).find(x =>
+      (x.name||'').trim() === insurerText || insLabel(x) === insurerText
+    );
+    if(!found){
+      found = { id: 'ins-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+                name: insurerText, branch:'', fax:'', contacts:[] };
+      if(!DATA.insurers) DATA.insurers = [];
+      DATA.insurers.push(found);
+      toast(`🏢 保険会社「${insurerText}」をマスタに登録しました`, 'success');
+    }
+    insurerId = found.id;
+    // 担当者情報も取り込み (次回から候補に出る)
+    const cName = ($('m-nc-insurerContact').value || '').trim();
+    const cTel  = ($('m-nc-insurerContactTel').value || '').trim();
+    if(cName && !(found.contacts||[]).some(x => (x.name||'') === cName)){
+      found.contacts = found.contacts || [];
+      found.contacts.push({ name:cName, tel:cTel, fax:'', dept:'', role:'', isDefault: found.contacts.length===0 });
+    }
+  }
   const ins = insurerId ? (findInsurer(insurerId) || {}) : {};
   // 配車予定日時が入っていれば '配車予定'、入っていなければ '受付' (PC版で後から進める)
   const initialStatus = dispatchAt ? '配車予定' : '受付';
   const receivedAt = $('m-nc-receivedAt').value || todayISO();
+  const _v = id => ($(id)?.value || '').trim();
   const c = {
     id: _genMobileCaseId(),
     caseNo: _genMobileCaseNo(receivedAt),
     receivedAt: receivedAt,
-    staff: localStorage.getItem(LS_KEYS.editor) || '',
-    category: '損保', callType: '保険', target: '対物',
+    staff: _v('m-nc-staff') || localStorage.getItem(LS_KEYS.editor) || '',
+    category: _v('m-nc-category') || '損保',
+    callType: '保険',
+    target: ($('m-nc-target')?.value ?? '対物'),
     status: initialStatus,
     insurerId: insurerId || '',
-    insurerContact: $('m-nc-insurerContact').value.trim(),
-    insurerContactTel: $('m-nc-insurerContactTel').value.trim(),
-    insurerContactFax: ins.fax || '',
+    insurerContact: _v('m-nc-insurerContact'),
+    insurerContactTel: _v('m-nc-insurerContactTel'),
+    insurerContactFax: _v('m-nc-insurerContactFax') || ins.fax || '',
+    accidentNo: _v('m-nc-accidentNo'),
+    accidentDate: _v('m-nc-accidentDate'),
     contractorName: contractor,
-    driverName: $('m-nc-driver').value.trim() || contractor,
-    driverTel: $('m-nc-driverTel').value.trim(),
+    driverName: _v('m-nc-driver') || contractor,
+    driverTel: _v('m-nc-driverTel'),
     dispatchToName: dispatchTo,
-    dispatchToAddress: $('m-nc-dispatchToAddr').value.trim(),
-    dispatchToTel: $('m-nc-dispatchToTel').value.trim(),
-    dispatchToContact: $('m-nc-dispatchContact').value.trim(),
-    dispatchToContactTel: $('m-nc-dispatchContactTel').value.trim(),
+    dispatchToAddress: _v('m-nc-dispatchToAddr'),
+    dispatchToTel: _v('m-nc-dispatchToTel'),
+    dispatchToContact: _v('m-nc-dispatchContact'),
+    dispatchToContactTel: _v('m-nc-dispatchContactTel'),
     dispatchAt: dispatchAt || '',
-    dispatchNote: '',
+    dispatchNote: _v('m-nc-dispatchNote'),
+    dispatchTimePending: !!($('m-nc-dispatchTimePending')?.checked),
+    dispatchTimePendingDriver: !!($('m-nc-dispatchTimePendingDriver')?.checked),
     vehicleClass: $('m-nc-vehicleClass').value || '',
     vehicleName: '', plateArea:'', plateNo:'', plateKana:'', plateTail:'',
     unitPrice: Number($('m-nc-unitPrice').value || 0),
-    useStart: '', useEnd: '',
-    useDeadline: $('m-nc-useDeadline').value || '',
-    internalMemo: $('m-nc-memo').value.trim(),
-    note1:'', note2:'', note3:'', negotiationLog:'',
+    useStart: _v('m-nc-useStart'),
+    useEnd: _v('m-nc-useEnd'),
+    useDeadline: _v('m-nc-useDeadline'),
+    internalMemo: _v('m-nc-memo'),
+    note1:'', note2:'', note3:'', negotiationLog: _v('m-nc-negotiationLog'),
     // PC版 defaultCase() との整合性のため、boolean/履歴フィールドを明示初期化
     recoveryCompleted: false,
     confirmCalledAt:'', faxSentAtDispatch:'', faxSentAtReturn:'',
@@ -3524,7 +3781,7 @@ async function saveNewCase(enterFlow){
   try {
     await saveToDropbox();
     // LINE通知 (newCase イベント)
-    try { await sendExternalNotify('newCase', _buildCasePayload(c)); } catch(e){}
+    try { await sendExternalNotify('newCase', _buildNotifyPayload(c, 'newCase')); } catch(e){}
     hideSpinner();
     closeNewCaseModal();
     toast(`✅ 案件 ${c.caseNo} を登録しました`, 'success');
@@ -3620,7 +3877,7 @@ async function saveQuickRecovery(){
   showSpinner('回収予定を保存中...');
   try {
     await saveToDropbox();
-    try { await sendExternalNotify('recoveryDateSet', _buildRecoveryPayload(c)); } catch(e){}
+    try { await sendExternalNotify('recoveryDateSet', _buildNotifyPayload(c, 'recoveryDateSet')); } catch(e){}
     hideSpinner();
     closeQuickRecModal();
     toast(`✅ ${c.caseNo} の回収予定日を ${date} に設定`, 'success');
@@ -3773,42 +4030,163 @@ async function sendExternalNotify(eventType, payload){
   try {
     const res = await fetch(url, {
       method: 'POST',
+      mode: 'no-cors',  // GAS Web App は CORS ヘッダを返さない。これが無いと POST は届くのに fetch が例外→「送信失敗」誤表示
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ eventType, payload, ts: new Date().toISOString() })
     });
-    return { ok: true, status: res.status };
+    return { ok: true, status: res.status };  // no-cors: res は opaque (status 0)。POST 自体は GAS に届く
   } catch(e){ return { ok:false, reason: String(e) }; }
 }
-function _buildCasePayload(c){
-  const ins = c.insurerId ? (findInsurer(c.insurerId)||{}) : {};
+// ============================================================
+// 新方式 (2026-05-15): モバイル側で LINE文面 と Calendar操作 を完成させ
+//   GASは実行だけを担当 → 文章変更で GAS 再デプロイ不要に
+// payload 形式: { line: { text }, calendar: { caseNoTag, delete, create } }
+// ============================================================
+function _buildNotifyPayload(c, eventType){
   return {
-    caseNo: c.caseNo||'', category: c.category||'',
-    contractorName: c.contractorName||'',
-    driverName: c.driverName || c.contractorName || '',
-    driverTel: c.driverTel||'', insurerName: ins.name||'',
-    insurerContact: c.insurerContact||'', insurerContactTel: c.insurerContactTel||'',
-    dispatchAt: c.dispatchAt||'', dispatchToName: c.dispatchToName||'',
-    dispatchToAddress: c.dispatchToAddress||'',
-    vehicleClass: c.vehicleClass||'', vehicleName: c.vehicleName||'',
-    useStart: c.useStart||'', useEnd: c.useEnd||'',
-    staff: c.staff||'', status: c.status||''
+    line: { text: _buildLineMessage(c, eventType) },
+    calendar: _buildCalendarOp(c, eventType)
   };
 }
-function _buildRecoveryPayload(c){
-  const ins = c.insurerId ? (findInsurer(c.insurerId)||{}) : {};
-  return {
-    caseNo: c.caseNo||'',
-    contractorName: c.contractorName||'',
-    driverName: c.driverName || c.contractorName || '',
-    driverTel: c.driverTel||'', insurerName: ins.name||'',
-    insurerContact: c.insurerContact||'', insurerContactTel: c.insurerContactTel||'',
-    recoveryDate: c.recoveryCalledAt||'',
-    vehicleClass: c.vehicleClass||'', vehicleName: c.vehicleName||'',
-    plate: [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' '),
-    dispatchToName: c.dispatchToName||'',
-    dispatchToAddress: c.dispatchToAddress||'',
-    staff: c.staff||''
-  };
+
+function _buildLineMessage(c, eventType){
+  const ins = c.insurerId ? (findInsurer(c.insurerId) || {}) : {};
+  const driver = c.driverName || c.contractorName || '';
+  const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  const vehicleStr = [c.vehicleName||'', plate].filter(Boolean).join(' ') || c.vehicleClass || '';
+
+  // 配車予定の修飾: 「📞工場/運転者と時間調整中」「・予約備考」を付加
+  const pendingParts = [];
+  if(c.dispatchTimePending) pendingParts.push('工場');
+  if(c.dispatchTimePendingDriver) pendingParts.push('運転者');
+  const pendingSuffix = pendingParts.length ? ` (📞${pendingParts.join('・')}と時間調整中)` : '';
+  const noteSuffix = c.dispatchNote ? ' ・' + c.dispatchNote : '';
+  const dispatchLine = c.dispatchAt
+    ? '配車予定: ' + c.dispatchAt + pendingSuffix + noteSuffix
+    : (pendingParts.length ? '配車予定: ' + pendingParts.join('・') + 'と時間調整中' + noteSuffix : '');
+  if(eventType === 'newCase'){
+    return [
+      '🆕 新規案件登録',
+      '受付No: ' + (c.caseNo||''),
+      '区分: ' + (c.category||''),
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      dispatchLine,
+      c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'recoveryDateSet'){
+    return [
+      '🚛 回収予定日 登録',
+      '受付No: ' + (c.caseNo||''),
+      c.recoveryCalledAt ? '回収予定: ' + c.recoveryCalledAt : '',
+      driver ? '運転者: ' + driver : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '',
+      c.staff ? '担当者: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'departed'){
+    return [
+      '🚀 配車先へ出発',
+      '受付No: ' + (c.caseNo||''),
+      driver ? '運転者: ' + driver : '',
+      c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
+      c.dispatchToTel ? 'TEL: ' + c.dispatchToTel : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'dispatchDone'){
+    return [
+      '🚗 配車完了',
+      '受付No: ' + (c.caseNo||''),
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.useStart ? '利用開始: ' + c.useStart : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'recoveryDone'){
+    return [
+      '🚛 回収完了',
+      '受付No: ' + (c.caseNo||''),
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.dispatchToName ? '回収元: ' + c.dispatchToName : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  return '';
+}
+
+function _buildCalendarOp(c, eventType){
+  const caseNoTag = '案件No: ' + (c.caseNo||'');
+  if(eventType === 'newCase'){
+    const op = { caseNoTag, delete: { kindPrefixes: ['🟦','配車','前日配車','前々日配車'] } };
+    if(c.dispatchAt){
+      const start = new Date(c.dispatchAt);
+      if(!isNaN(start.getTime())){
+        const end = new Date(start.getTime() + 60*60*1000);
+        const ins = c.insurerId ? (findInsurer(c.insurerId) || {}) : {};
+        const note = c.dispatchNote || '';
+        let prefix = '配車';
+        if(note.indexOf('前々日配車') !== -1) prefix = '前々日配車';
+        else if(note.indexOf('前日配車') !== -1) prefix = '前日配車';
+        op.create = {
+          title: '🟦 ' + [prefix, c.vehicleClass||'', c.dispatchToName||''].filter(Boolean).join(' '),
+          start: start.toISOString(),
+          end: end.toISOString(),
+          description: [
+            '案件No: ' + (c.caseNo||''),
+            '区分: ' + (c.category||''),
+            '保険会社: ' + (ins.name||''),
+            '運転者: ' + (c.driverName||c.contractorName||''),
+            '配車先: ' + (c.dispatchToName||''),
+            '車両クラス: ' + (c.vehicleClass||''),
+            '担当: ' + (c.staff||'')
+          ].join('\n'),
+          color: 'BLUE'
+        };
+      }
+    }
+    return op;
+  }
+  if(eventType === 'recoveryDateSet'){
+    const op = { caseNoTag, delete: { kindPrefixes: ['🟥','回収'] } };
+    if(c.recoveryCalledAt){
+      const ymd = String(c.recoveryCalledAt).slice(0,10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(ymd)){
+        const start = new Date(ymd + 'T09:00:00');
+        const end = new Date(ymd + 'T10:00:00');
+        const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+        op.create = {
+          title: '🟥 ' + ['回収', c.vehicleClass||'', c.dispatchToName||''].filter(Boolean).join(' '),
+          start: start.toISOString(),
+          end: end.toISOString(),
+          description: [
+            '案件No: ' + (c.caseNo||''),
+            '契約者: ' + (c.contractorName||''),
+            '運転者: ' + (c.driverName||''),
+            '連絡先: ' + (c.driverTel||''),
+            '車両: ' + plate,
+            '担当: ' + (c.staff||'')
+          ].join('\n'),
+          color: 'RED'
+        };
+      }
+    }
+    return op;
+  }
+  // departed, dispatchDone, recoveryDone はカレンダー操作なし
+  return null;
 }
 async function testNotify(){
   const url = (DATA?.settings?.gasWebAppUrl||'').trim();
@@ -3895,6 +4273,41 @@ function renderHistCard(e){
 // VEHICLE MANAGEMENT (車両管理: 点検入庫 / 復帰)
 // ============================================================
 let _vrPendingId = null;  // 復帰モーダル対象の車両ID
+let _vrEditMode = false;  // true=既存車両の点検日修正モード (status変更/LINE通知なし)
+
+// ISO日付 → 和暦表記 (車検証は令和表記なので照合用)
+function _toWareki(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  const y = d.getFullYear(), m = d.getMonth()+1, day = d.getDate();
+  if(y > 2019 || (y === 2019 && (d.getMonth()+1) >= 5)){
+    const r = y - 2018;
+    return `令和${r === 1 ? '元' : r}年${m}月${day}日`;
+  }
+  if(y >= 1989){
+    const h = y - 1988;
+    return `平成${h === 1 ? '元' : h}年${m}月${day}日`;
+  }
+  return `${y}年${m}月${day}日`;
+}
+// 指定フィールドの日付に 年/月 を加算してセット (基準: 今日 or 既存値)
+function _vrSetDate(fieldId, opt){
+  const el = $(fieldId); if(!el) return;
+  const base = el.value ? new Date(el.value) : new Date();
+  const d = isNaN(base.getTime()) ? new Date() : base;
+  if(opt.years)  d.setFullYear(d.getFullYear() + opt.years);
+  if(opt.months) d.setMonth(d.getMonth() + opt.months);
+  const tz = d.getTimezoneOffset()*60000;
+  el.value = new Date(d - tz).toISOString().slice(0,10);
+  _vrSyncWareki();
+}
+// 両日付欄の和暦表示を更新
+function _vrSyncWareki(){
+  const a = $('m-vr-wareki-ins'), b = $('m-vr-wareki-shaken');
+  if(a){ const w = _toWareki(($('m-vr-lastInspectionAt')||{}).value); a.textContent = w ? `和暦: ${w}` : ''; }
+  if(b){ const w = _toWareki(($('m-vr-inspectionDate')||{}).value); b.textContent = w ? `和暦: ${w}` : ''; }
+}
 
 function setVehTab(tab){
   localStorage.setItem('limeMob_vehTab', tab);
@@ -3965,7 +4378,8 @@ function _renderVehicleCard(v){
   if(isMaint){
     actionHtml = `<button class="v-action act-restore" onclick="openVehicleRestoreModal('${esc(v.id)}')">✅ 復帰</button>`;
   } else if(!isSold && !isScrap){
-    actionHtml = `<button class="v-action act-maint" onclick="confirmVehicleMaintenance('${esc(v.id)}')">🛠️ 点検入庫</button>`;
+    actionHtml = `<button class="v-action act-maint" onclick="confirmVehicleMaintenance('${esc(v.id)}')">🛠️ 点検入庫</button>`
+      + `<button class="v-action act-edit" onclick="openVehicleRestoreModal('${esc(v.id)}', true)" title="点検日・車検満了日の入力ミスを修正">✏️ 点検日修正</button>`;
   }
   return `
     <div class="m-veh-card ${cls}">
@@ -3978,7 +4392,7 @@ function _renderVehicleCard(v){
         <div class="v-meta">${esc(v.name||v.maker||'')}${v.class||v.vehicleClass?` ・ ${esc(v.class||v.vehicleClass)}`:''}</div>
         ${nextIns||shaken ? `<div class="v-meta" style="margin-top:3px">${nextIns?`📅 次回点検: ${esc(nextIns)}`:''}${nextIns&&shaken?' / ':''}${shaken?`🚨 車検: ${esc(shaken)}`:''}</div>` : ''}
       </div>
-      ${actionHtml}
+      <div class="v-actions">${actionHtml}</div>
     </div>
   `;
 }
@@ -4004,7 +4418,7 @@ async function confirmVehicleMaintenance(id){
   showSpinner('点検入庫を記録中...');
   try {
     await saveToDropbox();
-    try { await sendExternalNotify('vehicleMaintenance', _buildVehiclePayload(v)); } catch(e){}
+    try { await sendExternalNotify('vehicleMaintenance', _buildVehicleNotifyPayload(v, 'vehicleMaintenance')); } catch(e){}
     hideSpinner();
     toast(`🛠️ ${plate} を点検入庫中に設定しました`, 'success');
     renderVehiclesList();
@@ -4015,19 +4429,34 @@ async function confirmVehicleMaintenance(id){
 }
 
 // ✅ 復帰モーダルを開く
-function openVehicleRestoreModal(id){
+function openVehicleRestoreModal(id, editMode){
   _vrPendingId = id;
+  _vrEditMode = !!editMode;
   const v = (DATA?.vehicles || []).find(x => x.id === id);
   if(!v){ toast('車両が見つかりません', 'error'); return; }
   const pl = v.plate || {};
   const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
-  $('m-vr-summary').innerHTML = `<b>${esc(plate)}</b> ${v.name?`<span style="color:var(--muted)">(${esc(v.name)})</span>`:''}<br><span style="font-size:11.5px;color:var(--muted)">次回スケジュールを入力してください</span>`;
-  // 6ヶ月後を自動セット
-  const six = new Date(); six.setMonth(six.getMonth()+6);
-  const tz = six.getTimezoneOffset()*60000;
-  $('m-vr-lastInspectionAt').value = new Date(six - tz).toISOString().slice(0,10);
-  $('m-vr-inspectionDate').value = v.inspectionDate || '';
+  const titleEl = $('m-vrestore-modal').querySelector('h2');
+  const okBtn = $('m-vrestore-modal').querySelector('.m-btn-success');
+  if(_vrEditMode){
+    if(titleEl) titleEl.textContent = '📅 点検日を修正';
+    $('m-vr-summary').innerHTML = `<b>${esc(plate)}</b> ${v.name?`<span style="color:var(--muted)">(${esc(v.name)})</span>`:''}<br><span style="font-size:11.5px;color:var(--muted)">入力ミスの修正用。状態・LINE通知は変更しません</span>`;
+    // 既存値をそのまま編集
+    $('m-vr-lastInspectionAt').value = (v.lastInspectionAt||'').slice(0,10);
+    $('m-vr-inspectionDate').value = (v.inspectionDate||'').slice(0,10);
+    if(okBtn) okBtn.textContent = '💾 修正を保存';
+  } else {
+    if(titleEl) titleEl.textContent = '🛠️ 点検完了 → 稼働可に復帰';
+    $('m-vr-summary').innerHTML = `<b>${esc(plate)}</b> ${v.name?`<span style="color:var(--muted)">(${esc(v.name)})</span>`:''}<br><span style="font-size:11.5px;color:var(--muted)">次回スケジュールを入力してください</span>`;
+    // 6ヶ月後を自動セット
+    const six = new Date(); six.setMonth(six.getMonth()+6);
+    const tz = six.getTimezoneOffset()*60000;
+    $('m-vr-lastInspectionAt').value = new Date(six - tz).toISOString().slice(0,10);
+    $('m-vr-inspectionDate').value = (v.inspectionDate||'').slice(0,10);
+    if(okBtn) okBtn.textContent = '✅ 復帰して保存 + LINE通知';
+  }
   $('m-vr-note').value = '';
+  _vrSyncWareki();
   $('m-vrestore-modal').classList.add('active');
 }
 function closeVehicleRestoreModal(){
@@ -4042,14 +4471,43 @@ async function confirmVehicleRestore(){
   const nextIns = $('m-vr-lastInspectionAt').value || '';
   const nextShaken = $('m-vr-inspectionDate').value || '';
   const note = $('m-vr-note').value.trim();
+  const ts = todayISO();
+  const editMode = _vrEditMode;
+  const pl0 = v.plate || {};
+  const plate = [pl0.area, pl0.no, pl0.kana, pl0.tail].filter(Boolean).join(' ');
+
+  if(editMode){
+    // 修正モード: 日付のみ上書き。状態変更・LINE通知なし
+    v.lastInspectionAt = nextIns;
+    v.inspectionDate = nextShaken;
+    if(note){
+      v.repairHistory = (v.repairHistory ? v.repairHistory + '\n' : '') + `[${ts}] 点検日を修正 (モバイル): ${note}`;
+    } else {
+      v.repairHistory = (v.repairHistory ? v.repairHistory + '\n' : '') + `[${ts}] 点検日を修正 (モバイル) 次回点検:${nextIns||'-'} 車検満了:${nextShaken||'-'}`;
+    }
+    v.updatedAt = Date.now();
+    v.updatedBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
+    showSpinner('修正を保存中...');
+    try {
+      await saveToDropbox();
+      hideSpinner();
+      toast(`💾 ${plate} の点検日を修正しました`, 'success');
+      closeVehicleRestoreModal();
+      renderVehiclesList();
+    } catch(e){
+      hideSpinner();
+      toast('保存エラー: '+e.message, 'error');
+    }
+    return;
+  }
+
+  // 通常: 点検完了 → 稼働可復帰 (status変更 + LINE通知)
   v.status = '稼働可';
   if(nextIns) v.lastInspectionAt = nextIns;
   if(nextShaken) v.inspectionDate = nextShaken;
   if(note){
-    const ts = todayISO();
     v.repairHistory = (v.repairHistory ? v.repairHistory + '\n' : '') + `[${ts}] 点検完了 (モバイル): ${note}`;
   } else {
-    const ts = todayISO();
     v.repairHistory = (v.repairHistory ? v.repairHistory + '\n' : '') + `[${ts}] 点検完了 → 稼働可復帰 (モバイル)`;
   }
   v.updatedAt = Date.now();
@@ -4057,10 +4515,8 @@ async function confirmVehicleRestore(){
   showSpinner('復帰を記録中...');
   try {
     await saveToDropbox();
-    try { await sendExternalNotify('vehicleRestore', _buildVehiclePayload(v, { nextInspection: nextIns, nextShaken, note })); } catch(e){}
+    try { await sendExternalNotify('vehicleRestore', _buildVehicleNotifyPayload(v, 'vehicleRestore', { nextInspection: nextIns, nextShaken, note })); } catch(e){}
     hideSpinner();
-    const pl = v.plate || {};
-    const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
     toast(`✅ ${plate} を稼働可に復帰しました`, 'success');
     closeVehicleRestoreModal();
     renderVehiclesList();
@@ -4070,15 +4526,40 @@ async function confirmVehicleRestore(){
   }
 }
 
-function _buildVehiclePayload(v, extra){
+// 車両イベント (点検入庫 / 復帰) 用ペイロード — 新方式 (line.text のみ・カレンダー操作なし)
+function _buildVehicleNotifyPayload(v, eventType, extra){
+  return {
+    line: { text: _buildVehicleLineMessage(v, eventType, extra) },
+    calendar: null
+  };
+}
+function _buildVehicleLineMessage(v, eventType, extra){
   const pl = v.plate || {};
-  return Object.assign({
-    plate: [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' '),
-    name: v.name || '', class: v.class || v.vehicleClass || '',
-    maker: v.maker || '', grade: v.grade || '',
-    status: v.status || '',
-    by: localStorage.getItem(LS_KEYS.editor) || 'mobile'
-  }, extra || {});
+  const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
+  const by = (extra && extra.by) || localStorage.getItem(LS_KEYS.editor) || 'mobile';
+  if(eventType === 'vehicleMaintenance'){
+    return [
+      '🛠️ 車両 点検入庫',
+      plate ? 'ナンバー: ' + plate : '',
+      v.name ? '車種: ' + v.name : '',
+      (v.class || v.vehicleClass) ? 'クラス: ' + (v.class || v.vehicleClass) : '',
+      by ? '操作者: ' + by : '',
+      '',
+      '※ 復帰までの間、配車割当はできません'
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'vehicleRestore'){
+    return [
+      '✅ 車両 稼働可に復帰',
+      plate ? 'ナンバー: ' + plate : '',
+      v.name ? '車種: ' + v.name : '',
+      extra && extra.nextInspection ? '📅 次回点検: ' + extra.nextInspection : '',
+      extra && extra.nextShaken ? '🚨 車検満了: ' + extra.nextShaken : '',
+      extra && extra.note ? '点検内容: ' + extra.note : '',
+      by ? '操作者: ' + by : ''
+    ].filter(Boolean).join('\n');
+  }
+  return '';
 }
 
 // ============================================================
