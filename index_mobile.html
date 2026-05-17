@@ -1271,7 +1271,6 @@ a{color:var(--info);text-decoration:none}
   <nav class="m-bottom-nav" id="m-bottom-nav" style="display:none">
     <button data-nav="home" class="active" onclick="showScreen('home')"><span class="m-nav-ico">🏡</span>ホーム</button>
     <button data-nav="dispatch" onclick="showScreen('dispatch')"><span class="m-nav-ico">🚙</span>配車</button>
-    <button class="m-nav-new" onclick="openNewCaseModal()" aria-label="新規案件登録"><span class="m-nav-new-circle">＋</span><span class="m-nav-new-lbl">新規</span></button>
     <button data-nav="recovery" onclick="showScreen('recovery')"><span class="m-nav-ico">🛻</span>回収</button>
     <button data-nav="menu" onclick="showScreen('menu')"><span class="m-nav-ico">📋</span>メニュー</button>
   </nav>
@@ -1381,8 +1380,12 @@ a{color:var(--info);text-decoration:none}
     </div>
     <div class="m-section-divider">🏢 保険会社</div>
     <div class="m-form-grp">
-      <label>保険会社 <span class="muted">(一覧候補から選ぶ or 直接入力)</span></label>
-      <input type="text" id="m-nc-insurer" list="m-nc-insurer-list" placeholder="保険会社名を入力">
+      <label>保険会社 <span class="muted">(📋で一覧から選ぶ or 直接入力)</span></label>
+      <input type="hidden" id="m-nc-insurerId">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="m-nc-insurer" list="m-nc-insurer-list" placeholder="保険会社名を入力" oninput="onMncInsurerTextInput()" style="flex:1;min-width:0">
+        <button type="button" class="m-btn m-btn-outline" onclick="openMncInsurerPicker()" style="flex:0 0 auto;padding:0 14px;font-size:18px" title="一覧から選ぶ">📋</button>
+      </div>
       <datalist id="m-nc-insurer-list"></datalist>
     </div>
     <div class="m-form-grp">
@@ -1411,8 +1414,11 @@ a{color:var(--info);text-decoration:none}
     </div>
     <div class="m-section-divider">📍 配車先</div>
     <div class="m-form-grp">
-      <label>配車先名</label>
-      <input type="text" id="m-nc-dispatchTo" placeholder="例: トヨタモビリティ沖縄 豊崎店">
+      <label>配車先名 <span class="muted">(🏭で工場マスタから選ぶ or 直接入力)</span></label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="m-nc-dispatchTo" placeholder="例: トヨタモビリティ沖縄 豊崎店" style="flex:1;min-width:0">
+        <button type="button" class="m-btn m-btn-outline" onclick="openMncFactoryPicker()" style="flex:0 0 auto;padding:0 14px;font-size:18px" title="工場マスタから選ぶ">🏭</button>
+      </div>
     </div>
     <div class="m-form-grp">
       <label>配車先住所</label>
@@ -1497,6 +1503,30 @@ a{color:var(--info);text-decoration:none}
   </div>
 </div>
 
+<!-- 保険会社ピッカー (PC同等・マスタから選択) -->
+<div class="m-modal" id="m-ins-picker-modal">
+  <div class="m-modal-body" style="max-height:88%">
+    <h2>🏢 保険会社を選ぶ</h2>
+    <input type="text" id="m-ip-search" placeholder="🔍 保険会社名 / 支店 / FAX" oninput="renderMncInsurerPicker()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
+    <div id="m-ip-list" style="overflow:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="m-modal-actions" style="margin-top:14px">
+      <button class="m-btn m-btn-outline m-btn-full" onclick="$('m-ins-picker-modal').classList.remove('active')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 工場(配車先)ピッカー (PC同等・工場マスタから選択) -->
+<div class="m-modal" id="m-fac-picker-modal">
+  <div class="m-modal-body" style="max-height:88%">
+    <h2>🏭 工場(配車先)を選ぶ</h2>
+    <input type="text" id="m-fp-search" placeholder="🔍 工場名 / TEL / 住所" oninput="renderMncFactoryPicker()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
+    <div id="m-fp-list" style="overflow:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="m-modal-actions" style="margin-top:14px">
+      <button class="m-btn m-btn-outline m-btn-full" onclick="$('m-fac-picker-modal').classList.remove('active')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <!-- 簡易版 回収登録 モーダル -->
 <div class="m-modal" id="m-quickrec-modal">
   <div class="m-modal-body" style="max-height:88%">
@@ -1555,7 +1585,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-17c';
+const APP_VERSION = '2026-05-17d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3736,6 +3766,7 @@ function openNewCaseModal(){
   const dl = $('m-nc-insurer-list');
   if(dl) dl.innerHTML = insurers.map(i => `<option value="${esc(insLabel(i))}"></option>`).join('');
   if($('m-nc-insurer')) $('m-nc-insurer').value = '';
+  if($('m-nc-insurerId')) $('m-nc-insurerId').value = '';
   // 初期値
   $('m-nc-receivedAt').value = todayISO();
   ['m-nc-contractor','m-nc-driver','m-nc-driverTel','m-nc-insurerContact','m-nc-insurerContactTel',
@@ -3755,6 +3786,97 @@ function openNewCaseModal(){
   $('m-newcase-modal').classList.add('active');
 }
 function closeNewCaseModal(){ $('m-newcase-modal').classList.remove('active'); }
+
+// ===== 保険会社/工場 ピッカー (PC版と同等にマスタから選択可能に) =====
+function _mncInsLabel(i){ return (i.name||'') + (i.branch ? ` ${i.branch}` : ''); }
+// 保険会社名を直接編集したら、完全一致マスタがあればリンク、無ければ id を空に
+// (空のまま保存すると saveNewCase が find-or-create で手入力をマスタ登録)
+function onMncInsurerTextInput(){
+  const txt = ($('m-nc-insurer').value || '').trim();
+  const hid = $('m-nc-insurerId'); if(!hid) return;
+  if(!txt){ hid.value = ''; return; }
+  const m = (DATA?.insurers || []).find(x =>
+    (x.name||'').trim() === txt || _mncInsLabel(x) === txt);
+  hid.value = m ? m.id : '';
+}
+function openMncInsurerPicker(){
+  $('m-ip-search').value = '';
+  renderMncInsurerPicker();
+  $('m-ins-picker-modal').classList.add('active');
+}
+function renderMncInsurerPicker(){
+  const q = ($('m-ip-search').value || '').trim().toLowerCase();
+  const useCount = {};
+  (DATA?.cases || []).forEach(c => { if(c.insurerId) useCount[c.insurerId] = (useCount[c.insurerId]||0)+1; });
+  let rows = (DATA?.insurers || []).slice().sort((a,b) => {
+    const ca = useCount[a.id]||0, cb = useCount[b.id]||0;
+    if(cb !== ca) return cb - ca;
+    return (a.name||'').localeCompare(b.name||'','ja');
+  });
+  if(q){
+    rows = rows.filter(i => {
+      const ct = (i.contacts||[]).map(c=>(c.name||'')+' '+(c.tel||'')).join(' ');
+      return `${i.name||''} ${i.branch||''} ${i.fax||''} ${ct}`.toLowerCase().includes(q);
+    });
+  }
+  const host = $('m-ip-list');
+  host.innerHTML = rows.map(i => {
+    const cnt = useCount[i.id]||0;
+    const idJ = String(i.id).replace(/'/g,"\\'");
+    return `<div onclick="pickMncInsurer('${idJ}')" style="padding:11px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;cursor:pointer;background:#fff">
+      <div style="font-weight:700;color:var(--navy)">${esc(i.name||'')}${cnt>0?` <span style="font-size:10px;color:var(--green);font-weight:700">${cnt}件</span>`:''}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(i.branch||'')}${i.fax?` ／ FAX ${esc(i.fax)}`:''}${(i.contacts||[]).length?` ／ 担当${(i.contacts||[]).length}名`:''}</div>
+    </div>`;
+  }).join('') || '<div style="text-align:center;color:var(--muted);padding:24px 0">該当する保険会社がありません</div>';
+}
+function pickMncInsurer(id){
+  const ins = (DATA?.insurers || []).find(x => x.id === id); if(!ins) return;
+  $('m-nc-insurer').value = _mncInsLabel(ins);
+  if($('m-nc-insurerId')) $('m-nc-insurerId').value = id;
+  // 既定担当者 (isDefault → 先頭) を自動補完。空欄のみ埋め、入力済みは尊重しない
+  const cs = ins.contacts || [];
+  const def = cs.find(c => c.isDefault) || cs[0] || null;
+  if(def){
+    if(!($('m-nc-insurerContact').value||'').trim()) $('m-nc-insurerContact').value = def.name||'';
+    if(!($('m-nc-insurerContactTel').value||'').trim()) $('m-nc-insurerContactTel').value = def.tel||'';
+    if(!($('m-nc-insurerContactFax').value||'').trim()) $('m-nc-insurerContactFax').value = def.fax || ins.fax || '';
+  } else if(ins.fax && !($('m-nc-insurerContactFax').value||'').trim()){
+    $('m-nc-insurerContactFax').value = ins.fax;
+  }
+  $('m-ins-picker-modal').classList.remove('active');
+  toast('🏢 保険会社を設定: '+(ins.name||''), 'success');
+}
+function openMncFactoryPicker(){
+  $('m-fp-search').value = ($('m-nc-dispatchToTel')?.value || '').trim();
+  renderMncFactoryPicker();
+  $('m-fac-picker-modal').classList.add('active');
+}
+function renderMncFactoryPicker(){
+  const q = ($('m-fp-search').value || '').trim().toLowerCase();
+  let rows = (DATA?.factories || []).slice()
+    .sort((a,b)=> (a.name||'').localeCompare(b.name||'','ja'));
+  if(q){
+    rows = rows.filter(f => `${f.name||''} ${f.tel||''} ${f.address||''}`.toLowerCase().includes(q));
+  }
+  const host = $('m-fp-list');
+  host.innerHTML = rows.map(f => {
+    const idJ = String(f.id).replace(/'/g,"\\'");
+    return `<div onclick="pickMncFactory('${idJ}')" style="padding:11px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;cursor:pointer;background:#fff">
+      <div style="font-weight:700;color:var(--navy)">${esc(f.name||'')}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">${f.tel?`TEL ${esc(f.tel)}`:''}${f.address?` ／ ${esc(f.address)}`:''}</div>
+    </div>`;
+  }).join('') || '<div style="text-align:center;color:var(--muted);padding:24px 0">工場マスタが空です（PC版マスタで登録するか、直接入力してください）</div>';
+}
+function pickMncFactory(id){
+  const f = (DATA?.factories || []).find(x => x.id === id); if(!f) return;
+  $('m-nc-dispatchTo').value = f.name||'';
+  $('m-nc-dispatchToAddr').value = f.address||'';
+  $('m-nc-dispatchToTel').value = f.tel||'';
+  if(f.contact && !($('m-nc-dispatchContact').value||'').trim()) $('m-nc-dispatchContact').value = f.contact;
+  if(f.contactTel && !($('m-nc-dispatchContactTel').value||'').trim()) $('m-nc-dispatchContactTel').value = f.contactTel;
+  $('m-fac-picker-modal').classList.remove('active');
+  toast('🏭 配車先を設定: '+(f.name||''), 'success');
+}
 
 function _genMobileCaseId(){
   return 'mob-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,6);
@@ -3793,11 +3915,16 @@ async function saveNewCase(enterFlow){
   const dispatchTo = $('m-nc-dispatchTo').value.trim();
   const dispatchAt = $('m-nc-dispatchAt').value;
 
-  // 保険会社: 入力テキストから マスタを find-or-create してリンク
+  // 保険会社: ピッカーでマスタ選択済みなら そのIDを直使用。
+  //   未選択(手入力)なら 入力テキストから find-or-create してリンク。
   let insurerId = '';
-  if(insurerText){
+  const pickedInsId = ($('m-nc-insurerId')?.value || '').trim();
+  let found = pickedInsId ? (DATA?.insurers || []).find(x => x.id === pickedInsId) : null;
+  if(found){
+    insurerId = found.id;
+  } else if(insurerText){
     const insLabel = i => (i.name||'') + (i.branch ? ` ${i.branch}` : '');
-    let found = (DATA?.insurers || []).find(x =>
+    found = (DATA?.insurers || []).find(x =>
       (x.name||'').trim() === insurerText || insLabel(x) === insurerText
     );
     if(!found){
@@ -3808,7 +3935,9 @@ async function saveNewCase(enterFlow){
       toast(`🏢 保険会社「${insurerText}」をマスタに登録しました`, 'success');
     }
     insurerId = found.id;
-    // 担当者情報も取り込み (次回から候補に出る)
+  }
+  // 担当者情報も取り込み (次回から候補に出る) — 選択/手入力どちらでも
+  if(found){
     const cName = ($('m-nc-insurerContact').value || '').trim();
     const cTel  = ($('m-nc-insurerContactTel').value || '').trim();
     if(cName && !(found.contacts||[]).some(x => (x.name||'') === cName)){
