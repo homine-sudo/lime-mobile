@@ -910,7 +910,11 @@ a{color:var(--info);text-decoration:none}
   text-align:center;font-size:22px;font-weight:bold;margin:0 0 14px;
   letter-spacing:0.3em;border:none;
 }
-.sheet.handover .ho-top{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+/* html2pdf 0.10 同梱の旧 html2canvas は CSS Grid を正しく描画せず右列がクリップ
+   される (FAX見切れ事故の真因)。table レイアウトに統一 (テーブルは正常描画)。 */
+.sheet.handover .ho-top{display:table;width:100%;table-layout:fixed;border-collapse:separate;margin-bottom:10px}
+.sheet.handover .ho-top>.ho-hdr{display:table-cell;width:50%;vertical-align:top;box-sizing:border-box}
+.sheet.handover .ho-top>.ho-hdr2{padding-left:10px}
 .sheet.handover .ho-hdr{border-collapse:collapse;width:100%;font-size:12px}
 .sheet.handover .ho-hdr th,.sheet.handover .ho-hdr td{
   border:1px solid #000;padding:4px 8px;vertical-align:middle;text-align:center;
@@ -939,9 +943,9 @@ a{color:var(--info);text-decoration:none}
 .sheet.handover .ho-amt{font-size:14px;font-weight:bold}
 .sheet.handover .ho-sub{font-size:11px;color:#333}
 .sheet.handover .ho-memo{min-height:32px}
-.sheet.handover .ho-footer{margin-top:14px;display:grid;grid-template-columns:1.4fr 1fr;gap:16px;font-size:12px}
-.sheet.handover .ho-bank{border:1.5px solid #000;padding:8px 12px;line-height:1.6;background:#fff}
-.sheet.handover .ho-company{text-align:right;font-size:13px;line-height:1.6}
+.sheet.handover .ho-footer{margin-top:14px;display:table;width:100%;table-layout:fixed;font-size:12px}
+.sheet.handover .ho-bank{display:table-cell;width:58%;vertical-align:top;border:1.5px solid #000;padding:8px 12px;line-height:1.6;background:#fff;box-sizing:border-box}
+.sheet.handover .ho-company{display:table-cell;width:42%;vertical-align:top;text-align:right;font-size:13px;line-height:1.6;padding-left:16px;word-break:break-word;overflow-wrap:anywhere;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -1547,7 +1551,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-16b';
+const APP_VERSION = '2026-05-16c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2302,11 +2306,14 @@ async function _genHandoverPDF(sheetEl, opt){
     throw new Error('PDFライブラリ未読込のため生成中止 (FAX誤送信防止)');
   }
   // ① 生canvasを取得 (window.html2canvas が無くても html2pdf ワーカー経由で取得)
-  //   ★捕捉幅是正: スマホの狭ビューポートでは固定820px要素が画面幅で
-  //   クリップ捕捉される。html2canvas に「要素の実 scrollWidth」(=動的な
-  //   正しい値。ハードコード820ではない) を windowWidth/width として渡し、
-  //   端末幅に依存せず全幅を捕捉させる。万一ずれても直後の
-  //   _validatePdfPlacement がアスペクト乖離(過大/過小)で throw する安全網。
+  //   ★捕捉幅是正 (2026-05-16 再修正):
+  //   - 狭ビューポート対策に windowWidth は必須だが、これを固定820px要素の
+  //     幅ピッタリにし、かつ width で canvas をクロップすると、html2canvas の
+  //     テキスト再レイアウトが実DOMよりわずかに広くなり右端(社名行等)が欠ける。
+  //   - 対策: windowWidth に十分な余裕(動的算出・ハードコード820禁止) を与え、
+  //     固定幅シートが端末/クローン幅で再レイアウトされないようにする。
+  //     width/height は渡さず html2canvas に要素の自然な実寸を捕捉させる。
+  //   - 万一ずれても直後の _validatePdfPlacement がアスペクト乖離で throw。
   const capW = sheetEl.scrollWidth || sheetEl.offsetWidth || 820;
   const capH = sheetEl.scrollHeight || sheetEl.offsetHeight || 0;
   const h2cBase = {
