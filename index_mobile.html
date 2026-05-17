@@ -799,6 +799,41 @@ a{color:var(--info);text-decoration:none}
   transition:transform .08s,background .12s;
 }
 .m-qd:active{transform:scale(.93);background:#DDE9D2}
+/* 日付/日時 表示ボタン (ネイティブpickerを廃し自前カレンダーを開く) */
+.m-datebtn{
+  display:flex;align-items:center;justify-content:space-between;width:100%;
+  padding:13px 14px;border:1.5px solid #D4DECA;border-radius:10px;background:#fff;
+  font-size:16px;color:var(--text);text-align:left;font-weight:600;
+}
+.m-datebtn:active{transform:scale(.99);background:#FAFCF8}
+.m-datebtn .m-db-val{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-datebtn .m-db-val.ph{color:#9AA6A0;font-weight:500}
+.m-datebtn .m-db-ico{flex:0 0 auto;margin-left:10px;opacity:.65;font-size:18px}
+/* 月カレンダー ボトムシート */
+.m-cal-nav{display:flex;align-items:center;justify-content:space-between;margin:2px 0 12px}
+.m-cal-nav button{
+  width:46px;height:46px;border-radius:11px;background:#EEF3EA;
+  border:1px solid #C8D6BB;font-size:18px;color:var(--deep);font-weight:800;
+}
+.m-cal-nav button:active{transform:scale(.92)}
+.m-cal-title{font-size:17px;font-weight:800;color:var(--navy)}
+.m-cal-wd{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px}
+.m-cal-wd span{text-align:center;font-size:11px;font-weight:800;color:var(--muted);padding:3px 0}
+.m-cal-wd span.sun{color:#C53030}.m-cal-wd span.sat{color:#2563EB}
+.m-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.m-cal-cell{
+  min-height:44px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+  border-radius:10px;font-size:15px;font-weight:700;color:var(--text);
+  background:#fff;border:1px solid transparent;transition:transform .06s,background .1s;
+}
+.m-cal-cell:not(.empty):active{transform:scale(.9)}
+.m-cal-cell.empty{background:transparent}
+.m-cal-cell.today{border-color:#C8D6BB;background:#F2F6EE}
+.m-cal-cell.sun{color:#C53030}.m-cal-cell.sat{color:#2563EB}
+.m-cal-cell.sel{background:linear-gradient(180deg,#5FA04D,#4F8A3E)!important;color:#fff!important;border-color:#4F8A3E}
+.m-cal-time{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:16px}
+.m-cal-time select{width:auto;min-width:96px;text-align:center;font-weight:700}
+.m-cal-time .sep{font-size:18px;font-weight:800;color:var(--navy)}
 /* ピッカーモーダル: 見出し行に常時×、リストは内側スクロールで×が隠れない */
 .m-pick-head{
   display:flex;align-items:center;justify-content:space-between;
@@ -1389,7 +1424,8 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-row2">
       <div class="m-form-grp">
         <label>受付日</label>
-        <input type="date" id="m-nc-receivedAt">
+        <button type="button" class="m-datebtn" id="m-nc-receivedAt-btn" onclick="openMncCal('m-nc-receivedAt',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+        <input type="hidden" id="m-nc-receivedAt">
       </div>
       <div class="m-form-grp">
         <label>区分</label>
@@ -1461,7 +1497,8 @@ a{color:var(--info);text-decoration:none}
       </div>
       <div class="m-form-grp">
         <label>事故日</label>
-        <input type="date" id="m-nc-accidentDate">
+        <button type="button" class="m-datebtn" id="m-nc-accidentDate-btn" onclick="openMncCal('m-nc-accidentDate',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+        <input type="hidden" id="m-nc-accidentDate">
       </div>
     </div>
     <div class="m-section-divider">📍 配車先</div>
@@ -1491,7 +1528,8 @@ a{color:var(--info);text-decoration:none}
     <div class="m-section-divider">🚙 配車予約・車両</div>
     <div class="m-form-grp">
       <label>配車予約日時</label>
-      <input type="datetime-local" id="m-nc-dispatchAt" step="600">
+      <button type="button" class="m-datebtn" id="m-nc-dispatchAt-btn" onclick="openMncCal('m-nc-dispatchAt',true)"><span class="m-db-val ph" data-ph="日時を選択">日時を選択</span><span class="m-db-ico">📅</span></button>
+      <input type="hidden" id="m-nc-dispatchAt">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;cursor:pointer;font-weight:600">
           <input type="checkbox" id="m-nc-dispatchTimePending" style="margin:0;cursor:pointer;width:auto">
@@ -1526,15 +1564,18 @@ a{color:var(--info);text-decoration:none}
     </div>
     <div class="m-form-grp">
       <label>利用開始日</label>
-      <input type="date" id="m-nc-useStart">
+      <button type="button" class="m-datebtn" id="m-nc-useStart-btn" onclick="openMncCal('m-nc-useStart',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+      <input type="hidden" id="m-nc-useStart">
     </div>
     <div class="m-form-grp">
       <label>利用終了日</label>
-      <input type="date" id="m-nc-useEnd">
+      <button type="button" class="m-datebtn" id="m-nc-useEnd-btn" onclick="openMncCal('m-nc-useEnd',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+      <input type="hidden" id="m-nc-useEnd">
     </div>
     <div class="m-form-grp">
       <label>利用期限 (予定)</label>
-      <input type="date" id="m-nc-useDeadline">
+      <button type="button" class="m-datebtn" id="m-nc-useDeadline-btn" onclick="openMncCal('m-nc-useDeadline',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+      <input type="hidden" id="m-nc-useDeadline">
     </div>
     <div class="m-section-divider">📝 メモ</div>
     <div class="m-form-grp">
@@ -1598,6 +1639,31 @@ a{color:var(--info);text-decoration:none}
   </div>
 </div>
 
+<!-- 月カレンダー ボトムシート (全日付/日時欄で共用・OSピッカー非依存・明示の閉じる) -->
+<div class="m-modal" id="m-cal-sheet">
+  <div class="m-modal-body" style="max-height:92%">
+    <div class="m-pick-head">
+      <h2 id="m-cal-h">📅 日付を選ぶ</h2>
+      <button type="button" class="m-pick-x" onclick="closeMncCal(false)" aria-label="閉じる">✕</button>
+    </div>
+    <div class="m-cal-nav">
+      <button type="button" onclick="mncCalShift(-1)" aria-label="前の月">◀</button>
+      <span class="m-cal-title" id="m-cal-title"></span>
+      <button type="button" onclick="mncCalShift(1)" aria-label="次の月">▶</button>
+    </div>
+    <div class="m-cal-wd"><span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span></div>
+    <div class="m-cal-grid" id="m-cal-grid"></div>
+    <div class="m-cal-time" id="m-cal-time" style="display:none">
+      <select id="m-cal-hh"></select><span class="sep">:</span><select id="m-cal-mm"></select>
+    </div>
+    <div class="m-modal-actions" style="margin-top:16px;flex-direction:column;gap:8px">
+      <button class="m-btn m-btn-success m-btn-full" onclick="closeMncCal(true)">完了</button>
+      <button class="m-btn m-btn-outline m-btn-full" onclick="mncCalToday()">今日にする</button>
+      <button class="m-btn m-btn-ghost m-btn-full" onclick="closeMncCal(false)">閉じる (変更しない)</button>
+    </div>
+  </div>
+</div>
+
 <!-- 簡易版 回収登録 モーダル -->
 <div class="m-modal" id="m-quickrec-modal">
   <div class="m-modal-body" style="max-height:88%">
@@ -1656,7 +1722,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-17g';
+const APP_VERSION = '2026-05-17h';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3856,6 +3922,7 @@ function openNewCaseModal(){
   if(typeof refreshMncNoteChips === 'function') refreshMncNoteChips();
   if($('m-nc-dispatchTimePending')) $('m-nc-dispatchTimePending').checked = false;
   if($('m-nc-dispatchTimePendingDriver')) $('m-nc-dispatchTimePendingDriver').checked = false;
+  if(typeof _mncSyncAllDateBtns === 'function') _mncSyncAllDateBtns();
   $('m-newcase-modal').classList.add('active');
 }
 function closeNewCaseModal(){ $('m-newcase-modal').classList.remove('active'); }
@@ -4003,7 +4070,7 @@ function toggleMncNoteChip(t){
       const off = (t === '前日配車') ? 1 : 2;
       const ns = _mncAddDays(disp, off);
       const us = $('m-nc-useStart');
-      if(us && ns){ us.value = ns; toast(`📅 利用開始日を ${ns} に自動設定 (${t})`, 'success'); }
+      if(us && ns){ us.value = ns; if(typeof _mncDateBtn==='function') _mncDateBtn('m-nc-useStart'); toast(`📅 利用開始日を ${ns} に自動設定 (${t})`, 'success'); }
     } else {
       toast('💡 先に「配車予約日時」を入力してください', 'error');
     }
@@ -4016,13 +4083,98 @@ function _mncAddDays(ymd, n){
   d.setDate(d.getDate() + (Number(n)||0));
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
-// クイック日付: 基準(baseId の値 or 今日) + days を fieldId に入れる
-function mncQuickDate(fieldId, baseId, days){
-  const el = $(fieldId); if(!el) return;
-  let base = '';
-  if(baseId){ base = ($(baseId)?.value || '').slice(0,10); }
-  if(!base){ const t = new Date(); base = `${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}`; }
-  el.value = _mncAddDays(base, days);
+// ===== 自前 月カレンダー (OSピッカー非依存・明示の閉じる) =====
+// 各日付欄は hidden入力(id維持=保存処理不変) + 表示ボタン(.m-datebtn)。
+var _mncCal = null;
+function _mncFmtDate(ymd){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd||'')); if(!m) return '';
+  const d = new Date(+m[1], +m[2]-1, +m[3]);
+  return `${m[1]}/${m[2]}/${m[3]} (${'日月火水木金土'[d.getDay()]})`;
+}
+// hidden値から表示ボタンのラベルを同期
+function _mncDateBtn(id){
+  const inp = $(id), btn = $(id+'-btn'); if(!inp || !btn) return;
+  const val = btn.querySelector('.m-db-val'); if(!val) return;
+  const v = inp.value || '';
+  if(!v){ val.textContent = val.dataset.ph || '未選択'; val.classList.add('ph'); return; }
+  val.classList.remove('ph');
+  val.textContent = (v.indexOf('T') >= 0)
+    ? _mncFmtDate(v.slice(0,10)) + ' ' + v.slice(11,16)
+    : _mncFmtDate(v);
+}
+function _mncSyncAllDateBtns(){
+  ['m-nc-receivedAt','m-nc-accidentDate','m-nc-dispatchAt','m-nc-useStart','m-nc-useEnd','m-nc-useDeadline'].forEach(_mncDateBtn);
+}
+function openMncCal(id, withTime){
+  const inp = $(id); if(!inp) return;
+  const dm = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(inp.value || '');
+  const now = new Date();
+  let y, mo, da, hh = '09', mm = '00';
+  if(dm){ y=+dm[1]; mo=+dm[2]; da=+dm[3]; if(dm[4]){ hh=dm[4]; mm=dm[5]; } }
+  else { y=now.getFullYear(); mo=now.getMonth()+1; da=now.getDate();
+         if(withTime){ hh=pad2(now.getHours()); mm=pad2(Math.floor(now.getMinutes()/10)*10); } }
+  _mncCal = { target:id, time:!!withTime, vy:y, vm:mo, sy:y, sm:mo, sd:da };
+  $('m-cal-h').textContent = withTime ? '📅 配車予約日時' : '📅 日付を選ぶ';
+  const tEl = $('m-cal-time');
+  if(withTime){
+    tEl.style.display = 'flex';
+    $('m-cal-hh').innerHTML = Array.from({length:24},(_,i)=>`<option value="${pad2(i)}">${pad2(i)}時</option>`).join('');
+    $('m-cal-mm').innerHTML = [0,10,20,30,40,50].map(n=>`<option value="${pad2(n)}">${pad2(n)}分</option>`).join('');
+    $('m-cal-hh').value = hh;
+    const mmN = pad2(Math.floor((+mm||0)/10)*10);
+    $('m-cal-mm').value = mmN;
+  } else { tEl.style.display = 'none'; }
+  renderMncCal();
+  $('m-cal-sheet').classList.add('active');
+}
+function mncCalShift(d){
+  if(!_mncCal) return;
+  let y=_mncCal.vy, m=_mncCal.vm + d;
+  if(m<1){ m=12; y--; } if(m>12){ m=1; y++; }
+  _mncCal.vy=y; _mncCal.vm=m; renderMncCal();
+}
+function mncCalToday(){
+  if(!_mncCal) return;
+  const t = new Date();
+  _mncCal.vy=t.getFullYear(); _mncCal.vm=t.getMonth()+1;
+  _mncCal.sy=_mncCal.vy; _mncCal.sm=_mncCal.vm; _mncCal.sd=t.getDate();
+  renderMncCal();
+}
+function mncCalPick(d){
+  if(!_mncCal) return;
+  _mncCal.sy=_mncCal.vy; _mncCal.sm=_mncCal.vm; _mncCal.sd=d;
+  renderMncCal();
+}
+function renderMncCal(){
+  if(!_mncCal) return;
+  const y=_mncCal.vy, m=_mncCal.vm;
+  $('m-cal-title').textContent = `${y}年 ${m}月`;
+  const first = new Date(y, m-1, 1).getDay();
+  const days = new Date(y, m, 0).getDate();
+  const t = new Date(), ty=t.getFullYear(), tm=t.getMonth()+1, td=t.getDate();
+  let h = '';
+  for(let i=0;i<first;i++) h += '<div class="m-cal-cell empty"></div>';
+  for(let d=1; d<=days; d++){
+    const dow = new Date(y, m-1, d).getDay();
+    const sel = (_mncCal.sy===y && _mncCal.sm===m && _mncCal.sd===d);
+    const today = (ty===y && tm===m && td===d);
+    const cls = ['m-cal-cell', dow===0?'sun':'', dow===6?'sat':'', today?'today':'', sel?'sel':''].filter(Boolean).join(' ');
+    h += `<div class="${cls}" onclick="mncCalPick(${d})">${d}</div>`;
+  }
+  $('m-cal-grid').innerHTML = h;
+}
+function closeMncCal(commit){
+  if(commit && _mncCal){
+    const ymd = `${_mncCal.sy}-${pad2(_mncCal.sm)}-${pad2(_mncCal.sd)}`;
+    const inp = $(_mncCal.target);
+    if(inp){
+      inp.value = _mncCal.time ? `${ymd}T${$('m-cal-hh').value}:${$('m-cal-mm').value}` : ymd;
+      _mncDateBtn(_mncCal.target);
+      inp.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  }
+  $('m-cal-sheet').classList.remove('active');
+  _mncCal = null;
 }
 function refreshMncNoteChips(){
   const v = ($('m-nc-dispatchNote')?.value || '');
