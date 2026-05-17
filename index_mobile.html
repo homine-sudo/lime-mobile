@@ -791,6 +791,14 @@ a{color:var(--info);text-decoration:none}
 }
 .m-chip:active{transform:scale(.94)}
 .m-chip.on{background:linear-gradient(180deg,#5FA04D,#4F8A3E);color:#fff;border-color:#4F8A3E}
+/* クイック日付 (ワンタップで日付セット・控えめ＝盛り過ぎない) */
+.m-qd-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.m-qd{
+  font-size:11.5px;font-weight:700;color:var(--deep);background:#EEF3EA;
+  border:1px solid #C8D6BB;border-radius:8px;padding:6px 11px;
+  transition:transform .08s,background .12s;
+}
+.m-qd:active{transform:scale(.93);background:#DDE9D2}
 /* ピッカーモーダル: 見出し行に常時×、リストは内側スクロールで×が隠れない */
 .m-pick-head{
   display:flex;align-items:center;justify-content:space-between;
@@ -1454,6 +1462,10 @@ a{color:var(--info);text-decoration:none}
       <div class="m-form-grp">
         <label>事故日</label>
         <input type="date" id="m-nc-accidentDate">
+        <div class="m-qd-row">
+          <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-accidentDate',null,0)">今日</button>
+          <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-accidentDate',null,-1)">昨日</button>
+        </div>
       </div>
     </div>
     <div class="m-section-divider">📍 配車先</div>
@@ -1498,13 +1510,8 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-grp">
       <label>予約備考 <span class="muted">(タップで追加 / 自由記入も可)</span></label>
       <div class="m-chips" id="m-nc-noteChips">
-        <button type="button" class="m-chip" data-chip="前日配車" onclick="toggleMncNoteChip('前日配車')">前日配車</button>
-        <button type="button" class="m-chip" data-chip="前々日配車" onclick="toggleMncNoteChip('前々日配車')">前々日配車</button>
-        <button type="button" class="m-chip" data-chip="当日配車" onclick="toggleMncNoteChip('当日配車')">当日配車</button>
-        <button type="button" class="m-chip" data-chip="午前中" onclick="toggleMncNoteChip('午前中')">午前中</button>
-        <button type="button" class="m-chip" data-chip="午後" onclick="toggleMncNoteChip('午後')">午後</button>
-        <button type="button" class="m-chip" data-chip="時間厳守" onclick="toggleMncNoteChip('時間厳守')">時間厳守</button>
-        <button type="button" class="m-chip" data-chip="至急" onclick="toggleMncNoteChip('至急')">至急</button>
+        <button type="button" class="m-chip" data-chip="前日配車" onclick="toggleMncNoteChip('前日配車')">＋前日配車</button>
+        <button type="button" class="m-chip" data-chip="前々日配車" onclick="toggleMncNoteChip('前々日配車')">＋前々日配車</button>
       </div>
       <input type="text" id="m-nc-dispatchNote" placeholder="自由記入 (例: 12時迄)" oninput="refreshMncNoteChips()">
     </div>
@@ -1518,19 +1525,31 @@ a{color:var(--info);text-decoration:none}
       <label>日額 (税込・円)</label>
       <input type="number" id="m-nc-unitPrice" placeholder="例: 7000" inputmode="numeric">
     </div>
-    <div class="m-form-row2">
-      <div class="m-form-grp">
-        <label>利用開始日</label>
-        <input type="date" id="m-nc-useStart">
+    <div class="m-form-grp">
+      <label>利用開始日</label>
+      <input type="date" id="m-nc-useStart">
+      <div class="m-qd-row">
+        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useStart',null,0)">今日</button>
+        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useStart',null,1)">明日</button>
       </div>
-      <div class="m-form-grp">
-        <label>利用終了日</label>
-        <input type="date" id="m-nc-useEnd">
+    </div>
+    <div class="m-form-grp">
+      <label>利用終了日</label>
+      <input type="date" id="m-nc-useEnd">
+      <div class="m-qd-row">
+        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useEnd','m-nc-useStart',7)">開始+7日</button>
+        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useEnd','m-nc-useStart',14)">+14日</button>
+        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useEnd','m-nc-useStart',30)">+30日</button>
       </div>
     </div>
     <div class="m-form-grp">
       <label>利用期限 (予定)</label>
       <input type="date" id="m-nc-useDeadline">
+      <div class="m-qd-row">
+        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useDeadline','m-nc-useStart',30)">開始+30日</button>
+        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useDeadline','m-nc-useStart',60)">+60日</button>
+        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useDeadline','m-nc-useStart',90)">+90日</button>
+      </div>
     </div>
     <div class="m-section-divider">📝 メモ</div>
     <div class="m-form-grp">
@@ -1652,7 +1671,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-17e';
+const APP_VERSION = '2026-05-17f';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3991,6 +4010,34 @@ function toggleMncNoteChip(t){
   }
   inp.value = v;
   refreshMncNoteChips();
+  // PC版と同挙動: 前日配車/前々日配車 を ON にしたら
+  //   利用開始日 = 配車予約日 + N日 (前日=+1 / 前々日=+2) を自動設定
+  if(!on && (t === '前日配車' || t === '前々日配車')){
+    const disp = ($('m-nc-dispatchAt')?.value || '').slice(0,10);
+    if(disp){
+      const off = (t === '前日配車') ? 1 : 2;
+      const ns = _mncAddDays(disp, off);
+      const us = $('m-nc-useStart');
+      if(us && ns){ us.value = ns; toast(`📅 利用開始日を ${ns} に自動設定 (${t})`, 'success'); }
+    } else {
+      toast('💡 先に「配車予約日時」を入力してください', 'error');
+    }
+  }
+}
+// YYYY-MM-DD に日数加算 (ローカル基準・TZずれ無し)
+function _mncAddDays(ymd, n){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd||'')); if(!m) return '';
+  const d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+  d.setDate(d.getDate() + (Number(n)||0));
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+// クイック日付: 基準(baseId の値 or 今日) + days を fieldId に入れる
+function mncQuickDate(fieldId, baseId, days){
+  const el = $(fieldId); if(!el) return;
+  let base = '';
+  if(baseId){ base = ($(baseId)?.value || '').slice(0,10); }
+  if(!base){ const t = new Date(); base = `${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}`; }
+  el.value = _mncAddDays(base, days);
 }
 function refreshMncNoteChips(){
   const v = ($('m-nc-dispatchNote')?.value || '');
