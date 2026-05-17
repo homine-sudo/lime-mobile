@@ -902,9 +902,11 @@ a{color:var(--info);text-decoration:none}
 
 /* === 手配書 (handover) - FAX用、画面外でレンダリング === */
 #m-fax-host{position:absolute;left:-9999px;top:0;width:900px}
+/* 案2: A4縦フル活用・外枠なし・フッター下端 (FAX端クリップ対策で枠を排し安全マージン確保) */
 .sheet.handover{
   background:#fff;color:#000;font-family:"Yu Gothic","Hiragino Sans","メイリオ",sans-serif;
-  max-width:820px;width:820px;margin:0 auto;padding:16px 22px;border:1px solid #000;
+  max-width:820px;width:820px;margin:0 auto;padding:20px 26px;border:none;
+  box-sizing:border-box;display:flex;flex-direction:column;min-height:1140px;
 }
 .sheet.handover .ho-title{
   text-align:center;font-size:22px;font-weight:bold;margin:0 0 14px;
@@ -913,8 +915,9 @@ a{color:var(--info);text-decoration:none}
 /* html2pdf 0.10 同梱の旧 html2canvas は CSS Grid を正しく描画せず右列がクリップ
    される (FAX見切れ事故の真因)。table レイアウトに統一 (テーブルは正常描画)。 */
 .sheet.handover .ho-top{display:table;width:100%;table-layout:fixed;border-collapse:separate;margin-bottom:10px}
-.sheet.handover .ho-top>.ho-hdr{display:table-cell;width:50%;vertical-align:top;box-sizing:border-box}
-.sheet.handover .ho-top>.ho-hdr2{padding-left:10px}
+.sheet.handover .ho-top>.ho-col{display:table-cell;width:50%;vertical-align:top;box-sizing:border-box}
+.sheet.handover .ho-top>.ho-col2{padding-left:10px}
+.sheet.handover .ho-top .ho-hdr{width:100%}
 .sheet.handover .ho-hdr{border-collapse:collapse;width:100%;font-size:12px}
 .sheet.handover .ho-hdr th,.sheet.handover .ho-hdr td{
   border:1px solid #000;padding:4px 8px;vertical-align:middle;text-align:center;
@@ -943,9 +946,9 @@ a{color:var(--info);text-decoration:none}
 .sheet.handover .ho-amt{font-size:14px;font-weight:bold}
 .sheet.handover .ho-sub{font-size:11px;color:#333}
 .sheet.handover .ho-memo{min-height:32px}
-.sheet.handover .ho-footer{margin-top:14px;display:table;width:100%;table-layout:fixed;font-size:12px}
-.sheet.handover .ho-bank{display:table-cell;width:58%;vertical-align:top;border:1.5px solid #000;padding:8px 12px;line-height:1.6;background:#fff;box-sizing:border-box}
-.sheet.handover .ho-company{display:table-cell;width:42%;vertical-align:top;text-align:right;font-size:13px;line-height:1.6;padding-left:16px;word-break:break-word;overflow-wrap:anywhere;box-sizing:border-box}
+.sheet.handover .ho-footer{margin-top:auto;padding-top:18px;display:table;width:100%;table-layout:fixed;font-size:12px}
+.sheet.handover .ho-bank{display:table-cell;width:58%;vertical-align:bottom;line-height:1.6;box-sizing:border-box}
+.sheet.handover .ho-company{display:table-cell;width:42%;vertical-align:bottom;text-align:right;font-size:13px;line-height:1.6;padding-left:16px;word-break:break-word;overflow-wrap:anywhere;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -1551,7 +1554,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-16c';
+const APP_VERSION = '2026-05-17b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2306,33 +2309,50 @@ async function _genHandoverPDF(sheetEl, opt){
     throw new Error('PDFライブラリ未読込のため生成中止 (FAX誤送信防止)');
   }
   // ① 生canvasを取得 (window.html2canvas が無くても html2pdf ワーカー経由で取得)
-  //   ★捕捉幅是正 (2026-05-16 再修正):
-  //   - 狭ビューポート対策に windowWidth は必須だが、これを固定820px要素の
-  //     幅ピッタリにし、かつ width で canvas をクロップすると、html2canvas の
-  //     テキスト再レイアウトが実DOMよりわずかに広くなり右端(社名行等)が欠ける。
-  //   - 対策: windowWidth に十分な余裕(動的算出・ハードコード820禁止) を与え、
-  //     固定幅シートが端末/クローン幅で再レイアウトされないようにする。
-  //     width/height は渡さず html2canvas に要素の自然な実寸を捕捉させる。
-  //   - 万一ずれても直後の _validatePdfPlacement がアスペクト乖離で throw。
-  const capW = sheetEl.scrollWidth || sheetEl.offsetWidth || 820;
-  const capH = sheetEl.scrollHeight || sheetEl.offsetHeight || 0;
+  //   ★2026-05-17 確定 (実 index_mobile.html・demoモード・本番関数で忠実再現し検証):
+  //   windowWidth / width / windowHeight / height を html2canvas に渡すと、
+  //   手配書シート全体が左1/3に潰れ左側がクリップされる (= 取引先に壊れたFAX)。
+  //   windowWidth 単独でも発生。これら4つを一切渡さない場合のみ全面正常描画する
+  //   (フッター自社名「ライムレンタカー&コーティング」「株式会社 Hari Terrace」も完全)。
+  //   2026-05-16 改修が「狭ビューポート対策」と称しこれらを再混入させたのが回帰の真因。
+  //   狭ビューポート問題は #m-fax-host{width:900px} のオフスクリーン広ホストで既に解決済み。
+  //   ⇒ scale/useCORS/letterRendering のみ。サイズ系は絶対に追加するな (3度目の事故)。
   const h2cBase = {
     scale: (opt.html2canvas && opt.html2canvas.scale) || 2,
     useCORS: true,
-    letterRendering: true,
-    windowWidth: capW,
-    width: capW
+    letterRendering: true
   };
-  if(capH > 0){ h2cBase.windowHeight = capH; h2cBase.height = capH; }
-  let rawCanvas = null;
-  const winH2C = window.html2canvas;
-  if(typeof winH2C === 'function'){
-    rawCanvas = await winH2C(sheetEl, h2cBase);
-  } else {
+  // ★2026-05-17 確定: html2pdf 同梱 html2canvas は「ページ読込直後の初回呼び出し」が
+  //   不安定で、シート実寸(818幅)より狭い canvas(例 703幅=右端クリップ)を返すことが
+  //   ある (= ユーザーが見た間欠的フッター切れの正体)。2回目以降は安定して全幅捕捉。
+  //   対策: 捕捉アスペクトを要素実寸と照合し、乖離(=不完全捕捉)なら捨てて再捕捉する。
+  //   最大4回試行。良好な捕捉が得られなければ throw し fail-close (壊れFAX送信阻止)。
+  async function _captureOnce(){
+    const winH2C = window.html2canvas;
+    if(typeof winH2C === 'function'){
+      return await winH2C(sheetEl, h2cBase);
+    }
     const opt2 = Object.assign({}, opt, { html2canvas: h2cBase });
     const w0 = html2pdf().set(opt2).from(sheetEl);
     await w0.toCanvas();
-    rawCanvas = w0.prop && w0.prop.canvas;
+    return w0.prop && w0.prop.canvas;
+  }
+  let rawCanvas = null;
+  {
+    const elW = sheetEl.scrollWidth || sheetEl.offsetWidth || 0;
+    const elH = sheetEl.scrollHeight || sheetEl.offsetHeight || 0;
+    const elAspect = (elW > 0 && elH > 0) ? (elW / elH) : 0;
+    for(let attempt = 0; attempt < 4; attempt++){
+      let cv = null;
+      try { cv = await _captureOnce(); } catch(_){ cv = null; }
+      if(cv && cv.width && cv.height){
+        if(!elAspect){ rawCanvas = cv; break; }  // 実寸不明: 検証は _validatePdfPlacement に委ねる
+        const ratio = (cv.width / cv.height) / elAspect;
+        if(ratio >= 0.92 && ratio <= 1.08){ rawCanvas = cv; break; }  // 全幅捕捉成功
+        console.warn(`[FAX] 不完全捕捉を検出 (試行${attempt+1}/4): canvas ${cv.width}x${cv.height} 比${(cv.width/cv.height).toFixed(3)} vs 要素比${elAspect.toFixed(3)} → 再捕捉`);
+      }
+      await new Promise(r => setTimeout(r, 150));  // ★rAF不可(背面タブで停止しハング)。setTimeoutで待つ
+    }
   }
   if(!rawCanvas || !rawCanvas.width || !rawCanvas.height){
     throw new Error('PDF用canvas取得失敗のため生成中止 (FAX誤送信防止)');
@@ -4014,6 +4034,7 @@ function buildHandoverHTML(c, ins, s, upperOnly){
     <div class="sheet handover">
       <h1 class="ho-title">ライムレンタカー　手配報告書兼請求書</h1>
       <div class="ho-top">
+        <div class="ho-col">
         <table class="ho-hdr">
           <tr><th colspan="2" class="ho-hdr-title">保険会社</th></tr>
           <tr><td colspan="2" class="ho-bigname">${esc(ins.name||'')}</td></tr>
@@ -4022,6 +4043,8 @@ function buildHandoverHTML(c, ins, s, upperOnly){
           <tr><th>FAX</th><td>${esc(c.insurerContactFax||ins.fax||'')}</td></tr>
           <tr><th>担当者</th><td>${esc(c.insurerContact||'')}　　様</td></tr>
         </table>
+        </div>
+        <div class="ho-col ho-col2">
         <table class="ho-hdr ho-hdr2">
           <tr><th>受付No</th><td class="ho-strong">${esc(c.caseNo||'')}</td></tr>
           <tr><th>受付日</th><td class="ho-strong">${fmtD(c.receivedAt)}</td></tr>
@@ -4030,6 +4053,7 @@ function buildHandoverHTML(c, ins, s, upperOnly){
           <tr><th>住所</th><td class="ho-sm">${esc(s.address||'')}</td></tr>
           <tr><th>担当</th><td class="ho-strong">${esc(c.staff||'')}</td></tr>
         </table>
+        </div>
       </div>
       <div class="ho-section">■受付</div>
       <table class="ho-table">
