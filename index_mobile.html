@@ -1462,10 +1462,6 @@ a{color:var(--info);text-decoration:none}
       <div class="m-form-grp">
         <label>事故日</label>
         <input type="date" id="m-nc-accidentDate">
-        <div class="m-qd-row">
-          <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-accidentDate',null,0)">今日</button>
-          <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-accidentDate',null,-1)">昨日</button>
-        </div>
       </div>
     </div>
     <div class="m-section-divider">📍 配車先</div>
@@ -1510,6 +1506,9 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-grp">
       <label>予約備考 <span class="muted">(タップで追加 / 自由記入も可)</span></label>
       <div class="m-chips" id="m-nc-noteChips">
+        <button type="button" class="m-chip" data-chip="至急" onclick="toggleMncNoteChip('至急')">＋至急</button>
+        <button type="button" class="m-chip" data-chip="頃" onclick="toggleMncNoteChip('頃')">＋頃</button>
+        <button type="button" class="m-chip" data-chip="迄" onclick="toggleMncNoteChip('迄')">＋迄</button>
         <button type="button" class="m-chip" data-chip="前日配車" onclick="toggleMncNoteChip('前日配車')">＋前日配車</button>
         <button type="button" class="m-chip" data-chip="前々日配車" onclick="toggleMncNoteChip('前々日配車')">＋前々日配車</button>
       </div>
@@ -1528,28 +1527,14 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-grp">
       <label>利用開始日</label>
       <input type="date" id="m-nc-useStart">
-      <div class="m-qd-row">
-        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useStart',null,0)">今日</button>
-        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useStart',null,1)">明日</button>
-      </div>
     </div>
     <div class="m-form-grp">
       <label>利用終了日</label>
       <input type="date" id="m-nc-useEnd">
-      <div class="m-qd-row">
-        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useEnd','m-nc-useStart',7)">開始+7日</button>
-        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useEnd','m-nc-useStart',14)">+14日</button>
-        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useEnd','m-nc-useStart',30)">+30日</button>
-      </div>
     </div>
     <div class="m-form-grp">
       <label>利用期限 (予定)</label>
       <input type="date" id="m-nc-useDeadline">
-      <div class="m-qd-row">
-        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useDeadline','m-nc-useStart',30)">開始+30日</button>
-        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useDeadline','m-nc-useStart',60)">+60日</button>
-        <button type="button" class="m-qd" onclick="mncQuickDate('m-nc-useDeadline','m-nc-useStart',90)">+90日</button>
-      </div>
     </div>
     <div class="m-section-divider">📝 メモ</div>
     <div class="m-form-grp">
@@ -1671,7 +1656,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-17f';
+const APP_VERSION = '2026-05-17g';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
