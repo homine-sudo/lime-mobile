@@ -902,11 +902,12 @@ a{color:var(--info);text-decoration:none}
 
 /* === 手配書 (handover) - FAX用、画面外でレンダリング === */
 #m-fax-host{position:absolute;left:-9999px;top:0;width:900px}
-/* 案2: A4縦フル活用・外枠なし・フッター下端 (FAX端クリップ対策で枠を排し安全マージン確保) */
+/* 案2: 外枠なし・安全マージン (FAX端クリップ対策で枠を排す)。
+   ※flex/min-height は html2canvas が捕捉できずアスペクト自己検証と衝突し
+     fail-close するため使わない (2026-05-17 確定)。 */
 .sheet.handover{
   background:#fff;color:#000;font-family:"Yu Gothic","Hiragino Sans","メイリオ",sans-serif;
-  max-width:820px;width:820px;margin:0 auto;padding:20px 26px;border:none;
-  box-sizing:border-box;display:flex;flex-direction:column;min-height:1140px;
+  max-width:820px;width:820px;margin:0 auto;padding:20px 26px;border:none;box-sizing:border-box;
 }
 .sheet.handover .ho-title{
   text-align:center;font-size:22px;font-weight:bold;margin:0 0 14px;
@@ -946,7 +947,7 @@ a{color:var(--info);text-decoration:none}
 .sheet.handover .ho-amt{font-size:14px;font-weight:bold}
 .sheet.handover .ho-sub{font-size:11px;color:#333}
 .sheet.handover .ho-memo{min-height:32px}
-.sheet.handover .ho-footer{margin-top:auto;padding-top:18px;display:table;width:100%;table-layout:fixed;font-size:12px}
+.sheet.handover .ho-footer{margin-top:20px;display:table;width:100%;table-layout:fixed;font-size:12px}
 .sheet.handover .ho-bank{display:table-cell;width:58%;vertical-align:bottom;line-height:1.6;box-sizing:border-box}
 .sheet.handover .ho-company{display:table-cell;width:42%;vertical-align:bottom;text-align:right;font-size:13px;line-height:1.6;padding-left:16px;word-break:break-word;overflow-wrap:anywhere;box-sizing:border-box}
 </style>
@@ -1554,7 +1555,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-17b';
+const APP_VERSION = '2026-05-17c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2332,8 +2333,11 @@ async function _genHandoverPDF(sheetEl, opt){
     if(typeof winH2C === 'function'){
       return await winH2C(sheetEl, h2cBase);
     }
-    const opt2 = Object.assign({}, opt, { html2canvas: h2cBase });
-    const w0 = html2pdf().set(opt2).from(sheetEl);
+    // toCanvas には html2canvas オプションのみ渡す。opt 全体(margin/jsPDF/
+    // pagebreak)を渡すと html2pdf がページ幾何でcanvasを歪め、アスペクトが
+    // 要素実寸とズレてアスペクト自己検証が4回とも棄却→生成不可になる
+    // (2026-05-17 確定)。ページ化は後段の自前合成+最終html2pdfで行う。
+    const w0 = html2pdf().set({ html2canvas: h2cBase }).from(sheetEl);
     await w0.toCanvas();
     return w0.prop && w0.prop.canvas;
   }
