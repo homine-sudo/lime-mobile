@@ -766,11 +766,52 @@ a{color:var(--info);text-decoration:none}
 }
 .m-form-grp label .muted{color:#BBB;font-weight:500;font-size:10px}
 .m-section-divider{
-  font-size:12px;font-weight:700;color:var(--navy);
+  font-size:12.5px;font-weight:800;color:var(--navy);
   background:linear-gradient(90deg,#E8F0E0,transparent);
-  padding:6px 10px;border-left:3px solid var(--green);
-  margin:14px 0 8px;border-radius:0 5px 5px 0;letter-spacing:.04em;
+  padding:7px 11px;border-left:4px solid var(--green);
+  margin:18px 0 10px;border-radius:0 6px 6px 0;letter-spacing:.04em;
 }
+.m-section-divider:first-child{margin-top:4px}
+/* 入力欄＋選択ボタンの行 (高さ・角丸を入力欄に厳密一致させる) */
+.m-inrow{display:flex;gap:8px;align-items:stretch}
+.m-inrow > input{flex:1;min-width:0}
+.m-pick-btn{
+  flex:0 0 auto;width:52px;padding:0;font-size:20px;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:#fff;color:var(--navy);border:1.5px solid #C0CDB6;border-radius:10px;
+  box-shadow:0 1px 2px rgba(30,58,43,.04);transition:transform .08s,background .12s;
+}
+.m-pick-btn:active{transform:scale(.94);background:#F1F5EC}
+/* 予約備考 など タップ式プリセットチップ */
+.m-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px}
+.m-chip{
+  font-size:12.5px;font-weight:700;color:var(--navy);background:#fff;
+  border:1.5px solid #C0CDB6;border-radius:999px;padding:7px 13px;
+  transition:transform .08s,background .12s,border-color .12s,color .12s;
+}
+.m-chip:active{transform:scale(.94)}
+.m-chip.on{background:linear-gradient(180deg,#5FA04D,#4F8A3E);color:#fff;border-color:#4F8A3E}
+/* ピッカーモーダル: 見出し行に常時×、リストは内側スクロールで×が隠れない */
+.m-pick-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin:-4px 0 10px;gap:8px;
+}
+.m-pick-head h2{margin:0;font-size:16px;color:var(--navy);text-align:left}
+.m-pick-x{
+  flex:0 0 auto;width:38px;height:38px;border-radius:50%;font-size:18px;
+  background:#F1F5EC;color:var(--navy);border:1.5px solid #C0CDB6;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.m-pick-x:active{transform:scale(.92)}
+.m-pick-list{max-height:54vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.m-pick-row{
+  padding:12px 13px;border:1.5px solid var(--border);border-radius:10px;
+  margin-bottom:8px;background:#fff;transition:transform .08s,background .12s;
+}
+.m-pick-row:active{transform:scale(.985);background:#F4F7F1}
+.m-pick-row .pr-ttl{font-weight:800;color:var(--navy);font-size:14px}
+.m-pick-row .pr-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.m-pick-empty{text-align:center;color:var(--muted);padding:26px 8px;font-size:13px;line-height:1.7}
 
 /* === Quick recovery 案件選択リスト === */
 .m-qr-item{
@@ -1382,15 +1423,18 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-grp">
       <label>保険会社 <span class="muted">(📋で一覧から選ぶ or 直接入力)</span></label>
       <input type="hidden" id="m-nc-insurerId">
-      <div style="display:flex;gap:6px;align-items:center">
-        <input type="text" id="m-nc-insurer" list="m-nc-insurer-list" placeholder="保険会社名を入力" oninput="onMncInsurerTextInput()" style="flex:1;min-width:0">
-        <button type="button" class="m-btn m-btn-outline" onclick="openMncInsurerPicker()" style="flex:0 0 auto;padding:0 14px;font-size:18px" title="一覧から選ぶ">📋</button>
+      <div class="m-inrow">
+        <input type="text" id="m-nc-insurer" list="m-nc-insurer-list" placeholder="保険会社名を入力" oninput="onMncInsurerTextInput()">
+        <button type="button" class="m-pick-btn" onclick="openMncInsurerPicker()" title="一覧から選ぶ">📋</button>
       </div>
       <datalist id="m-nc-insurer-list"></datalist>
     </div>
     <div class="m-form-grp">
-      <label>担当者</label>
-      <input type="text" id="m-nc-insurerContact" placeholder="例: 佐藤">
+      <label>担当者 <span class="muted">(📋で保険会社の担当者から選ぶ)</span></label>
+      <div class="m-inrow">
+        <input type="text" id="m-nc-insurerContact" placeholder="例: 佐藤">
+        <button type="button" class="m-pick-btn" onclick="openMncContactPicker()" title="担当者を選ぶ">📋</button>
+      </div>
     </div>
     <div class="m-form-row2">
       <div class="m-form-grp">
@@ -1415,9 +1459,9 @@ a{color:var(--info);text-decoration:none}
     <div class="m-section-divider">📍 配車先</div>
     <div class="m-form-grp">
       <label>配車先名 <span class="muted">(🏭で工場マスタから選ぶ or 直接入力)</span></label>
-      <div style="display:flex;gap:6px;align-items:center">
-        <input type="text" id="m-nc-dispatchTo" placeholder="例: トヨタモビリティ沖縄 豊崎店" style="flex:1;min-width:0">
-        <button type="button" class="m-btn m-btn-outline" onclick="openMncFactoryPicker()" style="flex:0 0 auto;padding:0 14px;font-size:18px" title="工場マスタから選ぶ">🏭</button>
+      <div class="m-inrow">
+        <input type="text" id="m-nc-dispatchTo" placeholder="例: トヨタモビリティ沖縄 豊崎店">
+        <button type="button" class="m-pick-btn" onclick="openMncFactoryPicker()" title="工場マスタから選ぶ">🏭</button>
       </div>
     </div>
     <div class="m-form-grp">
@@ -1452,19 +1496,22 @@ a{color:var(--info);text-decoration:none}
       </div>
     </div>
     <div class="m-form-grp">
-      <label>予約備考 <span class="muted">(例: 12時迄 / 至急 など)</span></label>
-      <input type="text" id="m-nc-dispatchNote" placeholder="自由記入">
+      <label>予約備考 <span class="muted">(タップで追加 / 自由記入も可)</span></label>
+      <div class="m-chips" id="m-nc-noteChips">
+        <button type="button" class="m-chip" data-chip="前日配車" onclick="toggleMncNoteChip('前日配車')">前日配車</button>
+        <button type="button" class="m-chip" data-chip="前々日配車" onclick="toggleMncNoteChip('前々日配車')">前々日配車</button>
+        <button type="button" class="m-chip" data-chip="当日配車" onclick="toggleMncNoteChip('当日配車')">当日配車</button>
+        <button type="button" class="m-chip" data-chip="午前中" onclick="toggleMncNoteChip('午前中')">午前中</button>
+        <button type="button" class="m-chip" data-chip="午後" onclick="toggleMncNoteChip('午後')">午後</button>
+        <button type="button" class="m-chip" data-chip="時間厳守" onclick="toggleMncNoteChip('時間厳守')">時間厳守</button>
+        <button type="button" class="m-chip" data-chip="至急" onclick="toggleMncNoteChip('至急')">至急</button>
+      </div>
+      <input type="text" id="m-nc-dispatchNote" placeholder="自由記入 (例: 12時迄)" oninput="refreshMncNoteChips()">
     </div>
     <div class="m-form-grp">
-      <label>車両クラス</label>
+      <label>車両クラス <span class="muted">(コード｜名称)</span></label>
       <select id="m-nc-vehicleClass">
         <option value="">-- 未指定 --</option>
-        <option>軽自動車</option>
-        <option>コンパクト</option>
-        <option>セダン</option>
-        <option>ミニバン</option>
-        <option>バン</option>
-        <option>SUV</option>
       </select>
     </div>
     <div class="m-form-grp">
@@ -1506,11 +1553,28 @@ a{color:var(--info);text-decoration:none}
 <!-- 保険会社ピッカー (PC同等・マスタから選択) -->
 <div class="m-modal" id="m-ins-picker-modal">
   <div class="m-modal-body" style="max-height:88%">
-    <h2>🏢 保険会社を選ぶ</h2>
+    <div class="m-pick-head">
+      <h2>🏢 保険会社を選ぶ</h2>
+      <button type="button" class="m-pick-x" onclick="$('m-ins-picker-modal').classList.remove('active')" aria-label="閉じる">✕</button>
+    </div>
     <input type="text" id="m-ip-search" placeholder="🔍 保険会社名 / 支店 / FAX" oninput="renderMncInsurerPicker()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
-    <div id="m-ip-list" style="overflow:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="m-pick-list" id="m-ip-list"></div>
     <div class="m-modal-actions" style="margin-top:14px">
-      <button class="m-btn m-btn-outline m-btn-full" onclick="$('m-ins-picker-modal').classList.remove('active')">閉じる</button>
+      <button class="m-btn m-btn-outline m-btn-full" onclick="$('m-ins-picker-modal').classList.remove('active')">閉じる (選ばずに戻る)</button>
+    </div>
+  </div>
+</div>
+
+<!-- 保険会社 担当者ピッカー -->
+<div class="m-modal" id="m-con-picker-modal">
+  <div class="m-modal-body" style="max-height:80%">
+    <div class="m-pick-head">
+      <h2>👤 担当者を選ぶ</h2>
+      <button type="button" class="m-pick-x" onclick="$('m-con-picker-modal').classList.remove('active')" aria-label="閉じる">✕</button>
+    </div>
+    <div class="m-pick-list" id="m-cp-list"></div>
+    <div class="m-modal-actions" style="margin-top:14px">
+      <button class="m-btn m-btn-outline m-btn-full" onclick="$('m-con-picker-modal').classList.remove('active')">閉じる (選ばずに戻る)</button>
     </div>
   </div>
 </div>
@@ -1518,11 +1582,14 @@ a{color:var(--info);text-decoration:none}
 <!-- 工場(配車先)ピッカー (PC同等・工場マスタから選択) -->
 <div class="m-modal" id="m-fac-picker-modal">
   <div class="m-modal-body" style="max-height:88%">
-    <h2>🏭 工場(配車先)を選ぶ</h2>
+    <div class="m-pick-head">
+      <h2>🏭 工場(配車先)を選ぶ</h2>
+      <button type="button" class="m-pick-x" onclick="$('m-fac-picker-modal').classList.remove('active')" aria-label="閉じる">✕</button>
+    </div>
     <input type="text" id="m-fp-search" placeholder="🔍 工場名 / TEL / 住所" oninput="renderMncFactoryPicker()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
-    <div id="m-fp-list" style="overflow:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="m-pick-list" id="m-fp-list"></div>
     <div class="m-modal-actions" style="margin-top:14px">
-      <button class="m-btn m-btn-outline m-btn-full" onclick="$('m-fac-picker-modal').classList.remove('active')">閉じる</button>
+      <button class="m-btn m-btn-outline m-btn-full" onclick="$('m-fac-picker-modal').classList.remove('active')">閉じる (選ばずに戻る)</button>
     </div>
   </div>
 </div>
@@ -1585,7 +1652,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-17d';
+const APP_VERSION = '2026-05-17e';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3779,8 +3846,10 @@ function openNewCaseModal(){
   if($('m-nc-category')) $('m-nc-category').value = '損保';
   if($('m-nc-target')) $('m-nc-target').value = '対物';
   $('m-nc-dispatchAt').value = nowDateTimeLocal();
+  buildMncClassOptions();
   $('m-nc-vehicleClass').value = '';
   $('m-nc-useDeadline').value = '';
+  if(typeof refreshMncNoteChips === 'function') refreshMncNoteChips();
   if($('m-nc-dispatchTimePending')) $('m-nc-dispatchTimePending').checked = false;
   if($('m-nc-dispatchTimePendingDriver')) $('m-nc-dispatchTimePendingDriver').checked = false;
   $('m-newcase-modal').classList.add('active');
@@ -3823,11 +3892,11 @@ function renderMncInsurerPicker(){
   host.innerHTML = rows.map(i => {
     const cnt = useCount[i.id]||0;
     const idJ = String(i.id).replace(/'/g,"\\'");
-    return `<div onclick="pickMncInsurer('${idJ}')" style="padding:11px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;cursor:pointer;background:#fff">
-      <div style="font-weight:700;color:var(--navy)">${esc(i.name||'')}${cnt>0?` <span style="font-size:10px;color:var(--green);font-weight:700">${cnt}件</span>`:''}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(i.branch||'')}${i.fax?` ／ FAX ${esc(i.fax)}`:''}${(i.contacts||[]).length?` ／ 担当${(i.contacts||[]).length}名`:''}</div>
+    return `<div class="m-pick-row" onclick="pickMncInsurer('${idJ}')">
+      <div class="pr-ttl">${esc(i.name||'')}${cnt>0?` <span style="font-size:10px;color:var(--green)">${cnt}件</span>`:''}</div>
+      <div class="pr-sub">${esc(i.branch||'')}${i.fax?` ／ FAX ${esc(i.fax)}`:''}${(i.contacts||[]).length?` ／ 担当${(i.contacts||[]).length}名`:''}</div>
     </div>`;
-  }).join('') || '<div style="text-align:center;color:var(--muted);padding:24px 0">該当する保険会社がありません</div>';
+  }).join('') || '<div class="m-pick-empty">該当する保険会社がありません<br>(✕で戻り、直接入力もできます)</div>';
 }
 function pickMncInsurer(id){
   const ins = (DATA?.insurers || []).find(x => x.id === id); if(!ins) return;
@@ -3861,11 +3930,11 @@ function renderMncFactoryPicker(){
   const host = $('m-fp-list');
   host.innerHTML = rows.map(f => {
     const idJ = String(f.id).replace(/'/g,"\\'");
-    return `<div onclick="pickMncFactory('${idJ}')" style="padding:11px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;cursor:pointer;background:#fff">
-      <div style="font-weight:700;color:var(--navy)">${esc(f.name||'')}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">${f.tel?`TEL ${esc(f.tel)}`:''}${f.address?` ／ ${esc(f.address)}`:''}</div>
+    return `<div class="m-pick-row" onclick="pickMncFactory('${idJ}')">
+      <div class="pr-ttl">${esc(f.name||'')}</div>
+      <div class="pr-sub">${f.tel?`TEL ${esc(f.tel)}`:''}${f.address?` ／ ${esc(f.address)}`:''}</div>
     </div>`;
-  }).join('') || '<div style="text-align:center;color:var(--muted);padding:24px 0">工場マスタが空です（PC版マスタで登録するか、直接入力してください）</div>';
+  }).join('') || '<div class="m-pick-empty">工場マスタが空です<br>(✕で戻り、直接入力もできます。マスタはPC版で登録)</div>';
 }
 function pickMncFactory(id){
   const f = (DATA?.factories || []).find(x => x.id === id); if(!f) return;
@@ -3876,6 +3945,85 @@ function pickMncFactory(id){
   if(f.contactTel && !($('m-nc-dispatchContactTel').value||'').trim()) $('m-nc-dispatchContactTel').value = f.contactTel;
   $('m-fac-picker-modal').classList.remove('active');
   toast('🏭 配車先を設定: '+(f.name||''), 'success');
+}
+
+// --- 担当者ピッカー (リンク中の保険会社の contacts から選ぶ) ---
+function openMncContactPicker(){
+  const id = ($('m-nc-insurerId')?.value || '').trim();
+  const ins = id ? (DATA?.insurers || []).find(x => x.id === id) : null;
+  const host = $('m-cp-list');
+  const cs = (ins && ins.contacts) ? ins.contacts : [];
+  if(!ins){
+    host.innerHTML = '<div class="m-pick-empty">先に「保険会社」を📋で選択してください<br>(選択するとその会社の担当者一覧が出ます)</div>';
+  } else if(!cs.length){
+    host.innerHTML = `<div class="m-pick-empty">「${esc(ins.name||'')}」に登録済み担当者がありません<br>(担当者は直接入力できます。保存時にこの会社へ登録されます)</div>`;
+  } else {
+    host.innerHTML = cs.map((c,idx)=>`<div class="m-pick-row" onclick="pickMncContact(${idx})">
+      <div class="pr-ttl">${esc(c.name||'(名称未設定)')}${c.isDefault?' <span style="font-size:10px;color:var(--green)">既定</span>':''}</div>
+      <div class="pr-sub">${c.tel?`TEL ${esc(c.tel)}`:''}${c.fax?` ／ FAX ${esc(c.fax)}`:''}${c.dept?` ／ ${esc(c.dept)}`:''}</div>
+    </div>`).join('');
+  }
+  $('m-con-picker-modal').classList.add('active');
+}
+function pickMncContact(idx){
+  const id = ($('m-nc-insurerId')?.value || '').trim();
+  const ins = id ? (DATA?.insurers || []).find(x => x.id === id) : null;
+  const c = ins && (ins.contacts||[])[idx];
+  if(!c) return;
+  $('m-nc-insurerContact').value = c.name||'';
+  $('m-nc-insurerContactTel').value = c.tel||'';
+  if(c.fax || ins.fax) $('m-nc-insurerContactFax').value = c.fax || ins.fax || '';
+  $('m-con-picker-modal').classList.remove('active');
+  toast('👤 担当者を設定: '+(c.name||''), 'success');
+}
+
+// --- 予約備考 タップ式チップ (トグルで本文へ付与/除去・PC版と同挙動) ---
+function toggleMncNoteChip(t){
+  const inp = $('m-nc-dispatchNote'); if(!inp) return;
+  let v = (inp.value||'').trim();
+  const esc = t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const pat = new RegExp('(^|[\\s　・,、])' + esc + '(?=$|[\\s　・,、])');
+  const on = (v === t || pat.test(v));
+  if(on){
+    v = v.replace(pat, ' ').replace(/\s{2,}/g,' ').replace(/^[・,、\s　]+|[・,、\s　]+$/g,'');
+  } else {
+    v = v ? `${t} ${v}` : t;
+  }
+  inp.value = v;
+  refreshMncNoteChips();
+}
+function refreshMncNoteChips(){
+  const v = ($('m-nc-dispatchNote')?.value || '');
+  document.querySelectorAll('#m-nc-noteChips .m-chip').forEach(btn => {
+    const t = btn.dataset.chip || '';
+    const esc = t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const pat = new RegExp('(^|[\\s　・,、])' + esc + '(?=$|[\\s　・,、])');
+    btn.classList.toggle('on', v.trim() === t || pat.test(v));
+  });
+}
+
+// --- 車両クラス options を DATA.vehicleClasses から code｜name で生成 (PC同等) ---
+function buildMncClassOptions(){
+  const sel = $('m-nc-vehicleClass'); if(!sel) return;
+  const list = (DATA?.vehicleClasses || []).slice();
+  let html = '<option value="">-- 未指定 --</option>';
+  if(list.length){
+    const order = ['軽','EV','コンパクト','SUV','中型','ミニバン','プレミアム','ハイブリッド','その他'];
+    const grp = {};
+    list.forEach(v => { const k = (v.category||'その他').trim() || 'その他'; (grp[k]=grp[k]||[]).push(v); });
+    Object.keys(grp).forEach(k => { if(!order.includes(k)) order.push(k); });
+    html += order.filter(g => (grp[g]||[]).length).map(g => {
+      const items = grp[g].slice().sort((a,b)=>(a.code||'').localeCompare(b.code||''));
+      return `<optgroup label="${esc(g)}">` + items.map(v =>
+        `<option value="${esc(v.code||'')}">${esc(v.code||'')}｜${esc(v.name||'')}</option>`).join('') + `</optgroup>`;
+    }).join('');
+  } else {
+    // フォールバック (マスタ未同期時): PC既定の代表クラス
+    [['K','軽自動車'],['VK','軽バン'],['S','コンパクト'],['SH','コンパクトHV'],
+     ['SV','小型SUV'],['MV','ミドルSUV'],['WS','小型ミニバン'],['LW','ミニバン']]
+      .forEach(([c,n]) => { html += `<option value="${c}">${c}｜${n}</option>`; });
+  }
+  sel.innerHTML = html;
 }
 
 function _genMobileCaseId(){
