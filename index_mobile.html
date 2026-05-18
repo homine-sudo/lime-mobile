@@ -1723,7 +1723,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-18a';
+const APP_VERSION = '2026-05-18b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4740,12 +4740,14 @@ function _buildCalendarOp(c, eventType){
           title: '🟦 ' + [prefix, c.vehicleClass||'', c.dispatchToName||''].filter(Boolean).join(' '),
           start: start.toISOString(),
           end: end.toISOString(),
+          location: c.dispatchToAddress || '',
           description: [
             '案件No: ' + (c.caseNo||''),
             '区分: ' + (c.category||''),
             '保険会社: ' + (ins.name||''),
             '運転者: ' + (c.driverName||c.contractorName||''),
             '配車先: ' + (c.dispatchToName||''),
+            '配車先住所: ' + (c.dispatchToAddress||''),
             '車両クラス: ' + (c.vehicleClass||''),
             '担当: ' + (c.staff||'')
           ].join('\n'),
@@ -4767,12 +4769,15 @@ function _buildCalendarOp(c, eventType){
           title: '🟥 ' + ['回収', c.vehicleClass||'', c.dispatchToName||''].filter(Boolean).join(' '),
           start: start.toISOString(),
           end: end.toISOString(),
+          location: c.dispatchToAddress || '',
           description: [
             '案件No: ' + (c.caseNo||''),
             '契約者: ' + (c.contractorName||''),
             '運転者: ' + (c.driverName||''),
             '連絡先: ' + (c.driverTel||''),
             '車両: ' + plate,
+            '配車先: ' + (c.dispatchToName||''),
+            '配車先住所: ' + (c.dispatchToAddress||''),
             '担当: ' + (c.staff||'')
           ].join('\n'),
           color: 'RED'
