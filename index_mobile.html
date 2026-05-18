@@ -1723,7 +1723,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-18b';
+const APP_VERSION = '2026-05-18c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1749,7 +1749,7 @@ const LS_KEYS = {
 let DATA = null;
 let DBX_TOKEN = null, DBX_REFRESH = null;
 let _lastDbxRev = null, _lastSyncSnapshot = null;
-let _isSyncing = false, _saveInFlight = false, _saveQueued = false;
+let _isSyncing = false, _saveRunning = null, _savePending = null;
 let _currentScreen = 'onboard';
 let _screenHistory = [];
 
@@ -2325,19 +2325,49 @@ async function loadFromDropbox(){
   } finally { _isSyncing = false; }
 }
 
+// ★2026-05-18 修正 (再発データ消失の根治):
+//   旧実装は保存中に呼ばれると `_saveQueued=true; return;` で
+//   「保存していないのに await が解決」していた。呼び出し側 (新規案件登録/
+//   回収予定登録) はそれを成功とみなし LINE送信→実際は未保存、さらに
+//   先行保存の `DATA = merged` 置換で実行中入力が取りこぼされ恒久消失。
+//   対策: ①保存を直列化し await は実保存完了まで解決しない (実行中は
+//   「後続1サイクル」を共有し必ず最新DATAを書く) ②戻り値 true=永続化成功 /
+//   false=失敗 を返し、呼び出し側は false なら通知せずエラー表示 ③保存直後の
+//   DATA置換を「現DATA(実行中入力含む) × 保存済 × 開始時スナップショット」の
+//   再マージ(既存 mergeAll 再利用)にして実行中変更を保護。
 async function saveToDropbox(){
-  if(!DATA) return;
+  if(!DATA) return true;
   if(isDemoMode()){
     // デモモードでは保存しない (メモリ上のみ反映)
     toast('🧪 デモモード: 保存はスキップしました', 'success');
-    return;
+    return true;
   }
-  if(_saveInFlight){ _saveQueued = true; return; }
-  _saveInFlight = true; updateSyncStatus('syncing','保存中...');
+  if(_saveRunning){
+    // 実行中: 後続サイクルを1本だけ共有 (このサイクルは現サイクル完了後に
+    // 走り、live DATA=直近入力を読むので必ず永続化される)。
+    if(!_savePending){
+      _savePending = _saveRunning
+        .then(() => _doSaveCycle())
+        .then(r => { _savePending = null; return r; },
+              () => { _savePending = null; return false; });
+    }
+    return _savePending;
+  }
+  _saveRunning = _doSaveCycle()
+    .then(r => { _saveRunning = null; return r; },
+          () => { _saveRunning = null; return false; });
+  return _saveRunning;
+}
+
+// 実保存サイクル (旧 saveToDropbox 本体・保存/マージ/リトライ/キャッシュは不変)。
+// 成功=true / 3回リトライしても失敗=false。
+async function _doSaveCycle(){
+  updateSyncStatus('syncing','保存中...');
   let attempts = 0; const MAX = 3; let lastErr = null;
   while(attempts < MAX){
     attempts++;
     try {
+      const snapAtStart = _lastSyncSnapshot;  // 保存直後の再マージ基準
       let merged = DATA, revToUse = _lastDbxRev;
       try {
         const { data: disk, rev: diskRev } = await dbxLoadData();
@@ -2345,10 +2375,14 @@ async function saveToDropbox(){
       } catch(e){}
       const jsonStr = JSON.stringify(merged, null, 2);
       const newRev = await dbxSaveDataAtomic(jsonStr, revToUse);
-      DATA = merged; _lastDbxRev = newRev;
-      captureSyncSnapshot(merged);
+      // ★単純な DATA=merged は本サイクル実行中の別入力を取りこぼす。
+      //   現DATA(直近入力含む) を local、保存済 merged を disk、開始時
+      //   スナップショットを base として既存 mergeAll で再マージし保護。
+      DATA = mergeAll(DATA, merged, snapAtStart);
+      _lastDbxRev = newRev;
+      captureSyncSnapshot(DATA);
       try {
-        localStorage.setItem(LS_KEYS.cachedData, jsonStr);
+        localStorage.setItem(LS_KEYS.cachedData, JSON.stringify(DATA, null, 2));
         localStorage.setItem(LS_KEYS.cachedRev, newRev || '');
       } catch(e){}
       updateSyncStatus('ok','同期OK');
@@ -2361,9 +2395,12 @@ async function saveToDropbox(){
       break;
     }
   }
-  _saveInFlight = false;
-  if(lastErr){ updateSyncStatus('error','保存失敗'); toast('保存エラー: '+lastErr.message, 'error'); }
-  if(_saveQueued){ _saveQueued = false; setTimeout(saveToDropbox, 100); }
+  if(lastErr){
+    updateSyncStatus('error','保存失敗');
+    toast('保存エラー: '+lastErr.message, 'error');
+    return false;
+  }
+  return true;
 }
 
 function updateSyncStatus(state, msg){
@@ -4371,8 +4408,14 @@ async function saveNewCase(enterFlow){
 
   showSpinner('案件を登録中...');
   try {
-    await saveToDropbox();
-    // LINE通知 (newCase イベント)
+    const _ok = await saveToDropbox();
+    if(!_ok){
+      // ★未保存のまま通知しない。モーダルは閉じず再試行できるようにする
+      hideSpinner();
+      toast('❌ 保存できませんでした。案件は未登録です。「🔄同期」してからもう一度保存してください', 'error');
+      return;
+    }
+    // LINE通知 (newCase イベント) — 実保存確認後のみ
     try { await sendExternalNotify('newCase', _buildNotifyPayload(c, 'newCase')); } catch(e){}
     hideSpinner();
     closeNewCaseModal();
@@ -4468,7 +4511,13 @@ async function saveQuickRecovery(){
 
   showSpinner('回収予定を保存中...');
   try {
-    await saveToDropbox();
+    const _ok = await saveToDropbox();
+    if(!_ok){
+      // ★未保存のまま通知しない (LINEだけ来て保存消失 を根絶)
+      hideSpinner();
+      toast('❌ 保存できませんでした。回収予定は未保存です。「🔄同期」してから再登録してください', 'error');
+      return;
+    }
     try { await sendExternalNotify('recoveryDateSet', _buildNotifyPayload(c, 'recoveryDateSet')); } catch(e){}
     hideSpinner();
     closeQuickRecModal();
