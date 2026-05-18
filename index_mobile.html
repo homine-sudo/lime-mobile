@@ -1723,7 +1723,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-18c';
+const APP_VERSION = '2026-05-18d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1749,7 +1749,7 @@ const LS_KEYS = {
 let DATA = null;
 let DBX_TOKEN = null, DBX_REFRESH = null;
 let _lastDbxRev = null, _lastSyncSnapshot = null;
-let _isSyncing = false, _saveRunning = null, _savePending = null;
+let _isSyncing = false, _saveTail = null, _saveFollow = null;
 let _currentScreen = 'onboard';
 let _screenHistory = [];
 
@@ -2342,21 +2342,32 @@ async function saveToDropbox(){
     toast('🧪 デモモード: 保存はスキップしました', 'success');
     return true;
   }
-  if(_saveRunning){
-    // 実行中: 後続サイクルを1本だけ共有 (このサイクルは現サイクル完了後に
-    // 走り、live DATA=直近入力を読むので必ず永続化される)。
-    if(!_savePending){
-      _savePending = _saveRunning
-        .then(() => _doSaveCycle())
-        .then(r => { _savePending = null; return r; },
-              () => { _savePending = null; return false; });
+  // チェーン末尾 _saveTail に必ず連結する。実行中/予約中なら「後続1サイクル」
+  // (_saveFollow) を全呼び出しで共有。これで _doSaveCycle は常に同時1本=厳密に
+  // 直列化され、await は「自分の呼び出し以降に走るサイクル」の完了まで解決しない。
+  // ★2026-05-18d: 旧 _saveRunning/_savePending 版は、先行サイクル完了で
+  //   _saveRunning=null になった後・後続サイクル実行中に新規呼び出しが来ると
+  //   並行サイクルが走る欠陥があった。末尾追従方式でこれを解消。
+  if(_saveTail){
+    if(!_saveFollow){
+      const base = _saveTail;
+      _saveFollow = (async () => {
+        try { await base; } catch(_){}
+        try { return await _doSaveCycle(); }
+        catch(_) { return false; }
+        finally { _saveFollow = null; }
+      })();
+      _saveTail = _saveFollow;   // 以降の呼び出しはこの後続サイクルに合流
     }
-    return _savePending;
+    return _saveFollow;
   }
-  _saveRunning = _doSaveCycle()
-    .then(r => { _saveRunning = null; return r; },
-          () => { _saveRunning = null; return false; });
-  return _saveRunning;
+  const p = (async () => {
+    try { return await _doSaveCycle(); }
+    catch(_) { return false; }
+    finally { if(_saveTail === p) _saveTail = null; }
+  })();
+  _saveTail = p;
+  return p;
 }
 
 // 実保存サイクル (旧 saveToDropbox 本体・保存/マージ/リトライ/キャッシュは不変)。
