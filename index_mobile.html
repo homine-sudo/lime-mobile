@@ -1227,6 +1227,7 @@ a{color:var(--info);text-decoration:none}
     <section id="m-screen-flow-fax" class="m-screen">
       <div class="m-flow-prog" id="m-flow-prog-fax"></div>
       <div class="m-info-box" id="m-fax-info"></div>
+      <div id="m-fax-dup-warn" style="display:none"></div>
       <div class="m-fax-preview-wrap">
         <h3 style="font-size:14px;color:var(--navy);margin-bottom:8px">📠 送信内容確認</h3>
         <div class="m-fax-meta">
@@ -1722,7 +1723,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-17h';
+const APP_VERSION = '2026-05-18a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3609,7 +3610,30 @@ async function renderFlowFaxScreen(){
     _flow.faxNumber = (c.insurerContactFax || ins.fax || '').trim();
   }
   $('m-fax-num-disp').textContent = _flow.faxNumber || '(未設定)';
-  $('m-fax-status').textContent = '未送信';
+
+  // ★二重送信防止: この案件の当該フェーズFAXが既に送信済みかを共有データで検知。
+  //   PC版が回収報告FAX/手配書FAXを送ると faxSentAtReturn / faxSentAtDispatch に
+  //   日付が入り data.json 同期でモバイルにも届く。これを見ずに毎回「未送信」表示で
+  //   FAX画面に進んでいたため、現場が同じ書面をもう一度送り取引先に二重着信していた。
+  const _dupSentDate = _flow.kind === 'recovery' ? (c.faxSentAtReturn||'') : (c.faxSentAtDispatch||'');
+  const _dupDocLabel = _flow.kind === 'recovery' ? '回収完了報告書' : '手配書';
+  const _dupWarnEl = $('m-fax-dup-warn');
+  if(_dupSentDate){
+    const _d = esc(_dupSentDate);
+    _dupWarnEl.style.display = '';
+    _dupWarnEl.innerHTML = `<div style="background:#FFE5E5;border:1.5px solid var(--red);border-radius:8px;padding:10px 12px;margin-bottom:10px;color:var(--red);font-size:12.5px;line-height:1.6">⚠️ この案件の<b>${_dupDocLabel}FAX</b>は <b>${_d}</b> に<b>送信済み</b>です（PC版で送信した場合も含む）。<br>もう一度送ると取引先に<b>二重で届きます</b>。送信が不要なら「スキップ」してください。</div>`;
+    $('m-fax-status').innerHTML = `<span style="color:var(--red);font-weight:700">⚠️ 送信済み (${_d})</span>`;
+    $('m-fax-send-btn').textContent = '⚠️ それでも再送する';
+    $('m-fax-send-btn').classList.remove('m-btn-success');
+    $('m-fax-send-btn').classList.add('m-btn-danger');
+  } else {
+    _dupWarnEl.style.display = 'none';
+    _dupWarnEl.innerHTML = '';
+    $('m-fax-status').textContent = '未送信';
+    $('m-fax-send-btn').textContent = '📠 FAX送信する';
+    $('m-fax-send-btn').classList.remove('m-btn-danger');
+    $('m-fax-send-btn').classList.add('m-btn-success');
+  }
   $('m-fax-send-btn').disabled = !_flow.faxNumber;
 
   // プレビュー (手配書HTMLを縮小表示)
@@ -3642,6 +3666,20 @@ async function onFaxSend(){
   const settings = getSettings();
   const fax = toEfaxNumber(_flow.faxNumber);
   if(!fax){ toast('FAX番号が無効です', 'error'); return; }
+
+  // ★二重送信防止 (取引先誤送信防止): 当該フェーズFAXが既に送信済み (PC版で送信した
+  //   場合も data.json 同期で検知) なら、ブラインド再送を止め人間に明示確認を要求する。
+  //   ハードブロックはしない — 本当に届かず再送が必要なケースは確認後に続行できる。
+  const _dupSentDate = _flow.kind === 'recovery' ? (c.faxSentAtReturn||'') : (c.faxSentAtDispatch||'');
+  if(_dupSentDate){
+    const _docLabel = _flow.kind === 'recovery' ? '回収完了報告書' : '手配書';
+    const _ok = await confirmModal(
+      '⚠️ 二重送信の確認',
+      `この案件の<b>${_docLabel}FAX</b>は <b>${esc(_dupSentDate)}</b> に<b>送信済み</b>です。<br>（PC版で送信した場合も含みます）<br><br>もう一度送ると取引先に<b>二重で届きます</b>。<br>本当に再送しますか？`,
+      '二重送信を承知で再送', 'm-btn-danger'
+    );
+    if(!_ok){ toast('FAX送信を中止しました (二重送信防止)', 'error'); return; }
+  }
 
   const domain = (settings.faxSendDomain || 'efaxsend.com').trim();
   const toEmail = `${fax}@${domain}`;
