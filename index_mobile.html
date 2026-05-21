@@ -1214,6 +1214,13 @@ a{color:var(--info);text-decoration:none}
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">通常は現在時刻でOK。変更したい場合だけ修正してください。</div>
         <input type="datetime-local" id="m-confirm-time" step="60" style="width:100%;font-size:16px">
       </div>
+      <!-- 走行距離記録 (任意入力・キロ数のみ) -->
+      <div class="m-photo-section" id="m-confirm-meter-section" style="display:none">
+        <h3 id="m-confirm-meter-label">📏 メーター値 (km)</h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">任意入力。記録すると将来の売却判断や代車距離証跡に使えます。</div>
+        <input type="number" inputmode="numeric" min="0" step="1" id="m-confirm-meter" placeholder="例: 28450" style="width:100%;font-size:16px;text-align:right">
+        <div id="m-confirm-meter-delta" style="margin-top:6px;font-size:12px;text-align:right;color:var(--navy);display:none"></div>
+      </div>
       <div style="text-align:center;font-size:16px;font-weight:bold;color:var(--navy);margin:18px 0;padding:14px;background:#FFF8E0;border-radius:10px;border:1.5px solid var(--orange)" id="m-confirm-question">
         この内容で完了しますか？
       </div>
@@ -1723,7 +1730,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-21a';
+const APP_VERSION = '2026-05-21b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3114,9 +3121,21 @@ function renderInfoBox(c, hostId, kind){
     ? `<b>${esc(ins.name)}</b>${ins.branch?` (${esc(ins.branch)})`:''}${c.insurerContact?`<br>担当: ${esc(c.insurerContact)} 様`:''}${c.insurerContactTel?` ${tel(c.insurerContactTel)}`:''}`
     : '<span class="empty">―</span>';
 
+  // ★2026-05-21: 担当(主担当=c.staff / 最終操作=c.updatedBy) を明示し
+  //   「誰が入力したか」の混乱(staffとupdatedByが別人で表示されバラバラ感) を解消。
+  //   システム修正系の updatedBy ('システム修正...') は最終操作欄に出さない (人間操作のみ)。
+  const _isSysUpd = /^システム/.test(c.updatedBy||'');
+  const _staffParts = [];
+  if(c.staff) _staffParts.push(`案件: <b>${esc(c.staff)}</b>`);
+  if(c.updatedBy && !_isSysUpd && c.updatedBy !== c.staff) _staffParts.push(`最終操作: <b>${esc(c.updatedBy)}</b>`);
+  const _staffRow = _staffParts.length
+    ? `<div class="m-info-row"><span class="lbl">担当</span><span class="val">${_staffParts.join(' ／ ')}</span></div>`
+    : '';
+
   $(hostId).innerHTML = `
     <div class="caseno">📋 ${esc(c.caseNo||'')}</div>
     <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
+    ${_staffRow}
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val strong">${kind==='recovery'?(fmtDateFull(c.recoveryCalledAt)||'<span class="empty">未設定</span>'):dispatchInfo}</span></div>
     <div class="m-info-row"><span class="lbl">運転者</span><span class="val">${driver?`<b>${esc(driver)}</b>`:'<span class="empty">―</span>'} ${c.driverTel?tel(c.driverTel):''}</span></div>
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収先':'配車先'}</span><span class="val">${c.dispatchToName?`<b>${esc(c.dispatchToName)}</b>`:'<span class="empty">―</span>'}${c.dispatchToContact?`<br>担当: ${esc(c.dispatchToContact)} 様`:''}${(c.dispatchToContactTel||c.dispatchToTel)?` ${tel(c.dispatchToContactTel||c.dispatchToTel)}`:''}</span></div>
@@ -3571,6 +3590,43 @@ async function renderFlowConfirmScreen(){
     timeInput.removeAttribute('step');
     timeInput.value = c.recoveryCalledAt || todayISO();
   }
+  // 走行距離入力欄 (配車=貸出メーター / 回収=返却メーター+利用走行距離自動計算)
+  const meterSection = $('m-confirm-meter-section');
+  const meterLabel = $('m-confirm-meter-label');
+  const meterInput = $('m-confirm-meter');
+  const meterDelta = $('m-confirm-meter-delta');
+  if(meterSection && meterInput){
+    meterSection.style.display = '';
+    if(_flow.kind === 'dispatch'){
+      meterLabel.textContent = '📏 貸出メーター (km)';
+      meterInput.value = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? c.meterAtDispatch : '';
+      meterDelta.style.display = 'none';
+      meterInput.oninput = null;
+    } else {
+      meterLabel.textContent = '📏 返却メーター (km)';
+      meterInput.value = (c.meterAtReturn != null && c.meterAtReturn !== '') ? c.meterAtReturn : '';
+      meterDelta.style.display = '';
+      const baseMeter = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? Number(c.meterAtDispatch) : null;
+      const updateDelta = () => {
+        const cur = parseInt(meterInput.value||'', 10);
+        if(baseMeter == null){
+          meterDelta.textContent = isFinite(cur) ? '貸出メーター未記録のため利用走行距離は計算できません' : '';
+          meterDelta.style.color = '#888';
+          return;
+        }
+        if(!isFinite(cur)){
+          meterDelta.textContent = `貸出時メーター: ${baseMeter.toLocaleString('ja-JP')} km`;
+          meterDelta.style.color = '#888';
+          return;
+        }
+        const d = cur - baseMeter;
+        meterDelta.textContent = `利用走行距離: ${d.toLocaleString('ja-JP')} km (貸出時 ${baseMeter.toLocaleString('ja-JP')} km)`;
+        meterDelta.style.color = d < 0 ? '#C53030' : 'var(--navy)';
+      };
+      meterInput.oninput = updateDelta;
+      updateDelta();
+    }
+  }
 }
 
 async function onConfirmDo(){
@@ -3592,12 +3648,19 @@ async function onConfirmDo(){
 
     // 2. 状態更新 — 確認画面の時刻入力欄で編集された値を採用
     const enteredTime = ($('m-confirm-time')?.value || '').trim();
+    // 走行距離 (任意入力)・空欄なら既存値を保持
+    const meterRaw = ($('m-confirm-meter')?.value || '').trim();
+    const meterNum = meterRaw === '' ? null : parseInt(meterRaw, 10);
     if(_flow.kind === 'dispatch'){
       // 入力されていればその値、なければ現在時刻
       c.dispatchDoneAt = enteredTime || nowDateTimeLocal();
       // 利用開始日は dispatchDoneAt の日付部分から取得 (空ならtoday)
       if(!c.useStart){
         c.useStart = enteredTime ? enteredTime.slice(0,10) : todayISO();
+      }
+      // 走行距離: 入力されていれば保存。空欄なら既存値維持
+      if(meterNum != null && isFinite(meterNum) && meterNum >= 0){
+        c.meterAtDispatch = meterNum;
       }
       c.status = '配車済';
     } else {
@@ -3611,6 +3674,17 @@ async function onConfirmDo(){
           if(!c.salesYear) c.salesYear = d.getFullYear();
           if(!c.salesMonth) c.salesMonth = d.getMonth()+1;
         }
+      }
+      // 走行距離: 巻き戻し時は確認を取って保存
+      if(meterNum != null && isFinite(meterNum) && meterNum >= 0){
+        const baseM = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? Number(c.meterAtDispatch) : null;
+        if(baseM != null && meterNum < baseM){
+          hideSpinner();
+          const ok = confirm('⚠️ 返却メーター ('+meterNum.toLocaleString('ja-JP')+'km) が貸出メーター ('+baseM.toLocaleString('ja-JP')+'km) を下回っています。\n\nこのまま保存しますか?');
+          if(!ok){ return; }
+          showSpinner('回収完了を記録中...');
+        }
+        c.meterAtReturn = meterNum;
       }
       c.recoveryCompleted = true;
       c.status = '返却済';
