@@ -1723,7 +1723,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-18d';
+const APP_VERSION = '2026-05-21a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4408,6 +4408,8 @@ async function saveNewCase(enterFlow){
     confirmCalledAt:'', faxSentAtDispatch:'', faxSentAtReturn:'',
     recoveryCalledAt:'', dispatchDoneAt:'', dispatchDoneNote:'',
     departedAt:'',
+    // 走行距離記録 (キロ数のみ・未記録なら null)
+    meterAtDispatch:null, meterAtReturn:null,
     faxHistory: [], checkSheets: [],
     createdAt: Date.now(),
     createdBy: localStorage.getItem(LS_KEYS.editor) || 'mobile'
@@ -4717,8 +4719,17 @@ function _buildLineMessage(c, eventType){
   if(c.dispatchTimePendingDriver) pendingParts.push('運転者');
   const pendingSuffix = pendingParts.length ? ` (📞${pendingParts.join('・')}と時間調整中)` : '';
   const noteSuffix = c.dispatchNote ? ' ・' + c.dispatchNote : '';
+  // ★2026-05-21: dispatchAt(YYYY-MM-DDTHH:MM) を「M/D(曜) HH:MM」に整形 (LINE可読性向上)
+  const _fmtDispatchAt = (s) => {
+    if(!s) return s;
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if(!m) return s;
+    const d = (typeof parseDate === 'function') ? parseDate(s.slice(0,10)) : new Date(s.slice(0,10) + 'T00:00:00');
+    const wd = (d && !isNaN(d)) ? '日月火水木金土'[d.getDay()] : '';
+    return `${Number(m[2])}/${Number(m[3])}${wd?`(${wd})`:''} ${m[4]}:${m[5]}`;
+  };
   const dispatchLine = c.dispatchAt
-    ? '配車予定: ' + c.dispatchAt + pendingSuffix + noteSuffix
+    ? '配車予定: ' + _fmtDispatchAt(c.dispatchAt) + pendingSuffix + noteSuffix
     : (pendingParts.length ? '配車予定: ' + pendingParts.join('・') + 'と時間調整中' + noteSuffix : '');
   if(eventType === 'newCase'){
     return [
@@ -4727,6 +4738,7 @@ function _buildLineMessage(c, eventType){
       '区分: ' + (c.category||''),
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
+      c.insurerContact ? '保険会社担当: ' + c.insurerContact : '',
       dispatchLine,
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
