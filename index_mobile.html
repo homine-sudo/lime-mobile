@@ -187,6 +187,19 @@ a{color:var(--info);text-decoration:none}
 .m-actions-2row .m-actions-row-top{display:flex;gap:8px}
 .m-actions-2row .m-actions-row-top .m-btn{flex:1}
 
+/* === 2026-05-21d UX: 時刻クイックチップ (提案4) === */
+/* m-cal-time を縦積みに切替えてチップ行を追加 (既存の hh:mm 選択行は wrapper で水平維持) */
+.m-cal-time{flex-direction:column}
+.m-cal-time .m-cal-time-row{display:flex;align-items:center;gap:10px;justify-content:center}
+.m-cal-time .m-cal-quicktime{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.m-cal-time .m-cal-quicktime button{
+  padding:6px 12px;font-size:13px;font-weight:600;
+  background:#fff;color:var(--navy);
+  border:1.5px solid var(--border);border-radius:999px;
+  cursor:pointer;min-height:32px;line-height:1;
+}
+.m-cal-time .m-cal-quicktime button:active{background:var(--lime);color:#fff;border-color:var(--lime)}
+
 /* === BOTTOM NAV === */
 .m-bottom-nav{
   height:56px;
@@ -1713,7 +1726,18 @@ a{color:var(--info);text-decoration:none}
     <div class="m-cal-wd"><span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span></div>
     <div class="m-cal-grid" id="m-cal-grid"></div>
     <div class="m-cal-time" id="m-cal-time" style="display:none">
-      <select id="m-cal-hh"></select><span class="sep">:</span><select id="m-cal-mm"></select>
+      <div class="m-cal-time-row">
+        <select id="m-cal-hh"></select><span class="sep">:</span><select id="m-cal-mm"></select>
+      </div>
+      <div class="m-cal-quicktime" aria-label="よく使う時刻のクイック選択">
+        <button type="button" onclick="_setCalTime(9,0)">9:00</button>
+        <button type="button" onclick="_setCalTime(10,0)">10:00</button>
+        <button type="button" onclick="_setCalTime(13,0)">13:00</button>
+        <button type="button" onclick="_setCalTime(14,0)">14:00</button>
+        <button type="button" onclick="_setCalTime(15,0)">15:00</button>
+        <button type="button" onclick="_setCalTime(16,0)">16:00</button>
+        <button type="button" onclick="_setCalTimeNow()">今すぐ</button>
+      </div>
     </div>
     <div class="m-modal-actions" style="margin-top:16px;flex-direction:column;gap:8px">
       <button class="m-btn m-btn-success m-btn-full" onclick="closeMncCal(true)">完了</button>
@@ -1781,7 +1805,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-21c';
+const APP_VERSION = '2026-05-21d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1868,6 +1892,37 @@ function fmtJaDate(v){
 }
 function fmtNum(n){ return Number(n||0).toLocaleString('ja-JP'); }
 
+// ★2026-05-21d 触覚フィードバック (提案7):
+//   屋外/手袋/画面見ずタップでも押下感を補強。navigator.vibrate 未対応 (iOS Safari) は自動 no-op。
+//   送信・確認ダイアログのフローには触れない (視覚以外の追加チャネルのみ)。
+const _HAPTIC_PATTERNS = { tap:[8], success:[12,40,12], error:[40,80,40], warn:[20,30,20,30,20] };
+function haptic(kind){
+  try {
+    const p = _HAPTIC_PATTERNS[kind];
+    if(p && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(p);
+  } catch(_){}
+}
+
+// ★2026-05-21d 時刻クイックチップ (提案4) — _setCalTime / _setCalTimeNow
+//   既存ロジック (closeMncCal(true) → hidden input への書込) を保護するため
+//   select 値書換後に change イベントを発火する。
+function _setCalTime(h, m){
+  const hh = $('m-cal-hh'), mm = $('m-cal-mm');
+  if(!hh || !mm) return;
+  hh.value = ('0' + h).slice(-2);
+  mm.value = ('0' + m).slice(-2);
+  try { hh.dispatchEvent(new Event('change', { bubbles:true })); } catch(_){}
+  try { mm.dispatchEvent(new Event('change', { bubbles:true })); } catch(_){}
+  haptic('tap');
+}
+function _setCalTimeNow(){
+  const now = new Date();
+  let h = now.getHours();
+  let m = Math.round(now.getMinutes() / 10) * 10;
+  if(m === 60){ h = (h + 1) % 24; m = 0; }
+  _setCalTime(h, m);
+}
+
 function toast(msg, type){
   const host = $('m-toast-host');
   const t = document.createElement('div');
@@ -1876,6 +1931,9 @@ function toast(msg, type){
   host.appendChild(t);
   setTimeout(()=> t.style.opacity='0', 2300);
   setTimeout(()=> t.remove(), 2700);
+  // ★2026-05-21d 触覚連動 (success/error のみ。情報トーストは無音=過剰刺激防止)
+  if(type === 'success') haptic('success');
+  else if(type === 'error') haptic('error');
 }
 function showSpinner(msg){
   $('m-spinner-msg').textContent = msg || '処理中...';
@@ -1896,6 +1954,8 @@ function confirmModal(title, msg, okLabel, okClass){
     ok.onclick = () => { $('m-modal').classList.remove('active'); resolve(true); };
     acts.appendChild(cancel); acts.appendChild(ok);
     $('m-modal').classList.add('active');
+    // ★2026-05-21d 危険操作 (m-btn-danger) の確認表示時に警告haptic
+    if(typeof okClass === 'string' && okClass.indexOf('m-btn-danger') !== -1) haptic('warn');
   });
 }
 function alertModal(title, msg){
@@ -2695,6 +2755,8 @@ function confirmPdfBeforeSend(meta){
     ok.onclick = () => { $('m-modal').classList.remove('active'); resolve(true); };
     acts.appendChild(cancel); acts.appendChild(ok);
     $('m-modal').classList.add('active');
+    // ★2026-05-21d 取引先送信前の人間最終確認＝重み付け強化 (送信動作には触れない・視覚以外の追加チャネル)
+    haptic('warn');
   });
 }
 
