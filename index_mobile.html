@@ -146,6 +146,47 @@ a{color:var(--info);text-decoration:none}
 }
 .m-screen.active{display:block}
 
+/* === 2026-05-21c UX: Sticky 確定ボタン (提案1) + 完了確認カード (提案6) + 新規モーダル2段ボタン (提案2) === */
+/* prep/photo/fax の確定ボタン群を画面下にスティッキー固定 (親指リーチ＋キーボード被り対策) */
+.m-flow-actions{
+  position:sticky;bottom:0;z-index:5;
+  background:rgba(255,255,255,.94);
+  backdrop-filter:saturate(140%) blur(8px);
+  -webkit-backdrop-filter:saturate(140%) blur(8px);
+  margin:18px -12px 0;
+  padding:10px 12px calc(10px + var(--safe-bottom,0px));
+  border-top:1px solid rgba(212,222,202,.6);
+  box-shadow:0 -4px 12px rgba(0,0,0,.04);
+  display:flex;flex-direction:column;gap:8px;
+}
+.m-flow-actions .m-flow-actions-row{display:flex;gap:10px}
+.m-flow-actions .m-flow-actions-row .m-btn{flex:1}
+.m-flow-actions .m-flow-actions-row .m-btn-success,
+.m-flow-actions .m-flow-actions-row .m-btn-primary{flex:2}
+/* 完了確認: 確認文+ボタンを 1ユニットのオレンジカードに統合 (誤確定減) */
+.m-confirm-card{
+  position:sticky;bottom:0;z-index:5;
+  margin:18px -12px 0;
+  padding:12px 12px calc(12px + var(--safe-bottom,0px));
+  border-top:1.5px solid var(--orange);
+  background:#FFF8E0;
+  box-shadow:0 -4px 12px rgba(230,158,80,.12);
+}
+.m-confirm-card .m-confirm-q{
+  text-align:center;font-size:15px;font-weight:bold;color:var(--navy);margin-bottom:10px;
+}
+.m-confirm-card .m-confirm-actions{display:flex;gap:10px}
+.m-confirm-card .m-confirm-actions .m-btn{flex:1;line-height:1.2}
+.m-confirm-card .m-confirm-actions .m-btn-success,
+.m-confirm-card .m-confirm-actions .m-btn-primary{flex:2}
+.m-confirm-card .m-confirm-actions .m-btn small{
+  display:block;font-weight:normal;font-size:11px;opacity:.92;margin-top:2px;
+}
+/* 新規案件モーダル: 2段構成 (上段=サブ操作・下段=主アクション) */
+.m-modal-actions.m-actions-2row{flex-direction:column;gap:8px;margin-top:18px}
+.m-actions-2row .m-actions-row-top{display:flex;gap:8px}
+.m-actions-2row .m-actions-row-top .m-btn{flex:1}
+
 /* === BOTTOM NAV === */
 .m-bottom-nav{
   height:56px;
@@ -1181,9 +1222,11 @@ a{color:var(--info);text-decoration:none}
           ・出発時刻を記録 → LINE通知<br>
         </div>
       </div>
-      <div style="margin-top:20px">
-        <button class="m-btn m-btn-success m-btn-block" id="m-prep-depart-btn" onclick="onDeparture()">🚀 出発</button>
-        <button class="m-btn m-btn-outline m-btn-block" onclick="goBack()">キャンセル</button>
+      <div class="m-flow-actions">
+        <div class="m-flow-actions-row">
+          <button class="m-btn m-btn-outline" onclick="goBack()">キャンセル</button>
+          <button class="m-btn m-btn-success" id="m-prep-depart-btn" onclick="onDeparture()">🚀 出発</button>
+        </div>
       </div>
     </section>
 
@@ -1194,9 +1237,11 @@ a{color:var(--info);text-decoration:none}
       <div id="m-photo-host"></div>
       <!-- capture属性を外す → iOS/Androidが「カメラ撮影 / フォトライブラリ / ファイル」の選択を出す -->
       <input type="file" class="m-camera-input" id="m-camera-input" accept="image/*" onchange="onCameraCapture(event)">
-      <div style="margin-top:20px">
-        <button class="m-btn m-btn-success m-btn-block" id="m-photo-next-btn" onclick="onPhotoNext()" disabled>次へ（完了確認へ） →</button>
-        <button class="m-btn m-btn-outline m-btn-block" onclick="goBack()">キャンセル</button>
+      <div class="m-flow-actions">
+        <div class="m-flow-actions-row">
+          <button class="m-btn m-btn-outline" onclick="goBack()">キャンセル</button>
+          <button class="m-btn m-btn-success" id="m-photo-next-btn" onclick="onPhotoNext()" disabled>次へ（完了確認へ） →</button>
+        </div>
       </div>
     </section>
 
@@ -1221,12 +1266,12 @@ a{color:var(--info);text-decoration:none}
         <input type="number" inputmode="numeric" min="0" step="1" id="m-confirm-meter" placeholder="例: 28450" style="width:100%;font-size:16px;text-align:right">
         <div id="m-confirm-meter-delta" style="margin-top:6px;font-size:12px;text-align:right;color:var(--navy);display:none"></div>
       </div>
-      <div style="text-align:center;font-size:16px;font-weight:bold;color:var(--navy);margin:18px 0;padding:14px;background:#FFF8E0;border-radius:10px;border:1.5px solid var(--orange)" id="m-confirm-question">
-        この内容で完了しますか？
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:10px">
-        <button class="m-btn m-btn-outline" style="flex:1" onclick="goBack()">キャンセル</button>
-        <button class="m-btn m-btn-success" style="flex:2" id="m-confirm-do-btn" onclick="onConfirmDo()">完了する</button>
+      <div class="m-confirm-card">
+        <div class="m-confirm-q" id="m-confirm-question">この内容で完了しますか？</div>
+        <div class="m-confirm-actions">
+          <button class="m-btn m-btn-outline" onclick="goBack()">キャンセル</button>
+          <button class="m-btn m-btn-success" id="m-confirm-do-btn" onclick="onConfirmDo()">完了する</button>
+        </div>
       </div>
     </section>
 
@@ -1249,9 +1294,11 @@ a{color:var(--info);text-decoration:none}
         <div style="font-size:12px;color:var(--muted);margin:6px 0">📄 送信書類プレビュー</div>
         <div class="m-fax-preview-box" id="m-fax-preview-box"></div>
       </div>
-      <div style="display:flex;gap:10px;margin-bottom:10px">
-        <button class="m-btn m-btn-outline" style="flex:1" onclick="onFaxSkip()">スキップ</button>
-        <button class="m-btn m-btn-success" style="flex:2" id="m-fax-send-btn" onclick="onFaxSend()">📠 FAX送信する</button>
+      <div class="m-flow-actions">
+        <div class="m-flow-actions-row">
+          <button class="m-btn m-btn-outline" onclick="onFaxSkip()">スキップ</button>
+          <button class="m-btn m-btn-success" id="m-fax-send-btn" onclick="onFaxSend()">📠 FAX送信する</button>
+        </div>
       </div>
     </section>
 
@@ -1595,10 +1642,14 @@ a{color:var(--info);text-decoration:none}
       <textarea id="m-nc-negotiationLog" rows="2" placeholder="例: 5/15 30日限度で連絡済"></textarea>
     </div>
 
-    <div class="m-modal-actions" style="margin-top:18px;flex-direction:column;gap:8px">
+    <!-- ★2026-05-21c: 親指リーチ最強位置に「保存して配車フローへ」を配置。誤タップしやすい
+         キャンセルは上段左へ移動。confirmModal の (キャン左/確定右) と UI言語を統一。 -->
+    <div class="m-modal-actions m-actions-2row">
+      <div class="m-actions-row-top">
+        <button class="m-btn m-btn-outline" onclick="closeNewCaseModal()">キャンセル</button>
+        <button class="m-btn m-btn-primary" onclick="saveNewCase(false)">💾 保存のみ</button>
+      </div>
       <button class="m-btn m-btn-success m-btn-full" onclick="saveNewCase(true)">💾 保存して配車フローへ</button>
-      <button class="m-btn m-btn-primary m-btn-full" onclick="saveNewCase(false)">💾 保存のみ</button>
-      <button class="m-btn m-btn-outline m-btn-full" onclick="closeNewCaseModal()">キャンセル</button>
     </div>
   </div>
 </div>
@@ -1730,7 +1781,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-21b';
+const APP_VERSION = '2026-05-21c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3571,7 +3622,14 @@ async function renderFlowConfirmScreen(){
     `;
   }
   $('m-confirm-question').textContent = _flow.kind === 'recovery' ? '回収を完了しますか？' : '配車を完了しますか？';
-  $('m-confirm-do-btn').textContent = _flow.kind === 'recovery' ? '回収完了する' : '配車完了する';
+  // ★2026-05-21c: 完了ボタンに案件サマリを2行目で再提示 (誤確定時の被害低減・提案6)
+  const _doLabel = _flow.kind === 'recovery' ? '回収完了する' : '配車完了する';
+  const _plateStr = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  const _vehStr = [c.vehicleName || c.vehicleClass || '', _plateStr].filter(Boolean).join(' ');
+  const _toStr = c.dispatchToName || '';
+  const _arrow = _flow.kind === 'recovery' ? '←' : '→';
+  const _summary = [_vehStr, _toStr ? _arrow + ' ' + _toStr : ''].filter(Boolean).join('  ');
+  $('m-confirm-do-btn').innerHTML = esc(_doLabel) + (_summary ? `<small>${esc(_summary)}</small>` : '');
   // セクションタイトル変更
   const sectionTitle = document.querySelector('#m-screen-flow-confirm .m-photo-section h3');
   if(sectionTitle) sectionTitle.textContent = _flow.kind === 'recovery' ? '📷 配車時のチェックシート (参考)' : '📷 チェックシート';
