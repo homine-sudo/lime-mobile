@@ -200,6 +200,25 @@ a{color:var(--info);text-decoration:none}
 }
 .m-cal-time .m-cal-quicktime button:active{background:var(--lime);color:#fff;border-color:var(--lime)}
 
+/* === 2026-05-21e UX 提案3 (保守的・badge絶対配置) === */
+/* badge を右上固定にし、長い受付Noで折り返して時刻と分離する問題を解消 */
+/* (現実装にはm-card-time chip が無いため、agent提案より小スコープで実施) */
+.m-card-badge{position:absolute;top:10px;right:12px;z-index:2}
+.m-card-row1{padding-right:84px;min-height:22px}
+/* .done時は ::after「✓ 完了」と通常バッジが同位置に出るのを避けバッジを隠す */
+.m-card.done .m-card-badge{display:none}
+
+/* === 2026-05-21e UX 提案5: FAB 拡張ピル化＋safe-area対応 === */
+/* 円→ピル: 親指リーチ拡大＋ラベル併記でアフォーダンス強化 */
+.m-fab{
+  width:auto;height:auto;min-height:52px;
+  padding:0 18px;border-radius:26px;
+  font-size:14.5px;font-weight:800;letter-spacing:.04em;gap:6px;
+  bottom:calc(78px + env(safe-area-inset-bottom,0px));
+}
+/* toast も safe-area 加算しFABと縦並びの干渉を避ける */
+#m-toast-host{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+
 /* === BOTTOM NAV === */
 .m-bottom-nav{
   height:56px;
@@ -1203,7 +1222,7 @@ a{color:var(--info);text-decoration:none}
         <button data-disp-tab="pending" onclick="setDispTab('pending')">📌 未対応</button>
       </div>
       <div id="m-disp-list"></div>
-      <button class="m-fab" onclick="openNewCaseModal()" aria-label="新規案件">+</button>
+      <button class="m-fab" onclick="openNewCaseModal()" aria-label="新規案件">＋ 新規案件</button>
     </section>
 
     <!-- (4) Recovery list -->
@@ -1215,7 +1234,7 @@ a{color:var(--info);text-decoration:none}
         <button data-rec-tab="pending" onclick="setRecTab('pending')">📌 未対応</button>
       </div>
       <div id="m-rec-list"></div>
-      <button class="m-fab fab-recovery" onclick="openQuickRecModal()" aria-label="回収予定追加">+</button>
+      <button class="m-fab fab-recovery" onclick="openQuickRecModal()" aria-label="回収予定追加">＋ 回収予定</button>
     </section>
 
     <!-- (4b) Flow: Preparation (配車前の車両選択+出発) -->
@@ -1805,7 +1824,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-21d';
+const APP_VERSION = '2026-05-21e';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
