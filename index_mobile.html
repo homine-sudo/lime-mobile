@@ -1815,7 +1815,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-21f';
+const APP_VERSION = '2026-05-22a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4935,6 +4935,11 @@ function _buildLineMessage(c, eventType){
   const dispatchLine = c.dispatchAt
     ? '配車予定: ' + _fmtDispatchAt(c.dispatchAt) + pendingSuffix + noteSuffix
     : (pendingParts.length ? '配車予定: ' + pendingParts.join('・') + 'と時間調整中' + noteSuffix : '');
+  // ★2026-05-22: LINE通知の「担当」= その操作を保存した人 (操作者)。
+  //   通知直前に _stampUpdated が c.updatedBy=現操作者(LS_KEYS.editor) をセット済み。
+  //   未設定時のみ案件担当 c.staff にフォールバック。ラベルは全イベント「担当」に統一。
+  const _lineStaff = c.updatedBy || c.staff || '';
+  const staffLine = _lineStaff ? '担当: ' + _lineStaff : '';
   if(eventType === 'newCase'){
     return [
       '🆕 新規案件登録',
@@ -4946,7 +4951,7 @@ function _buildLineMessage(c, eventType){
       dispatchLine,
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
-      c.staff ? '担当: ' + c.staff : ''
+      staffLine
     ].filter(Boolean).join('\n');
   }
   if(eventType === 'recoveryDateSet'){
@@ -4957,7 +4962,7 @@ function _buildLineMessage(c, eventType){
       driver ? '運転者: ' + driver : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '',
-      c.staff ? '担当者: ' + c.staff : ''
+      staffLine
     ].filter(Boolean).join('\n');
   }
   if(eventType === 'departed'){
@@ -4969,7 +4974,7 @@ function _buildLineMessage(c, eventType){
       c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
       c.dispatchToTel ? 'TEL: ' + c.dispatchToTel : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
-      c.staff ? '担当: ' + c.staff : ''
+      staffLine
     ].filter(Boolean).join('\n');
   }
   if(eventType === 'dispatchDone'){
@@ -4981,7 +4986,7 @@ function _buildLineMessage(c, eventType){
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.useStart ? '利用開始: ' + c.useStart : '',
-      c.staff ? '担当: ' + c.staff : ''
+      staffLine
     ].filter(Boolean).join('\n');
   }
   if(eventType === 'recoveryDone'){
@@ -4993,7 +4998,7 @@ function _buildLineMessage(c, eventType){
       c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.dispatchToName ? '回収元: ' + c.dispatchToName : '',
-      c.staff ? '担当: ' + c.staff : ''
+      staffLine
     ].filter(Boolean).join('\n');
   }
   return '';
