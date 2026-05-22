@@ -323,6 +323,12 @@ a{color:var(--info);text-decoration:none}
   background:linear-gradient(180deg,#5FA04D 0%,#4F8A3E 100%);color:#fff;
   box-shadow:0 3px 10px rgba(79,138,62,.32),inset 0 1px 0 rgba(255,255,255,.2);
 }
+/* ★2026-05-22: 回収系アクション = 紫 (配車=緑との色分け)。
+   旧: m-btn-success にインラインstyleで紫上書き していたのを専用クラス化。 */
+.m-btn-recovery{
+  background:linear-gradient(180deg,#8453B1 0%,#6B3F8C 100%);color:#fff;
+  box-shadow:0 3px 10px rgba(107,63,140,.32),inset 0 1px 0 rgba(255,255,255,.2);
+}
 .m-btn-secondary{
   background:#fff;color:var(--navy);border:1.5px solid var(--green);
   box-shadow:0 1px 3px rgba(30,58,43,.06);
@@ -822,13 +828,20 @@ a{color:var(--info);text-decoration:none}
   margin-bottom:5px;letter-spacing:.04em;
 }
 .m-form-grp label .muted{color:#BBB;font-weight:500;font-size:10px}
+/* ★2026-05-22: 警告バナー共通クラス (FAX二重送信警告等の旧インラインstyle塊を集約)。
+   淡い面＋細い左罫＋控えめな影＝送信前確認ボックス等と同じ穏やかなトーン。 */
+.m-alert-danger{
+  background:#FFF1F1;border-left:3px solid var(--red);border-radius:6px;
+  padding:10px 12px;margin-bottom:10px;
+  color:var(--red);font-size:12.5px;line-height:1.6;
+  box-shadow:0 1px 3px rgba(197,48,48,.10);
+}
 .m-section-divider{
   font-size:12.5px;font-weight:800;color:var(--navy);
   background:linear-gradient(90deg,#E8F0E0,transparent);
   padding:7px 11px;border-left:4px solid var(--green);
   margin:18px 0 10px;border-radius:0 6px 6px 0;letter-spacing:.04em;
 }
-.m-section-divider:first-child{margin-top:4px}
 /* 入力欄＋選択ボタンの行 (高さ・角丸を入力欄に厳密一致させる) */
 .m-inrow{display:flex;gap:8px;align-items:stretch}
 .m-inrow > input{flex:1;min-width:0}
@@ -1187,7 +1200,7 @@ a{color:var(--info);text-decoration:none}
           <button class="m-btn m-btn-success" onclick="openNewCaseModal()">
             <span class="ico">📝</span>新規案件
           </button>
-          <button class="m-btn m-btn-success" onclick="openQuickRecModal()" style="background:linear-gradient(180deg,#8453B1,#6B3F8C);box-shadow:0 3px 10px rgba(107,63,140,.32),inset 0 1px 0 rgba(255,255,255,.2)">
+          <button class="m-btn m-btn-recovery" onclick="openQuickRecModal()">
             <span class="ico">🛻</span>回収予定登録
           </button>
         </div>
@@ -1808,7 +1821,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-22d';
+const APP_VERSION = '2026-05-22e';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3866,7 +3879,7 @@ async function renderFlowFaxScreen(){
   if(_dupSentDate){
     const _d = esc(_dupSentDate);
     _dupWarnEl.style.display = '';
-    _dupWarnEl.innerHTML = `<div style="background:#FFE5E5;border:1.5px solid var(--red);border-radius:8px;padding:10px 12px;margin-bottom:10px;color:var(--red);font-size:12.5px;line-height:1.6">⚠️ この案件の<b>${_dupDocLabel}FAX</b>は <b>${_d}</b> に<b>送信済み</b>です（PC版で送信した場合も含む）。<br>もう一度送ると取引先に<b>二重で届きます</b>。送信が不要なら「スキップ」してください。</div>`;
+    _dupWarnEl.innerHTML = `<div class="m-alert-danger">⚠️ この案件の<b>${_dupDocLabel}FAX</b>は <b>${_d}</b> に<b>送信済み</b>です（PC版で送信した場合も含む）。<br>もう一度送ると取引先に<b>二重で届きます</b>。送信が不要なら「スキップ」してください。</div>`;
     $('m-fax-status').innerHTML = `<span style="color:var(--red);font-weight:700">⚠️ 送信済み (${_d})</span>`;
     $('m-fax-send-btn').textContent = '⚠️ それでも再送する';
     $('m-fax-send-btn').classList.remove('m-btn-success');
@@ -4946,10 +4959,10 @@ function _buildLineMessage(c, eventType){
       '🆕 新規案件登録',
       '受付No: ' + (c.caseNo||''),
       '区分: ' + (c.category||''),
+      dispatchLine,
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
       c.insurerContact ? '保険会社担当: ' + c.insurerContact : '',
-      dispatchLine,
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       staffLine
@@ -4961,8 +4974,8 @@ function _buildLineMessage(c, eventType){
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収予定: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
-      vehicleStr ? '車両: ' + vehicleStr : '',
       c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
       staffLine
     ].filter(Boolean).join('\n');
   }
@@ -4982,11 +4995,11 @@ function _buildLineMessage(c, eventType){
     return [
       '🚗 配車完了',
       '受付No: ' + (c.caseNo||''),
+      c.useStart ? '利用開始: ' + c.useStart : '',
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
-      c.useStart ? '利用開始: ' + c.useStart : '',
       staffLine
     ].filter(Boolean).join('\n');
   }
@@ -4994,11 +5007,11 @@ function _buildLineMessage(c, eventType){
     return [
       '🚛 回収完了',
       '受付No: ' + (c.caseNo||''),
+      c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
-      c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
-      vehicleStr ? '車両: ' + vehicleStr : '',
       c.dispatchToName ? '回収元: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
       staffLine
     ].filter(Boolean).join('\n');
   }
