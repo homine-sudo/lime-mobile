@@ -205,8 +205,8 @@ a{color:var(--info);text-decoration:none}
 /* (現実装にはm-card-time chip が無いため、agent提案より小スコープで実施) */
 .m-card-badge{position:absolute;top:10px;right:12px;z-index:2}
 .m-card-row1{padding-right:84px;min-height:22px}
-/* .done時は ::after「✓ 完了」と通常バッジが同位置に出るのを避けバッジを隠す */
-.m-card.done .m-card-badge{display:none}
+/* ★2026-05-22: .done カードは ::after「✓完了」を廃止し、実ステータスバッジ
+   (FAX送信済/回収完了 等・汎用「✓完了」より情報量が多い)をそのまま表示する。 */
 
 /* === 2026-05-21f: 提案5(FAB拡張ピル化) は ユーザー判断で revert。FAB は元の丸+のまま === */
 
@@ -419,15 +419,6 @@ a{color:var(--info);text-decoration:none}
   opacity:.55;border-left-color:#7AAE2D;background:#F6F9F0;
   position:relative;
 }
-.m-card.done::after{
-  content:'✓ 完了';
-  position:absolute;top:8px;right:14px;
-  background:#7AAE2D;color:#fff;
-  font-size:10px;font-weight:800;letter-spacing:.06em;
-  padding:2px 8px;border-radius:10px;
-  box-shadow:0 1px 3px rgba(122,174,45,.3);
-  pointer-events:none;
-}
 .m-card.done .m-card-right{display:none}
 .m-card-row1{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .m-card-time{
@@ -448,7 +439,7 @@ a{color:var(--info);text-decoration:none}
 .m-badge-before{background:#E5EBDD;color:var(--deep);border:1px solid #CFD9C0}
 .m-badge-photo-done{background:#FFE89D;color:#7A4500;border:1px solid #E6C54C}
 .m-badge-done{background:#D8F5C5;color:var(--deep);border:1px solid var(--lime-d)}
-.m-badge-fax-done{background:linear-gradient(135deg,#5FA04D,#4F8A3E);color:#fff;border:1px solid #3E6E2E}
+.m-badge-fax-done{background:#BCE3A6;color:var(--deep);border:1px solid var(--lime-d)}
 .m-badge-cancel{background:#E0E0E0;color:#666;border:1px solid #C8C8C8}
 .m-pending-badge{
   display:inline-block;background:#FEF3C7;color:#92400E;
@@ -1817,7 +1808,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-22c';
+const APP_VERSION = '2026-05-22d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3154,7 +3145,7 @@ function _renderCaseCard(c, kind){
           ${vehicleLine ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${vehicleLine}</span></div>` : ''}
           ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
           ${toLine ? `<div class="m-card-row"><span class="lbl">回収先</span><span class="val">${toLine}</span></div>` : ''}
-          ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">📝</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
+          ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
         </div>
         <div class="m-card-right">›</div>
       </div>
@@ -3173,7 +3164,7 @@ function _renderCaseCard(c, kind){
         ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
         ${toLine ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${toLine}</span></div>` : ''}
         ${c.dispatchToAddress ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsLink}</span></div>` : ''}
-        ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">📝</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
+        ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
       </div>
       <div class="m-card-right">›</div>
     </div>
