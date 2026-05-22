@@ -1815,7 +1815,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-22a';
+const APP_VERSION = '2026-05-22b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4915,7 +4915,15 @@ function _buildLineMessage(c, eventType){
   const ins = c.insurerId ? (findInsurer(c.insurerId) || {}) : {};
   const driver = c.driverName || c.contractorName || '';
   const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
-  const vehicleStr = [c.vehicleName||'', plate].filter(Boolean).join(' ') || c.vehicleClass || '';
+  // ★2026-05-22: 車両割当済(vehicleId あり)なら車両マスタの実車種名を優先。
+  //   c.vehicleName は受付時のクラス表記(例「コンパクト 同等」)のまま更新されない
+  //   ことがあり、配車/回収段階では実際に割り当てた車の名前(マスタ.name)を出したい。
+  let _vehName = c.vehicleName || '';
+  if(c.vehicleId){
+    const _vm = ((DATA && DATA.vehicles) || []).find(v => v && v.id === c.vehicleId);
+    if(_vm && _vm.name) _vehName = _vm.name;
+  }
+  const vehicleStr = [_vehName, plate].filter(Boolean).join(' ') || c.vehicleClass || '';
 
   // 配車予定の修飾: 「📞工場/運転者と時間調整中」「・予約備考」を付加
   const pendingParts = [];
