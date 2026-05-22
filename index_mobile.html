@@ -506,11 +506,13 @@ a{color:var(--info);text-decoration:none}
 .m-info-row .val.empty{color:#BBB;font-style:italic}
 
 /* === PHOTO CAPTURE === */
-.m-photo-section{
+/* ★2026-05-22: .m-detail-section は従来CSS未定義で prep画面/案件詳細が "下書き" 状態
+   だった。.m-photo-section と同一スタイルを共有させフロー4画面の体裁を揃える。 */
+.m-photo-section, .m-detail-section{
   background:#fff;border-radius:10px;padding:16px;margin-bottom:14px;
   border:1px solid var(--border);
 }
-.m-photo-section h3{
+.m-photo-section h3, .m-detail-section h3{
   font-size:14px;color:var(--navy);margin-bottom:12px;
   display:flex;align-items:center;gap:6px;
 }
@@ -815,7 +817,7 @@ a{color:var(--info);text-decoration:none}
   font-weight:bold;display:flex;align-items:center;justify-content:center;font-size:11px;
 }
 .m-flow-step.done .num{background:var(--green);color:#fff}
-.m-flow-step.active .num{background:var(--blue);color:#fff;box-shadow:0 0 0 3px rgba(42,111,203,.2)}
+.m-flow-step.active .num{background:var(--info);color:#fff;box-shadow:0 0 0 3px rgba(42,111,203,.2)}
 .m-flow-step.active .lbl{color:var(--navy);font-weight:bold}
 .m-flow-arrow{color:#BBB;font-size:12px;margin:0 -2px}
 
@@ -1815,7 +1817,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-22b';
+const APP_VERSION = '2026-05-22c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
