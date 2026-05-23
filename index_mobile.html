@@ -1513,10 +1513,11 @@ a{color:var(--info);text-decoration:none}
       </div>
       <div class="m-form-grp">
         <label>区分</label>
+        <!-- ★2026-05-22: 「一般」は削除 — モバイルでの一般貸渡入力はPCのGRモーダル専用
+             (CLAUDE.md §0 事務作業はPC・α方針)。既存の一般案件はモバイルで閲覧のみ。 -->
         <select id="m-nc-category">
           <option value="損保">損保</option>
           <option value="工場">工場</option>
-          <option value="一般">一般</option>
         </select>
       </div>
     </div>
@@ -1821,7 +1822,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-22e';
+const APP_VERSION = '2026-05-22f';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3047,20 +3048,27 @@ function _renderSearchResultCard(c){
 function getDispatchCases(tab){
   const cases = (DATA?.cases || []).filter(_isActive);
   const today = todayISO(), tomorrow = tomorrowISO();
+  // ★2026-05-22 α方針: 一般貸渡は dispatchAt が空 (顧客直接来店・工場経由なし) のため
+  //   useStart(貸渡日) で today/tomorrow に拾う。pending には載せない (PC専用管理)。
+  //   ※従来は 一般案件が status='受付' + dispatchAt空 で未対応リスト上位に常時居座る不具合。
+  const matchDay = (c, day) => c.category === '一般'
+    ? (c.useStart||'').startsWith(day)
+    : (c.dispatchAt||'').startsWith(day);
+  const dayKey = c => c.category === '一般' ? (c.useStart||'') : (c.dispatchAt||'');
   // 完了済みもリストに残し、未完了→完了の順でソート (完了済みは薄表示)
   if(tab === 'today'){
-    return cases.filter(c => (c.dispatchAt||'').startsWith(today))
+    return cases.filter(c => matchDay(c, today))
       .sort((a,b) => Number(!!a.dispatchDoneAt) - Number(!!b.dispatchDoneAt)
-        || (a.dispatchAt||'').localeCompare(b.dispatchAt||''));
+        || dayKey(a).localeCompare(dayKey(b)));
   }
   if(tab === 'tomorrow'){
-    return cases.filter(c => (c.dispatchAt||'').startsWith(tomorrow))
+    return cases.filter(c => matchDay(c, tomorrow))
       .sort((a,b) => Number(!!a.dispatchDoneAt) - Number(!!b.dispatchDoneAt)
-        || (a.dispatchAt||'').localeCompare(b.dispatchAt||''));
+        || dayKey(a).localeCompare(dayKey(b)));
   }
-  // pending: 配車予定だが未配車完了
+  // pending: 配車予定だが未配車完了 (一般は除外=PC専用管理)
   return cases.filter(c =>
-    ['受付','確認中','配車予定'].includes(c.status) && !c.dispatchDoneAt
+    c.category !== '一般' && ['受付','確認中','配車予定'].includes(c.status) && !c.dispatchDoneAt
   ).sort((a,b) => (a.dispatchAt||a.receivedAt||'').localeCompare(b.dispatchAt||b.receivedAt||''));
 }
 function renderDispatchList(){
@@ -3158,6 +3166,7 @@ function _renderCaseCard(c, kind){
           ${vehicleLine ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${vehicleLine}</span></div>` : ''}
           ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
           ${toLine ? `<div class="m-card-row"><span class="lbl">回収先</span><span class="val">${toLine}</span></div>` : ''}
+          ${c.category === '一般' && (c.useStart || c.useEnd) ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>` : ''}
           ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
         </div>
         <div class="m-card-right">›</div>
@@ -3173,7 +3182,9 @@ function _renderCaseCard(c, kind){
           <span class="m-card-caseno">${esc(c.caseNo||'(No未設定)')}</span>
           <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
         </div>
-        <div class="m-card-row"><span class="lbl">配車予約</span><span class="val">${dispatchInfo}</span></div>
+        ${c.category === '一般'
+          ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>`
+          : `<div class="m-card-row"><span class="lbl">配車予約</span><span class="val">${dispatchInfo}</span></div>`}
         ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
         ${toLine ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${toLine}</span></div>` : ''}
         ${c.dispatchToAddress ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsLink}</span></div>` : ''}
@@ -3195,25 +3206,28 @@ function setRecTab(tab){
 function getRecoveryCases(tab){
   const cases = (DATA?.cases || []).filter(_isActive);
   const today = todayISO();
+  // ★2026-05-22 α方針: 一般貸渡は recoveryCalledAt が空 (回収予定の登録なし) のため
+  //   useEnd(返却日) で today/upcoming に拾う。pending には載せない (PC専用管理)。
+  const dayKey = c => c.category === '一般' ? (c.useEnd||'') : (c.recoveryCalledAt||'');
   // 完了済みの案件も表示する (カードに done クラスがついて薄表示になる)
   if(tab === 'today'){
-    return cases.filter(c => (c.recoveryCalledAt||'').startsWith(today))
+    return cases.filter(c => dayKey(c).startsWith(today))
       .sort((a,b) => Number(!!a.recoveryCompleted) - Number(!!b.recoveryCompleted)
-        || (a.recoveryCalledAt||'').localeCompare(b.recoveryCalledAt||''));
+        || dayKey(a).localeCompare(dayKey(b)));
   }
   if(tab === 'upcoming'){
     const limit = new Date(); limit.setDate(limit.getDate()+7);
     const tz = limit.getTimezoneOffset()*60000;
     const limitISO = new Date(limit-tz).toISOString().slice(0,10);
     return cases.filter(c => {
-      const d = c.recoveryCalledAt||'';
+      const d = dayKey(c);
       return d && d >= today && d <= limitISO;
     }).sort((a,b) => Number(!!a.recoveryCompleted) - Number(!!b.recoveryCompleted)
-      || (a.recoveryCalledAt||'').localeCompare(b.recoveryCalledAt||''));
+      || dayKey(a).localeCompare(dayKey(b)));
   }
-  // pending
+  // pending (一般は除外=PC専用管理)
   return cases.filter(c =>
-    ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted
+    c.category !== '一般' && ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted
   ).sort((a,b) => (a.recoveryCalledAt||a.useStart||'').localeCompare(b.recoveryCalledAt||b.useStart||''));
 }
 function renderRecoveryList(){
