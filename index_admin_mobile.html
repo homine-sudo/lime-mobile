@@ -170,6 +170,17 @@
   /* section bottom spacing so content isn't covered by FAB */
   section{padding-bottom:120px !important}
 
+  /* ===== Duo (本日 / 明日 並列) ===== */
+  .duo-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  .duo{position:relative}
+  .duo+.duo{border-left:1px solid var(--line);padding-left:14px}
+  .duo-h{font-family:var(--serif);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);font-weight:500;margin-bottom:8px;display:flex;align-items:baseline;justify-content:space-between}
+  .duo-h .duo-d{font-family:var(--sans);font-size:9.5px;color:var(--ink3);letter-spacing:.1em;text-transform:none;font-weight:400}
+  .duo-row{display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;border-bottom:1px dotted var(--line)}
+  .duo-row:last-child{border-bottom:0}
+  .duo-l{font-size:11.5px;color:var(--ink2);letter-spacing:.04em}
+  .duo-n{font-family:var(--serif);font-size:22px;color:var(--ink);font-weight:500;line-height:1;min-width:32px;text-align:right}
+  .duo-n.zero{color:var(--ink3);font-weight:400}
   /* Decorative minute-track hairline for hero card */
   .card.hero{position:relative;padding-top:26px}
   .card.hero::before{content:'';position:absolute;left:18px;right:18px;top:14px;height:1px;background:linear-gradient(90deg,transparent,var(--line2) 8%,var(--line2) 92%,transparent)}
@@ -189,8 +200,10 @@
     </div>
   </header>
 
-  <!-- ========== 今月 ========== -->
+  <!-- ========== 今月 — これ1画面で全部わかる ========== -->
   <section id="sec-now" class="on">
+
+    <!-- ① HERO: 当月売上 -->
     <div class="card hero">
       <div class="lbl" style="text-align:center;margin-bottom:14px">当月 合算売上 · 税込</div>
       <div class="big num" id="now-total" style="text-align:center">—<span class="unit">円</span></div>
@@ -199,10 +212,10 @@
         <span class="delta ink3" id="now-yoy">前年同月 —</span>
       </div>
       <div class="bar"><i id="now-progress" style="width:0%"></i></div>
-      <div class="sm" style="margin-top:6px"><span id="now-target-pct">—</span> · 月次目標 <span class="num" id="now-target">—</span> 円</div>
+      <div class="sm" style="margin-top:6px;text-align:center"><span id="now-target-pct">—</span> · 月次目標 <span class="num" id="now-target">—</span> 円</div>
     </div>
 
-    <!-- 稼働台数 + 売上日額 (経営者の最重要パルス) -->
+    <!-- ② 数字パルス: 稼働台数 + 売上日額 -->
     <div class="grid2" style="margin:14px 16px">
       <div class="card tight" style="margin:0">
         <div class="lbl">稼働台数</div>
@@ -216,6 +229,26 @@
       </div>
     </div>
 
+    <!-- ③ 現場の忙しさ - 今日と明日 -->
+    <div class="card">
+      <div class="lbl">現場 · 直近2日間</div>
+      <div class="duo-grid">
+        <div class="duo">
+          <div class="duo-h">本日 <span class="duo-d" id="duo-today-date">—</span></div>
+          <div class="duo-row"><span class="duo-l">配車予定</span><span class="duo-n num" id="duo-d-today">—</span></div>
+          <div class="duo-row"><span class="duo-l">回収予定</span><span class="duo-n num" id="duo-r-today">—</span></div>
+          <div class="duo-row"><span class="duo-l">新規受付</span><span class="duo-n num" id="duo-n-today">—</span></div>
+        </div>
+        <div class="duo">
+          <div class="duo-h">明日 <span class="duo-d" id="duo-tom-date">—</span></div>
+          <div class="duo-row"><span class="duo-l">配車予定</span><span class="duo-n num" id="duo-d-tom">—</span></div>
+          <div class="duo-row"><span class="duo-l">回収予定</span><span class="duo-n num" id="duo-r-tom">—</span></div>
+          <div class="duo-row"><span class="duo-l">利用終了</span><span class="duo-n num" id="duo-e-tom">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ 売上内訳 -->
     <div class="grid2" style="margin:14px 16px">
       <div class="card tight" style="margin:0">
         <div class="lbl">レンタカー (税込)</div>
@@ -229,19 +262,11 @@
       </div>
     </div>
 
+    <!-- ⑤ 12ヶ月推移 -->
     <div class="card">
       <div class="lbl">12ヶ月推移 (税込)</div>
       <svg class="spark" id="spark-12" viewBox="0 0 320 80" preserveAspectRatio="none"></svg>
-      <div class="sm ink3" id="spark-12-cap">— 月 〜 — 月</div>
-    </div>
-
-    <div class="card">
-      <div class="lbl">今日の動き</div>
-      <div class="stat-grid">
-        <div class="cell"><div class="lbl">本日配車</div><div class="v num" id="today-dispatch">—</div></div>
-        <div class="cell"><div class="lbl">本日回収</div><div class="v num" id="today-recover">—</div></div>
-        <div class="cell"><div class="lbl">新規受付</div><div class="v num" id="today-new">—</div></div>
-      </div>
+      <div class="sm ink3" id="spark-12-cap" style="text-align:center">— 月 〜 — 月</div>
     </div>
   </section>
 
@@ -394,7 +419,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24g';
+const APP_VERSION = '2026-05-24h';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -697,12 +722,16 @@ function arList(){
   return {list, sum, b30,b60,b90};
 }
 
-function todayMovement(){
-  const today=todayISO();
-  const dispatch=rentalCases().filter(c=>c.dispatchAt&&String(c.dispatchAt).slice(0,10)===today&&c.status!=='キャンセル').length;
-  const rec=rentalCases().filter(c=>c.recoveryCalledAt&&String(c.recoveryCalledAt).slice(0,10)===today).length;
-  const nw=rentalCases().filter(c=>c.receivedAt&&String(c.receivedAt).slice(0,10)===today&&c.status!=='キャンセル').length;
-  return {dispatch,rec,nw};
+function dayActivity(dateISO){
+  // 指定日の現場活動を集計 (本日/明日 共通)
+  const cs=rentalCases().filter(c=>c.status!=='キャンセル');
+  const slice=v=>v?String(v).slice(0,10):'';
+  return {
+    dispatch: cs.filter(c=>slice(c.dispatchAt)===dateISO).length,
+    recover:  cs.filter(c=>slice(c.recoveryCalledAt)===dateISO).length,
+    newCase:  cs.filter(c=>slice(c.receivedAt)===dateISO).length,
+    useEnd:   cs.filter(c=>slice(c.useEnd)===dateISO).length,
+  };
 }
 
 // ---------- RENDER ----------
@@ -725,11 +754,6 @@ function renderNow(){
   $('now-progress').style.width=Math.min(100,pct)+'%';
   $('now-progress').className=pct>=100?'':pct>=70?'warn':'danger';
 
-  const m=todayMovement();
-  $('today-dispatch').textContent=m.dispatch;
-  $('today-recover').textContent=m.rec;
-  $('today-new').textContent=m.nw;
-
   // 稼働台数 (稼働タブと同じ計算 — 今日 useStart<=today<=useEnd の vehicleId 数)
   const vs=vehicleStats();
   $('now-active').innerHTML=vs.inUse+'<span class="unit" style="font-size:12px">台</span>';
@@ -741,6 +765,19 @@ function renderNow(){
   const dailyAvg=daysElapsed?Math.round(s.total/daysElapsed):0;
   $('now-daily').innerHTML=yen(dailyAvg)+'<span class="unit" style="font-size:11px">円</span>';
   $('now-daily-cap').textContent=daysElapsed+' 日経過 · 合算 ÷ 日数';
+
+  // 現場 · 本日 / 明日
+  const today=todayISO();
+  const tomorrow=addDays(today,1);
+  const dows=['日','月','火','水','木','金','土'];
+  const fmtMD=iso=>{const d=parseD(iso);return d?(d.getMonth()+1)+'/'+d.getDate()+'('+dows[d.getDay()]+')':''};
+  $('duo-today-date').textContent=fmtMD(today);
+  $('duo-tom-date').textContent=fmtMD(tomorrow);
+  const tA=dayActivity(today), tB=dayActivity(tomorrow);
+  const setDuo=(id,n)=>{const el=$(id);if(el){el.textContent=n;el.classList.toggle('zero',n===0)}};
+  setDuo('duo-d-today',tA.dispatch); setDuo('duo-r-today',tA.recover); setDuo('duo-n-today',tA.newCase);
+  setDuo('duo-d-tom',tB.dispatch);   setDuo('duo-r-tom',tB.recover);   setDuo('duo-e-tom',tB.useEnd);
+
 
   // sparkline
   const t12=trailing12();
