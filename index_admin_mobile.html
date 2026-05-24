@@ -202,6 +202,20 @@
       <div class="sm" style="margin-top:6px"><span id="now-target-pct">—</span> · 月次目標 <span class="num" id="now-target">—</span> 円</div>
     </div>
 
+    <!-- 稼働台数 + 売上日額 (経営者の最重要パルス) -->
+    <div class="grid2" style="margin:14px 16px">
+      <div class="card tight" style="margin:0">
+        <div class="lbl">稼働台数</div>
+        <div class="med num" id="now-active">—<span class="unit" style="font-size:12px">台</span></div>
+        <div class="sm" id="now-active-cap">— / — 台</div>
+      </div>
+      <div class="card tight" style="margin:0">
+        <div class="lbl">売上日額 · 当月平均</div>
+        <div class="med num" id="now-daily">—<span class="unit" style="font-size:11px">円</span></div>
+        <div class="sm" id="now-daily-cap">— 日経過</div>
+      </div>
+    </div>
+
     <div class="grid2" style="margin:14px 16px">
       <div class="card tight" style="margin:0">
         <div class="lbl">レンタカー (税込)</div>
@@ -380,7 +394,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24f';
+const APP_VERSION = '2026-05-24g';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -715,6 +729,18 @@ function renderNow(){
   $('today-dispatch').textContent=m.dispatch;
   $('today-recover').textContent=m.rec;
   $('today-new').textContent=m.nw;
+
+  // 稼働台数 (稼働タブと同じ計算 — 今日 useStart<=today<=useEnd の vehicleId 数)
+  const vs=vehicleStats();
+  $('now-active').innerHTML=vs.inUse+'<span class="unit" style="font-size:12px">台</span>';
+  $('now-active-cap').textContent=vs.inUse+' / '+vs.tot+' 台 ('+(vs.tot?Math.round(vs.inUse*100/vs.tot):0)+'%)';
+
+  // 売上日額 = 当月合算売上 ÷ 当月経過日数
+  const now2=new Date();
+  const daysElapsed=now2.getDate();
+  const dailyAvg=daysElapsed?Math.round(s.total/daysElapsed):0;
+  $('now-daily').innerHTML=yen(dailyAvg)+'<span class="unit" style="font-size:11px">円</span>';
+  $('now-daily-cap').textContent=daysElapsed+' 日経過 · 合算 ÷ 日数';
 
   // sparkline
   const t12=trailing12();
