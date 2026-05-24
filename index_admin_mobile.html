@@ -360,6 +360,20 @@
   <!-- ========== 設定 ========== -->
   <section id="sec-set">
     <div class="card">
+      <div class="lbl">月次売上目標 (税込)</div>
+      <div style="display:flex;gap:8px;align-items:baseline;margin-top:4px">
+        <input id="tgt-input" type="number" inputmode="numeric" min="0" step="100000" placeholder="例: 8000000"
+          style="flex:1;font-family:var(--serif);font-size:24px;font-weight:500;color:var(--ink);background:var(--panel2);border:1px solid var(--line);padding:10px 14px;letter-spacing:.01em;width:100%">
+        <span class="ink3" style="letter-spacing:.16em;text-transform:uppercase;font-size:11px">円</span>
+      </div>
+      <div class="sm ink3" style="margin-top:8px;letter-spacing:.04em">今月達成バーの基準値。経営DB自体に保存 (端末ローカル)。</div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn" id="btn-tgt-save">保存</button>
+        <button class="btn ghost" id="btn-tgt-clear">クリア</button>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="lbl">接続</div>
       <table class="kv">
         <tr><td>Dropbox</td><td id="set-dbx-state">—</td></tr>
@@ -419,7 +433,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24h';
+const APP_VERSION = '2026-05-24i';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -430,7 +444,8 @@ const LS = {
   token:'limeAdm_dbxToken', refresh:'limeAdm_dbxRefresh',
   verifier:'limeAdm_dbxVerifier',
   cachedR:'limeAdm_cachedR', cachedD:'limeAdm_cachedD',
-  loadedAt:'limeAdm_loadedAt'
+  loadedAt:'limeAdm_loadedAt',
+  monthlyTarget:'limeAdm_monthlyTarget'  // 月次売上目標 (経営者がこのアプリ内で設定)
 };
 const DEMO = new URLSearchParams(location.search).get('demo')==='1';
 
@@ -632,17 +647,33 @@ function thisMonthSummary(){
 }
 
 function monthlyTarget(){
+  // 優先順位: ユーザーがアプリ内で設定した値 > DETALIA設定の monthlyTarget > 0
+  const user=Number(localStorage.getItem(LS.monthlyTarget)||0);
+  if(user>0) return user;
   const t=DD&&DD.settings&&DD.settings.monthlyTarget;
   const n=Number(t)||0;
   return n>0?n:0;
 }
+function setMonthlyTarget(v){
+  const n=Math.max(0,Math.round(Number(v)||0));
+  if(n>0) localStorage.setItem(LS.monthlyTarget,String(n));
+  else localStorage.removeItem(LS.monthlyTarget);
+}
 
-// status pipeline
+// status pipeline — 4グループに統合 (経営者は粒度低くて良い)
+const RENTAL_PIPE_GROUPS=[
+  { label:'受付・配車前',  statuses:['受付','確認中','配車予定'] },
+  { label:'貸出中',        statuses:['配車済','利用中'] },
+  { label:'回収・返却',    statuses:['回収連絡','手配書FAX済','返却済'] },
+  { label:'請求・入金',    statuses:['仮請求','請求済','入金済'] },
+];
 function rentalPipeline(){
-  const order=['受付','確認中','配車予定','配車済','利用中','回収連絡','手配書FAX済','返却済','仮請求','請求済','入金済'];
-  const cnt={};order.forEach(s=>cnt[s]=0);
-  rentalCases().forEach(c=>{if(cnt[c.status]!==undefined) cnt[c.status]++});
-  return order.map(s=>({s,n:cnt[s]}));
+  // 当月活動分のみ集計 (キャンセル除外・isHistorical=true は完了済みのため除外)
+  const cs=rentalCases().filter(c=>c.status!=='キャンセル' && !c.isHistorical);
+  return RENTAL_PIPE_GROUPS.map(g=>({
+    s:g.label,
+    n:cs.filter(c=>g.statuses.includes(c.status)).length
+  }));
 }
 function detaliaPipeline(){
   const order=['予約','入庫済','作業中','作業完了','納車済','入金済'];
@@ -759,15 +790,22 @@ function renderNow(){
   $('now-active').innerHTML=vs.inUse+'<span class="unit" style="font-size:12px">台</span>';
   $('now-active-cap').textContent=vs.inUse+' / '+vs.tot+' 台 ('+(vs.tot?Math.round(vs.inUse*100/vs.tot):0)+'%)';
 
-  // 売上日額 = 当月合算売上 ÷ 当月経過日数
-  const now2=new Date();
-  const daysElapsed=now2.getDate();
-  const dailyAvg=daysElapsed?Math.round(s.total/daysElapsed):0;
-  $('now-daily').innerHTML=yen(dailyAvg)+'<span class="unit" style="font-size:11px">円</span>';
-  $('now-daily-cap').textContent=daysElapsed+' 日経過 · 合算 ÷ 日数';
+  const today=todayISO();
+  // 売上日額 = いま貸出中の車両の単価合計 (=今日続けば1日でこれだけ売上が立つ run rate)
+  let runRate=0, activeCount=0;
+  rentalCases().forEach(c=>{
+    if(c.status==='キャンセル') return;
+    if(!c.useStart) return;
+    const e=c.useEnd||addDays(c.useStart,30);
+    if(c.useStart<=today && today<=e){
+      runRate += Number(c.unitPrice||0);
+      activeCount++;
+    }
+  });
+  $('now-daily').innerHTML=yen(runRate)+'<span class="unit" style="font-size:11px">円</span>';
+  $('now-daily-cap').textContent='稼働 '+activeCount+' 台 × 日額単価 合計';
 
   // 現場 · 本日 / 明日
-  const today=todayISO();
   const tomorrow=addDays(today,1);
   const dows=['日','月','火','水','木','金','土'];
   const fmtMD=iso=>{const d=parseD(iso);return d?(d.getMonth()+1)+'/'+d.getDate()+'('+dows[d.getDay()]+')':''};
@@ -935,6 +973,11 @@ function renderSet(){
   $('set-detalia-state').textContent=DD?(DD.cases||[]).length+' 件':'—';
   $('set-loaded-at').textContent=localStorage.getItem(LS.loadedAt)||'—';
   $('set-ver').textContent=APP_VERSION;
+  const tgtEl=$('tgt-input');
+  if(tgtEl){
+    const t=Number(localStorage.getItem(LS.monthlyTarget)||0);
+    tgtEl.value = t>0 ? String(t) : '';
+  }
 }
 
 function renderAll(){
@@ -993,6 +1036,19 @@ function setupTabs(){
     localStorage.removeItem(LS.token);localStorage.removeItem(LS.refresh);
     localStorage.removeItem(LS.cachedR);localStorage.removeItem(LS.cachedD);
     DBX_TOKEN=null;toast('連携解除しました','ok');setTimeout(()=>location.reload(),500);
+  };
+  $('btn-tgt-save').onclick=()=>{
+    const v=Number($('tgt-input').value||0);
+    if(v<=0){toast('目標額を入力してください','err');return}
+    setMonthlyTarget(v);
+    toast('月次目標を保存しました','ok');
+    renderAll();
+  };
+  $('btn-tgt-clear').onclick=()=>{
+    setMonthlyTarget(0);
+    $('tgt-input').value='';
+    toast('目標をクリアしました','ok');
+    renderAll();
   };
 }
 
