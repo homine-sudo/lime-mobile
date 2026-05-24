@@ -14,66 +14,124 @@
      Palette derived from the silvered/eggshell dial and blued steel hands. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=EB+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:wght@400;500&family=Italiana&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* IWC Portugieser dial palette */
-    --bg:#F2EFE6;          /* eggshell page */
-    --panel:#FCFBF6;       /* silvered dial */
-    --panel2:#F7F4EA;      /* subdial */
-    --line:#D6CFBE;        /* hairline minute track */
-    --line2:#B5AB94;       /* heavier hairline */
-    --ink:#0E1A2E;         /* deep blued ink (≈ blued-steel hand color) */
-    --ink2:#3D4A60;        /* secondary text */
-    --ink3:#8A8470;        /* tertiary / brushed gold-grey */
-    --acc:#1B3667;         /* IWC blued-steel feuille hand */
-    --acc2:#2C4F8F;        /* lighter blue for variations */
-    --gold:#8E7B4E;        /* applied indices gold-bronze */
-    --red:#A0182A;         /* small-seconds red (rarely used) */
-    --warn:#9A6B1F;        /* amber */
-    --danger:#A0182A;
-    --ok:#1B3667;          /* "ok" uses blue rather than green (monochromatic) */
+    /* IWC Portugieser 42 silvered dial palette (refined) */
+    --bg:#EAE5D6;            /* warm parchment page (slightly deeper) */
+    --bg2:#F0EBDD;
+    --panel:#FBF9F1;         /* silvered dial face */
+    --panel2:#F4F0E2;        /* subdial (slightly darker for depth) */
+    --panel-hi:#FFFEFA;      /* polished highlight */
+    --line:#D2CAB4;          /* hairline minute track */
+    --line2:#A89D80;         /* heavier hairline / chapter ring */
+    --line3:#80755A;         /* deepest hairline */
+    --ink:#0B1729;           /* deep blued steel ink */
+    --ink2:#34425A;          /* secondary text */
+    --ink3:#8B8068;          /* brushed gold-grey for labels */
+    --acc:#1C355F;           /* IWC blued-steel feuille hand (deep) */
+    --acc2:#2D4F87;          /* lighter blued steel */
+    --acc-hi:#3E68A6;        /* highlight on hands */
+    --gold:#9A8454;          /* applied indices gold-bronze */
+    --gold-hi:#C7B07A;
+    --red:#9D1626;
+    --warn:#8E6219;
+    --danger:#9D1626;
+    --ok:#1C355F;
     --serif:'Cormorant Garamond','EB Garamond','Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif;
+    --display:'Italiana','Cormorant Garamond',serif;
     --sans:'Inter','Helvetica Neue','Hiragino Kaku Gothic ProN','Yu Gothic',system-ui,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;letter-spacing:.01em;font-weight:300}
+  html,body{margin:0;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;letter-spacing:.01em;font-weight:300;
+    /* シルバー化 ダイヤルのような warm gradient (center高輝度→edge深め) */
+    background:
+      radial-gradient(ellipse 120% 80% at 50% 25%, var(--bg2) 0%, var(--bg) 55%, #E0D9C5 100%) fixed;
+    -webkit-font-smoothing:antialiased;
+  }
   body{padding:0;padding-bottom:env(safe-area-inset-bottom,0)}
   a{color:var(--acc);text-decoration:none}
-  button{font-family:inherit;cursor:pointer}
+  button{font-family:inherit;cursor:pointer;letter-spacing:inherit}
   .mono{font-feature-settings:"tnum" 1,"lnum" 1}
   /* Applied Arabic numerals — serif, slight extension to mimic Portugieser numerals */
   .num{font-family:var(--serif);font-feature-settings:"tnum" 1,"lnum" 1;letter-spacing:.005em;font-weight:500;color:var(--ink)}
   .ink2{color:var(--ink2)} .ink3{color:var(--ink3)}
   .hr{height:1px;background:var(--line);margin:0}
   .ph{padding:14px 16px}
-  /* ----- header ----- */
-  .hdr{position:sticky;top:0;z-index:5;background:rgba(242,239,230,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:env(safe-area-inset-top,0) 0 0 0}
-  .hdr-row{display:flex;align-items:baseline;justify-content:space-between;padding:14px 18px 12px;gap:8px}
-  .brand{font-family:var(--serif);font-size:15px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-  .brand .dot{color:var(--acc);margin:0 4px}
-  .brand .sub{color:var(--ink3);font-weight:400;letter-spacing:.22em}
-  .ver{font-size:9px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;flex:0 0 auto}
+  /* ----- header ----- (chapter ring風の細いライン) */
+  .hdr{position:sticky;top:0;z-index:5;background:rgba(240,235,221,.92);backdrop-filter:blur(14px) saturate(120%);border-bottom:1px solid var(--line2);padding:env(safe-area-inset-top,0) 0 0 0;box-shadow:0 1px 0 var(--panel-hi)}
+  .hdr-row{display:flex;align-items:baseline;justify-content:center;padding:14px 16px 10px;gap:8px;position:relative}
+  .brand{font-family:var(--display);font-size:18px;letter-spacing:.32em;text-transform:uppercase;font-weight:400;color:var(--ink);white-space:nowrap;line-height:1;display:inline-flex;align-items:center;gap:14px}
+  /* 文字と並ぶ diamond ticks — IWC plate decoration風 */
+  .brand::before,.brand::after{content:'';width:5px;height:5px;background:var(--gold);transform:rotate(45deg);display:inline-block;opacity:.7}
+  .brand .dot{color:var(--acc);margin:0 4px;font-family:var(--serif)}
+  .brand .sub{color:var(--ink3);font-weight:400;letter-spacing:.30em}
+  .ver{position:absolute;right:14px;bottom:6px;font-size:8px;color:var(--ink3);letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;font-style:italic;font-family:var(--serif);font-weight:400}
   .tabbar{display:flex;gap:0;overflow-x:auto;border-top:1px solid var(--line);scrollbar-width:none}
   .tabbar::-webkit-scrollbar{display:none}
   .tab{flex:1 1 0;padding:11px 6px;font-size:11.5px;color:var(--ink3);border:0;background:transparent;border-bottom:1.5px solid transparent;letter-spacing:.18em;text-transform:uppercase;font-weight:400}
   .tab.on{color:var(--acc);border-color:var(--acc)}
-  /* ----- card (dial) ----- */
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:20px 18px;margin:14px 16px;box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 1px 3px rgba(14,26,46,.04)}
-  .card.tight{padding:14px}
-  /* dial-style label: small caps, hairline-tracked */
-  .lbl{font-size:9.5px;color:var(--ink3);letter-spacing:.32em;text-transform:uppercase;margin-bottom:8px;font-weight:400}
-  /* big serif numerals — Portugieser style */
-  .big{font-family:var(--serif);font-size:50px;line-height:1;font-weight:500;letter-spacing:-.005em;color:var(--ink)}
-  .big .unit{font-size:16px;color:var(--ink3);margin-left:8px;letter-spacing:.18em;font-weight:400;text-transform:uppercase}
-  .med{font-family:var(--serif);font-size:32px;line-height:1.05;font-weight:500;color:var(--ink)}
-  .sm{font-size:12px;color:var(--ink2);letter-spacing:.02em}
-  .delta{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:400}
+  /* ===== ダイヤル風カード (silvered face) ===== */
+  .card{
+    background:
+      /* 中央のシルバーハイライト */
+      radial-gradient(ellipse 70% 110% at 50% 0%, var(--panel-hi) 0%, var(--panel) 60%, var(--panel) 100%);
+    border:1px solid var(--line2);
+    border-radius:3px;
+    padding:22px 20px;
+    margin:14px 16px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.9) inset,           /* top highlight = polished bezel */
+      0 -1px 0 rgba(168,157,128,.18) inset,         /* bottom shadow */
+      0 1px 0 rgba(255,255,255,.6),                 /* outer top hint */
+      0 4px 14px rgba(11,23,41,.06),
+      0 1px 3px rgba(11,23,41,.04);
+    position:relative;
+  }
+  .card.tight{padding:16px 14px}
+  /* dial-style label: small caps, ベル印字風 */
+  .lbl{font-size:9px;color:var(--ink3);letter-spacing:.36em;text-transform:uppercase;margin-bottom:10px;font-weight:400;font-family:var(--sans)}
+  /* メインの数字 — Portugieser applied numeral 風 */
+  .big{
+    font-family:var(--serif);
+    font-size:54px;
+    line-height:1;
+    font-weight:500;
+    letter-spacing:-.008em;
+    color:var(--ink);
+    /* engraved depth feel */
+    text-shadow:0 1px 0 rgba(255,255,255,.45);
+  }
+  .big .unit{font-size:14px;color:var(--ink3);margin-left:10px;letter-spacing:.24em;font-weight:400;text-transform:uppercase;font-family:var(--sans);vertical-align:.2em}
+  .med{
+    font-family:var(--serif);
+    font-size:34px;
+    line-height:1.05;
+    font-weight:500;
+    color:var(--ink);
+    letter-spacing:-.005em;
+    text-shadow:0 1px 0 rgba(255,255,255,.4);
+  }
+  .med .unit{font-size:10px;color:var(--ink3);margin-left:6px;letter-spacing:.18em;font-weight:400;text-transform:uppercase;font-family:var(--sans)}
+  .sm{font-size:11.5px;color:var(--ink2);letter-spacing:.04em}
+  .delta{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:400;font-family:var(--sans)}
   .delta.up{color:var(--acc)} .delta.dn{color:var(--danger)}
-  /* progress — like a chapter ring */
-  .bar{height:2px;background:var(--line);margin-top:14px;position:relative;overflow:hidden}
-  .bar > i{display:block;height:100%;background:var(--acc);transition:width .6s cubic-bezier(.4,0,.2,1)}
-  .bar > i.warn{background:var(--warn)} .bar > i.danger{background:var(--danger)}
+  .delta.up::before{content:'▲';margin-right:3px;font-size:7px;vertical-align:1px}
+  .delta.dn::before{content:'▼';margin-right:3px;font-size:7px;vertical-align:1px}
+  /* progress — IWC chapter ring風 + 25%/50%/75% tick */
+  .bar{
+    height:2px;background:var(--line);margin-top:16px;position:relative;
+    box-shadow:0 1px 0 var(--panel-hi);
+  }
+  .bar > i{display:block;height:100%;background:linear-gradient(to right, var(--acc), var(--acc2));transition:width .8s cubic-bezier(.4,0,.2,1);box-shadow:0 0 6px rgba(28,53,95,.3)}
+  .bar > i.warn{background:linear-gradient(to right, var(--warn), #B58236)}
+  .bar > i.danger{background:linear-gradient(to right, var(--danger), #BC2839)}
+  .bar::before,.bar::after{content:'';position:absolute;top:-2px;width:1px;height:6px;background:var(--line2);opacity:.6}
+  .bar::before{left:25%} .bar::after{left:50%}
+  .bar-ticks{position:relative}
+  .bar-ticks::before,.bar-ticks::after{content:'';position:absolute;top:-2px;width:1px;height:6px;background:var(--line2);opacity:.6}
+  .bar-ticks::before{left:75%}
+  .bar-ticks::after{left:100%}
   /* grid */
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -99,14 +157,14 @@
   .badge.warn{color:var(--warn);border-color:var(--warn)}
   .badge.danger{color:var(--danger);border-color:var(--danger)}
   .badge.ok{color:var(--acc);border-color:var(--acc)}
-  /* spark — like a chronograph trace */
-  .spark{width:100%;height:64px;display:block;margin-top:12px}
-  .spark .area{fill:rgba(27,54,103,.06)}
-  .spark .line{stroke:var(--acc);stroke-width:1.4;fill:none;stroke-linejoin:round;stroke-linecap:round}
-  .spark .pt{fill:var(--acc)}
-  .spark .ax{stroke:var(--line);stroke-width:1}
-  .spark .gd{stroke:var(--line);stroke-dasharray:2,3}
-  .spark text{fill:var(--ink3);font-size:9px;font-family:var(--sans);letter-spacing:.05em}
+  /* spark — chronograph trace (refined) */
+  .spark{width:100%;height:72px;display:block;margin-top:14px}
+  .spark .area{fill:url(#sparkGrad)}
+  .spark .line{stroke:var(--acc);stroke-width:1.4;fill:none;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 1px 0 rgba(255,255,255,.6))}
+  .spark .pt{fill:var(--acc);filter:drop-shadow(0 0 3px rgba(28,53,95,.4))}
+  .spark .ax{stroke:var(--line2);stroke-width:.5}
+  .spark .gd{stroke:var(--line);stroke-dasharray:1.5,3;opacity:.5}
+  .spark text{fill:var(--ink3);font-size:8.5px;font-family:var(--serif);letter-spacing:.08em;font-style:italic}
   /* buttons */
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;border:1px solid var(--line2);background:transparent;color:var(--ink);font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:400}
   .btn.primary{background:var(--acc);color:#FCFBF6;border-color:var(--acc)}
@@ -138,21 +196,72 @@
   table.kv td{padding:9px 0;border-bottom:1px dotted var(--line);font-size:12.5px;letter-spacing:.02em}
   table.kv td:first-child{color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;font-size:10.5px}
   table.kv td:last-child{text-align:right;font-family:var(--serif);font-size:18px;color:var(--ink);font-weight:500}
-  /* status grid — subdial cells */
-  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
-  .stat-grid .cell{padding:14px 10px;border:1px solid var(--line);background:var(--panel2);text-align:center}
-  .stat-grid .cell .lbl{margin-bottom:6px;font-size:8.5px;letter-spacing:.2em}
-  .stat-grid .cell .v{font-family:var(--serif);font-size:24px;line-height:1;color:var(--ink);font-weight:500}
-  /* ===== Crown FAB ===== Portugieser のリューズ風1ボタン+扇形展開 ====== */
-  .crown{position:fixed;right:22px;bottom:calc(28px + env(safe-area-inset-bottom,0));width:72px;height:72px;z-index:20}
-  .crown-btn{position:absolute;inset:0;width:72px;height:72px;border-radius:50%;background:var(--panel);border:2px solid var(--acc);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 8px 24px rgba(14,26,46,.22), inset 0 0 0 4px var(--panel),inset 0 0 0 5px var(--line);font-family:var(--serif);color:var(--acc);font-weight:600;cursor:pointer;transition:transform .25s cubic-bezier(.4,0,.2,1), box-shadow .25s}
-  .crown-btn .cur{font-size:15px;line-height:1;letter-spacing:.04em}
-  .crown-btn .hint{font-family:var(--sans);font-size:7.5px;color:var(--ink3);letter-spacing:.28em;text-transform:uppercase;font-weight:400}
-  .crown.open .crown-btn{transform:rotate(45deg);box-shadow:0 10px 30px rgba(27,54,103,.32)}
-  .crown.open .crown-btn .cur,.crown.open .crown-btn .hint{transform:rotate(-45deg)}
+  /* status grid — subdial cells (guilloche風 texture) */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  .stat-grid .cell{
+    padding:16px 10px;
+    border:1px solid var(--line2);
+    background:
+      radial-gradient(circle at 50% 0%, var(--panel-hi), var(--panel2) 70%);
+    text-align:center;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 -1px 0 rgba(168,157,128,.15) inset,
+      0 2px 4px rgba(11,23,41,.04);
+    border-radius:50%;
+    aspect-ratio:1/1;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+  }
+  .stat-grid .cell .lbl{margin-bottom:6px;font-size:7.5px;letter-spacing:.24em}
+  .stat-grid .cell .v{font-family:var(--serif);font-size:26px;line-height:1;color:var(--ink);font-weight:500;text-shadow:0 1px 0 rgba(255,255,255,.5)}
+  /* ===== Crown FAB ===== Portugieser のリューズ風ボタン+扇形展開 ====== */
+  .crown{position:fixed;right:22px;bottom:calc(28px + env(safe-area-inset-bottom,0));width:74px;height:74px;z-index:20}
+  /* outer polished steel ring (case bezel) */
+  .crown::before{
+    content:'';position:absolute;inset:-3px;border-radius:50%;
+    background:conic-gradient(from 215deg, #C7B07A 0%, #8A7847 25%, #C7B07A 50%, #8A7847 75%, #C7B07A 100%);
+    z-index:-1;
+    box-shadow:0 8px 28px rgba(11,23,41,.28), 0 2px 6px rgba(11,23,41,.18);
+  }
+  .crown-btn{
+    position:absolute;inset:0;width:74px;height:74px;border-radius:50%;
+    background:
+      radial-gradient(ellipse 80% 70% at 50% 30%, var(--panel-hi) 0%, var(--panel) 60%, var(--panel2) 100%);
+    border:1.5px solid var(--acc);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    box-shadow:
+      inset 0 0 0 4px var(--panel),
+      inset 0 0 0 5px var(--gold),
+      inset 0 1px 0 rgba(255,255,255,.7),
+      inset 0 -1px 0 rgba(168,157,128,.4);
+    font-family:var(--serif);color:var(--acc);font-weight:600;cursor:pointer;
+    transition:transform .3s cubic-bezier(.4,0,.2,1), box-shadow .25s
+  }
+  .crown-btn .cur{font-size:15px;line-height:1;letter-spacing:.04em;text-shadow:0 1px 0 rgba(255,255,255,.5)}
+  .crown-btn .hint{font-family:var(--serif);font-style:italic;font-size:8px;color:var(--ink3);letter-spacing:.18em;text-transform:lowercase;font-weight:400}
+  .crown.open .crown-btn{transform:rotate(60deg);
+    box-shadow:
+      inset 0 0 0 4px var(--panel),
+      inset 0 0 0 5px var(--gold-hi),
+      inset 0 1px 0 rgba(255,255,255,.7),
+      0 12px 32px rgba(28,53,95,.4)}
+  .crown.open .crown-btn .cur,.crown.open .crown-btn .hint{transform:rotate(-60deg)}
   .crown-btn:active{transform:translateY(1px)}
-  /* petal buttons positioned via CSS variable --ang (angle from center) */
-  .crown .petal{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:var(--panel);border:1px solid var(--line2);box-shadow:0 6px 18px rgba(14,26,46,.16);display:flex;align-items:center;justify-content:center;color:var(--ink);font-family:var(--serif);font-weight:500;font-size:13px;letter-spacing:.04em;opacity:0;transform:translate(0,0) scale(.4);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .25s;pointer-events:none;cursor:pointer}
+  /* petal buttons */
+  .crown .petal{
+    position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;
+    background:radial-gradient(circle at 50% 30%, var(--panel-hi), var(--panel) 70%);
+    border:1px solid var(--line2);
+    box-shadow:
+      0 6px 18px rgba(11,23,41,.18),
+      inset 0 1px 0 rgba(255,255,255,.7);
+    display:flex;align-items:center;justify-content:center;color:var(--ink);
+    font-family:var(--serif);font-weight:500;font-size:13px;letter-spacing:.04em;
+    opacity:0;transform:translate(0,0) scale(.4);
+    transition:transform .4s cubic-bezier(.34,1.3,.6,1),opacity .25s;
+    pointer-events:none;cursor:pointer;
+    text-shadow:0 1px 0 rgba(255,255,255,.4);
+  }
   .crown .petal span{display:block;line-height:1}
   /* opened petals fan out — distance from FAB center along --ang */
   .crown.open .petal{opacity:1;pointer-events:auto;transform:rotate(var(--ang)) translate(100px) rotate(calc(-1 * var(--ang))) scale(1)}
@@ -171,21 +280,84 @@
   section{padding-bottom:120px !important}
 
   /* ===== Duo (本日 / 明日 並列) ===== */
-  .duo-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  .duo-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
   .duo{position:relative}
-  .duo+.duo{border-left:1px solid var(--line);padding-left:14px}
-  .duo-h{font-family:var(--serif);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);font-weight:500;margin-bottom:8px;display:flex;align-items:baseline;justify-content:space-between}
-  .duo-h .duo-d{font-family:var(--sans);font-size:9.5px;color:var(--ink3);letter-spacing:.1em;text-transform:none;font-weight:400}
-  .duo-row{display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;border-bottom:1px dotted var(--line)}
+  .duo+.duo{border-left:1px solid var(--line2);padding-left:18px}
+  .duo-h{font-family:var(--display);font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink);font-weight:400;margin-bottom:10px;display:flex;align-items:baseline;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--line2)}
+  .duo-h .duo-d{font-family:var(--serif);font-style:italic;font-size:10px;color:var(--ink3);letter-spacing:.08em;text-transform:none;font-weight:400}
+  .duo-row{display:flex;align-items:baseline;justify-content:space-between;padding:7px 0;border-bottom:1px dotted var(--line)}
   .duo-row:last-child{border-bottom:0}
-  .duo-l{font-size:11.5px;color:var(--ink2);letter-spacing:.04em}
-  .duo-n{font-family:var(--serif);font-size:22px;color:var(--ink);font-weight:500;line-height:1;min-width:32px;text-align:right}
-  .duo-n.zero{color:var(--ink3);font-weight:400}
-  /* Decorative minute-track hairline for hero card */
-  .card.hero{position:relative;padding-top:26px}
-  .card.hero::before{content:'';position:absolute;left:18px;right:18px;top:14px;height:1px;background:linear-gradient(90deg,transparent,var(--line2) 8%,var(--line2) 92%,transparent)}
-  /* small Portugieser-style decoration on hero */
-  .card.hero::after{content:'XII';position:absolute;top:6px;left:50%;transform:translateX(-50%);font-family:var(--serif);font-size:9px;color:var(--ink3);letter-spacing:.3em;background:var(--panel);padding:0 6px}
+  .duo-l{font-size:11px;color:var(--ink2);letter-spacing:.06em}
+  .duo-n{font-family:var(--serif);font-size:24px;color:var(--ink);font-weight:500;line-height:1;min-width:32px;text-align:right;text-shadow:0 1px 0 rgba(255,255,255,.4)}
+  .duo-n.zero{color:var(--line2);font-weight:400}
+  /* ===== HERO カード = 完全なPortugieser dial表現 ===== */
+  .card.hero{
+    position:relative;
+    padding:36px 22px 24px;
+    /* シルバーダイヤルの中心ハイライト */
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 30%, var(--panel-hi) 0%, var(--panel) 55%, var(--panel2) 100%);
+    border:1px solid var(--line2);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.95) inset,
+      0 -1px 0 rgba(168,157,128,.25) inset,
+      0 1px 0 var(--panel-hi),
+      0 6px 20px rgba(11,23,41,.08),
+      0 2px 4px rgba(11,23,41,.04);
+  }
+  /* chapter ring (外周ライン) */
+  .card.hero::before{
+    content:'';position:absolute;
+    inset:6px;
+    border:1px solid var(--line);
+    pointer-events:none;
+  }
+  /* XII applied numeral at 12 o'clock — engraved feel */
+  .card.hero::after{
+    content:'XII';
+    position:absolute;
+    top:1px;
+    left:50%;
+    transform:translateX(-50%);
+    font-family:var(--display);
+    font-size:11px;
+    color:var(--ink2);
+    letter-spacing:.35em;
+    background:var(--panel-hi);
+    padding:4px 10px 2px;
+    text-shadow:0 1px 0 rgba(255,255,255,.7);
+  }
+  /* corner tick marks (applied indices at 4 corners) */
+  .card.hero .corner-tick{position:absolute;width:6px;height:6px;border:1px solid var(--line2);transform:rotate(45deg);background:var(--panel);pointer-events:none}
+  .card.hero .ct-tl{top:2px;left:18px}
+  .card.hero .ct-tr{top:2px;right:18px}
+  .card.hero .ct-bl{bottom:2px;left:18px}
+  .card.hero .ct-br{bottom:2px;right:18px}
+  /* "AUTOMATIC" italic micro-label below XII */
+  .card.hero .auto-label{
+    position:absolute;top:24px;left:50%;transform:translateX(-50%);
+    font-family:var(--serif);font-style:italic;font-size:9.5px;
+    color:var(--ink3);letter-spacing:.18em;text-transform:lowercase;
+    pointer-events:none;
+  }
+  .card.hero .big{font-size:56px}
+  .card.hero .ytd-divider{
+    margin:22px 14px 16px;
+    height:1px;
+    background:linear-gradient(90deg,transparent 0%, var(--line2) 20%, var(--line2) 80%, transparent 100%);
+    position:relative;
+  }
+  /* dial signature mark on divider */
+  .card.hero .ytd-divider::after{
+    content:'◆';
+    position:absolute;
+    left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    color:var(--gold);
+    background:var(--panel);
+    padding:0 6px;
+    font-size:6px;
+  }
 </style>
 </head>
 <body>
@@ -205,23 +377,29 @@
 
     <!-- ① HERO: 当月売上 + 当年 (YTD) -->
     <div class="card hero">
+      <span class="corner-tick ct-tl"></span>
+      <span class="corner-tick ct-tr"></span>
+      <span class="corner-tick ct-bl"></span>
+      <span class="corner-tick ct-br"></span>
+      <div class="auto-label">automatic</div>
+
       <div class="lbl" style="text-align:center;margin-bottom:14px">当月 合算売上 · 税込</div>
       <div class="big num" id="now-total" style="text-align:center">—<span class="unit">円</span></div>
-      <div style="display:flex;gap:18px;margin-top:14px;align-items:baseline;justify-content:center">
+      <div style="display:flex;gap:24px;margin-top:16px;align-items:baseline;justify-content:center">
         <span class="delta" id="now-mom">前月比 —</span>
         <span class="delta ink3" id="now-yoy">前年同月 —</span>
       </div>
-      <div class="bar"><i id="now-progress" style="width:0%"></i></div>
-      <div class="sm" style="margin-top:6px;text-align:center"><span id="now-target-pct">—</span> · 月次目標 <span class="num" id="now-target">—</span> 円</div>
+      <div class="bar bar-ticks"><i id="now-progress" style="width:0%"></i></div>
+      <div class="sm" style="margin-top:10px;text-align:center;letter-spacing:.1em"><span id="now-target-pct">—</span> · 月次目標 <span class="num" id="now-target" style="font-size:14px">—</span> 円</div>
 
-      <!-- YTD分割 -->
-      <div style="margin-top:18px;padding-top:14px;border-top:1px dotted var(--line)">
-        <div class="lbl" style="text-align:center;margin-bottom:6px"><span id="ytd-year">—</span>年 累計 (YTD)</div>
-        <div class="med num" id="ytd-total" style="text-align:center">—<span class="unit" style="font-size:10px">円</span></div>
-        <div style="display:flex;gap:18px;margin-top:10px;align-items:baseline;justify-content:center">
-          <span class="delta" id="ytd-yoy">前年同期 —</span>
-          <span class="delta ink3" id="ytd-prev">前年通期 —</span>
-        </div>
+      <!-- ダイヤル中央セパレータ (ロゴパッチ風) -->
+      <div class="ytd-divider"></div>
+
+      <div class="lbl" style="text-align:center;margin-bottom:8px"><span id="ytd-year">—</span>年 累計 · YTD</div>
+      <div class="med num" id="ytd-total" style="text-align:center">—<span class="unit" style="font-size:10px">円</span></div>
+      <div style="display:flex;gap:24px;margin-top:12px;align-items:baseline;justify-content:center">
+        <span class="delta" id="ytd-yoy">前年同期 —</span>
+        <span class="delta ink3" id="ytd-prev">前年通期 —</span>
       </div>
     </div>
 
@@ -443,7 +621,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24j';
+const APP_VERSION = '2026-05-24k';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -817,6 +995,7 @@ function renderNow(){
   const yoy=s.yoy?Math.round((s.total-s.yoy)/s.yoy*100):null;
   $('now-mom').className='delta '+(mom==null?'ink3':(mom>=0?'up':'dn'));
   $('now-mom').textContent='前月比 '+(mom==null?'—':(mom>=0?'+':'')+mom+'%');
+  $('now-yoy').className='delta '+(yoy==null?'ink3':(yoy>=0?'up':'dn'));
   $('now-yoy').textContent='前年同月 '+(yoy==null?'—':(yoy>=0?'+':'')+yoy+'%');
   $('now-rental').textContent=yen(s.rental);
   $('now-rental-cnt').textContent=s.rentalCnt+' 件';
@@ -880,21 +1059,31 @@ function fmtJaYM(k){if(!k) return '—';const [y,m]=k.split('-');return y+'年'+
 
 function drawSpark(id,values,labels){
   const svg=$(id);if(!svg) return;
-  const W=320,H=svg.viewBox.baseVal.height||80,Pad=8,L=22,R=8,T=8,B=18;
+  const W=320,H=svg.viewBox.baseVal.height||80,L=24,R=10,T=10,B=20;
   const w=W-L-R, h=H-T-B;
   const max=Math.max(1,...values);
   const pts=values.map((v,i)=>{const x=L+(i/(values.length-1||1))*w; const y=T+h-(v/max)*h; return [x,y]});
   let area=`M ${L} ${T+h}`;pts.forEach(p=>area+=` L ${p[0]} ${p[1]}`);area+=` L ${L+w} ${T+h} Z`;
   let line='';pts.forEach((p,i)=>line+=(i?' L ':'M ')+p[0]+' '+p[1]);
-  // axis labels min/max
+  const last=pts[pts.length-1];
+  // tick marks at 25/50/75/100% positions on x-axis (chapter ring風)
+  const xTicks=[0.25,0.5,0.75,1].map(f=>L+f*w).map(x=>`<line class="ax" x1="${x}" y1="${T+h-2}" x2="${x}" y2="${T+h+2}"/>`).join('');
   svg.innerHTML=`
+    <defs>
+      <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1C355F" stop-opacity=".18"/>
+        <stop offset="100%" stop-color="#1C355F" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
     <path class="area" d="${area}"/>
     <path class="line" d="${line}"/>
-    ${pts.map((p,i)=>i===pts.length-1?`<circle class="pt" cx="${p[0]}" cy="${p[1]}" r="2.5"/>`:'').join('')}
+    <circle class="pt" cx="${last[0]}" cy="${last[1]}" r="2.8"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="5" fill="none" stroke="#1C355F" stroke-width=".5" opacity=".4"/>
     <line class="ax" x1="${L}" y1="${T+h}" x2="${L+w}" y2="${T+h}"/>
-    <text x="${L-4}" y="${T+10}" text-anchor="end">${(max/10000).toFixed(0)}万</text>
-    <text x="${L-4}" y="${T+h+4}" text-anchor="end">0</text>
-    ${labels?`<text x="${L}" y="${H-4}">${labels[0]?labels[0].slice(2):''}</text><text x="${L+w}" y="${H-4}" text-anchor="end">${labels[labels.length-1]?labels[labels.length-1].slice(2):''}</text>`:''}
+    ${xTicks}
+    <text x="${L-6}" y="${T+8}" text-anchor="end">${(max/10000).toFixed(0)}万</text>
+    <text x="${L-6}" y="${T+h+3}" text-anchor="end">0</text>
+    ${labels?`<text x="${L}" y="${H-5}">${labels[0]?labels[0].slice(2):''}</text><text x="${L+w}" y="${H-5}" text-anchor="end">${labels[labels.length-1]?labels[labels.length-1].slice(2):''}</text>`:''}
   `;
 }
 
