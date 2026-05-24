@@ -6,8 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0E1410">
-<title>LIME 経営ダッシュボード</title>
-<link rel="apple-touch-icon" href="logo.png">
+<title>Hari Terrace 経営ダッシュボード</title>
+<link rel="apple-touch-icon" sizes="180x180" href="ht_logo.png">
+<link rel="apple-touch-icon" sizes="1024x1024" href="ht_logo.png">
+<link rel="icon" href="ht_logo.png">
 <style>
   :root{
     --bg:#0E1410; --panel:#141C18; --panel2:#1A231E;
@@ -137,27 +139,12 @@
 </head>
 <body>
 
-<!-- ============================================================ GATE ============================================================ -->
-<div id="gate" class="gate">
-  <div class="brandbig">L<span style="color:var(--acc)">i</span>me One</div>
-  <div class="sub">Executive Dashboard</div>
-  <div class="pin-row" id="pin-row">
-    <input class="pin" id="p0" maxlength="1" inputmode="numeric" autocomplete="off">
-    <input class="pin" id="p1" maxlength="1" inputmode="numeric" autocomplete="off">
-    <input class="pin" id="p2" maxlength="1" inputmode="numeric" autocomplete="off">
-    <input class="pin" id="p3" maxlength="1" inputmode="numeric" autocomplete="off">
-  </div>
-  <div class="err" id="gate-err"></div>
-  <div class="kpad" id="kpad"></div>
-  <div class="info" id="gate-info">初回はお好きな4桁を設定してください。<br>この端末に保存され、次回から同じPINで開けます。</div>
-</div>
-
 <!-- ============================================================ APP ============================================================ -->
-<div id="app" style="display:none">
+<div id="app">
 
   <header class="hdr">
     <div class="hdr-row">
-      <div class="brand">Lime <span class="dot">·</span> Executive</div>
+      <div class="brand">Hari Terrace <span class="dot">·</span> Executive</div>
       <div class="ver" id="ver">v—</div>
     </div>
     <nav class="tabbar" id="tabbar">
@@ -317,17 +304,6 @@
     </div>
 
     <div class="card">
-      <div class="lbl">PIN</div>
-      <table class="kv">
-        <tr><td>状態</td><td id="set-pin-state">設定済</td></tr>
-      </table>
-      <div style="display:flex;gap:8px;margin-top:14px">
-        <button class="btn" id="btn-pin-change">PIN変更</button>
-        <button class="btn ghost" id="btn-pin-reset">PIN削除</button>
-      </div>
-    </div>
-
-    <div class="card">
       <div class="lbl">情報</div>
       <table class="kv">
         <tr><td>バージョン</td><td id="set-ver">—</td></tr>
@@ -337,7 +313,7 @@
     </div>
 
     <div class="foot">
-      Lime One Executive · 読込専用ビュー<br>
+      Hari Terrace · Executive · 読込専用ビュー<br>
       レンタカー = /システムデータ（R）/data.json<br>
       DETALIA = /システムデータ（D)/data.json
     </div>
@@ -354,7 +330,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24b';
+const APP_VERSION = '2026-05-24d';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -362,7 +338,6 @@ const PATH_RENTAL  = '/ライム共有DB/システムデータ（R）/data.json'
 const PATH_DETALIA = '/ライム共有DB/システムデータ（D)/data.json';
 
 const LS = {
-  pinHash:'limeAdm_pinHash', pinSalt:'limeAdm_pinSalt',
   token:'limeAdm_dbxToken', refresh:'limeAdm_dbxRefresh',
   verifier:'limeAdm_dbxVerifier',
   cachedR:'limeAdm_cachedR', cachedD:'limeAdm_cachedD',
@@ -382,55 +357,6 @@ function addDays(a,n){const d=parseD(a);if(!d)return '';d.setDate(d.getDate()+n)
 function showSpinner(){$('spinner').classList.add('on')}
 function hideSpinner(){$('spinner').classList.remove('on')}
 function toast(msg,k){const t=document.createElement('div');t.className='toast'+(k?' '+k:'');t.textContent=msg;$('toast-host').appendChild(t);t.style.pointerEvents='auto';setTimeout(()=>t.style.opacity=0,2400);setTimeout(()=>t.remove(),2900)}
-
-// ---------- PIN ----------
-async function sha(s){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return btoa(String.fromCharCode(...new Uint8Array(buf)))}
-async function setPin(pin){
-  const salt=String(Date.now())+Math.random().toString(36).slice(2);
-  const h=await sha(salt+'|'+pin);
-  localStorage.setItem(LS.pinSalt,salt);
-  localStorage.setItem(LS.pinHash,h);
-}
-async function checkPin(pin){
-  const salt=localStorage.getItem(LS.pinSalt);
-  const h=localStorage.getItem(LS.pinHash);
-  if(!salt||!h) return false;
-  return (await sha(salt+'|'+pin))===h;
-}
-function pinClear(){localStorage.removeItem(LS.pinSalt);localStorage.removeItem(LS.pinHash)}
-function pinExists(){return !!localStorage.getItem(LS.pinHash)}
-
-function renderKeypad(){
-  const k=$('kpad');k.innerHTML='';
-  const layout=['1','2','3','4','5','6','7','8','9','clr','0','del'];
-  layout.forEach(v=>{
-    const b=document.createElement('button');
-    if(v==='clr'||v==='del'){b.className='act';b.textContent=v==='clr'?'CLR':'DEL'}
-    else b.textContent=v;
-    b.onclick=()=>onKey(v);
-    k.appendChild(b);
-  });
-}
-let _pinBuf='';
-function onKey(v){
-  if(v==='clr'){_pinBuf='';refreshPinInputs();return}
-  if(v==='del'){_pinBuf=_pinBuf.slice(0,-1);refreshPinInputs();return}
-  if(_pinBuf.length>=4) return;
-  _pinBuf+=v;refreshPinInputs();
-  if(_pinBuf.length===4) submitPin();
-}
-function refreshPinInputs(){for(let i=0;i<4;i++){$('p'+i).value=_pinBuf[i]||''}}
-async function submitPin(){
-  const errEl=$('gate-err');errEl.textContent='';
-  if(pinExists()){
-    if(await checkPin(_pinBuf)){enterApp();return}
-    errEl.textContent='PINが違います';_pinBuf='';refreshPinInputs();return;
-  }
-  // first time setup
-  await setPin(_pinBuf);
-  toast('PIN を設定しました','ok');
-  enterApp();
-}
 
 // ---------- Dropbox PKCE ----------
 function getRedirectUri(){return location.origin+location.pathname}
@@ -533,13 +459,25 @@ function detaliaAmount(c, taxRate){
 }
 // month bucket key from a YYYY-MM-* string
 function ym(s){if(!s) return null;const m=String(s).match(/^(\d{4})-(\d{1,2})/);if(!m) return null;return m[1]+'-'+pad2(m[2])}
-// rental "received" date drives revenue month (mirrors renderSales)
-function rentalReceivedYM(c){return ym(c.receivedAt)}
+// ★ レンタル売上の月帰属は useEnd (=利用終了日 / freee発生日)。
+//   PC LIMEOne.html freeeFormatRow が「発生日=c.useEnd」を採用しているため、
+//   経営者ダッシュボードもこれに揃える (= freee月次CSVと月帰属が一致)。
+//   useEnd未設定の案件は売上未計上として除外。
+function rentalSalesYM(c){return ym(c.useEnd)}
 // DETALIA delivery → fall back to paidDate → arrival
 function detaliaYM(c){return ym(c.delivery)||ym(c.paidDate)||ym(c.arrival)}
 
 function rentalCases(){return (DR&&DR.cases)||[]}
 function detaliaCases(){return ((DD&&DD.cases)||[]).filter(c=>!c.deleted)}
+// 売上集計対象: キャンセル除外 + useEnd必須 + 一般貸渡は status ゲート (PC freeeExportTargets と同条件)
+function billableRental(){
+  return rentalCases().filter(c=>{
+    if(c.status==='キャンセル') return false;
+    if(!c.useEnd) return false;
+    if(c.category==='一般' && !['請求済','入金済'].includes(c.status)) return false;
+    return true;
+  });
+}
 function activeRental(){return rentalCases().filter(c=>c.status!=='キャンセル')}
 
 function monthlyTotals(yearStr){
@@ -549,8 +487,8 @@ function monthlyTotals(yearStr){
   const r=new Array(12).fill(0), d=new Array(12).fill(0);
   const rc=new Array(12).fill(0), dc=new Array(12).fill(0);
   const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
-  activeRental().forEach(c=>{
-    const k=rentalReceivedYM(c);if(!k) return;
+  billableRental().forEach(c=>{
+    const k=rentalSalesYM(c);if(!k) return;
     const idx=months.indexOf(k);if(idx<0) return;
     const a=rentalAmount(c);r[idx]+=a.total;rc[idx]++;
   });
@@ -573,7 +511,7 @@ function trailing12(){
     labels.push(key);r.push(0);d.push(0);
   }
   const idxOf=k=>labels.indexOf(k);
-  activeRental().forEach(c=>{const k=rentalReceivedYM(c);const i=idxOf(k);if(i>=0) r[i]+=rentalAmount(c).total});
+  billableRental().forEach(c=>{const k=rentalSalesYM(c);const i=idxOf(k);if(i>=0) r[i]+=rentalAmount(c).total});
   detaliaCases().forEach(c=>{const k=detaliaYM(c);const i=idxOf(k);if(i>=0) d[i]+=detaliaAmount(c,taxR).total});
   return {labels,rental:r,detalia:d};
 }
@@ -587,8 +525,8 @@ function thisMonthSummary(){
   const yym=py.getFullYear()+'-'+pad2(py.getMonth()+1);
   const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
   let r=0,d=0,rc=0,dc=0,rPrev=0,dPrev=0,rYoy=0,dYoy=0;
-  activeRental().forEach(c=>{
-    const k=rentalReceivedYM(c);if(!k) return;
+  billableRental().forEach(c=>{
+    const k=rentalSalesYM(c);if(!k) return;
     const a=rentalAmount(c);
     if(k===tm){r+=a.total;rc++}
     else if(k===pm) rPrev+=a.total;
@@ -758,7 +696,7 @@ function drawSpark(id,values,labels){
 
 function renderRev(){
   const years=new Set();
-  rentalCases().forEach(c=>{const k=rentalReceivedYM(c);if(k) years.add(k.slice(0,4))});
+  billableRental().forEach(c=>{const k=rentalSalesYM(c);if(k) years.add(k.slice(0,4))});
   detaliaCases().forEach(c=>{const k=detaliaYM(c);if(k) years.add(k.slice(0,4))});
   const yearList=[...years].sort().reverse();
   const seg=$('rev-year-seg');
@@ -796,8 +734,8 @@ function renderRev(){
 
   // category — rental by category field; for cases w/o category, group as "損保(既定)"
   const catR={};
-  activeRental().forEach(c=>{
-    const k=rentalReceivedYM(c); if(!k||k.slice(0,4)!==curr) return;
+  billableRental().forEach(c=>{
+    const k=rentalSalesYM(c); if(!k||k.slice(0,4)!==curr) return;
     const cat=c.category||'損保'; // legacy null = 損保
     catR[cat]=(catR[cat]||0)+rentalAmount(c).total;
   });
@@ -884,7 +822,6 @@ function renderSet(){
   $('set-detalia-state').textContent=DD?(DD.cases||[]).length+' 件':'—';
   $('set-loaded-at').textContent=localStorage.getItem(LS.loadedAt)||'—';
   $('set-ver').textContent=APP_VERSION;
-  $('set-pin-state').textContent=pinExists()?'設定済':'未設定';
 }
 
 function renderAll(){
@@ -905,8 +842,6 @@ function showTab(t){
 
 // ---------- ENTRY ----------
 async function enterApp(){
-  $('gate').style.display='none';
-  $('app').style.display='block';
   $('ver').textContent='v'+APP_VERSION;
   try { await loadAll(); } catch(e){ toast(e.message,'err'); }
   renderAll();
@@ -921,13 +856,6 @@ function setupTabs(){
     localStorage.removeItem(LS.cachedR);localStorage.removeItem(LS.cachedD);
     DBX_TOKEN=null;toast('連携解除しました','ok');setTimeout(()=>location.reload(),500);
   };
-  $('btn-pin-change').onclick=async()=>{
-    const v=prompt('現在のPINを入力');if(v==null) return;
-    if(!(await checkPin(v))){toast('PINが違います','err');return}
-    const nv=prompt('新しい4桁PIN');if(!nv||!/^\d{4}$/.test(nv)){toast('4桁の数字で','err');return}
-    await setPin(nv);toast('PIN変更しました','ok');renderSet();
-  };
-  $('btn-pin-reset').onclick=()=>{if(confirm('PINを削除しますか？')){pinClear();toast('削除しました','ok');setTimeout(()=>location.reload(),500)}};
 }
 
 // ---------- DEMO DATA ----------
@@ -961,35 +889,14 @@ function DEMO_D(){
   return {cases,settings:{taxRate:10,monthlyTarget:500000}};
 }
 
-// ---------- GATE / BOOTSTRAP ----------
+// ---------- BOOTSTRAP ----------
 async function bootstrap(){
-  renderKeypad();
-  // PIN field listeners (when physical keyboard is used)
-  for(let i=0;i<4;i++){
-    const el=$('p'+i);
-    el.addEventListener('input',()=>{
-      _pinBuf=Array.from({length:4}).map((_,j)=>$('p'+j).value).join('').replace(/\D/g,'').slice(0,4);
-      refreshPinInputs();
-      if(_pinBuf.length===4) submitPin();
-      else if(_pinBuf.length<4) $('p'+_pinBuf.length)?.focus();
-    });
-  }
-  if(!pinExists()){
-    $('gate-info').innerHTML='初回はお好きな4桁を設定してください。<br>この端末に保存され、次回から同じPINで開けます。';
-  } else {
-    $('gate-info').textContent='4桁の PIN を入力してください。';
-  }
-  // Dropbox callback (oauth code in URL) — handle even before app entry
+  setupTabs();
+  // Dropbox OAuth コールバック処理 (URLに code パラメータがあれば交換)
   if(new URL(location.href).searchParams.get('code')){
     await dbxHandleCallback();
   }
-  if(DEMO){
-    // skip PIN in demo
-    enterApp();
-    return;
-  }
-  $('p0').focus();
-  setupTabs();
+  enterApp();
 }
 window.addEventListener('DOMContentLoaded',bootstrap);
 </script>
