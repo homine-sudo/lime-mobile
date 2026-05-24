@@ -143,6 +143,33 @@
   .stat-grid .cell{padding:14px 10px;border:1px solid var(--line);background:var(--panel2);text-align:center}
   .stat-grid .cell .lbl{margin-bottom:6px;font-size:8.5px;letter-spacing:.2em}
   .stat-grid .cell .v{font-family:var(--serif);font-size:24px;line-height:1;color:var(--ink);font-weight:500}
+  /* ===== Crown FAB ===== Portugieser のリューズ風1ボタン+扇形展開 ====== */
+  .crown{position:fixed;right:22px;bottom:calc(28px + env(safe-area-inset-bottom,0));width:72px;height:72px;z-index:20}
+  .crown-btn{position:absolute;inset:0;width:72px;height:72px;border-radius:50%;background:var(--panel);border:2px solid var(--acc);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 8px 24px rgba(14,26,46,.22), inset 0 0 0 4px var(--panel),inset 0 0 0 5px var(--line);font-family:var(--serif);color:var(--acc);font-weight:600;cursor:pointer;transition:transform .25s cubic-bezier(.4,0,.2,1), box-shadow .25s}
+  .crown-btn .cur{font-size:15px;line-height:1;letter-spacing:.04em}
+  .crown-btn .hint{font-family:var(--sans);font-size:7.5px;color:var(--ink3);letter-spacing:.28em;text-transform:uppercase;font-weight:400}
+  .crown.open .crown-btn{transform:rotate(45deg);box-shadow:0 10px 30px rgba(27,54,103,.32)}
+  .crown.open .crown-btn .cur,.crown.open .crown-btn .hint{transform:rotate(-45deg)}
+  .crown-btn:active{transform:translateY(1px)}
+  /* petal buttons positioned via CSS variable --ang (angle from center) */
+  .crown .petal{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:var(--panel);border:1px solid var(--line2);box-shadow:0 6px 18px rgba(14,26,46,.16);display:flex;align-items:center;justify-content:center;color:var(--ink);font-family:var(--serif);font-weight:500;font-size:13px;letter-spacing:.04em;opacity:0;transform:translate(0,0) scale(.4);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .25s;pointer-events:none;cursor:pointer}
+  .crown .petal span{display:block;line-height:1}
+  /* opened petals fan out — distance from FAB center along --ang */
+  .crown.open .petal{opacity:1;pointer-events:auto;transform:rotate(var(--ang)) translate(100px) rotate(calc(-1 * var(--ang))) scale(1)}
+  .crown .petal.current{border-color:var(--acc);color:var(--acc);background:var(--panel2)}
+  /* stagger animation */
+  .crown.open .petal:nth-child(1){transition-delay:.02s}
+  .crown.open .petal:nth-child(2){transition-delay:.05s}
+  .crown.open .petal:nth-child(3){transition-delay:.08s}
+  .crown.open .petal:nth-child(4){transition-delay:.11s}
+  .crown.open .petal:nth-child(5){transition-delay:.14s}
+  .crown.open .petal:nth-child(6){transition-delay:.17s}
+  /* scrim — softens background while open, also click-to-close */
+  .crown-scrim{position:fixed;inset:0;background:rgba(242,239,230,.55);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .25s;z-index:15}
+  .crown-scrim.on{opacity:1;pointer-events:auto}
+  /* section bottom spacing so content isn't covered by FAB */
+  section{padding-bottom:120px !important}
+
   /* Decorative minute-track hairline for hero card */
   .card.hero{position:relative;padding-top:26px}
   .card.hero::before{content:'';position:absolute;left:18px;right:18px;top:14px;height:1px;background:linear-gradient(90deg,transparent,var(--line2) 8%,var(--line2) 92%,transparent)}
@@ -160,14 +187,6 @@
       <div class="brand">Hari Terrace</div>
       <div class="ver" id="ver">—</div>
     </div>
-    <nav class="tabbar" id="tabbar">
-      <button class="tab on" data-tab="now">今月</button>
-      <button class="tab" data-tab="rev">売上</button>
-      <button class="tab" data-tab="ops">稼働</button>
-      <button class="tab" data-tab="pipe">案件</button>
-      <button class="tab" data-tab="ar">未入金</button>
-      <button class="tab" data-tab="set">設定</button>
-    </nav>
   </header>
 
   <!-- ========== 今月 ========== -->
@@ -331,6 +350,24 @@
       DETALIA = /システムデータ（D)/data.json
     </div>
   </section>
+
+  <!-- Crown FAB ナビゲーション (Portugieser リューズ風1ボタン) -->
+  <!-- 中央: 現在タブ。タップで petals が扇形展開、もう一度タップか外側タップで閉じる -->
+  <!-- 親指リーチ最適化のため左上方向のみへ扇形展開 (FAB位置=右下) -->
+  <nav id="crown" class="crown closed" aria-label="セクションナビ">
+    <button class="petal" data-tab="now"  style="--ang:-75deg"><span>今月</span></button>
+    <button class="petal" data-tab="rev"  style="--ang:-99deg"><span>売上</span></button>
+    <button class="petal" data-tab="ops"  style="--ang:-123deg"><span>稼働</span></button>
+    <button class="petal" data-tab="pipe" style="--ang:-147deg"><span>案件</span></button>
+    <button class="petal" data-tab="ar"   style="--ang:-171deg"><span>未入金</span></button>
+    <button class="petal" data-tab="set"  style="--ang:-195deg"><span>設定</span></button>
+    <button class="crown-btn" id="crown-btn" type="button" aria-expanded="false">
+      <span class="cur" id="crown-cur">今月</span>
+      <span class="hint">tap</span>
+    </button>
+  </nav>
+  <div id="crown-scrim" class="crown-scrim" aria-hidden="true"></div>
+
 </div>
 
 <div class="spinner-wrap" id="spinner"><div class="spinner"></div></div>
@@ -343,7 +380,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24e';
+const APP_VERSION = '2026-05-24f';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -846,11 +883,30 @@ function renderAll(){
   renderNow();renderRev();renderOps();renderPipe();renderAr();renderSet();
 }
 
-// ---------- TABS ----------
+// ---------- TABS / CROWN FAB ----------
+const TAB_LABELS = {now:'今月', rev:'売上', ops:'稼働', pipe:'案件', ar:'未入金', set:'設定'};
+let _currentTab = 'now';
 function showTab(t){
-  Array.from(document.querySelectorAll('.tab')).forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  _currentTab = t;
   ['now','rev','ops','pipe','ar','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
+  // Crown 中央表示と petal 現在地ハイライト
+  const cur=$('crown-cur'); if(cur) cur.textContent=TAB_LABELS[t]||t;
+  document.querySelectorAll('.crown .petal').forEach(p=>p.classList.toggle('current',p.dataset.tab===t));
+  closeCrown();
   window.scrollTo({top:0,behavior:'instant'});
+}
+function openCrown(){
+  $('crown').classList.add('open');
+  $('crown-scrim').classList.add('on');
+  $('crown-btn').setAttribute('aria-expanded','true');
+}
+function closeCrown(){
+  $('crown').classList.remove('open');
+  $('crown-scrim').classList.remove('on');
+  $('crown-btn').setAttribute('aria-expanded','false');
+}
+function toggleCrown(){
+  ($('crown').classList.contains('open')?closeCrown:openCrown)();
 }
 
 // ---------- ENTRY ----------
@@ -861,7 +917,13 @@ async function enterApp(){
 }
 
 function setupTabs(){
-  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+  // Crown FAB
+  $('crown-btn').onclick=(e)=>{e.stopPropagation();toggleCrown()};
+  document.querySelectorAll('.crown .petal').forEach(b=>b.onclick=(e)=>{e.stopPropagation();showTab(b.dataset.tab)});
+  $('crown-scrim').onclick=closeCrown;
+  // Esc キーで閉じる
+  document.addEventListener('keydown',e=>{if(e.key==='Escape') closeCrown()});
+
   $('btn-reload').onclick=async()=>{try{await loadAll();renderAll();toast('再読込しました','ok')}catch(e){toast(e.message,'err')}};
   $('btn-dbx-connect').onclick=dbxAuthorize;
   $('btn-dbx-logout').onclick=()=>{
