@@ -203,7 +203,7 @@
   <!-- ========== 今月 — これ1画面で全部わかる ========== -->
   <section id="sec-now" class="on">
 
-    <!-- ① HERO: 当月売上 -->
+    <!-- ① HERO: 当月売上 + 当年 (YTD) -->
     <div class="card hero">
       <div class="lbl" style="text-align:center;margin-bottom:14px">当月 合算売上 · 税込</div>
       <div class="big num" id="now-total" style="text-align:center">—<span class="unit">円</span></div>
@@ -213,6 +213,16 @@
       </div>
       <div class="bar"><i id="now-progress" style="width:0%"></i></div>
       <div class="sm" style="margin-top:6px;text-align:center"><span id="now-target-pct">—</span> · 月次目標 <span class="num" id="now-target">—</span> 円</div>
+
+      <!-- YTD分割 -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px dotted var(--line)">
+        <div class="lbl" style="text-align:center;margin-bottom:6px"><span id="ytd-year">—</span>年 累計 (YTD)</div>
+        <div class="med num" id="ytd-total" style="text-align:center">—<span class="unit" style="font-size:10px">円</span></div>
+        <div style="display:flex;gap:18px;margin-top:10px;align-items:baseline;justify-content:center">
+          <span class="delta" id="ytd-yoy">前年同期 —</span>
+          <span class="delta ink3" id="ytd-prev">前年通期 —</span>
+        </div>
+      </div>
     </div>
 
     <!-- ② 数字パルス: 稼働台数 + 売上日額 -->
@@ -433,7 +443,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24i';
+const APP_VERSION = '2026-05-24j';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -620,6 +630,40 @@ function trailing12(){
   return {labels,rental:r,detalia:d};
 }
 
+function thisYearSummary(){
+  // 当年(YTD = 1/1〜今日) vs 前年同期(1/1〜今日の月日と同じ範囲) vs 前年通期
+  const now=new Date();
+  const Y=now.getFullYear();
+  const todayMD=pad2(now.getMonth()+1)+'-'+pad2(now.getDate());
+  const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
+  let cur=0, prevPart=0, prevFull=0, curCnt=0, prevPartCnt=0;
+  billableRental().forEach(c=>{
+    const k=rentalSalesYM(c);if(!k) return;
+    const y=Number(k.slice(0,4));
+    const md=String(c.useEnd).slice(5,10);
+    const a=rentalAmount(c).total;
+    if(y===Y && md<=todayMD){cur+=a;curCnt++}
+    else if(y===Y-1){
+      prevFull+=a;
+      if(md<=todayMD){prevPart+=a;prevPartCnt++}
+    }
+  });
+  detaliaCases().forEach(c=>{
+    const k=detaliaYM(c);if(!k) return;
+    const y=Number(k.slice(0,4));
+    // 月日 — delivery/paidDate/arrival から最新使用日
+    const src=c.delivery||c.paidDate||c.arrival||'';
+    const md=String(src).slice(5,10);
+    const a=detaliaAmount(c,taxR).total;
+    if(y===Y && md<=todayMD){cur+=a;curCnt++}
+    else if(y===Y-1){
+      prevFull+=a;
+      if(md<=todayMD){prevPart+=a;prevPartCnt++}
+    }
+  });
+  return {year:Y, cur, prevPart, prevFull, curCnt, prevPartCnt};
+}
+
 function thisMonthSummary(){
   const now=new Date();
   const tm=now.getFullYear()+'-'+pad2(now.getMonth()+1);
@@ -784,6 +828,15 @@ function renderNow(){
   $('now-target-pct').textContent=tgt?pct+'%':'目標未設定';
   $('now-progress').style.width=Math.min(100,pct)+'%';
   $('now-progress').className=pct>=100?'':pct>=70?'warn':'danger';
+
+  // 当年(YTD) サマリー
+  const yr=thisYearSummary();
+  $('ytd-year').textContent=yr.year;
+  $('ytd-total').innerHTML=yen(yr.cur)+'<span class="unit" style="font-size:10px">円</span>';
+  const ytdYoy = yr.prevPart>0 ? Math.round((yr.cur-yr.prevPart)/yr.prevPart*100) : null;
+  $('ytd-yoy').className='delta '+(ytdYoy==null?'ink3':(ytdYoy>=0?'up':'dn'));
+  $('ytd-yoy').textContent='前年同期 '+(ytdYoy==null?'—':(ytdYoy>=0?'+':'')+ytdYoy+'%');
+  $('ytd-prev').textContent='前年通期 '+(yr.prevFull?yen(yr.prevFull)+'円':'—');
 
   // 稼働台数 (稼働タブと同じ計算 — 今日 useStart<=today<=useEnd の vehicleId 数)
   const vs=vehicleStats();
