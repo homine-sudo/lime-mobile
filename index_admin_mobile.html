@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0E1410">
+<title>LIME 経営ダッシュボード</title>
+<link rel="apple-touch-icon" href="logo.png">
+<style>
+  :root{
+    --bg:#0E1410; --panel:#141C18; --panel2:#1A231E;
+    --line:#22302A; --line2:#2E4039;
+    --ink:#F2EFE6; --ink2:#C6CFCA; --ink3:#8A958F;
+    --acc:#A9D27A;   /* LIME accent */
+    --gold:#D4B879;
+    --warn:#E0A85F; --danger:#D77A6B;
+    --ok:#9FCE8A;
+    --serif:'Cormorant Garamond','Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif;
+    --sans:'Inter','Helvetica Neue','Hiragino Kaku Gothic ProN','Yu Gothic',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;letter-spacing:.01em}
+  body{padding:0;padding-bottom:env(safe-area-inset-bottom,0)}
+  a{color:var(--acc);text-decoration:none}
+  button{font-family:inherit;cursor:pointer}
+  .mono{font-feature-settings:"tnum" 1,"lnum" 1}
+  .num{font-family:var(--serif);font-feature-settings:"tnum" 1,"lnum" 1;letter-spacing:0}
+  .ink2{color:var(--ink2)} .ink3{color:var(--ink3)}
+  .hr{height:1px;background:var(--line);margin:0}
+  .ph{padding:14px 16px}
+  /* ----- header ----- */
+  .hdr{position:sticky;top:0;z-index:5;background:rgba(14,20,16,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:env(safe-area-inset-top,0) 0 0 0}
+  .hdr-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+  .brand{font-family:var(--serif);font-size:17px;letter-spacing:.18em;text-transform:uppercase}
+  .brand .dot{color:var(--acc)}
+  .ver{font-size:10px;color:var(--ink3);letter-spacing:.1em}
+  .tabbar{display:flex;gap:0;overflow-x:auto;border-top:1px solid var(--line);scrollbar-width:none}
+  .tabbar::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;padding:10px 16px;font-size:13px;color:var(--ink3);border:0;background:transparent;border-bottom:2px solid transparent;letter-spacing:.04em}
+  .tab.on{color:var(--ink);border-color:var(--acc)}
+  /* ----- card ----- */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 16px}
+  .card.tight{padding:14px}
+  .lbl{font-size:10.5px;color:var(--ink3);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+  .big{font-family:var(--serif);font-size:48px;line-height:1;font-weight:500;letter-spacing:-.01em}
+  .big .unit{font-size:18px;color:var(--ink3);margin-left:6px;letter-spacing:.1em}
+  .med{font-family:var(--serif);font-size:30px;line-height:1.05;font-weight:500}
+  .sm{font-size:12.5px;color:var(--ink2)}
+  .delta{font-size:12.5px;letter-spacing:.04em}
+  .delta.up{color:var(--ok)} .delta.dn{color:var(--danger)}
+  /* progress */
+  .bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:10px}
+  .bar > i{display:block;height:100%;background:var(--acc);transition:width .6s ease}
+  .bar > i.warn{background:var(--warn)} .bar > i.danger{background:var(--danger)}
+  /* grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  /* chip */
+  .chip{display:inline-flex;align-items:baseline;gap:6px;padding:8px 10px;border:1px solid var(--line2);border-radius:999px;font-size:12.5px;color:var(--ink2);margin:4px 4px 0 0}
+  .chip b{font-family:var(--serif);font-size:16px;color:var(--ink);font-weight:500}
+  /* pipeline */
+  .pipe{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .pipe .row{display:flex;align-items:center;gap:12px}
+  .pipe .row .nm{flex:1;font-size:13.5px;color:var(--ink2)}
+  .pipe .row .ct{font-family:var(--serif);font-size:20px;width:48px;text-align:right;color:var(--ink)}
+  .pipe .row .bar2{flex:0 0 64px;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+  .pipe .row .bar2 > i{display:block;height:100%;background:var(--acc)}
+  /* table-ish list */
+  .list .item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .list .item:last-child{border-bottom:0}
+  .list .nm{flex:1;min-width:0}
+  .list .nm .t{font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .list .nm .s{font-size:11.5px;color:var(--ink3);margin-top:2px}
+  .list .val{font-family:var(--serif);font-size:17px;text-align:right;color:var(--ink)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;border:1px solid var(--line2);color:var(--ink2);letter-spacing:.04em}
+  .badge.warn{color:var(--warn);border-color:var(--warn)}
+  .badge.danger{color:var(--danger);border-color:var(--danger)}
+  .badge.ok{color:var(--ok);border-color:var(--ok)}
+  /* spark */
+  .spark{width:100%;height:64px;display:block;margin-top:10px}
+  .spark .area{fill:rgba(169,210,122,.10)}
+  .spark .line{stroke:var(--acc);stroke-width:1.5;fill:none}
+  .spark .pt{fill:var(--acc)}
+  .spark .ax{stroke:var(--line);stroke-width:1}
+  .spark .gd{stroke:var(--line);stroke-dasharray:2,3}
+  .spark text{fill:var(--ink3);font-size:9px;font-family:var(--sans)}
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid var(--line2);background:transparent;color:var(--ink);border-radius:999px;font-size:14px;letter-spacing:.04em}
+  .btn.primary{background:var(--acc);color:#0E1410;border-color:var(--acc)}
+  .btn.ghost{color:var(--ink3)}
+  .btn.full{width:100%}
+  .btn:active{transform:translateY(1px)}
+  /* gate / onboard */
+  .gate{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px}
+  .gate .brandbig{font-family:var(--serif);font-size:28px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:6px}
+  .gate .sub{font-size:11.5px;color:var(--ink3);letter-spacing:.18em;text-transform:uppercase;margin-bottom:48px}
+  .pin-row{display:flex;gap:10px;margin:16px 0 22px}
+  .pin{width:42px;height:54px;border:1px solid var(--line2);border-radius:8px;background:var(--panel);color:var(--ink);font-family:var(--serif);font-size:24px;text-align:center}
+  .pin:focus{outline:none;border-color:var(--acc)}
+  .kpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:320px;margin-top:8px}
+  .kpad button{padding:18px;font-family:var(--serif);font-size:22px;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:10px}
+  .kpad button.act{background:var(--panel2);color:var(--ink3);font-size:13px;font-family:var(--sans);letter-spacing:.08em;text-transform:uppercase}
+  .err{color:var(--danger);font-size:12.5px;margin-top:8px;letter-spacing:.06em;min-height:1em;text-transform:uppercase}
+  .gate .info{font-size:11.5px;color:var(--ink3);margin-top:32px;text-align:center;max-width:280px;line-height:1.7}
+  /* spinner / toast */
+  .spinner-wrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(14,20,16,.6);backdrop-filter:blur(2px);z-index:30}
+  .spinner-wrap.on{display:flex}
+  .spinner{width:36px;height:36px;border:2px solid var(--line2);border-top-color:var(--acc);border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .toast-host{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0));left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:40;pointer-events:none}
+  .toast{padding:10px 16px;background:var(--panel2);border:1px solid var(--line2);color:var(--ink);font-size:13px;border-radius:999px;letter-spacing:.04em;transition:opacity .3s}
+  .toast.err{border-color:var(--danger);color:var(--danger)}
+  .toast.ok{border-color:var(--ok);color:var(--ok)}
+  /* sections */
+  section{display:none;padding-bottom:32px}
+  section.on{display:block}
+  /* footnote */
+  .foot{padding:18px 16px 36px;font-size:11px;color:var(--ink3);text-align:center;letter-spacing:.08em}
+  .foot a{color:var(--ink3);text-decoration:underline}
+  /* segmented */
+  .seg{display:inline-flex;border:1px solid var(--line2);border-radius:999px;overflow:hidden;background:var(--panel2)}
+  .seg button{padding:6px 12px;border:0;background:transparent;color:var(--ink3);font-size:12px;letter-spacing:.05em}
+  .seg button.on{background:var(--ink);color:#0E1410}
+  /* table */
+  table.kv{width:100%;border-collapse:collapse}
+  table.kv td{padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+  table.kv td:first-child{color:var(--ink3)}
+  table.kv td:last-child{text-align:right;font-family:var(--serif);font-size:17px}
+  /* status grid */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+  .stat-grid .cell{padding:12px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+  .stat-grid .cell .lbl{margin-bottom:4px;font-size:9.5px}
+  .stat-grid .cell .v{font-family:var(--serif);font-size:22px;line-height:1}
+</style>
+</head>
+<body>
+
+<!-- ============================================================ GATE ============================================================ -->
+<div id="gate" class="gate">
+  <div class="brandbig">L<span style="color:var(--acc)">i</span>me One</div>
+  <div class="sub">Executive Dashboard</div>
+  <div class="pin-row" id="pin-row">
+    <input class="pin" id="p0" maxlength="1" inputmode="numeric" autocomplete="off">
+    <input class="pin" id="p1" maxlength="1" inputmode="numeric" autocomplete="off">
+    <input class="pin" id="p2" maxlength="1" inputmode="numeric" autocomplete="off">
+    <input class="pin" id="p3" maxlength="1" inputmode="numeric" autocomplete="off">
+  </div>
+  <div class="err" id="gate-err"></div>
+  <div class="kpad" id="kpad"></div>
+  <div class="info" id="gate-info">初回はお好きな4桁を設定してください。<br>この端末に保存され、次回から同じPINで開けます。</div>
+</div>
+
+<!-- ============================================================ APP ============================================================ -->
+<div id="app" style="display:none">
+
+  <header class="hdr">
+    <div class="hdr-row">
+      <div class="brand">Lime <span class="dot">·</span> Executive</div>
+      <div class="ver" id="ver">v—</div>
+    </div>
+    <nav class="tabbar" id="tabbar">
+      <button class="tab on" data-tab="now">今月</button>
+      <button class="tab" data-tab="rev">売上</button>
+      <button class="tab" data-tab="ops">稼働</button>
+      <button class="tab" data-tab="pipe">案件</button>
+      <button class="tab" data-tab="ar">未入金</button>
+      <button class="tab" data-tab="set">設定</button>
+    </nav>
+  </header>
+
+  <!-- ========== 今月 ========== -->
+  <section id="sec-now" class="on">
+    <div class="card">
+      <div class="lbl">当月 合算売上 (税込)</div>
+      <div class="big num" id="now-total">—<span class="unit">円</span></div>
+      <div style="display:flex;gap:14px;margin-top:8px;align-items:baseline">
+        <span class="delta" id="now-mom">前月比 —</span>
+        <span class="delta ink3" id="now-yoy">前年同月 —</span>
+      </div>
+      <div class="bar"><i id="now-progress" style="width:0%"></i></div>
+      <div class="sm" style="margin-top:6px"><span id="now-target-pct">—</span> · 月次目標 <span class="num" id="now-target">—</span> 円</div>
+    </div>
+
+    <div class="grid2" style="margin:14px 16px">
+      <div class="card tight" style="margin:0">
+        <div class="lbl">レンタカー (税込)</div>
+        <div class="med num" id="now-rental">—</div>
+        <div class="sm" id="now-rental-cnt">— 件</div>
+      </div>
+      <div class="card tight" style="margin:0">
+        <div class="lbl">DETALIA (税込)</div>
+        <div class="med num" id="now-detalia">—</div>
+        <div class="sm" id="now-detalia-cnt">— 件</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">12ヶ月推移 (税込)</div>
+      <svg class="spark" id="spark-12" viewBox="0 0 320 80" preserveAspectRatio="none"></svg>
+      <div class="sm ink3" id="spark-12-cap">— 月 〜 — 月</div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">今日の動き</div>
+      <div class="stat-grid">
+        <div class="cell"><div class="lbl">本日配車</div><div class="v num" id="today-dispatch">—</div></div>
+        <div class="cell"><div class="lbl">本日回収</div><div class="v num" id="today-recover">—</div></div>
+        <div class="cell"><div class="lbl">新規受付</div><div class="v num" id="today-new">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 売上 ========== -->
+  <section id="sec-rev">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+        <div class="lbl" style="margin:0">年次切替</div>
+        <div class="seg" id="rev-year-seg"></div>
+      </div>
+      <div class="hr"></div>
+      <table class="kv" id="rev-summary"></table>
+    </div>
+
+    <div class="card">
+      <div class="lbl">月次 (税込) · 当年</div>
+      <svg class="spark" id="spark-rev" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
+      <table class="kv" id="rev-monthly"></table>
+    </div>
+
+    <div class="card">
+      <div class="lbl">カテゴリ別 (当年)</div>
+      <table class="kv" id="rev-cat"></table>
+    </div>
+  </section>
+
+  <!-- ========== 稼働 ========== -->
+  <section id="sec-ops">
+    <div class="card">
+      <div class="lbl">いま稼働中</div>
+      <div class="big num" id="ops-now">—<span class="unit">台</span></div>
+      <div class="sm" id="ops-now-cap">— / — 台</div>
+      <div class="bar"><i id="ops-now-bar" style="width:0%"></i></div>
+    </div>
+
+    <div class="grid2" style="margin:14px 16px">
+      <div class="card tight" style="margin:0">
+        <div class="lbl">直近30日 稼働率</div>
+        <div class="med num" id="ops-30">—<span class="unit" style="font-size:12px">%</span></div>
+        <div class="sm" id="ops-30-cap">—</div>
+      </div>
+      <div class="card tight" style="margin:0">
+        <div class="lbl">空き</div>
+        <div class="med num" id="ops-free">—<span class="unit" style="font-size:12px">台</span></div>
+        <div class="sm" id="ops-free-cap">即稼働可</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">稼働率ランキング (直近30日)</div>
+      <div class="list" id="ops-rank"></div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">稼働ゼロ (直近30日)</div>
+      <div class="list" id="ops-idle"></div>
+    </div>
+  </section>
+
+  <!-- ========== パイプライン ========== -->
+  <section id="sec-pipe">
+    <div class="card">
+      <div class="lbl">レンタカー 案件</div>
+      <div class="pipe" id="pipe-rental"></div>
+    </div>
+    <div class="card">
+      <div class="lbl">DETALIA 案件</div>
+      <div class="pipe" id="pipe-detalia"></div>
+    </div>
+  </section>
+
+  <!-- ========== 未入金 ========== -->
+  <section id="sec-ar">
+    <div class="card">
+      <div class="lbl">未入金 残高 (税込)</div>
+      <div class="big num" id="ar-total">—<span class="unit">円</span></div>
+      <div class="sm" id="ar-cnt">— 件</div>
+      <div class="stat-grid" style="margin-top:14px">
+        <div class="cell"><div class="lbl">30日以内</div><div class="v num" id="ar-30">—</div></div>
+        <div class="cell"><div class="lbl">31–60日</div><div class="v num" id="ar-60">—</div></div>
+        <div class="cell"><div class="lbl">61日以上</div><div class="v num" id="ar-90">—</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">経過日数が長い順</div>
+      <div class="list" id="ar-list"></div>
+    </div>
+  </section>
+
+  <!-- ========== 設定 ========== -->
+  <section id="sec-set">
+    <div class="card">
+      <div class="lbl">接続</div>
+      <table class="kv">
+        <tr><td>Dropbox</td><td id="set-dbx-state">—</td></tr>
+        <tr><td>レンタカーデータ</td><td id="set-rental-state">—</td></tr>
+        <tr><td>DETALIAデータ</td><td id="set-detalia-state">—</td></tr>
+        <tr><td>最終取得</td><td id="set-loaded-at">—</td></tr>
+      </table>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn" id="btn-reload">再読込</button>
+        <button class="btn" id="btn-dbx-connect">Dropbox 連携</button>
+        <button class="btn ghost" id="btn-dbx-logout">連携解除</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">PIN</div>
+      <table class="kv">
+        <tr><td>状態</td><td id="set-pin-state">設定済</td></tr>
+      </table>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn" id="btn-pin-change">PIN変更</button>
+        <button class="btn ghost" id="btn-pin-reset">PIN削除</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">情報</div>
+      <table class="kv">
+        <tr><td>バージョン</td><td id="set-ver">—</td></tr>
+        <tr><td>用途</td><td>経営者・閲覧専用</td></tr>
+        <tr><td>書込</td><td>行わない</td></tr>
+      </table>
+    </div>
+
+    <div class="foot">
+      Lime One Executive · 読込専用ビュー<br>
+      レンタカー = /システムデータ（R）/data.json<br>
+      DETALIA = /システムデータ（D)/data.json
+    </div>
+  </section>
+</div>
+
+<div class="spinner-wrap" id="spinner"><div class="spinner"></div></div>
+<div class="toast-host" id="toast-host"></div>
+
+<script>
+/* ===========================================================
+   LIME EXECUTIVE — Manager-only mobile dashboard
+   - Read-only
+   - PIN gate + Dropbox PKCE auth
+   - Reads BOTH rental & DETALIA data.json
+   =========================================================== */
+const APP_VERSION = '2026-05-24b';
+
+// Dropbox App key (PKCE = public)
+const DBX_APP_KEY = 'fly154tcdbz09x9';
+const PATH_RENTAL  = '/ライム共有DB/システムデータ（R）/data.json';
+const PATH_DETALIA = '/ライム共有DB/システムデータ（D)/data.json';
+
+const LS = {
+  pinHash:'limeAdm_pinHash', pinSalt:'limeAdm_pinSalt',
+  token:'limeAdm_dbxToken', refresh:'limeAdm_dbxRefresh',
+  verifier:'limeAdm_dbxVerifier',
+  cachedR:'limeAdm_cachedR', cachedD:'limeAdm_cachedD',
+  loadedAt:'limeAdm_loadedAt'
+};
+const DEMO = new URLSearchParams(location.search).get('demo')==='1';
+
+// ---------- helpers ----------
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad2=n=>String(n).padStart(2,'0');
+const yen=n=>Math.round(Number(n)||0).toLocaleString('ja-JP');
+const todayISO=()=>{const d=new Date();const tz=d.getTimezoneOffset()*60000;return new Date(d-tz).toISOString().slice(0,10)};
+const parseD=v=>{if(!v)return null;const d=new Date(v);return isNaN(d.getTime())?null:d};
+function daysBetween(a,b){const da=parseD(a),db=parseD(b);if(!da||!db)return 0;return Math.max(0,Math.round((db-da)/86400000))}
+function addDays(a,n){const d=parseD(a);if(!d)return '';d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+function showSpinner(){$('spinner').classList.add('on')}
+function hideSpinner(){$('spinner').classList.remove('on')}
+function toast(msg,k){const t=document.createElement('div');t.className='toast'+(k?' '+k:'');t.textContent=msg;$('toast-host').appendChild(t);t.style.pointerEvents='auto';setTimeout(()=>t.style.opacity=0,2400);setTimeout(()=>t.remove(),2900)}
+
+// ---------- PIN ----------
+async function sha(s){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return btoa(String.fromCharCode(...new Uint8Array(buf)))}
+async function setPin(pin){
+  const salt=String(Date.now())+Math.random().toString(36).slice(2);
+  const h=await sha(salt+'|'+pin);
+  localStorage.setItem(LS.pinSalt,salt);
+  localStorage.setItem(LS.pinHash,h);
+}
+async function checkPin(pin){
+  const salt=localStorage.getItem(LS.pinSalt);
+  const h=localStorage.getItem(LS.pinHash);
+  if(!salt||!h) return false;
+  return (await sha(salt+'|'+pin))===h;
+}
+function pinClear(){localStorage.removeItem(LS.pinSalt);localStorage.removeItem(LS.pinHash)}
+function pinExists(){return !!localStorage.getItem(LS.pinHash)}
+
+function renderKeypad(){
+  const k=$('kpad');k.innerHTML='';
+  const layout=['1','2','3','4','5','6','7','8','9','clr','0','del'];
+  layout.forEach(v=>{
+    const b=document.createElement('button');
+    if(v==='clr'||v==='del'){b.className='act';b.textContent=v==='clr'?'CLR':'DEL'}
+    else b.textContent=v;
+    b.onclick=()=>onKey(v);
+    k.appendChild(b);
+  });
+}
+let _pinBuf='';
+function onKey(v){
+  if(v==='clr'){_pinBuf='';refreshPinInputs();return}
+  if(v==='del'){_pinBuf=_pinBuf.slice(0,-1);refreshPinInputs();return}
+  if(_pinBuf.length>=4) return;
+  _pinBuf+=v;refreshPinInputs();
+  if(_pinBuf.length===4) submitPin();
+}
+function refreshPinInputs(){for(let i=0;i<4;i++){$('p'+i).value=_pinBuf[i]||''}}
+async function submitPin(){
+  const errEl=$('gate-err');errEl.textContent='';
+  if(pinExists()){
+    if(await checkPin(_pinBuf)){enterApp();return}
+    errEl.textContent='PINが違います';_pinBuf='';refreshPinInputs();return;
+  }
+  // first time setup
+  await setPin(_pinBuf);
+  toast('PIN を設定しました','ok');
+  enterApp();
+}
+
+// ---------- Dropbox PKCE ----------
+function getRedirectUri(){return location.origin+location.pathname}
+function genVerifier(){const a=new Uint8Array(48);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function shaB64Url(s){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function dbxAuthorize(){
+  const v=genVerifier();const ch=await shaB64Url(v);
+  sessionStorage.setItem(LS.verifier,v);
+  const p=new URLSearchParams({client_id:DBX_APP_KEY,response_type:'code',code_challenge:ch,code_challenge_method:'S256',redirect_uri:getRedirectUri(),token_access_type:'offline'});
+  location.href='https://www.dropbox.com/oauth2/authorize?'+p;
+}
+let DBX_TOKEN=localStorage.getItem(LS.token)||null;
+async function dbxHandleCallback(){
+  const url=new URL(location.href);
+  const code=url.searchParams.get('code');
+  if(!code) return false;
+  const v=sessionStorage.getItem(LS.verifier);
+  if(!v){toast('verifier紛失','err');return false}
+  showSpinner();
+  try{
+    const p=new URLSearchParams({code,grant_type:'authorization_code',client_id:DBX_APP_KEY,code_verifier:v,redirect_uri:getRedirectUri()});
+    const res=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:p.toString()});
+    if(!res.ok) throw new Error(res.status);
+    const d=await res.json();
+    DBX_TOKEN=d.access_token;
+    localStorage.setItem(LS.token,DBX_TOKEN);
+    if(d.refresh_token) localStorage.setItem(LS.refresh,d.refresh_token);
+    sessionStorage.removeItem(LS.verifier);
+    history.replaceState({},'',getRedirectUri());
+    toast('Dropbox 連携完了','ok');
+    return true;
+  }catch(e){toast('認証失敗 '+e.message,'err');return false}
+  finally{hideSpinner()}
+}
+async function dbxRefresh(){
+  const r=localStorage.getItem(LS.refresh);if(!r) return false;
+  try{
+    const p=new URLSearchParams({grant_type:'refresh_token',refresh_token:r,client_id:DBX_APP_KEY});
+    const res=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:p.toString()});
+    if(!res.ok) return false;
+    const d=await res.json();DBX_TOKEN=d.access_token;localStorage.setItem(LS.token,DBX_TOKEN);return true;
+  }catch(e){return false}
+}
+function _asciiSafe(o){return JSON.stringify(o).replace(/[-￿]/g,c=>'\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4))}
+async function dbxDownload(path){
+  if(!DBX_TOKEN) throw new Error('未認証');
+  const doReq=async()=>{
+    return fetch('https://content.dropboxapi.com/2/files/download',{method:'POST',headers:{'Authorization':'Bearer '+DBX_TOKEN,'Dropbox-API-Arg':_asciiSafe({path})}});
+  };
+  let res=await doReq();
+  if(res.status===401){ if(await dbxRefresh()) res=await doReq(); }
+  if(res.status===409){const t=await res.text();throw new Error('not_found: '+path+' '+t.slice(0,80))}
+  if(!res.ok) throw new Error('DL fail '+res.status);
+  return JSON.parse(await res.text());
+}
+
+// ---------- DATA ----------
+let DR=null, DD=null; // rental, detalia
+
+async function loadAll(){
+  if(DEMO){ DR=DEMO_R(); DD=DEMO_D(); cacheSet(); return; }
+  if(!DBX_TOKEN){
+    // try cache
+    const cR=localStorage.getItem(LS.cachedR),cD=localStorage.getItem(LS.cachedD);
+    if(cR&&cD){DR=JSON.parse(cR);DD=JSON.parse(cD);toast('キャッシュから表示');return}
+    throw new Error('Dropbox 未連携');
+  }
+  showSpinner();
+  try{
+    const [r,d]=await Promise.allSettled([dbxDownload(PATH_RENTAL),dbxDownload(PATH_DETALIA)]);
+    if(r.status==='fulfilled') DR=r.value;
+    else { const cR=localStorage.getItem(LS.cachedR); if(cR) DR=JSON.parse(cR); toast('レンタカー: '+r.reason.message,'err'); }
+    if(d.status==='fulfilled') DD=d.value;
+    else { const cD=localStorage.getItem(LS.cachedD); if(cD) DD=JSON.parse(cD); toast('DETALIA: '+d.reason.message,'err'); }
+    cacheSet();
+    localStorage.setItem(LS.loadedAt,new Date().toISOString());
+  } finally { hideSpinner(); }
+}
+function cacheSet(){
+  if(DR) localStorage.setItem(LS.cachedR,JSON.stringify(DR));
+  if(DD) localStorage.setItem(LS.cachedD,JSON.stringify(DD));
+}
+
+// ---------- CALCULATIONS ----------
+// Rental case amount (税込) — mirrors LIMEOne.html calcAmounts
+function rentalAmount(c){
+  const effEnd=c.useEnd||(c.recoveryCalledAt?String(c.recoveryCalledAt).slice(0,10):'');
+  const days=(c.useStart&&effEnd)?daysBetween(c.useStart,effEnd):0;
+  const unit=Number(c.unitPrice||0);
+  const gross=days*unit;
+  const disc=Number(c.discount||0);
+  const total=Math.max(0,gross-disc);
+  return {days,total};
+}
+// DETALIA case amount (税込) — totalAmount = optExt+optInt+optOther - discount, tax 10%
+function detaliaAmount(c, taxRate){
+  const sub=Math.max(0,(Number(c.optExt)||0)+(Number(c.optInt)||0)+(Number(c.optOther)||0)-(Number(c.discount)||0));
+  const r=(typeof taxRate==='number'?taxRate:10)/100;
+  return {sub, total: Math.round(sub*(1+r))};
+}
+// month bucket key from a YYYY-MM-* string
+function ym(s){if(!s) return null;const m=String(s).match(/^(\d{4})-(\d{1,2})/);if(!m) return null;return m[1]+'-'+pad2(m[2])}
+// rental "received" date drives revenue month (mirrors renderSales)
+function rentalReceivedYM(c){return ym(c.receivedAt)}
+// DETALIA delivery → fall back to paidDate → arrival
+function detaliaYM(c){return ym(c.delivery)||ym(c.paidDate)||ym(c.arrival)}
+
+function rentalCases(){return (DR&&DR.cases)||[]}
+function detaliaCases(){return ((DD&&DD.cases)||[]).filter(c=>!c.deleted)}
+function activeRental(){return rentalCases().filter(c=>c.status!=='キャンセル')}
+
+function monthlyTotals(yearStr){
+  // Returns {months:['2026-01',...], rental:[..], detalia:[..]}
+  const months=[];
+  for(let i=1;i<=12;i++) months.push(yearStr+'-'+pad2(i));
+  const r=new Array(12).fill(0), d=new Array(12).fill(0);
+  const rc=new Array(12).fill(0), dc=new Array(12).fill(0);
+  const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
+  activeRental().forEach(c=>{
+    const k=rentalReceivedYM(c);if(!k) return;
+    const idx=months.indexOf(k);if(idx<0) return;
+    const a=rentalAmount(c);r[idx]+=a.total;rc[idx]++;
+  });
+  detaliaCases().forEach(c=>{
+    const k=detaliaYM(c);if(!k) return;
+    const idx=months.indexOf(k);if(idx<0) return;
+    const a=detaliaAmount(c,taxR);d[idx]+=a.total;dc[idx]++;
+  });
+  return {months, rental:r, detalia:d, rentalCnt:rc, detaliaCnt:dc};
+}
+
+// 12-month rolling window ending at "today"
+function trailing12(){
+  const now=new Date();
+  const labels=[],r=[],d=[];
+  const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
+  for(let i=11;i>=0;i--){
+    const dt=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const key=dt.getFullYear()+'-'+pad2(dt.getMonth()+1);
+    labels.push(key);r.push(0);d.push(0);
+  }
+  const idxOf=k=>labels.indexOf(k);
+  activeRental().forEach(c=>{const k=rentalReceivedYM(c);const i=idxOf(k);if(i>=0) r[i]+=rentalAmount(c).total});
+  detaliaCases().forEach(c=>{const k=detaliaYM(c);const i=idxOf(k);if(i>=0) d[i]+=detaliaAmount(c,taxR).total});
+  return {labels,rental:r,detalia:d};
+}
+
+function thisMonthSummary(){
+  const now=new Date();
+  const tm=now.getFullYear()+'-'+pad2(now.getMonth()+1);
+  const prev=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const pm=prev.getFullYear()+'-'+pad2(prev.getMonth()+1);
+  const py=new Date(now.getFullYear()-1,now.getMonth(),1);
+  const yym=py.getFullYear()+'-'+pad2(py.getMonth()+1);
+  const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
+  let r=0,d=0,rc=0,dc=0,rPrev=0,dPrev=0,rYoy=0,dYoy=0;
+  activeRental().forEach(c=>{
+    const k=rentalReceivedYM(c);if(!k) return;
+    const a=rentalAmount(c);
+    if(k===tm){r+=a.total;rc++}
+    else if(k===pm) rPrev+=a.total;
+    else if(k===yym) rYoy+=a.total;
+  });
+  detaliaCases().forEach(c=>{
+    const k=detaliaYM(c);if(!k) return;
+    const a=detaliaAmount(c,taxR);
+    if(k===tm){d+=a.total;dc++}
+    else if(k===pm) dPrev+=a.total;
+    else if(k===yym) dYoy+=a.total;
+  });
+  return {tm,total:r+d,rental:r,detalia:d,rentalCnt:rc,detaliaCnt:dc,prev:rPrev+dPrev,yoy:rYoy+dYoy};
+}
+
+function monthlyTarget(){
+  const t=DD&&DD.settings&&DD.settings.monthlyTarget;
+  const n=Number(t)||0;
+  return n>0?n:0;
+}
+
+// status pipeline
+function rentalPipeline(){
+  const order=['受付','確認中','配車予定','配車済','利用中','回収連絡','手配書FAX済','返却済','仮請求','請求済','入金済'];
+  const cnt={};order.forEach(s=>cnt[s]=0);
+  rentalCases().forEach(c=>{if(cnt[c.status]!==undefined) cnt[c.status]++});
+  return order.map(s=>({s,n:cnt[s]}));
+}
+function detaliaPipeline(){
+  const order=['予約','入庫済','作業中','作業完了','納車済','入金済'];
+  // DETALIA cases don't have an explicit status — derive
+  const cnt={};order.forEach(s=>cnt[s]=0);
+  detaliaCases().forEach(c=>{
+    let s='予約';
+    if(c.paidDate) s='入金済';
+    else if(c.delivery) s='納車済';
+    else if(c.workChecks && Object.keys(c.workChecks).length) s='作業完了';
+    else if(c.arrival && parseD(c.arrival)<=new Date()) s='作業中';
+    else if(c.arrival) s='入庫済';
+    cnt[s]++;
+  });
+  return order.map(s=>({s,n:cnt[s]}));
+}
+
+// vehicle utilization
+function vehicleStats(){
+  const vehicles=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車');
+  const tot=vehicles.length;
+  const today=todayISO();
+  // currently dispatched = vehicleId in any case with useStart<=today<useEnd and status not キャンセル/入金済 finalized post-recovery? simpler: cases between useStart and useEnd today.
+  const inUse=new Set();
+  rentalCases().forEach(c=>{
+    if(!c.vehicleId||c.status==='キャンセル') return;
+    const s=c.useStart,e=c.useEnd||addDays(c.useStart,30);
+    if(s&&s<=today&&today<=e) inUse.add(c.vehicleId);
+  });
+  // last 30 days utilization
+  const end=new Date();const start=new Date(); start.setDate(start.getDate()-29);
+  const startISO=start.toISOString().slice(0,10), endISO=end.toISOString().slice(0,10);
+  const span=daysBetween(startISO,endISO)||30;
+  const used={};
+  rentalCases().forEach(c=>{
+    if(!c.vehicleId||c.status==='キャンセル'||!c.useStart) return;
+    const s=c.useStart<startISO?startISO:c.useStart;
+    const eRaw=c.useEnd||addDays(c.useStart,30);
+    const e=eRaw>endISO?endISO:eRaw;
+    const d=daysBetween(s,e);
+    if(d>0) used[c.vehicleId]=(used[c.vehicleId]||0)+d;
+  });
+  const rows=vehicles.map(v=>({v,days:used[v.id]||0,rate:Math.min(100,Math.round((used[v.id]||0)*100/span))}));
+  rows.sort((a,b)=>b.rate-a.rate);
+  const avg=rows.length?Math.round(rows.reduce((s,r)=>s+r.rate,0)/rows.length):0;
+  return {tot, inUse:inUse.size, free:tot-inUse.size, avg, rows, idle: rows.filter(r=>r.days===0)};
+}
+
+// AR (accounts receivable) — billed but not yet paid
+function arList(){
+  const today=new Date();
+  const list=[];
+  rentalCases().forEach(c=>{
+    if(c.status!=='請求済'&&c.status!=='仮請求') return;
+    const a=rentalAmount(c);
+    let issued=c.invoiceIssuedAt||null;
+    if(!issued && c.salesYear && c.salesMonth){
+      issued=`${c.salesYear}-${pad2(Number(c.salesMonth))}-01`;
+    }
+    const due=c.paymentDueAt||null;
+    const elapsed= issued? daysBetween(issued, today.toISOString().slice(0,10)):0;
+    list.push({src:'rental',c,total:a.total,issued,due,elapsed,label:`受付№${c.caseNo||c.id} · ${c.driverName||c.dispatchToName||c.insurerContact||'—'}`});
+  });
+  // DETALIA: billMonth filled but no paidDate
+  detaliaCases().forEach(c=>{
+    if(!c.billMonth||c.paidDate) return;
+    const a=detaliaAmount(c,(DD&&DD.settings&&DD.settings.taxRate)||10);
+    const issued=c.delivery||c.arrival;
+    const elapsed=issued?daysBetween(String(issued).slice(0,10),today.toISOString().slice(0,10)):null;
+    list.push({src:'detalia',c,total:a.total,issued,elapsed:elapsed||0,label:`${c.carModel||'—'} · ${c.customer||'—'}`});
+  });
+  list.sort((a,b)=>b.elapsed-a.elapsed);
+  const b30=list.filter(x=>x.elapsed<=30).length;
+  const b60=list.filter(x=>x.elapsed>30&&x.elapsed<=60).length;
+  const b90=list.filter(x=>x.elapsed>60).length;
+  const sum=list.reduce((s,x)=>s+x.total,0);
+  return {list, sum, b30,b60,b90};
+}
+
+function todayMovement(){
+  const today=todayISO();
+  const dispatch=rentalCases().filter(c=>c.dispatchAt&&String(c.dispatchAt).slice(0,10)===today&&c.status!=='キャンセル').length;
+  const rec=rentalCases().filter(c=>c.recoveryCalledAt&&String(c.recoveryCalledAt).slice(0,10)===today).length;
+  const nw=rentalCases().filter(c=>c.receivedAt&&String(c.receivedAt).slice(0,10)===today&&c.status!=='キャンセル').length;
+  return {dispatch,rec,nw};
+}
+
+// ---------- RENDER ----------
+function renderNow(){
+  const s=thisMonthSummary();
+  $('now-total').innerHTML = yen(s.total)+'<span class="unit">円</span>';
+  const mom=s.prev?Math.round((s.total-s.prev)/s.prev*100):null;
+  const yoy=s.yoy?Math.round((s.total-s.yoy)/s.yoy*100):null;
+  $('now-mom').className='delta '+(mom==null?'ink3':(mom>=0?'up':'dn'));
+  $('now-mom').textContent='前月比 '+(mom==null?'—':(mom>=0?'+':'')+mom+'%');
+  $('now-yoy').textContent='前年同月 '+(yoy==null?'—':(yoy>=0?'+':'')+yoy+'%');
+  $('now-rental').textContent=yen(s.rental);
+  $('now-rental-cnt').textContent=s.rentalCnt+' 件';
+  $('now-detalia').textContent=yen(s.detalia);
+  $('now-detalia-cnt').textContent=s.detaliaCnt+' 件';
+  const tgt=monthlyTarget();
+  const pct=tgt?Math.min(160,Math.round(s.total*100/tgt)):0;
+  $('now-target').textContent=tgt?yen(tgt):'未設定';
+  $('now-target-pct').textContent=tgt?pct+'%':'目標未設定';
+  $('now-progress').style.width=Math.min(100,pct)+'%';
+  $('now-progress').className=pct>=100?'':pct>=70?'warn':'danger';
+
+  const m=todayMovement();
+  $('today-dispatch').textContent=m.dispatch;
+  $('today-recover').textContent=m.rec;
+  $('today-new').textContent=m.nw;
+
+  // sparkline
+  const t12=trailing12();
+  const merged=t12.labels.map((_,i)=>t12.rental[i]+t12.detalia[i]);
+  drawSpark('spark-12',merged,t12.labels);
+  $('spark-12-cap').textContent=fmtJaYM(t12.labels[0])+' 〜 '+fmtJaYM(t12.labels[t12.labels.length-1]);
+}
+function fmtJaYM(k){if(!k) return '—';const [y,m]=k.split('-');return y+'年'+Number(m)+'月'}
+
+function drawSpark(id,values,labels){
+  const svg=$(id);if(!svg) return;
+  const W=320,H=svg.viewBox.baseVal.height||80,Pad=8,L=22,R=8,T=8,B=18;
+  const w=W-L-R, h=H-T-B;
+  const max=Math.max(1,...values);
+  const pts=values.map((v,i)=>{const x=L+(i/(values.length-1||1))*w; const y=T+h-(v/max)*h; return [x,y]});
+  let area=`M ${L} ${T+h}`;pts.forEach(p=>area+=` L ${p[0]} ${p[1]}`);area+=` L ${L+w} ${T+h} Z`;
+  let line='';pts.forEach((p,i)=>line+=(i?' L ':'M ')+p[0]+' '+p[1]);
+  // axis labels min/max
+  svg.innerHTML=`
+    <path class="area" d="${area}"/>
+    <path class="line" d="${line}"/>
+    ${pts.map((p,i)=>i===pts.length-1?`<circle class="pt" cx="${p[0]}" cy="${p[1]}" r="2.5"/>`:'').join('')}
+    <line class="ax" x1="${L}" y1="${T+h}" x2="${L+w}" y2="${T+h}"/>
+    <text x="${L-4}" y="${T+10}" text-anchor="end">${(max/10000).toFixed(0)}万</text>
+    <text x="${L-4}" y="${T+h+4}" text-anchor="end">0</text>
+    ${labels?`<text x="${L}" y="${H-4}">${labels[0]?labels[0].slice(2):''}</text><text x="${L+w}" y="${H-4}" text-anchor="end">${labels[labels.length-1]?labels[labels.length-1].slice(2):''}</text>`:''}
+  `;
+}
+
+function renderRev(){
+  const years=new Set();
+  rentalCases().forEach(c=>{const k=rentalReceivedYM(c);if(k) years.add(k.slice(0,4))});
+  detaliaCases().forEach(c=>{const k=detaliaYM(c);if(k) years.add(k.slice(0,4))});
+  const yearList=[...years].sort().reverse();
+  const seg=$('rev-year-seg');
+  const curr=seg.dataset.year||yearList[0]||String(new Date().getFullYear());
+  seg.dataset.year=curr;
+  seg.innerHTML=yearList.map(y=>`<button class="${y===curr?'on':''}" data-y="${y}">${y}</button>`).join('');
+  Array.from(seg.querySelectorAll('button')).forEach(b=>b.onclick=()=>{seg.dataset.year=b.dataset.y;renderRev()});
+
+  const t=monthlyTotals(curr);
+  // for current year, only show months up to current month (future months would flatline to 0)
+  const now=new Date();
+  const isCurrentYear=String(now.getFullYear())===curr;
+  const lastIdx=isCurrentYear?now.getMonth():11;
+  const monthsView=t.months.slice(0,lastIdx+1);
+  const rentalView=t.rental.slice(0,lastIdx+1);
+  const detaliaView=t.detalia.slice(0,lastIdx+1);
+  const sumR=rentalView.reduce((a,b)=>a+b,0);
+  const sumD=detaliaView.reduce((a,b)=>a+b,0);
+  const sumAll=sumR+sumD;
+  const cntR=t.rentalCnt.slice(0,lastIdx+1).reduce((a,b)=>a+b,0);
+  const cntD=t.detaliaCnt.slice(0,lastIdx+1).reduce((a,b)=>a+b,0);
+  $('rev-summary').innerHTML=`
+    <tr><td>合算 (税込)</td><td class="num">${yen(sumAll)} 円</td></tr>
+    <tr><td>レンタカー</td><td class="num">${yen(sumR)} 円</td></tr>
+    <tr><td>DETALIA</td><td class="num">${yen(sumD)} 円</td></tr>
+    <tr><td>件数 合計</td><td class="num">${cntR+cntD} 件</td></tr>
+  `;
+  // monthly chart of combined (only months in view)
+  const merged=monthsView.map((_,i)=>rentalView[i]+detaliaView[i]);
+  drawSpark('spark-rev',merged,monthsView);
+  $('rev-monthly').innerHTML=monthsView.map((m,i)=>{
+    const tot=rentalView[i]+detaliaView[i];
+    return `<tr><td>${Number(m.slice(5))}月</td><td class="num">${yen(tot)} 円</td></tr>`;
+  }).join('');
+
+  // category — rental by category field; for cases w/o category, group as "損保(既定)"
+  const catR={};
+  activeRental().forEach(c=>{
+    const k=rentalReceivedYM(c); if(!k||k.slice(0,4)!==curr) return;
+    const cat=c.category||'損保'; // legacy null = 損保
+    catR[cat]=(catR[cat]||0)+rentalAmount(c).total;
+  });
+  const catD=sumD;
+  const rowsCat=[];
+  Object.entries(catR).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>rowsCat.push([`レンタカー · ${k}`,v]));
+  rowsCat.push(['DETALIA',catD]);
+  $('rev-cat').innerHTML=rowsCat.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${yen(v)} 円</td></tr>`).join('') || '<tr><td colspan=2 class="ink3">データなし</td></tr>';
+}
+
+function renderOps(){
+  const s=vehicleStats();
+  $('ops-now').innerHTML=s.inUse+'<span class="unit">台</span>';
+  $('ops-now-cap').textContent=s.inUse+' / '+s.tot+' 台';
+  $('ops-now-bar').style.width=s.tot?Math.round(s.inUse*100/s.tot)+'%':'0%';
+  $('ops-30').innerHTML=s.avg+'<span class="unit" style="font-size:12px">%</span>';
+  $('ops-30-cap').textContent='平均 (登録 '+s.tot+' 台)';
+  $('ops-free').innerHTML=s.free+'<span class="unit" style="font-size:12px">台</span>';
+  $('ops-free-cap').textContent='今日 即稼働可';
+
+  const top=s.rows.slice(0,10);
+  $('ops-rank').innerHTML=top.map(r=>`
+    <div class="item">
+      <div class="nm">
+        <div class="t">${esc(r.v.name||r.v.code||r.v.id)}</div>
+        <div class="s">${esc(r.v.plateNo||'')} · ${r.days}日</div>
+      </div>
+      <div class="val">${r.rate}<span class="ink3" style="font-size:12px">%</span></div>
+    </div>
+  `).join('') || '<div class="ink3 sm">データなし</div>';
+
+  $('ops-idle').innerHTML=s.idle.slice(0,20).map(r=>`
+    <div class="item">
+      <div class="nm">
+        <div class="t">${esc(r.v.name||r.v.code||r.v.id)}</div>
+        <div class="s">${esc(r.v.plateNo||'')}</div>
+      </div>
+      <div class="val ink3" style="font-size:12px">0日</div>
+    </div>
+  `).join('') || '<div class="ink3 sm">無し</div>';
+}
+
+function renderPipe(){
+  const pr=rentalPipeline();
+  const mx=Math.max(1,...pr.map(p=>p.n));
+  $('pipe-rental').innerHTML=pr.map(p=>`
+    <div class="row">
+      <div class="nm">${esc(p.s)}</div>
+      <div class="bar2"><i style="width:${Math.round(p.n*100/mx)}%"></i></div>
+      <div class="ct num">${p.n}</div>
+    </div>
+  `).join('');
+  const pd=detaliaPipeline();
+  const md=Math.max(1,...pd.map(p=>p.n));
+  $('pipe-detalia').innerHTML=pd.map(p=>`
+    <div class="row">
+      <div class="nm">${esc(p.s)}</div>
+      <div class="bar2"><i style="width:${Math.round(p.n*100/md)}%"></i></div>
+      <div class="ct num">${p.n}</div>
+    </div>
+  `).join('');
+}
+
+function renderAr(){
+  const a=arList();
+  $('ar-total').innerHTML=yen(a.sum)+'<span class="unit">円</span>';
+  $('ar-cnt').textContent=a.list.length+' 件';
+  $('ar-30').textContent=a.b30; $('ar-60').textContent=a.b60; $('ar-90').textContent=a.b90;
+  $('ar-list').innerHTML=a.list.slice(0,30).map(x=>{
+    const bk=x.elapsed>60?'danger':x.elapsed>30?'warn':'ok';
+    return `<div class="item">
+      <div class="nm">
+        <div class="t">${esc(x.label)} <span class="badge ${bk}">${x.elapsed}日</span></div>
+        <div class="s">${x.src==='rental'?'レンタカー':'DETALIA'} · ${esc(x.issued||'—')}</div>
+      </div>
+      <div class="val">${yen(x.total)}</div>
+    </div>`;
+  }).join('') || '<div class="ink3 sm">未入金なし</div>';
+}
+
+function renderSet(){
+  $('set-dbx-state').textContent=DEMO?'デモモード':(DBX_TOKEN?'連携済':'未連携');
+  $('set-rental-state').textContent=DR?(DR.cases||[]).length+' 件':'—';
+  $('set-detalia-state').textContent=DD?(DD.cases||[]).length+' 件':'—';
+  $('set-loaded-at').textContent=localStorage.getItem(LS.loadedAt)||'—';
+  $('set-ver').textContent=APP_VERSION;
+  $('set-pin-state').textContent=pinExists()?'設定済':'未設定';
+}
+
+function renderAll(){
+  if(!DR&&!DD){
+    toast('データなし — 連携してください','err');
+    showTab('set');
+    return;
+  }
+  renderNow();renderRev();renderOps();renderPipe();renderAr();renderSet();
+}
+
+// ---------- TABS ----------
+function showTab(t){
+  Array.from(document.querySelectorAll('.tab')).forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  ['now','rev','ops','pipe','ar','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
+  window.scrollTo({top:0,behavior:'instant'});
+}
+
+// ---------- ENTRY ----------
+async function enterApp(){
+  $('gate').style.display='none';
+  $('app').style.display='block';
+  $('ver').textContent='v'+APP_VERSION;
+  try { await loadAll(); } catch(e){ toast(e.message,'err'); }
+  renderAll();
+}
+
+function setupTabs(){
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+  $('btn-reload').onclick=async()=>{try{await loadAll();renderAll();toast('再読込しました','ok')}catch(e){toast(e.message,'err')}};
+  $('btn-dbx-connect').onclick=dbxAuthorize;
+  $('btn-dbx-logout').onclick=()=>{
+    localStorage.removeItem(LS.token);localStorage.removeItem(LS.refresh);
+    localStorage.removeItem(LS.cachedR);localStorage.removeItem(LS.cachedD);
+    DBX_TOKEN=null;toast('連携解除しました','ok');setTimeout(()=>location.reload(),500);
+  };
+  $('btn-pin-change').onclick=async()=>{
+    const v=prompt('現在のPINを入力');if(v==null) return;
+    if(!(await checkPin(v))){toast('PINが違います','err');return}
+    const nv=prompt('新しい4桁PIN');if(!nv||!/^\d{4}$/.test(nv)){toast('4桁の数字で','err');return}
+    await setPin(nv);toast('PIN変更しました','ok');renderSet();
+  };
+  $('btn-pin-reset').onclick=()=>{if(confirm('PINを削除しますか？')){pinClear();toast('削除しました','ok');setTimeout(()=>location.reload(),500)}};
+}
+
+// ---------- DEMO DATA ----------
+function DEMO_R(){
+  const cases=[];const status=['受付','確認中','配車予定','配車済','利用中','回収連絡','返却済','請求済','入金済'];
+  const today=new Date();
+  // spread 180 cases over the last 13 months including current
+  for(let i=0;i<180;i++){
+    const monthsBack=Math.floor(i/15); // ~15 cases per month, last 12 months
+    const dt=new Date(today.getFullYear(),today.getMonth()-monthsBack,1+Math.floor(Math.random()*27));
+    if(dt>today) dt.setDate(today.getDate());
+    const useStart=dt.toISOString().slice(0,10);
+    const useEnd=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()+5+Math.floor(Math.random()*20)).toISOString().slice(0,10);
+    const st=monthsBack===0?status[Math.floor(Math.random()*7)]:(monthsBack<=1?status[6+Math.floor(Math.random()*3)]:'入金済');
+    cases.push({id:'R'+i,caseNo:dt.getFullYear()+'-'+pad2(dt.getMonth()+1)+'-'+pad2(i),status:st,receivedAt:useStart,useStart,useEnd,unitPrice:5500+Math.floor(Math.random()*8)*1100,discount:0,vehicleId:'V'+(i%22),category:Math.random()<0.85?'損保':'一般',driverName:'運転者'+i,recoveryCalledAt:useEnd,invoiceIssuedAt:st==='請求済'?useEnd:null,paymentDueAt:st==='請求済'?addDays(useEnd,30):null});
+  }
+  const vehicles=[];for(let i=0;i<22;i++) vehicles.push({id:'V'+i,name:'車両'+i,plateNo:String(1000+i),status:'稼働'});
+  return {cases,vehicles,settings:{taxRate:10}};
+}
+function DEMO_D(){
+  const cases=[];const sizes=['S','M','L','LL'];const plans=['新車プラン','スタンダード','ガラスコーティング','セラミック'];
+  const today=new Date();
+  // spread 60 cases over last 12 months
+  for(let i=0;i<60;i++){
+    const monthsBack=Math.floor(i/5);
+    const dt=new Date(today.getFullYear(),today.getMonth()-monthsBack,1+Math.floor(Math.random()*27));
+    if(dt>today) dt.setDate(today.getDate());
+    const isoDay=dt.toISOString().slice(0,10);
+    cases.push({id:'D'+i,receptionDate:isoDay,arrival:isoDay+'T10:00',delivery:monthsBack===0&&i%3===0?null:isoDay,paidDate:monthsBack>0||i%5===0?isoDay:null,billMonth:(dt.getMonth()+1)+'月',plan:plans[i%4],size:sizes[i%4],optExt:[30000,50000,100000,200000][i%4],optInt:[0,20000,0,0][i%4],optOther:0,discount:0,carModel:'車両'+i,customer:'顧客'+i,deleted:false});
+  }
+  return {cases,settings:{taxRate:10,monthlyTarget:500000}};
+}
+
+// ---------- GATE / BOOTSTRAP ----------
+async function bootstrap(){
+  renderKeypad();
+  // PIN field listeners (when physical keyboard is used)
+  for(let i=0;i<4;i++){
+    const el=$('p'+i);
+    el.addEventListener('input',()=>{
+      _pinBuf=Array.from({length:4}).map((_,j)=>$('p'+j).value).join('').replace(/\D/g,'').slice(0,4);
+      refreshPinInputs();
+      if(_pinBuf.length===4) submitPin();
+      else if(_pinBuf.length<4) $('p'+_pinBuf.length)?.focus();
+    });
+  }
+  if(!pinExists()){
+    $('gate-info').innerHTML='初回はお好きな4桁を設定してください。<br>この端末に保存され、次回から同じPINで開けます。';
+  } else {
+    $('gate-info').textContent='4桁の PIN を入力してください。';
+  }
+  // Dropbox callback (oauth code in URL) — handle even before app entry
+  if(new URL(location.href).searchParams.get('code')){
+    await dbxHandleCallback();
+  }
+  if(DEMO){
+    // skip PIN in demo
+    enterApp();
+    return;
+  }
+  $('p0').focus();
+  setupTabs();
+}
+window.addEventListener('DOMContentLoaded',bootstrap);
+</script>
+</body>
+</html>
