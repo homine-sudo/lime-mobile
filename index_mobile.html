@@ -1561,9 +1561,10 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-grp">
       <label>担当者 <span class="muted">(📋で保険会社の担当者から選ぶ)</span></label>
       <div class="m-inrow">
-        <input type="text" id="m-nc-insurerContact" placeholder="例: 佐藤">
+        <input type="text" id="m-nc-insurerContact" placeholder="例: 佐藤" onblur="onMncContactBlurFuzzyCheck()">
         <button type="button" class="m-pick-btn" onclick="openMncContactPicker()" title="担当者を選ぶ">📋</button>
       </div>
+      <div id="m-nc-contact-hint" style="display:none;margin-top:4px;font-size:12px;color:#b85c00;line-height:1.4"></div>
     </div>
     <div class="m-form-row2">
       <div class="m-form-grp">
@@ -1706,6 +1707,8 @@ a{color:var(--info);text-decoration:none}
       <h2>👤 担当者を選ぶ</h2>
       <button type="button" class="m-pick-x" onclick="$('m-con-picker-modal').classList.remove('active')" aria-label="閉じる">✕</button>
     </div>
+    <div id="m-cp-insurer-note" class="muted" style="font-size:12px;margin-bottom:8px"></div>
+    <input type="search" id="m-cp-search" placeholder="🔍 担当者名で検索" oninput="renderMncContactPickerList()" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px;font-size:14px">
     <div class="m-pick-list" id="m-cp-list"></div>
     <div class="m-modal-actions" style="margin-top:14px">
       <button class="m-btn m-btn-outline m-btn-full" onclick="$('m-con-picker-modal').classList.remove('active')">閉じる (選ばずに戻る)</button>
@@ -1822,7 +1825,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-25b';
+const APP_VERSION = '2026-05-25c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4335,19 +4338,40 @@ function pickMncFactory(id){
 function openMncContactPicker(){
   const id = ($('m-nc-insurerId')?.value || '').trim();
   const ins = id ? (DATA?.insurers || []).find(x => x.id === id) : null;
+  const note = $('m-cp-insurer-note');
+  if(note) note.innerHTML = ins
+    ? `🏢 <b>${esc(ins.name||'')}</b>${ins.branch?` (${esc(ins.branch)})`:''} の担当者`
+    : '⚠️ 先に保険会社を選んでください';
+  const sb = $('m-cp-search'); if(sb) sb.value='';
+  renderMncContactPickerList();
+  $('m-con-picker-modal').classList.add('active');
+}
+function renderMncContactPickerList(){
+  const id = ($('m-nc-insurerId')?.value || '').trim();
+  const ins = id ? (DATA?.insurers || []).find(x => x.id === id) : null;
   const host = $('m-cp-list');
   const cs = (ins && ins.contacts) ? ins.contacts : [];
   if(!ins){
     host.innerHTML = '<div class="m-pick-empty">先に「保険会社」を📋で選択してください<br>(選択するとその会社の担当者一覧が出ます)</div>';
-  } else if(!cs.length){
-    host.innerHTML = `<div class="m-pick-empty">「${esc(ins.name||'')}」に登録済み担当者がありません<br>(担当者は直接入力できます。保存時にこの会社へ登録されます)</div>`;
-  } else {
-    host.innerHTML = cs.map((c,idx)=>`<div class="m-pick-row" onclick="pickMncContact(${idx})">
-      <div class="pr-ttl">${esc(c.name||'(名称未設定)')}${c.isDefault?' <span style="font-size:10px;color:var(--green)">既定</span>':''}</div>
-      <div class="pr-sub">${c.tel?`TEL ${esc(c.tel)}`:''}${c.fax?` ／ FAX ${esc(c.fax)}`:''}${c.dept?` ／ ${esc(c.dept)}`:''}</div>
-    </div>`).join('');
+    return;
   }
-  $('m-con-picker-modal').classList.add('active');
+  if(!cs.length){
+    host.innerHTML = `<div class="m-pick-empty">「${esc(ins.name||'')}」に登録済み担当者がありません<br>(担当者は直接入力できます。保存時にこの会社へ登録されます)</div>`;
+    return;
+  }
+  const q = (($('m-cp-search')?.value)||'').trim().toLowerCase();
+  const filtered = q
+    ? cs.map((c,idx)=>({c,idx})).filter(({c}) =>
+        (((c.name||'')+' '+(c.tel||'')+' '+(c.dept||'')).toLowerCase()).includes(q))
+    : cs.map((c,idx)=>({c,idx}));
+  if(!filtered.length){
+    host.innerHTML = '<div class="m-pick-empty">該当する担当者なし</div>';
+    return;
+  }
+  host.innerHTML = filtered.map(({c,idx})=>`<div class="m-pick-row" onclick="pickMncContact(${idx})">
+    <div class="pr-ttl">${esc(c.name||'(名称未設定)')}${c.isDefault?' <span style="font-size:10px;color:var(--green)">既定</span>':''}</div>
+    <div class="pr-sub">${c.tel?`TEL ${esc(c.tel)}`:''}${c.fax?` ／ FAX ${esc(c.fax)}`:''}${c.dept?` ／ ${esc(c.dept)}`:''}</div>
+  </div>`).join('');
 }
 function pickMncContact(idx){
   const id = ($('m-nc-insurerId')?.value || '').trim();
@@ -4358,7 +4382,60 @@ function pickMncContact(idx){
   $('m-nc-insurerContactTel').value = c.tel||'';
   if(c.fax || ins.fax) $('m-nc-insurerContactFax').value = c.fax || ins.fax || '';
   $('m-con-picker-modal').classList.remove('active');
+  const hint = $('m-nc-contact-hint'); if(hint) hint.style.display='none';
   toast('👤 担当者を設定: '+(c.name||''), 'success');
+}
+
+/* === fuzzy一致警告 (モバイル・2026-05-25c) === */
+function _mEditDistanceLE1(a, b){
+  if(a === b) return true;
+  if(Math.abs(a.length - b.length) > 1) return false;
+  const [s, l] = a.length <= b.length ? [a, b] : [b, a];
+  let i=0, j=0, diff=0;
+  while(i < s.length && j < l.length){
+    if(s[i] !== l[j]){
+      diff++; if(diff > 1) return false;
+      if(s.length === l.length){ i++; j++; } else { j++; }
+    } else { i++; j++; }
+  }
+  if(j < l.length) diff++;
+  return diff <= 1;
+}
+function _mContactFuzzyMatch(name, contacts){
+  const n = (name||'').trim();
+  if(n.length < 2) return [];
+  const nlc = n.toLowerCase().replace(/[\s　]+/g,'');
+  return (contacts||[]).map(c => {
+    const cn = (c.name||'').trim();
+    const clc = cn.toLowerCase().replace(/[\s　]+/g,'');
+    if(!clc || clc === nlc) return null;
+    if(clc.includes(nlc) || nlc.includes(clc)) return { name: cn };
+    if(Math.abs(clc.length - nlc.length) <= 1 && _mEditDistanceLE1(clc, nlc)) return { name: cn };
+    return null;
+  }).filter(Boolean).slice(0, 3);
+}
+function onMncContactBlurFuzzyCheck(){
+  const hint = $('m-nc-contact-hint'); if(!hint) return;
+  hint.style.display='none'; hint.innerHTML='';
+  const id = ($('m-nc-insurerId')?.value || '').trim();
+  const ins = id ? (DATA?.insurers || []).find(x => x.id === id) : null;
+  if(!ins) return;
+  const name = (($('m-nc-insurerContact')?.value)||'').trim();
+  if(!name) return;
+  const cs = ins.contacts||[];
+  if(cs.some(c => (c.name||'').trim() === name)) return;  // 完全一致
+  const matches = _mContactFuzzyMatch(name, cs);
+  if(!matches.length) return;
+  hint.innerHTML = '⚠️ 似た担当者がマスタにあります: ' +
+    matches.map(m => `<a href="javascript:_pickMncContactByName(${JSON.stringify(m.name).replace(/"/g,'&quot;')})" style="color:#0b5cad;text-decoration:underline">${esc(m.name)}</a>`).join(' / ') +
+    ' <span style="color:#888">(新規ならこのまま保存=自動登録)</span>';
+  hint.style.display='block';
+}
+function _pickMncContactByName(name){
+  const id = ($('m-nc-insurerId')?.value || '').trim();
+  const ins = id ? (DATA?.insurers || []).find(x => x.id === id) : null;
+  const idx = ins ? (ins.contacts||[]).findIndex(c => (c.name||'').trim() === name) : -1;
+  if(idx >= 0) pickMncContact(idx);
 }
 
 // --- 予約備考 タップ式チップ (トグルで本文へ付与/除去・PC版と同挙動) ---
@@ -4581,13 +4658,20 @@ async function saveNewCase(enterFlow){
     }
     insurerId = found.id;
   }
-  // 担当者情報も取り込み (次回から候補に出る) — 選択/手入力どちらでも
+  // 担当者情報も取り込み (次回から候補に出る) — 選択/手入力どちらでも・既存マスタにも追加
+  // (2026-05-25c: FAXも取り込み + 追加時 toast 通知。表記揺れ再発防止の根幹)
   if(found){
     const cName = ($('m-nc-insurerContact').value || '').trim();
     const cTel  = ($('m-nc-insurerContactTel').value || '').trim();
-    if(cName && !(found.contacts||[]).some(x => (x.name||'') === cName)){
+    const cFax  = ($('m-nc-insurerContactFax').value || '').trim();
+    if(cName && !(found.contacts||[]).some(x => (x.name||'').trim() === cName)){
       found.contacts = found.contacts || [];
-      found.contacts.push({ name:cName, tel:cTel, fax:'', dept:'', role:'', isDefault: found.contacts.length===0 });
+      found.contacts.push({
+        name: cName, tel: cTel, fax: cFax || found.fax || '',
+        dept:'', role:'', isDefault: found.contacts.length===0,
+        note: '案件保存時に自動追加'
+      });
+      toast(`👤 担当者「${cName}」をマスタに追加`, 'success');
     }
   }
   const ins = insurerId ? (findInsurer(insurerId) || {}) : {};
