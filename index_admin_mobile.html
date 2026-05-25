@@ -255,10 +255,27 @@
   .card.dept .rec-row{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:0 8px;padding:8px 0;border-bottom:1px dotted var(--line);align-items:baseline}
   .card.dept .rec-row:last-of-type{border-bottom:0}
   .card.dept .rec-row .dept-l{grid-row:span 2;align-self:center}
-  .card.dept .rec-v{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--ink);line-height:1;text-align:right;text-shadow:0 1px 0 rgba(255,255,255,.5)}
+  .card.dept .rec-v{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--ink);line-height:1;text-align:right}
   .card.dept .rec-cmp{font-size:9.5px;color:var(--ink3);letter-spacing:.08em;text-align:right;line-height:1.4}
   .card.dept .rec-cmp .up{color:var(--acc)}
   .card.dept .rec-cmp .dn{color:var(--danger)}
+  /* ===== DETALIA 区分別 (一般/業販/次郎) — フル幅で表組み ===== */
+  .card.dept.det-split .dsp-head{display:grid;grid-template-columns:1fr 80px 80px;gap:12px;font-size:9px;color:var(--ink3);letter-spacing:.32em;text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid var(--line);margin-top:4px}
+  .card.dept.det-split .dsp-head .dsp-h{text-align:right}
+  .card.dept.det-split .dsp-row{display:grid;grid-template-columns:1fr 80px 80px;gap:12px;padding:10px 0;border-bottom:1px dotted var(--line);align-items:baseline}
+  .card.dept.det-split .dsp-row.sub{padding-left:12px}
+  .card.dept.det-split .dsp-row.sub .dsp-l{color:var(--ink3);font-size:11.5px}
+  .card.dept.det-split .dsp-row.sub .dsp-v{font-size:18px;color:var(--ink2)}
+  .card.dept.det-split .dsp-l{font-size:12.5px;color:var(--ink2);letter-spacing:.06em;font-family:var(--serif)}
+  .card.dept.det-split .dsp-v{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--ink);line-height:1;text-align:right}
+  .card.dept.det-split .dsp-v.small{font-size:18px;color:var(--ink2)}
+  .card.dept.det-split .dsp-foot{display:grid;grid-template-columns:1fr 80px 80px;gap:12px;padding:11px 0 4px;align-items:baseline;border-top:1px solid var(--line2);margin-top:4px}
+  .card.dept.det-split .dsp-foot .dsp-l{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink3);font-family:var(--sans)}
+  .card.dept.det-split .dsp-foot .dsp-v{font-size:26px;color:var(--ink)}
+  .card.dept.det-split .dsp-foot .dsp-v.small{font-size:20px}
+  .card.dept.det-split .dsp-cmp{margin-top:10px;font-size:10px;color:var(--ink3);text-align:center;letter-spacing:.1em;font-family:var(--serif);font-style:italic}
+  .card.dept.det-split .dsp-cmp .up{color:var(--acc);font-style:normal;letter-spacing:.04em}
+  .card.dept.det-split .dsp-cmp .dn{color:var(--danger);font-style:normal;letter-spacing:.04em}
 
   /* ===== Duo (本日 / 明日 並列) ===== */
   .duo-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:10px}
@@ -433,33 +450,49 @@
       </div>
     </div>
 
-    <!-- ⑤ 部門別 × 受付件数 (月/年度/前年比) -->
-    <div class="grid2" style="margin:14px 16px">
-      <div class="card dept" style="margin:0">
-        <div class="lbl">レンタカー · 受付</div>
-        <div class="rec-row">
-          <span class="dept-l">当月</span>
-          <span class="rec-v num" id="rent-recm">—</span>
-          <span class="rec-cmp" id="rent-recmy">—</span>
-        </div>
-        <div class="rec-row">
-          <span class="dept-l">当年度</span>
-          <span class="rec-v num" id="rent-recy">—</span>
-          <span class="rec-cmp" id="rent-recyy">—</span>
-        </div>
+    <!-- ⑤ レンタカー受付 -->
+    <div class="card dept">
+      <div class="lbl">レンタカー · 受付</div>
+      <div class="rec-row">
+        <span class="dept-l">当月</span>
+        <span class="rec-v num" id="rent-recm">—</span>
+        <span class="rec-cmp" id="rent-recmy">—</span>
       </div>
-      <div class="card dept" style="margin:0">
-        <div class="lbl">DETALIA · 受付</div>
-        <div class="rec-row">
-          <span class="dept-l">当月</span>
-          <span class="rec-v num" id="det-recm">—</span>
-          <span class="rec-cmp" id="det-recmy">—</span>
-        </div>
-        <div class="rec-row">
-          <span class="dept-l">当年度</span>
-          <span class="rec-v num" id="det-recy">—</span>
-          <span class="rec-cmp" id="det-recyy">—</span>
-        </div>
+      <div class="rec-row">
+        <span class="dept-l">当年度</span>
+        <span class="rec-v num" id="rent-recy">—</span>
+        <span class="rec-cmp" id="rent-recyy">—</span>
+      </div>
+    </div>
+
+    <!-- ⑥ DETALIA 受付 (フル幅 — 一般/業販/うち次郎 の3行ブレークダウン) -->
+    <div class="card dept det-split">
+      <div class="lbl">DETALIA · 受付</div>
+      <div class="dsp-head">
+        <span></span><span class="dsp-h">月</span><span class="dsp-h">年度</span>
+      </div>
+      <div class="dsp-row">
+        <span class="dsp-l">一般</span>
+        <span class="dsp-v num" id="det-gen-m">—</span>
+        <span class="dsp-v small num" id="det-gen-y">—</span>
+      </div>
+      <div class="dsp-row">
+        <span class="dsp-l">業販</span>
+        <span class="dsp-v num" id="det-ws-m">—</span>
+        <span class="dsp-v small num" id="det-ws-y">—</span>
+      </div>
+      <div class="dsp-row sub">
+        <span class="dsp-l">└ 次郎工業</span>
+        <span class="dsp-v num" id="det-jiro-m">—</span>
+        <span class="dsp-v small num" id="det-jiro-y">—</span>
+      </div>
+      <div class="dsp-foot">
+        <span class="dsp-l">合計</span>
+        <span class="dsp-v num" id="det-recm">—</span>
+        <span class="dsp-v small num" id="det-recy">—</span>
+      </div>
+      <div class="dsp-cmp">
+        前年同月 <span id="det-recmy">—</span>  ·  前年度同期 <span id="det-recyy">—</span>
       </div>
     </div>
 
@@ -634,7 +667,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24p';
+const APP_VERSION = '2026-05-24q';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -881,13 +914,20 @@ function receptionStats(){
     const k=ymOf(d);if(!k) return;
     tally(c, rental, d, k);
   });
+  // DETALIA: 全体集計 + 区分別 (一般 / 業販 / うち次郎工業)
+  const general=init(), wholesale=init(), jiro=init();
   detaliaCases().forEach(c=>{
     const d=String(c.receptionDate||c.arrival||'').slice(0,10);
     if(!d) return;
     const k=ymOf(d);if(!k) return;
     tally(c, detalia, d, k);
+    if(c.category==='一般') tally(c, general, d, k);
+    else if(c.category==='業販'){
+      tally(c, wholesale, d, k);
+      if(/次郎/.test(String(c.customer||''))) tally(c, jiro, d, k);
+    }
   });
-  return {rental, detalia, curFY};
+  return {rental, detalia, general, wholesale, jiro, curFY};
 }
 
 function thisYearSummary(){
@@ -1116,14 +1156,29 @@ function renderNow(){
     const sign=pct>=0?'+':'';
     return label+' '+prevN+' <span class="'+cls+'">'+sign+pct+'%</span>';
   };
+  // レンタカー (シンプル2行)
   $('rent-recm').textContent=rec.rental.month+' 件';
   $('rent-recmy').innerHTML=fmtCmp(rec.rental.month, rec.rental.prevMonth, '前年同月');
   $('rent-recy').textContent=rec.rental.year+' 件';
   $('rent-recyy').innerHTML=fmtCmp(rec.rental.year, rec.rental.prevYearPart, '前年度同期');
-  $('det-recm').textContent=rec.detalia.month+' 件';
-  $('det-recmy').innerHTML=fmtCmp(rec.detalia.month, rec.detalia.prevMonth, '前年同月');
-  $('det-recy').textContent=rec.detalia.year+' 件';
-  $('det-recyy').innerHTML=fmtCmp(rec.detalia.year, rec.detalia.prevYearPart, '前年度同期');
+  // DETALIA (一般 / 業販 / 次郎 の3行 + 合計)
+  $('det-gen-m').textContent=rec.general.month;
+  $('det-gen-y').textContent=rec.general.year;
+  $('det-ws-m').textContent=rec.wholesale.month;
+  $('det-ws-y').textContent=rec.wholesale.year;
+  $('det-jiro-m').textContent=rec.jiro.month;
+  $('det-jiro-y').textContent=rec.jiro.year;
+  $('det-recm').textContent=rec.detalia.month;
+  $('det-recy').textContent=rec.detalia.year;
+  // DETALIA合計の前年比 (HTMLに「前年同月」「前年度同期」ラベルあり・spanには数値のみ)
+  const fmtCmpInline=(curN,prevN)=>{
+    if(prevN<=0) return String(prevN||0);
+    const pct=Math.round((curN-prevN)/prevN*100);
+    const cls=pct>=0?'up':'dn';const sign=pct>=0?'+':'';
+    return prevN+' <span class="'+cls+'">'+sign+pct+'%</span>';
+  };
+  $('det-recmy').innerHTML=fmtCmpInline(rec.detalia.month, rec.detalia.prevMonth);
+  $('det-recyy').innerHTML=fmtCmpInline(rec.detalia.year, rec.detalia.prevYearPart);
 
   // 稼働台数 (稼働タブと同じ計算 — 今日 useStart<=today<=useEnd の vehicleId 数)
   const vs=vehicleStats();
@@ -1423,13 +1478,17 @@ function DEMO_R(){
 function DEMO_D(){
   const cases=[];const sizes=['S','M','L','LL'];const plans=['新車プラン','スタンダード','ガラスコーティング','セラミック'];
   const today=new Date();
-  // spread 60 cases over last 12 months
   for(let i=0;i<60;i++){
     const monthsBack=Math.floor(i/5);
     const dt=new Date(today.getFullYear(),today.getMonth()-monthsBack,1+Math.floor(Math.random()*27));
     if(dt>today) dt.setDate(today.getDate());
     const isoDay=dt.toISOString().slice(0,10);
-    cases.push({id:'D'+i,receptionDate:isoDay,arrival:isoDay+'T10:00',delivery:monthsBack===0&&i%3===0?null:isoDay,paidDate:monthsBack>0||i%5===0?isoDay:null,billMonth:(dt.getMonth()+1)+'月',plan:plans[i%4],size:sizes[i%4],optExt:[30000,50000,100000,200000][i%4],optInt:[0,20000,0,0][i%4],optOther:0,discount:0,carModel:'車両'+i,customer:'顧客'+i,deleted:false});
+    // category 分布: 業販70% (うち次郎工業90% = 全体63%), 一般30%
+    const r=Math.random();
+    const isGeneral = r<0.30;
+    const cat = isGeneral?'一般':'業販';
+    const cust = isGeneral?('顧客'+i):(Math.random()<0.9?'株式会社次郎工業':('業販'+i));
+    cases.push({id:'D'+i,category:cat,customer:cust,receptionDate:isoDay,arrival:isoDay+'T10:00',delivery:monthsBack===0&&i%3===0?null:isoDay,paidDate:monthsBack>0||i%5===0?isoDay:null,billMonth:(dt.getMonth()+1)+'月',plan:plans[i%4],size:sizes[i%4],optExt:[30000,50000,100000,200000][i%4],optInt:[0,20000,0,0][i%4],optOther:0,discount:0,carModel:'車両'+i,deleted:false});
   }
   return {cases,settings:{taxRate:10,monthlyTarget:500000}};
 }
