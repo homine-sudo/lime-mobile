@@ -366,11 +366,11 @@
       <!-- ダイヤル中央セパレータ (ロゴパッチ風) -->
       <div class="ytd-divider"></div>
 
-      <div class="lbl" style="text-align:center;margin-bottom:8px"><span id="ytd-year">—</span>年 累計 · YTD</div>
+      <div class="lbl" style="text-align:center;margin-bottom:8px"><span id="ytd-year">—</span>年度 累計 · 4月〜本日</div>
       <div class="med num" id="ytd-total" style="text-align:center">—<span class="unit" style="font-size:10px">円</span></div>
       <div style="display:flex;gap:24px;margin-top:12px;align-items:baseline;justify-content:center">
-        <span class="delta" id="ytd-yoy">前年同期 —</span>
-        <span class="delta ink3" id="ytd-prev">前年通期 —</span>
+        <span class="delta" id="ytd-yoy">前年度同期 —</span>
+        <span class="delta ink3" id="ytd-prev">前年度通期 —</span>
       </div>
     </div>
 
@@ -407,7 +407,7 @@
       </div>
     </div>
 
-    <!-- ④ 部門別 × 売上(月/年) -->
+    <!-- ④ 部門別 × 売上(月/年度) -->
     <div class="grid2" style="margin:14px 16px">
       <div class="card dept" style="margin:0">
         <div class="lbl">レンタカー · 売上</div>
@@ -416,7 +416,7 @@
           <span class="dept-v num" id="rent-month">—</span>
         </div>
         <div class="dept-row">
-          <span class="dept-l">当年</span>
+          <span class="dept-l">当年度</span>
           <span class="dept-v num small" id="rent-year">—</span>
         </div>
       </div>
@@ -427,13 +427,13 @@
           <span class="dept-v num" id="det-month">—</span>
         </div>
         <div class="dept-row">
-          <span class="dept-l">当年</span>
+          <span class="dept-l">当年度</span>
           <span class="dept-v num small" id="det-year">—</span>
         </div>
       </div>
     </div>
 
-    <!-- ⑤ 部門別 × 受付件数 (月/年/前年比) -->
+    <!-- ⑤ 部門別 × 受付件数 (月/年度/前年比) -->
     <div class="grid2" style="margin:14px 16px">
       <div class="card dept" style="margin:0">
         <div class="lbl">レンタカー · 受付</div>
@@ -443,7 +443,7 @@
           <span class="rec-cmp" id="rent-recmy">—</span>
         </div>
         <div class="rec-row">
-          <span class="dept-l">当年</span>
+          <span class="dept-l">当年度</span>
           <span class="rec-v num" id="rent-recy">—</span>
           <span class="rec-cmp" id="rent-recyy">—</span>
         </div>
@@ -456,7 +456,7 @@
           <span class="rec-cmp" id="det-recmy">—</span>
         </div>
         <div class="rec-row">
-          <span class="dept-l">当年</span>
+          <span class="dept-l">当年度</span>
           <span class="rec-v num" id="det-recy">—</span>
           <span class="rec-cmp" id="det-recyy">—</span>
         </div>
@@ -634,7 +634,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24o';
+const APP_VERSION = '2026-05-24p';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -821,7 +821,39 @@ function trailing12(){
   return {labels,rental:r,detalia:d};
 }
 
-// 受付件数 統計 — 部門別 月/年/前年同月/前年同期
+// ★年度(4月〜翌3月)ヘルパー
+// 「2025年度」= 2025/4/1 〜 2026/3/31。今日が4月以降ならその年、3月以前なら前年がFYラベル
+function fyOf(dateStr){
+  const d=parseD(dateStr);if(!d) return null;
+  const y=d.getFullYear(), m=d.getMonth()+1;
+  return m>=4 ? y : y-1;
+}
+function fyRange(fy){
+  return { start: fy+'-04-01', end: (fy+1)+'-03-31' };
+}
+// 「年度内同日対応」 — 当FY起算で経過日数を測り、前FY同期は前FY起算+同経過日数
+function inFYToToday(dateStr, fy, today){
+  // dateStr が当FY (fy/4/1 〜 today) に入っているか
+  const r=fyRange(fy);
+  return dateStr>=r.start && dateStr<=today;
+}
+function inPrevFYSamePeriod(dateStr, fy, today){
+  // 前FY (fy-1) の 4/1 〜 (今日と同経過日数) に入っているか
+  // 経過日数 = today - currentFYstart
+  const r=fyRange(fy);
+  const cur=parseD(today), st=parseD(r.start);
+  const elapsedDays = Math.floor((cur-st)/86400000);
+  const prevSt=parseD((fy-1)+'-04-01');
+  const prevSameDay=new Date(prevSt); prevSameDay.setDate(prevSt.getDate()+elapsedDays);
+  const prevSameDayStr=prevSameDay.toISOString().slice(0,10);
+  return dateStr>=((fy-1)+'-04-01') && dateStr<=prevSameDayStr;
+}
+function inFYFull(dateStr, fy){
+  const r=fyRange(fy);
+  return dateStr>=r.start && dateStr<=r.end;
+}
+
+// 受付件数 統計 — 部門別 月/年度/前年同月/前年度同期/前年度通期
 //   レンタカー受付日 = c.receivedAt
 //   DETALIA受付日 = c.receptionDate || c.arrival
 function receptionStats(){
@@ -830,72 +862,58 @@ function receptionStats(){
   const M=now.getMonth()+1;
   const curYM = Y+'-'+pad2(M);
   const prevYM = (Y-1)+'-'+pad2(M);
-  const todayMD = pad2(M)+'-'+pad2(now.getDate());
-  const ymOf = v=>{const m=String(v||'').match(/^(\d{4})-(\d{1,2})/);return m?m[1]+'-'+pad2(m[2]):null};
+  const today = todayISO();
+  const curFY = fyOf(today);
   const init=()=>({month:0,year:0,prevMonth:0,prevYearPart:0,prevYearFull:0});
   const rental=init(), detalia=init();
+  const tally=(c, group, dateStr, ymStr)=>{
+    if(ymStr===curYM) group.month++;
+    if(ymStr===prevYM) group.prevMonth++;
+    if(inFYToToday(dateStr, curFY, today)) group.year++;
+    else if(inPrevFYSamePeriod(dateStr, curFY, today)) group.prevYearPart++;
+    if(inFYFull(dateStr, curFY-1)) group.prevYearFull++;
+  };
+  const ymOf=v=>{const m=String(v||'').match(/^(\d{4})-(\d{1,2})/);return m?m[1]+'-'+pad2(m[2]):null};
   rentalCases().forEach(c=>{
     if(c.status==='キャンセル') return;
-    const k=ymOf(c.receivedAt);if(!k) return;
-    const y=Number(k.slice(0,4));
-    const md=String(c.receivedAt).slice(5,10);
-    if(k===curYM) rental.month++;
-    if(k===prevYM) rental.prevMonth++;
-    if(y===Y && md<=todayMD) rental.year++;
-    else if(y===Y-1){
-      rental.prevYearFull++;
-      if(md<=todayMD) rental.prevYearPart++;
-    }
+    const d=String(c.receivedAt||'').slice(0,10);
+    if(!d) return;
+    const k=ymOf(d);if(!k) return;
+    tally(c, rental, d, k);
   });
   detaliaCases().forEach(c=>{
-    const src=c.receptionDate||c.arrival||'';
-    const k=ymOf(src);if(!k) return;
-    const y=Number(k.slice(0,4));
-    const md=String(src).slice(5,10);
-    if(k===curYM) detalia.month++;
-    if(k===prevYM) detalia.prevMonth++;
-    if(y===Y && md<=todayMD) detalia.year++;
-    else if(y===Y-1){
-      detalia.prevYearFull++;
-      if(md<=todayMD) detalia.prevYearPart++;
-    }
+    const d=String(c.receptionDate||c.arrival||'').slice(0,10);
+    if(!d) return;
+    const k=ymOf(d);if(!k) return;
+    tally(c, detalia, d, k);
   });
-  return {rental, detalia};
+  return {rental, detalia, curFY};
 }
 
 function thisYearSummary(){
-  // 当年(YTD = 1/1〜今日) vs 前年同期(1/1〜今日の月日と同じ範囲) vs 前年通期
-  // 合算 + 部門別 (rental / detalia) も同時集計
-  const now=new Date();
-  const Y=now.getFullYear();
-  const todayMD=pad2(now.getMonth()+1)+'-'+pad2(now.getDate());
+  // 当年度(FY YTD = 4/1〜今日) vs 前年度同期 vs 前年度通期
+  // ★年度ベース (4月〜翌3月) で集計
+  const today=todayISO();
+  const curFY=fyOf(today);
   const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
   const init=()=>({cur:0,prevPart:0,prevFull:0,curCnt:0,prevPartCnt:0});
   const all=init(), rental=init(), detalia=init();
+  const tally=(group, dateStr, amount)=>{
+    if(inFYToToday(dateStr, curFY, today)){group.cur+=amount;group.curCnt++}
+    else if(inPrevFYSamePeriod(dateStr, curFY, today)){group.prevPart+=amount;group.prevPartCnt++}
+    if(inFYFull(dateStr, curFY-1)) group.prevFull+=amount;
+  };
   billableRental().forEach(c=>{
-    const k=rentalSalesYM(c);if(!k) return;
-    const y=Number(k.slice(0,4));
-    const md=String(c.useEnd).slice(5,10);
+    const d=String(c.useEnd||'').slice(0,10);if(!d) return;
     const a=rentalAmount(c).total;
-    if(y===Y && md<=todayMD){all.cur+=a;all.curCnt++;rental.cur+=a;rental.curCnt++}
-    else if(y===Y-1){
-      all.prevFull+=a; rental.prevFull+=a;
-      if(md<=todayMD){all.prevPart+=a;all.prevPartCnt++;rental.prevPart+=a;rental.prevPartCnt++}
-    }
+    tally(all,d,a); tally(rental,d,a);
   });
   detaliaCases().forEach(c=>{
-    const k=detaliaYM(c);if(!k) return;
-    const y=Number(k.slice(0,4));
-    const src=c.delivery||c.paidDate||c.arrival||'';
-    const md=String(src).slice(5,10);
+    const d=String(c.delivery||c.paidDate||c.arrival||'').slice(0,10);if(!d) return;
     const a=detaliaAmount(c,taxR).total;
-    if(y===Y && md<=todayMD){all.cur+=a;all.curCnt++;detalia.cur+=a;detalia.curCnt++}
-    else if(y===Y-1){
-      all.prevFull+=a; detalia.prevFull+=a;
-      if(md<=todayMD){all.prevPart+=a;all.prevPartCnt++;detalia.prevPart+=a;detalia.prevPartCnt++}
-    }
+    tally(all,d,a); tally(detalia,d,a);
   });
-  return {year:Y, ...all, rental, detalia};
+  return {fy:curFY, ...all, rental, detalia};
 }
 
 function thisMonthSummary(){
@@ -1076,36 +1094,36 @@ function renderNow(){
   $('now-progress').style.width=Math.min(100,pct)+'%';
   $('now-progress').className=pct>=100?'':pct>=70?'warn':'danger';
 
-  // 当年(YTD) サマリー
+  // 当年度(FY YTD) サマリー
   const yr=thisYearSummary();
-  $('ytd-year').textContent=yr.year;
+  $('ytd-year').textContent=yr.fy;
   $('ytd-total').innerHTML=yen(yr.cur)+'<span class="unit" style="font-size:10px">円</span>';
   const ytdYoy = yr.prevPart>0 ? Math.round((yr.cur-yr.prevPart)/yr.prevPart*100) : null;
   $('ytd-yoy').className='delta '+(ytdYoy==null?'ink3':(ytdYoy>=0?'up':'dn'));
-  $('ytd-yoy').textContent='前年同期 '+(ytdYoy==null?'—':(ytdYoy>=0?'+':'')+ytdYoy+'%');
-  $('ytd-prev').textContent='前年通期 '+(yr.prevFull?yen(yr.prevFull)+'円':'—');
+  $('ytd-yoy').textContent='前年度同期 '+(ytdYoy==null?'—':(ytdYoy>=0?'+':'')+ytdYoy+'%');
+  $('ytd-prev').textContent='前年度通期 '+(yr.prevFull?yen(yr.prevFull)+'円':'—');
 
   // 部門別 年次 (売上)
   $('rent-year').textContent=yen(yr.rental.cur);
   $('det-year').textContent=yen(yr.detalia.cur);
 
-  // 部門別 受付件数 (月/年/前年比)
+  // 部門別 受付件数 (月/年度/前年比)
   const rec=receptionStats();
-  const fmtCmp=(curN,prevN)=>{
-    if(prevN<=0) return '<span class="ink3">前年 '+(prevN||0)+'</span>';
+  const fmtCmp=(curN, prevN, label)=>{
+    if(prevN<=0) return '<span class="ink3">'+label+' '+(prevN||0)+'</span>';
     const pct=Math.round((curN-prevN)/prevN*100);
     const cls=pct>=0?'up':'dn';
     const sign=pct>=0?'+':'';
-    return '前年 '+prevN+' <span class="'+cls+'">'+sign+pct+'%</span>';
+    return label+' '+prevN+' <span class="'+cls+'">'+sign+pct+'%</span>';
   };
   $('rent-recm').textContent=rec.rental.month+' 件';
-  $('rent-recmy').innerHTML=fmtCmp(rec.rental.month, rec.rental.prevMonth);
+  $('rent-recmy').innerHTML=fmtCmp(rec.rental.month, rec.rental.prevMonth, '前年同月');
   $('rent-recy').textContent=rec.rental.year+' 件';
-  $('rent-recyy').innerHTML=fmtCmp(rec.rental.year, rec.rental.prevYearPart);
+  $('rent-recyy').innerHTML=fmtCmp(rec.rental.year, rec.rental.prevYearPart, '前年度同期');
   $('det-recm').textContent=rec.detalia.month+' 件';
-  $('det-recmy').innerHTML=fmtCmp(rec.detalia.month, rec.detalia.prevMonth);
+  $('det-recmy').innerHTML=fmtCmp(rec.detalia.month, rec.detalia.prevMonth, '前年同月');
   $('det-recy').textContent=rec.detalia.year+' 件';
-  $('det-recyy').innerHTML=fmtCmp(rec.detalia.year, rec.detalia.prevYearPart);
+  $('det-recyy').innerHTML=fmtCmp(rec.detalia.year, rec.detalia.prevYearPart, '前年度同期');
 
   // 稼働台数 (稼働タブと同じ計算 — 今日 useStart<=today<=useEnd の vehicleId 数)
   const vs=vehicleStats();
