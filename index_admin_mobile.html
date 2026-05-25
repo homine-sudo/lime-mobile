@@ -645,7 +645,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24l';
+const APP_VERSION = '2026-05-24m';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -938,17 +938,30 @@ function detaliaPipeline(){
   return order.map(s=>({s,n:cnt[s]}));
 }
 
+// 「いま稼働中」の案件 — PC LIMEOne.html line 6492 と完全一致させる
+//   ① status='利用中' (基本)
+//   ② status='回収連絡' (回収予定通知済だが車両まだ顧客の手元)
+//   ③ status='配車済' かつ useStart<=today かつ (useEnd未設定 or useEnd>=today)
+//   ※ 単純な期間判定だけだと「返却済/入金済」も拾ってしまい過大表示になるので status ベースで判定
+function currentlyDispatchedCases(){
+  const today=todayISO();
+  return rentalCases().filter(c=>{
+    if(c.status==='キャンセル') return false;
+    if(c.status==='利用中') return true;
+    if(c.status==='回収連絡') return true;
+    if(c.status==='配車済' && c.useStart && c.useStart<=today && (!c.useEnd || c.useEnd>=today)) return true;
+    return false;
+  });
+}
 // vehicle utilization
 function vehicleStats(){
   const vehicles=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車');
   const tot=vehicles.length;
   const today=todayISO();
-  // currently dispatched = vehicleId in any case with useStart<=today<useEnd and status not キャンセル/入金済 finalized post-recovery? simpler: cases between useStart and useEnd today.
+  // 稼働中車両 = currentlyDispatched 案件の vehicleId set (= PC稼働数と一致)
   const inUse=new Set();
-  rentalCases().forEach(c=>{
-    if(!c.vehicleId||c.status==='キャンセル') return;
-    const s=c.useStart,e=c.useEnd||addDays(c.useStart,30);
-    if(s&&s<=today&&today<=e) inUse.add(c.vehicleId);
+  currentlyDispatchedCases().forEach(c=>{
+    if(c.vehicleId) inUse.add(c.vehicleId);
   });
   // last 30 days utilization
   const end=new Date();const start=new Date(); start.setDate(start.getDate()-29);
@@ -1053,19 +1066,13 @@ function renderNow(){
   $('now-active-cap').textContent=vs.inUse+' / '+vs.tot+' 台 ('+(vs.tot?Math.round(vs.inUse*100/vs.tot):0)+'%)';
 
   const today=todayISO();
-  // 売上日額 = いま貸出中の車両の単価合計 (=今日続けば1日でこれだけ売上が立つ run rate)
-  let runRate=0, activeCount=0;
-  rentalCases().forEach(c=>{
-    if(c.status==='キャンセル') return;
-    if(!c.useStart) return;
-    const e=c.useEnd||addDays(c.useStart,30);
-    if(c.useStart<=today && today<=e){
-      runRate += Number(c.unitPrice||0);
-      activeCount++;
-    }
-  });
+  // 売上日額 = currentlyDispatched 案件の unitPrice 合計
+  // (PC LIMEOne.html 6493行 inUseDailySum と完全一致 — 稼働中件数×日額単価)
+  const dispatched=currentlyDispatchedCases();
+  const runRate=dispatched.reduce((s,c)=>s+Number(c.unitPrice||0),0);
+  const activeCount=dispatched.length;
   $('now-daily').innerHTML=yen(runRate)+'<span class="unit" style="font-size:11px">円</span>';
-  $('now-daily-cap').textContent='稼働 '+activeCount+' 台 × 日額単価 合計';
+  $('now-daily-cap').textContent='稼働 '+activeCount+' 件 × 日額単価 合計';
 
   // 現場 · 本日 / 明日
   const tomorrow=addDays(today,1);
