@@ -1822,7 +1822,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-22f';
+const APP_VERSION = '2026-05-25b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4283,9 +4283,12 @@ function pickMncInsurer(id){
   const ins = (DATA?.insurers || []).find(x => x.id === id); if(!ins) return;
   $('m-nc-insurer').value = _mncInsLabel(ins);
   if($('m-nc-insurerId')) $('m-nc-insurerId').value = id;
-  // 既定担当者 (isDefault → 先頭) を自動補完。空欄のみ埋め、入力済みは尊重しない
+  // 担当者の自動補完は isDefault が **明示的に立っている** 場合のみ。
+  // 旧仕様の cs[0] フォールバックは廃止 (JA共済等で17名中先頭の「比嘉」が
+  // 勝手に入る誤入力の温床になっていた・2026-05-25b PC版と同期)。
+  // FAX は会社デフォルト ins.fax のみ自動入力 (取引先誤送信防止の保険補完)。空欄時のみ尊重。
   const cs = ins.contacts || [];
-  const def = cs.find(c => c.isDefault) || cs[0] || null;
+  const def = cs.find(c => c.isDefault);
   if(def){
     if(!($('m-nc-insurerContact').value||'').trim()) $('m-nc-insurerContact').value = def.name||'';
     if(!($('m-nc-insurerContactTel').value||'').trim()) $('m-nc-insurerContactTel').value = def.tel||'';
