@@ -242,6 +242,12 @@
   /* section bottom spacing so content isn't covered by FAB */
   section{padding-bottom:120px !important}
 
+  /* ===== Dual stat (台 / % 並列) ===== */
+  .dual-stat{display:flex;align-items:baseline;gap:14px;margin-top:2px}
+  .dual-main{display:flex;align-items:baseline;gap:4px}
+  .dual-sep{width:1px;align-self:stretch;background:var(--line);margin:4px 0}
+  .unit-sm{font-size:11px;color:var(--ink3);letter-spacing:.18em;text-transform:uppercase;font-weight:400;font-family:var(--sans)}
+
   /* ===== Department card (簡素化) ===== */
   .card.dept{padding:20px 18px}
   .card.dept .lbl{margin-bottom:14px;text-align:center;border-bottom:1px solid var(--line);padding-bottom:8px;letter-spacing:.32em}
@@ -494,11 +500,21 @@
       </div>
     </div>
 
-    <!-- ② 数字パルス: 稼働台数 + 売上日額 -->
+    <!-- ② 数字パルス: 稼働台数 (台+%) + 売上日額 -->
     <div class="grid2" style="margin:14px 16px">
       <div class="card tight" style="margin:0">
         <div class="lbl">稼働台数</div>
-        <div class="med num" id="now-active">—<span class="unit" style="font-size:12px">台</span></div>
+        <div class="dual-stat">
+          <div class="dual-main">
+            <span class="med num" id="now-active">—</span>
+            <span class="unit-sm">台</span>
+          </div>
+          <div class="dual-sep"></div>
+          <div class="dual-main">
+            <span class="med num" id="now-active-pct">—</span>
+            <span class="unit-sm">%</span>
+          </div>
+        </div>
         <div class="sm" id="now-active-cap">— / — 台</div>
       </div>
       <div class="card tight" style="margin:0">
@@ -745,14 +761,14 @@
   <!-- 中央: 現在タブ。タップで petals が扇形展開、もう一度タップか外側タップで閉じる -->
   <!-- 親指リーチ最適化のため左上方向のみへ扇形展開 (FAB位置=右下) -->
   <nav id="crown" class="crown closed" aria-label="セクションナビ">
-    <button class="petal" data-tab="now"  style="--ang:-75deg"><span>今月</span></button>
+    <button class="petal" data-tab="now"  style="--ang:-75deg"><span>TOP</span></button>
     <button class="petal" data-tab="rev"  style="--ang:-99deg"><span>売上</span></button>
     <button class="petal" data-tab="ops"  style="--ang:-123deg"><span>稼働</span></button>
     <button class="petal" data-tab="pipe" style="--ang:-147deg"><span>案件</span></button>
     <button class="petal" data-tab="ar"   style="--ang:-171deg"><span>未入金</span></button>
     <button class="petal" data-tab="set"  style="--ang:-195deg"><span>設定</span></button>
     <button class="crown-btn" id="crown-btn" type="button" aria-expanded="false">
-      <span class="cur" id="crown-cur">今月</span>
+      <span class="cur" id="crown-cur">TOP</span>
       <span class="hint">tap</span>
     </button>
   </nav>
@@ -770,7 +786,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24r';
+const APP_VERSION = '2026-05-24s';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1278,10 +1294,12 @@ function renderNow(){
   $('det-recmy').innerHTML=fmtCmpInline(rec.detalia.month, rec.detalia.prevMonth);
   $('det-recyy').innerHTML=fmtCmpInline(rec.detalia.year, rec.detalia.prevYearPart);
 
-  // 稼働台数 (稼働タブと同じ計算 — 今日 useStart<=today<=useEnd の vehicleId 数)
+  // 稼働台数 (稼働タブと同じ計算 — currentlyDispatchedCases)
   const vs=vehicleStats();
-  $('now-active').innerHTML=vs.inUse+'<span class="unit" style="font-size:12px">台</span>';
-  $('now-active-cap').textContent=vs.inUse+' / '+vs.tot+' 台 ('+(vs.tot?Math.round(vs.inUse*100/vs.tot):0)+'%)';
+  const utilPctNow = vs.tot?Math.round(vs.inUse*100/vs.tot):0;
+  $('now-active').textContent=vs.inUse;
+  $('now-active-pct').textContent=utilPctNow;
+  $('now-active-cap').textContent=vs.inUse+' / '+vs.tot+' 台 (保有)';
 
   // ─── サブダイヤル: 左=稼働率 (small seconds風) ───
   const utilPct = vs.tot ? Math.round(vs.inUse*100/vs.tot) : 0;
@@ -1531,7 +1549,7 @@ function renderAll(){
 }
 
 // ---------- TABS / CROWN FAB ----------
-const TAB_LABELS = {now:'今月', rev:'売上', ops:'稼働', pipe:'案件', ar:'未入金', set:'設定'};
+const TAB_LABELS = {now:'TOP', rev:'売上', ops:'稼働', pipe:'案件', ar:'未入金', set:'設定'};
 let _currentTab = 'now';
 function showTab(t){
   _currentTab = t;
