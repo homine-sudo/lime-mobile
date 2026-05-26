@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#FAF8F2">
+<meta name="theme-color" content="#F5F5F6">
 <title>Hari Terrace 経営ダッシュボード</title>
 <link rel="apple-touch-icon" sizes="180x180" href="ht_logo.png">
 <link rel="apple-touch-icon" sizes="1024x1024" href="ht_logo.png">
@@ -17,22 +17,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:wght@400;500&family=Italiana&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* IWC Portugieser 42 silvered dial palette (refined) */
-    --bg:#EAE5D6;            /* warm parchment page (slightly deeper) */
-    --bg2:#F0EBDD;
-    --panel:#FBF9F1;         /* silvered dial face */
-    --panel2:#F4F0E2;        /* subdial (slightly darker for depth) */
-    --panel-hi:#FFFEFA;      /* polished highlight */
-    --line:#D2CAB4;          /* hairline minute track */
-    --line2:#A89D80;         /* heavier hairline / chapter ring */
-    --line3:#80755A;         /* deepest hairline */
-    --ink:#0B1729;           /* deep blued steel ink */
+    /* IWC Portugieser 42 silvered dial palette — pure WHITE (not cream) */
+    --bg:#ECEDEE;            /* cool silver page */
+    --bg2:#F5F5F6;
+    --panel:#FFFFFF;         /* pure silvered dial face */
+    --panel2:#F4F4F5;        /* subdial (slightly darker cool grey) */
+    --panel-hi:#FFFFFF;      /* polished highlight */
+    --line:#D6D7D9;          /* hairline minute track (cool grey) */
+    --line2:#9B9DA0;         /* heavier hairline / chapter ring */
+    --line3:#6F7174;         /* deepest hairline */
+    --ink:#0B1729;           /* deep blued steel ink (unchanged) */
     --ink2:#34425A;          /* secondary text */
-    --ink3:#8B8068;          /* brushed gold-grey for labels */
-    --acc:#1C355F;           /* IWC blued-steel feuille hand (deep) */
-    --acc2:#2D4F87;          /* lighter blued steel */
-    --acc-hi:#3E68A6;        /* highlight on hands */
-    --gold:#9A8454;          /* applied indices gold-bronze */
+    --ink3:#7A7C80;          /* cool grey labels (was warm gold-grey) */
+    --acc:#1C355F;           /* IWC blued-steel feuille hand (unchanged) */
+    --acc2:#2D4F87;
+    --acc-hi:#3E68A6;
+    --gold:#9A8454;          /* gold は最小限のアクセントのみ */
     --gold-hi:#C7B07A;
     --red:#9D1626;
     --warn:#8E6219;
@@ -46,7 +46,7 @@
   html,body{margin:0;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;letter-spacing:.01em;font-weight:300;
     /* シルバー化 ダイヤルのような warm gradient (center高輝度→edge深め) */
     background:
-      radial-gradient(ellipse 120% 80% at 50% 25%, var(--bg2) 0%, var(--bg) 55%, #E0D9C5 100%) fixed;
+      radial-gradient(ellipse 120% 80% at 50% 25%, var(--bg2) 0%, var(--bg) 55%, #D8DADC 100%) fixed;
     -webkit-font-smoothing:antialiased;
   }
   body{padding:0;padding-bottom:env(safe-area-inset-bottom,0)}
@@ -60,7 +60,7 @@
   .ph{padding:14px 16px}
   /* ----- header ----- (chapter ring風の細いライン) */
   /* IWC = quiet. ヘッダは hairline 1本だけで仕切る */
-  .hdr{position:sticky;top:0;z-index:5;background:rgba(240,235,221,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line2);padding:env(safe-area-inset-top,0) 0 0 0}
+  .hdr{position:sticky;top:0;z-index:5;background:rgba(245,245,246,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line2);padding:env(safe-area-inset-top,0) 0 0 0}
   .hdr-row{display:flex;align-items:baseline;justify-content:center;padding:18px 16px 14px;position:relative}
   .brand{font-family:var(--display);font-size:17px;letter-spacing:.40em;text-transform:uppercase;font-weight:400;color:var(--ink);white-space:nowrap;line-height:1}
   .ver{position:absolute;right:52px;bottom:10px;font-size:8.5px;color:var(--ink3);letter-spacing:.18em;text-transform:lowercase;white-space:nowrap;font-style:italic;font-family:var(--serif);font-weight:400}
@@ -786,7 +786,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24s';
+const APP_VERSION = '2026-05-24t';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
