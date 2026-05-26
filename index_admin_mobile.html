@@ -364,6 +364,7 @@
   .subdial .sd-lbl{fill:var(--ink3);font-family:var(--serif);font-size:7;letter-spacing:.18em;font-style:italic}
   .subdial .sd-toplbl{fill:var(--ink3);font-family:'Inter',sans-serif;font-size:5.5;letter-spacing:.34em;font-weight:500}
   .subdial-val{font-family:var(--serif);font-size:14px;color:var(--ink);font-weight:500;letter-spacing:.02em;margin-top:-4px}
+  .subdial-cap{font-family:var(--serif);font-style:italic;font-size:10px;color:var(--ink3);letter-spacing:.04em;margin-top:2px}
 
   /* AUTOMATIC italic + date window (6時位置のデイトアパチャー風) */
   .card.hero .auto-row{
@@ -461,6 +462,7 @@
             <text class="sd-lbl" x="50" y="80" text-anchor="middle">稼働台数</text>
           </svg>
           <div class="subdial-val num" id="sd-left-val">— / —</div>
+          <div class="subdial-cap" id="sd-left-cap">稼働率 —</div>
         </div>
         <div class="subdial-wrap">
           <svg class="subdial" viewBox="0 0 100 100" id="sd-right">
@@ -478,6 +480,7 @@
             <text class="sd-lbl" x="50" y="80" text-anchor="middle">月次目標</text>
           </svg>
           <div class="subdial-val num" id="sd-right-val">—%</div>
+          <div class="subdial-cap" id="sd-right-cap">目標 —</div>
         </div>
       </div>
 
@@ -786,7 +789,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24u';
+const APP_VERSION = '2026-05-24v';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1310,7 +1313,8 @@ function renderNow(){
   const sweepLeft = -150 + (utilPct/100)*300; // -150 〜 +150 (300°のアーク)
   const ndLeft=document.getElementById('sd-left-needle');
   if(ndLeft) ndLeft.setAttribute('transform','rotate('+sweepLeft+' 50 50)');
-  $('sd-left-val').textContent=vs.inUse+' / '+vs.tot;
+  $('sd-left-val').textContent=vs.inUse+' / '+vs.tot+' 台';
+  $('sd-left-cap').textContent='稼働率 '+utilPct+'%';
   // 左ダイヤルのticks (0/25/50/75/100% に対応する位置)
   const lTicks=document.getElementById('sd-left-ticks');
   if(lTicks && !lTicks.children.length){
@@ -1329,7 +1333,8 @@ function renderNow(){
   const sweepRight = -150 + Math.min(100,tgtPct)/100*300;
   const ndRight=document.getElementById('sd-right-needle');
   if(ndRight) ndRight.setAttribute('transform','rotate('+sweepRight+' 50 50)');
-  $('sd-right-val').textContent = tgtNow ? tgtPct+'%' : '—';
+  $('sd-right-val').textContent = tgtNow ? tgtPct+'%' : '未設定';
+  $('sd-right-cap').textContent = tgtNow ? ('目標 ¥'+yen(tgtNow)) : '設定タブから入力';
   const rTicks=document.getElementById('sd-right-ticks');
   if(rTicks && !rTicks.children.length){
     const angles=[-150,-75,0,75,150];
