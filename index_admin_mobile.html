@@ -789,7 +789,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24v';
+const APP_VERSION = '2026-05-24w';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1149,11 +1149,11 @@ function detaliaPipeline(){
   return order.map(s=>({s,n:cnt[s]}));
 }
 
-// 「いま稼働中」の案件 — PC LIMEOne.html line 6492 と完全一致させる
-//   ① status='利用中' (基本)
-//   ② status='回収連絡' (回収予定通知済だが車両まだ顧客の手元)
+// 「いま稼働中」の案件 — 売上日額(run rate)計算用
+//   PC LIMEOne.html line 6598 と一致 (3ステータス)
+//   ① status='利用中'
+//   ② status='回収連絡'
 //   ③ status='配車済' かつ useStart<=today かつ (useEnd未設定 or useEnd>=today)
-//   ※ 単純な期間判定だけだと「返却済/入金済」も拾ってしまい過大表示になるので status ベースで判定
 function currentlyDispatchedCases(){
   const today=todayISO();
   return rentalCases().filter(c=>{
@@ -1164,16 +1164,30 @@ function currentlyDispatchedCases(){
     return false;
   });
 }
-// vehicle utilization
-function vehicleStats(){
-  const vehicles=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車');
-  const tot=vehicles.length;
+// 「本日 瞬間稼働率」用の vehicle set — PC LIMEOne.html line 6611 と一致
+//   5ステータス + 全ステータスに useStart<=today<=useEnd の期間フィルタ
+function activeVehicleIds(){
   const today=todayISO();
-  // 稼働中車両 = currentlyDispatched 案件の vehicleId set (= PC稼働数と一致)
-  const inUse=new Set();
-  currentlyDispatchedCases().forEach(c=>{
-    if(c.vehicleId) inUse.add(c.vehicleId);
+  const vehAll=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車' && v.status!=='売却済');
+  const vehIdSet=new Set(vehAll.map(v=>v.id));
+  const activeStatus=new Set(['配車済','利用中','回収連絡','手配書FAX済','返却済']);
+  const activeIds=new Set();
+  rentalCases().forEach(c=>{
+    if(!vehIdSet.has(c.vehicleId) || !c.useStart) return;
+    if(!activeStatus.has(c.status)) return;
+    const s=c.useStart;
+    const e=c.useEnd || addDays(c.useStart, 30);
+    if(s<=today && today<=e) activeIds.add(c.vehicleId);
   });
+  return {activeIds, vehAll};
+}
+// vehicle utilization (PC dashboard と一致)
+function vehicleStats(){
+  const {activeIds, vehAll}=activeVehicleIds();
+  const tot=vehAll.length;
+  const today=todayISO();
+  const inUse=activeIds;
+  const vehicles=vehAll;
   // last 30 days utilization
   const end=new Date();const start=new Date(); start.setDate(start.getDate()-29);
   const startISO=start.toISOString().slice(0,10), endISO=end.toISOString().slice(0,10);
