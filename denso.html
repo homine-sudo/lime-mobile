@@ -274,7 +274,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28n';
+const APP_VERSION = '2026-05-28p';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -286,8 +286,8 @@ let DATA = null;
 function defaultData(){
   return {
     jobs:[],
-    clients:[{id:uid(),name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'}],
-    subcontractors:[{id:uid(),name:'諸見里 貢',tel:'',memo:''}],
+    clients:[{id:'cl-proceed',name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'}],
+    subcontractors:[{id:'sub-moromizato',name:'諸見里 貢',tel:'',memo:''}],
     presets:[
       {id:uid(),name:'ドラレコ前後取付',price:''},
       {id:uid(),name:'ナビ取付',price:''},
@@ -434,6 +434,18 @@ function adminLogout(){ localStorage.removeItem('denso_admin'); toast('管理者
 /* ───────── ホーム ───────── */
 function renderHome(){
   const jobs=DATA.jobs.filter(j=>j.status!=='キャンセル');
+  if(jobs.length===0){
+    document.getElementById('page-home').innerHTML=`<div class="page-h">⚡ ダッシュボード</div>
+      <div class="card" style="text-align:center;padding:28px 18px"><div style="font-size:42px">🚗</div>
+      <div style="font-size:16px;font-weight:800;margin:10px 0 4px">まだ案件がありません</div>
+      <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:16px;line-height:1.6">データはこの端末(ブラウザ)に保存されます。<br>Dropbox連携すると他の端末と同じデータを共有できます。</div>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:300px;margin:0 auto">
+        <button class="btn btn-primary" onclick="openJobModal()">＋ 新規依頼を登録</button>
+        <button class="btn btn-secondary btn-sm" onclick="seedRealData()">📥 請求書の実データを読み込む</button>
+        ${DBX_TOKEN?`<button class="btn btn-ghost btn-sm" onclick="syncNow()">🔄 Dropboxから今すぐ同期</button>`:`<button class="btn btn-ghost btn-sm" onclick="dbxAuthorize()">📦 Dropboxと連携して読み込む</button>`}
+      </div></div>`;
+    return;
+  }
   const active=jobs.filter(j=>!['請求済','入金済'].includes(j.status));
   const cnt=s=>jobs.filter(j=>j.status===s).length;
   const inquiry=cnt('依頼')+cnt('受注');
@@ -501,7 +513,15 @@ function renderJobs(){
 function renderJobsList(){
   const jobs=jobsFiltered();
   const el=document.getElementById('job-list'); if(!el) return;
-  el.innerHTML=jobs.length? jobs.map(jobCard).join('') : '<div class="empty"><div class="ico">📭</div><div class="t">該当する案件がありません</div></div>';
+  const totalActive=DATA.jobs.filter(j=>j.status!=='キャンセル').length;
+  el.innerHTML = jobs.length ? jobs.map(jobCard).join('')
+    : (totalActive===0 ? `<div class="empty"><div class="ico">🚗</div><div class="t">まだ案件がありません</div>
+        <div style="display:flex;flex-direction:column;gap:9px;max-width:280px;margin:16px auto 0">
+          <button class="btn btn-primary" onclick="openJobModal()">＋ 新規依頼を登録</button>
+          <button class="btn btn-secondary btn-sm" onclick="seedRealData()">📥 請求書の実データを読み込む</button>
+          ${DBX_TOKEN?'':'<button class="btn btn-ghost btn-sm" onclick="dbxAuthorize()">📦 Dropbox連携で読み込む</button>'}
+        </div></div>`
+      : `<div class="empty"><div class="ico">📭</div><div class="t">該当する案件がありません</div></div>`);
 }
 function jobCard(j){
   const cl=clientById(j.clientId);
@@ -1453,7 +1473,7 @@ function openSettings(){
     <div class="sec-label">💾 データ</div>
     <div class="btn-row" style="margin-bottom:9px"><button class="btn btn-secondary btn-sm" onclick="exportData()">⬇️ バックアップ書出</button><button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file').click()">⬆️ 復元(取込)</button></div>
     <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(this)">
-    <button class="btn btn-ghost btn-sm btn-full" style="margin-bottom:9px" onclick="seedDemo()">🧪 サンプルデータを入れて試す</button>
+    <button class="btn btn-ghost btn-sm btn-full" style="margin-bottom:9px" onclick="seedRealData()">📥 請求書の実データを読み込む</button>
     <button class="btn btn-danger btn-sm btn-full" onclick="wipeData()">全データ削除</button>
     <div class="hint" style="margin-top:12px;text-align:center">電装取付管理 ${APP_VERSION}<br>データはこの端末内(localStorage)に保存されます</div>
   </div>
@@ -1489,32 +1509,40 @@ async function wipeData(){
   if(!await confirmModal('本当に削除しますか？',{danger:true,okText:'はい、削除'})) return;
   DATA=defaultData(); save(); closeModal(); toast('削除しました'); switchTab('home');
 }
-async function seedDemo(){
-  if(DBX_TOKEN){ if(!await confirmModal('Dropbox連携中です。\nサンプルデータは共有データに「追加」されます(混ざります)。\nローカルだけで試すなら先に連携解除してください。\n\n続けますか？',{danger:true,okText:'それでも投入'})) return; }
-  let c1=DATA.clients.find(c=>c.name==='株式会社プロシード'); if(!c1){ c1={id:uid(),name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'}; DATA.clients.push(c1); }
-  let s1=DATA.subcontractors.find(s=>s.name==='諸見里 貢'); if(!s1){ s1={id:uid(),name:'諸見里 貢',tel:'',memo:''}; DATA.subcontractors.push(s1); }
-  DATA.settings.nextInvoiceNo=214; // 5月=INV-213が実発行。6月(214)は作業完了時に発行する運用
-  const mk=(over)=>Object.assign(newJob(),{jobNo:genJobNo(),clientId:c1.id,clientName:c1.name,worker:'大嶺'},over);
-  DATA.jobs.push(
+// 請求書から抽出した実データ(固定ID=端末間で重複しない)
+function realDataJobs(){
+  const J=(o)=>Object.assign({clientId:'cl-proceed',clientName:'株式会社プロシード',worker:'大嶺'},o);
+  return [
     // ── 進行中の依頼(実依頼文より) ──
-    mk({status:'依頼',workDesc:'オンダッシュナビ＋カメラ＋ドラレコ前後取付',carModel:'ハイゼットカーゴ',workPlace:'沖縄ユーポス 豊見城',siteContact:'堤さん',siteTel:'080-9427-9341',partsEta:'30日着荷予定',workableFrom:'6/1以降',deadline:'2026-06-05',qty:1,unitFee:'25000',memo:'車両は店舗にあります。着荷後に堤さんへ連絡し6月1日以降早めの取付作業をお願いいたします。'}),
-    mk({status:'部品手配',workDesc:'ドラレコ前後取付（ZDR018＋GS29）',carModel:'ヤリスクロス',endUser:'レンタリースラボ',workPlace:'スカイレンタリース株式会社 スカイ倶楽部豊崎 沖縄県豊見城市豊崎3番60',siteContact:'金城さん',siteTel:'070-5403-0780',partsEta:'27日着荷予定',deadline:'2026-06-02',qty:1,unitFee:'7000',parts:[{name:'ドラレコ ZDR018',supplier:'コムテック',cost:0,arrived:true,arrivedAt:'2026-05-27'},{name:'GS29',supplier:'コムテック',cost:0,arrived:false,arrivedAt:''}],memo:'車両はありますので、いつでも作業可能です。'}),
-    // ── 5月分 請求済(INV-0000000213 / 合計税込349,800) ──
-    mk({status:'請求済',carModel:'ジムニーノマド',endUser:'ユーポス奥武山',workDesc:'ドラレコ前後取付',qty:1,unitFee:'7000',workedAt:'2026-05-13',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
-    mk({status:'請求済',carModel:'ハイゼットカーゴ',endUser:'フジレンオートサービス',workDesc:'ドラレコ前後　CDオーディオ取付',qty:1,unitFee:'12000',workedAt:'2026-05-20',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
-    mk({status:'請求済',carModel:'ヤリスクロス',endUser:'NEWS',workDesc:'マット設置',qty:34,unitFee:'500',workedAt:'2026-05-23',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
-    mk({status:'請求済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:11,unitFee:'25000',workedAt:'2026-05-28',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31',etc:{used:true,count:11,unit:1800},outsource:{used:true,vendor:'諸見里 貢',cost:88000,paid:false}}),
-    mk({status:'請求済',carModel:'ヤリスクロス',endUser:'レンタリースラボ',workDesc:'ドラレコ前後',qty:1,unitFee:'7000',workedAt:'2026-05-29',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
-    // ── 4月分 入金済(INV-0000000204 / 合計税込907,500) ※摘要は車種+相手先様のみ ──
-    mk({status:'入金済',carModel:'ハスラー',endUser:'NEWS',billingDesc:'ハスラー　NEWS様',qty:10,unitFee:'20000',workedAt:'2026-04-01',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
-    mk({status:'入金済',carModel:'ハスラー',endUser:'フジレンタカー',billingDesc:'ハスラー　フジレンタカー様',qty:15,unitFee:'25000',workedAt:'2026-04-02',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
-    mk({status:'入金済',carModel:'スペーシア',endUser:'NEWS',billingDesc:'スペーシア　NEWS様',qty:10,unitFee:'25000',workedAt:'2026-04-29',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
-    // ── 6月予定 まだ作業未完了(完了したら請求発行→INV-214採番。取引日なし=作業前) ──
-    mk({status:'受注',carModel:'ヤリスクロス',endUser:'NEWS',workDesc:'マット設置',qty:44,unitFee:'500',billingMonth:'2026-06',deadline:'2026-06-18'}),
-    mk({status:'着荷済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:8,unitFee:'25000',billingMonth:'2026-06',deadline:'2026-06-22',partsDest:'現場・エンド直送'}),
-    mk({status:'受注',carModel:'スペーシア',workDesc:'ナビ取付',qty:20,unitFee:'25000',billingMonth:'2026-06',deadline:'2026-06-27'}),
-  );
-  save(); closeModal(); toast('実データ(4月・5月の請求＋進行中)を投入しました','ok'); switchTab('home');
+    J({id:'j-req-haiace',jobNo:'依頼-001',status:'依頼',requestedAt:'2026-05-26',workDesc:'オンダッシュナビ＋カメラ＋ドラレコ前後取付',carModel:'ハイゼットカーゴ',workPlace:'沖縄ユーポス 豊見城',siteContact:'堤さん',siteTel:'080-9427-9341',partsEta:'30日着荷予定',workableFrom:'6/1以降',deadline:'2026-06-05',qty:1,unitFee:'25000',memo:'車両は店舗にあります。着荷後に堤さんへ連絡し6月1日以降早めの取付作業をお願いいたします。'}),
+    J({id:'j-req-yaris',jobNo:'依頼-002',status:'部品手配',requestedAt:'2026-05-27',workDesc:'ドラレコ前後取付（ZDR018＋GS29）',carModel:'ヤリスクロス',endUser:'レンタリースラボ',workPlace:'スカイレンタリース株式会社 スカイ倶楽部豊崎 沖縄県豊見城市豊崎3番60',siteContact:'金城さん',siteTel:'070-5403-0780',partsEta:'27日着荷予定',deadline:'2026-06-02',qty:1,unitFee:'7000',parts:[{name:'ドラレコ ZDR018',supplier:'コムテック',arrived:true,arrivedAt:'2026-05-27'},{name:'GS29',supplier:'コムテック',arrived:false,arrivedAt:''}],memo:'車両はありますので、いつでも作業可能です。'}),
+    // ── 6月 まだ作業未完了(請求書INV-214は取引日なし=作業前) ──
+    J({id:'j-2606-1',jobNo:'2026-06-0001',status:'受注',carModel:'ヤリスクロス',endUser:'NEWS',workDesc:'マット設置',qty:44,unitFee:'500',billingMonth:'2026-06',deadline:'2026-06-18'}),
+    J({id:'j-2606-2',jobNo:'2026-06-0002',status:'着荷済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:8,unitFee:'25000',billingMonth:'2026-06',deadline:'2026-06-22',partsDest:'現場・エンド直送'}),
+    J({id:'j-2606-3',jobNo:'2026-06-0003',status:'受注',carModel:'スペーシア',workDesc:'ナビ取付',qty:20,unitFee:'25000',billingMonth:'2026-06',deadline:'2026-06-27'}),
+    // ── 5月 請求済(INV-0000000213 / 税込349,800) ──
+    J({id:'j-2605-1',jobNo:'2026-05-0001',status:'請求済',carModel:'ジムニーノマド',endUser:'ユーポス奥武山',workDesc:'ドラレコ前後取付',qty:1,unitFee:'7000',workedAt:'2026-05-13',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
+    J({id:'j-2605-2',jobNo:'2026-05-0002',status:'請求済',carModel:'ハイゼットカーゴ',endUser:'フジレンオートサービス',workDesc:'ドラレコ前後　CDオーディオ取付',qty:1,unitFee:'12000',workedAt:'2026-05-20',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
+    J({id:'j-2605-3',jobNo:'2026-05-0003',status:'請求済',carModel:'ヤリスクロス',endUser:'NEWS',workDesc:'マット設置',qty:34,unitFee:'500',workedAt:'2026-05-23',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
+    J({id:'j-2605-4',jobNo:'2026-05-0004',status:'請求済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:11,unitFee:'25000',workedAt:'2026-05-28',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31',etc:{used:true,count:11,unit:1800},outsource:{used:true,vendor:'諸見里 貢',cost:88000,paid:false}}),
+    J({id:'j-2605-5',jobNo:'2026-05-0005',status:'請求済',carModel:'ヤリスクロス',endUser:'レンタリースラボ',workDesc:'ドラレコ前後',qty:1,unitFee:'7000',workedAt:'2026-05-29',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
+    // ── 4月 入金済(INV-0000000204 / 税込907,500・摘要=車種+相手先様) ──
+    J({id:'j-2604-1',jobNo:'2026-04-0001',status:'入金済',carModel:'ハスラー',endUser:'NEWS',billingDesc:'ハスラー　NEWS様',qty:10,unitFee:'20000',workedAt:'2026-04-01',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
+    J({id:'j-2604-2',jobNo:'2026-04-0002',status:'入金済',carModel:'ハスラー',endUser:'フジレンタカー',billingDesc:'ハスラー　フジレンタカー様',qty:15,unitFee:'25000',workedAt:'2026-04-02',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
+    J({id:'j-2604-3',jobNo:'2026-04-0003',status:'入金済',carModel:'スペーシア',endUser:'NEWS',billingDesc:'スペーシア　NEWS様',qty:10,unitFee:'25000',workedAt:'2026-04-29',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
+  ];
+}
+function _seedRealDataSilent(){
+  if(!DATA.clients.some(c=>c.id==='cl-proceed')) DATA.clients.push({id:'cl-proceed',name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'});
+  if(!DATA.subcontractors.some(s=>s.id==='sub-moromizato')) DATA.subcontractors.push({id:'sub-moromizato',name:'諸見里 貢',tel:'',memo:''});
+  realDataJobs().forEach(o=>{ if(!DATA.jobs.some(x=>x.id===o.id)) DATA.jobs.push(o); });  // 既存は上書きしない(編集を保護)
+  if((num(DATA.settings.nextInvoiceNo)||0)<214) DATA.settings.nextInvoiceNo=214;
+  DATA.settings._updatedAt=Date.now();
+  _migrate(DATA); save();
+}
+async function seedRealData(){
+  if(DBX_TOKEN){ if(!await confirmModal('Dropbox連携中です。\n実データの不足分を共有データに追加します(既存は上書きしません)。\n続けますか？',{okText:'読み込む'})) return; }
+  _seedRealDataSilent(); closeModal(); toast('請求書の実データを読み込みました','ok'); switchTab('home');
 }
 
 /* ───────── Dropbox同期 (LIME One方式・PKCE / data消失防止の不変条件厳守) ───────── */
@@ -1617,8 +1645,10 @@ async function syncNow(){ if(!DBX_TOKEN){ dbxAuthorize(); return; } await loadFr
 async function init(){
   document.getElementById('hdr-ver').textContent='v'+APP_VERSION;
   DBX_TOKEN=localStorage.getItem(DBX_LS.token); DBX_REFRESH=localStorage.getItem(DBX_LS.refresh);
+  const fresh=!localStorage.getItem(LS_KEY);
   if(location.search.includes('code=')){ const ok=await dbxHandleCallback(); if(ok) DBX_TOKEN=localStorage.getItem(DBX_LS.token); }
   load();
+  if(fresh && !DBX_TOKEN){ _seedRealDataSilent(); }  // 初回起動は請求書の実データを自動投入(Dropbox未連携時のみ)
   restoreSyncSnapshot();
   updateSyncStatus('ok','');
   switchTab('home');
