@@ -242,6 +242,18 @@
   /* section bottom spacing so content isn't covered by FAB */
   section{padding-bottom:120px !important}
 
+  /* ===== クラス別 稼働率 ===== */
+  .cls-util{display:flex;flex-direction:column;gap:0;margin-top:4px}
+  .cls-row{display:grid;grid-template-columns:1fr 90px 52px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px dotted var(--line)}
+  .cls-row:last-child{border-bottom:0}
+  .cls-row.cls-total{border-top:1px solid var(--line2);border-bottom:0;margin-top:2px;padding-top:11px}
+  .cls-row.cls-total .cls-nm{color:var(--ink3);letter-spacing:.18em;text-transform:uppercase;font-size:10px;font-family:var(--sans)}
+  .cls-nm{font-size:13px;color:var(--ink);letter-spacing:.04em;display:flex;align-items:baseline;gap:8px;font-family:var(--serif)}
+  .cls-cnt{font-size:9.5px;color:var(--ink3);letter-spacing:.06em;font-family:var(--sans)}
+  .cls-bar{height:2px;background:var(--line);position:relative}
+  .cls-bar > i{display:block;height:100%;background:var(--acc)}
+  .cls-rate{font-family:var(--serif);font-size:20px;color:var(--ink);font-weight:500;text-align:right;line-height:1}
+
   /* ===== Dual stat (台 / % 並列) ===== */
   .dual-stat{display:flex;align-items:baseline;gap:14px;margin-top:2px}
   .dual-main{display:flex;align-items:baseline;gap:4px}
@@ -671,6 +683,12 @@
       </div>
     </div>
 
+    <!-- クラスグループ別 稼働率 (PC経営分析 2026-05-28c と同方式) -->
+    <div class="card">
+      <div class="lbl">クラス別 稼働率 (直近30日)</div>
+      <div class="cls-util" id="ops-class"></div>
+    </div>
+
     <div class="card">
       <div class="lbl">稼働率ランキング (直近30日)</div>
       <div class="list" id="ops-rank"></div>
@@ -789,7 +807,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-28a';
+const APP_VERSION = '2026-05-28b';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1149,6 +1167,49 @@ function detaliaPipeline(){
   return order.map(s=>({s,n:cnt[s]}));
 }
 
+// ★ クラスグループ別稼働率 — PC LIMEOne.html 2026-05-28c (BI_CLASS_GROUPS) と一致
+const BI_CLASS_GROUPS = [
+  { key:'軽乗用',     codes:['K','KEV'] },
+  { key:'商用',       codes:['VK','TK'] },
+  { key:'コンパクト', codes:['S'] },
+  { key:'SH〜MH',     codes:['SH','SV','SVH','BVH','MV','MVH','MH'] },
+  { key:'WS〜WAH',    codes:['WS','WSH','WA','WAH'] },
+  { key:'P〜PMH',     codes:['P','PM','PMH'] },
+];
+const CLASS_ALIASES = {
+  'SK':'K','Ｋ':'K','KE':'K','SP':'S',
+  'BV':'SV','F':'MV','G':'MV','WB':'PM','WC':'PMH',
+  'ES':'SH','EA':'SH','E':'SH','EB':'BVH','EC':'MH',
+  'EWS':'WSH','EWA':'WAH','EWC':'WAH',
+  'VA':'VK','DB':'VK','DD':'VK','PRV':'P'
+};
+function groupOfClass(code){
+  let c=(code||'').toUpperCase().trim();
+  c=CLASS_ALIASES[c]||c;
+  for(const g of BI_CLASS_GROUPS){ if(g.codes.includes(c)) return g.key; }
+  return 'その他';
+}
+// vehicleStats().rows (直近30日のper-vehicle days/rate) をクラスグループに集計
+function classGroupUtil(rows, span){
+  const order=[...BI_CLASS_GROUPS.map(g=>g.key),'その他'];
+  const agg={}; order.forEach(k=>agg[k]={count:0,days:0});
+  (rows||[]).forEach(r=>{
+    const k=groupOfClass(r.v && r.v.vehicleClass);
+    agg[k].count++; agg[k].days+=r.days;
+  });
+  const pd=span||30;
+  const out=[];
+  let totC=0,totD=0;
+  order.forEach(k=>{
+    const a=agg[k];
+    if(a.count===0) return;
+    totC+=a.count; totD+=a.days;
+    out.push({key:k, count:a.count, days:a.days, rate:Math.min(100, a.days/(pd*a.count)*100)});
+  });
+  const total={count:totC, days:totD, rate:totC?Math.min(100, totD/(pd*totC)*100):0};
+  return {groups:out, total, periodDays:pd};
+}
+
 // ★「本日 車が出ている」統一述語 — PC LIMEOne.html line 6603 (_isOutToday) と完全一致 (2026-05-28b)
 //   status ∈ {配車済, 利用中, 回収連絡, 手配書FAX済} (返却済は車庫に戻ってるので除外)
 //   ∧ useStart <= today (未来開始を除外)
@@ -1191,7 +1252,7 @@ function vehicleStats(){
   const rows=vehicles.map(v=>({v,days:used[v.id]||0,rate:Math.min(100,Math.round((used[v.id]||0)*100/span))}));
   rows.sort((a,b)=>b.rate-a.rate);
   const avg=rows.length?Math.round(rows.reduce((s,r)=>s+r.rate,0)/rows.length):0;
-  return {tot, inUse:inUse.size, free:tot-inUse.size, avg, rows, idle: rows.filter(r=>r.days===0)};
+  return {tot, inUse:inUse.size, free:tot-inUse.size, avg, rows, span, idle: rows.filter(r=>r.days===0)};
 }
 
 // AR (accounts receivable) — billed but not yet paid
@@ -1472,6 +1533,22 @@ function renderOps(){
   $('ops-free').innerHTML=s.free+'<span class="unit" style="font-size:12px">台</span>';
   $('ops-free-cap').textContent='今日 即稼働可';
 
+  // クラスグループ別 稼働率
+  const cg=classGroupUtil(s.rows, s.span);
+  const cgMax=Math.max(1,...cg.groups.map(g=>g.rate));
+  $('ops-class').innerHTML = cg.groups.map(g=>`
+    <div class="cls-row">
+      <div class="cls-nm">${esc(g.key)}<span class="cls-cnt">${g.count}台</span></div>
+      <div class="cls-bar"><i style="width:${Math.round(g.rate/cgMax*100)}%"></i></div>
+      <div class="cls-rate num">${g.rate.toFixed(0)}<span class="ink3" style="font-size:11px">%</span></div>
+    </div>
+  `).join('') + (cg.total.count?`
+    <div class="cls-row cls-total">
+      <div class="cls-nm">合計<span class="cls-cnt">${cg.total.count}台</span></div>
+      <div class="cls-bar"></div>
+      <div class="cls-rate num">${cg.total.rate.toFixed(0)}<span class="ink3" style="font-size:11px">%</span></div>
+    </div>`:'') || '<div class="ink3 sm">データなし</div>';
+
   const top=s.rows.slice(0,10);
   $('ops-rank').innerHTML=top.map(r=>`
     <div class="item">
@@ -1638,7 +1715,8 @@ function DEMO_R(){
     const st=monthsBack===0?status[Math.floor(Math.random()*7)]:(monthsBack<=1?status[6+Math.floor(Math.random()*3)]:'入金済');
     cases.push({id:'R'+i,caseNo:dt.getFullYear()+'-'+pad2(dt.getMonth()+1)+'-'+pad2(i),status:st,receivedAt:useStart,useStart,useEnd,unitPrice:5500+Math.floor(Math.random()*8)*1100,discount:0,vehicleId:'V'+(i%22),category:Math.random()<0.85?'損保':'一般',driverName:'運転者'+i,recoveryCalledAt:useEnd,invoiceIssuedAt:st==='請求済'?useEnd:null,paymentDueAt:st==='請求済'?addDays(useEnd,30):null});
   }
-  const vehicles=[];for(let i=0;i<22;i++) vehicles.push({id:'V'+i,name:'車両'+i,plateNo:String(1000+i),status:'稼働'});
+  const vehicles=[];const demoCls=['K','K','K','K','K','S','S','S','SH','SV','MH','WA','WS','P','VK','TK','K','S','SH','K','S','P'];
+  for(let i=0;i<22;i++) vehicles.push({id:'V'+i,name:'車両'+i,plateNo:String(1000+i),status:'稼働',vehicleClass:demoCls[i]||'K'});
   return {cases,vehicles,settings:{taxRate:10}};
 }
 function DEMO_D(){
