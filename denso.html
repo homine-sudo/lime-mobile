@@ -273,7 +273,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28j';
+const APP_VERSION = '2026-05-28k';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -284,7 +284,9 @@ const FLOW_SHORT = {'依頼':'依頼','受注':'受注','部品手配':'手配',
 let DATA = null;
 function defaultData(){
   return {
-    jobs:[], clients:[], subcontractors:[],
+    jobs:[],
+    clients:[{id:uid(),name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'}],
+    subcontractors:[{id:uid(),name:'諸見里 貢',tel:'',memo:''}],
     presets:[
       {id:uid(),name:'ドラレコ前後取付',price:''},
       {id:uid(),name:'ナビ取付',price:''},
@@ -415,7 +417,7 @@ function renderHome(){
   const dlAlert=dlJobs.filter(j=>deadlineState(j)).length;
   const m=curMonth();
   const monthJobs=jobs.filter(j=> billMonthOf(j)===m && ['作業完了','報告済','請求済','入金済'].includes(j.status));
-  const monthBill=monthJobs.reduce((s,j)=>s+withTax(jobSubtotal(j)),0);
+  const monthBill=monthJobs.reduce((s,j)=>s+jobSubtotal(j),0);
   const monthProfit=monthJobs.reduce((s,j)=>s+jobProfit(j),0);
   const html=`
   <div class="page-h">⚡ ダッシュボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
@@ -431,7 +433,7 @@ function renderHome(){
     ${dlJobs.slice(0,6).map(j=>{const ds=deadlineState(j);const cl=clientById(j.clientId);return `<div class="list-row" onclick="openJobDetail('${j.id}')"><div class="ic" style="${ds==='over'?'background:#FCE2E3;color:#C0303A':ds==='soon'?'background:#FDF0D5;color:#B45309':''}">${ds==='over'?'⚠️':ds==='soon'?'⏰':'📅'}</div><div class="tx"><div class="t1">${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''} <span style="color:var(--text-dim);font-weight:500;font-size:12px">${esc(cl?cl.name:j.clientName||'')}</span></div><div class="t2">期日 ${fmtD(j.deadline)} ・ ${j.workDesc?esc(j.workDesc):''}</div></div><span class="badge st-${j.status}">${j.status}</span></div>`;}).join('')}</div>`:''}
   <div class="card"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
     <div class="money-box" style="margin:0">
-      <div class="money-row total"><span>請求見込(税込)</span><b>${yen(monthBill)}</b></div>
+      <div class="money-row total"><span>請求見込(税抜)</span><b>${yen(monthBill)}</b></div>
       <div class="money-row profit"><span>粗利見込</span><b>${yen(monthProfit)}</b></div>
       <div class="money-row"><span>対象案件</span><b>${monthJobs.length}件</b></div>
     </div>
@@ -490,7 +492,7 @@ function jobCard(j){
   return `<div class="job-card s-${j.status}" onclick="openJobDetail('${j.id}')">
     <div class="job-row1"><span class="job-no">${esc(j.jobNo||'')}</span><span class="badge st-${j.status}">${j.status}</span></div>
     <div class="job-client">${esc(cl?cl.name:j.clientName||'(取引先未設定)')}</div>
-    <div class="job-meta"><b>${esc(j.carModel||'車種未設定')}</b>${j.endUser?' ／ '+esc(j.endUser)+'様':''} ${esc(j.carPlate||'')}<br>${esc(j.workDesc||'内容未設定')} ・ <b>${yen(withTax(jobSubtotal(j)))}</b>${qtyStr}</div>
+    <div class="job-meta"><b>${esc(j.carModel||'車種未設定')}</b>${j.endUser?' ／ '+esc(j.endUser)+'様':''} ${esc(j.carPlate||'')}<br>${esc(j.workDesc||'内容未設定')} ・ <b>${yen(jobSubtotal(j))}</b><span style="font-size:10px;color:var(--muted)"> 税抜</span>${qtyStr}</div>
     <div class="job-tags">${tags.join('')}</div>
     ${next?`<div style="margin-top:10px" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm btn-full" onclick="advanceStatus('${j.id}')">${nextActionLabel(j.status)} →</button></div>`:''}
   </div>`;
@@ -660,9 +662,8 @@ function recalcMoney(){
   const etcCost=etcCnt*etcUnit;
   const el=document.getElementById('f-money'); if(!el) return;
   el.innerHTML=`
-    <div class="money-row"><span>明細金額(税抜) ${qty>1?qty+'台 × '+yen(unit):''}</span><b>${yen(sub)}</b></div>
-    <div class="money-row"><span>消費税(${taxRate()}%)</span><b>${yen(sub*taxRate()/100)}</b></div>
-    <div class="money-row total"><span>請求額(税込)</span><b>${yen(withTax(sub))}</b></div>
+    <div class="money-row total"><span>請求額(税抜) ${qty>1?qty+'台 × '+yen(unit):''}</span><b>${yen(sub)}</b></div>
+    <div class="money-row" style="font-size:11px"><span>税込(${taxRate()}%)</span><b>${yen(withTax(sub))}</b></div>
     ${parts?`<div class="money-row"><span>部品原価(当社購入分)</span><b>−${yen(parts)}</b></div>`:''}
     ${etcCost?`<div class="money-row"><span>ETCセットアップ ${etcCnt}台×${yen(etcUnit)}</span><b>−${yen(etcCost)}</b></div>`:''}
     ${outCost?`<div class="money-row"><span>外注費</span><b>−${yen(outCost)}</b></div>`:''}
@@ -799,8 +800,8 @@ function openJobDetail(id){
       ${j.invoiceNo?`<dt>請求No</dt><dd>${esc(j.invoiceNo)}</dd>`:''}
     </dl>
     <div class="money-box">
-      <div class="money-row"><span>工賃 ${num(j.qty)>1?num(j.qty)+'台 × '+yen(j.unitFee):'(税別)'}</span><b>${yen(jobSubtotal(j))}</b></div>
-      <div class="money-row total"><span>請求額(税込)</span><b>${yen(withTax(jobSubtotal(j)))}</b></div>
+      <div class="money-row total"><span>請求額(税抜) ${num(j.qty)>1?num(j.qty)+'台 × '+yen(j.unitFee):''}</span><b>${yen(jobSubtotal(j))}</b></div>
+      <div class="money-row" style="font-size:11px"><span>税込(${taxRate()}%)</span><b>${yen(withTax(jobSubtotal(j)))}</b></div>
       ${jobPartsCost(j)?`<div class="money-row"><span>部品原価(当社購入)</span><b>−${yen(jobPartsCost(j))}</b></div>`:''}
       ${jobEtcCost(j)?`<div class="money-row"><span>ETCセットアップ ${num(j.etc.count)}台×${yen(j.etc.unit||DATA.settings.etcSetupFee)}</span><b>−${yen(jobEtcCost(j))}</b></div>`:''}
       ${jobOutsource(j)?`<div class="money-row"><span>外注費 ${j.outsource&&j.outsource.used?'('+esc(j.outsource.vendor||'未定')+(j.outsource.paid?'/支払済':'/未払')+')':''}</span><b>−${yen(jobOutsource(j))}</b></div>`:''}
@@ -936,10 +937,11 @@ function renderSalesBilling(){
   const target=DATA.jobs.filter(j=> j.status!=='キャンセル' && billMonthOf(j)===billMonth && ['作業完了','報告済','請求済','入金済'].includes(j.status));
   const groups={}; target.forEach(j=>{ const k=j.clientId||('_'+j.clientName); (groups[k]=groups[k]||[]).push(j); });
   const groupArr=Object.keys(groups).map(k=>({key:k,jobs:groups[k],client:clientById(groups[k][0].clientId)}));
-  const totalBill=target.reduce((s,j)=>s+withTax(jobSubtotal(j)),0);
+  const totalBill=target.reduce((s,j)=>s+jobSubtotal(j),0);
+  const totalBillTax=target.reduce((s,j)=>s+withTax(jobSubtotal(j)),0);
   const totalProfit=target.reduce((s,j)=>s+jobProfit(j),0);
   return `<div class="kpi-grid">
-    <div class="kpi"><div class="kpi-lbl">請求合計(税込)</div><div class="kpi-val" style="font-size:21px">${yen(totalBill)}</div><div class="kpi-sub">${target.length}件 / ${groupArr.length}社</div></div>
+    <div class="kpi"><div class="kpi-lbl">請求合計(税抜)</div><div class="kpi-val" style="font-size:21px">${yen(totalBill)}</div><div class="kpi-sub">税込 ${yen(totalBillTax)} ・ ${target.length}件/${groupArr.length}社</div></div>
     <div class="kpi green"><div class="kpi-lbl">粗利合計</div><div class="kpi-val" style="font-size:21px">${yen(totalProfit)}</div></div>
   </div>
   ${groupArr.length? groupArr.map(billingGroupCard).join('') : '<div class="empty"><div class="ico">🗓</div><div class="t">この月の請求対象案件はありません</div><div style="font-size:11px;color:var(--muted);margin-top:6px">案件を「作業完了」にすると請求対象になります</div></div>'}`;
@@ -990,11 +992,11 @@ function billingGroupCard(g){
     </div>
     ${g.jobs.map(j=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)" onclick="openJobDetail('${j.id}')">
       <span>${fmtD(j.workedAt||j.requestedAt)} ${esc(billingDescOf(j))}${num(j.qty)>1?' '+num(j.qty)+'台':''}</span>
-      <span style="white-space:nowrap">${yen(withTax(jobSubtotal(j)))}</span></div>`).join('')}
+      <span style="white-space:nowrap">${yen(jobSubtotal(j))}</span></div>`).join('')}
     <div class="money-box" style="margin:10px 0 8px">
-      <div class="money-row"><span>小計(税抜)</span><b>${yen(sub)}</b></div>
+      <div class="money-row total"><span>小計(税抜)</span><b>${yen(sub)}</b></div>
       <div class="money-row"><span>消費税(${taxRate()}%)</span><b>${yen(total-sub)}</b></div>
-      <div class="money-row total"><span>合計</span><b>${yen(total)}</b></div>
+      <div class="money-row"><span>請求書合計(税込)</span><b>${yen(total)}</b></div>
     </div>
     <div class="btn-row">
       <button class="btn btn-secondary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',false)">📄 プレビュー</button>
@@ -1401,9 +1403,8 @@ async function wipeData(){
   DATA=defaultData(); save(); closeModal(); toast('削除しました'); switchTab('home');
 }
 function seedDemo(){
-  const c1={id:uid(),name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'};
-  DATA.clients.push(c1);
-  const s1={id:uid(),name:'電装プロ仲宗根',tel:'090-1234-5678',memo:'特殊配線・本格作業'}; DATA.subcontractors.push(s1);
+  let c1=DATA.clients.find(c=>c.name==='株式会社プロシード'); if(!c1){ c1={id:uid(),name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'}; DATA.clients.push(c1); }
+  let s1=DATA.subcontractors.find(s=>s.name==='諸見里 貢'); if(!s1){ s1={id:uid(),name:'諸見里 貢',tel:'',memo:''}; DATA.subcontractors.push(s1); }
   DATA.settings.nextInvoiceNo=214; // 5月=INV-213が実発行。6月(214)は作業完了時に発行する運用
   const mk=(over)=>Object.assign(newJob(),{jobNo:genJobNo(),clientId:c1.id,clientName:c1.name,worker:'大嶺'},over);
   DATA.jobs.push(
@@ -1414,7 +1415,7 @@ function seedDemo(){
     mk({status:'請求済',carModel:'ジムニーノマド',endUser:'ユーポス奥武山',workDesc:'ドラレコ前後取付',qty:1,unitFee:'7000',workedAt:'2026-05-13',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
     mk({status:'請求済',carModel:'ハイゼットカーゴ',endUser:'フジレンオートサービス',workDesc:'ドラレコ前後　CDオーディオ取付',qty:1,unitFee:'12000',workedAt:'2026-05-20',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
     mk({status:'請求済',carModel:'ヤリスクロス',endUser:'NEWS',workDesc:'マット設置',qty:34,unitFee:'500',workedAt:'2026-05-23',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
-    mk({status:'請求済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:11,unitFee:'25000',workedAt:'2026-05-28',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31',etc:{used:true,count:11,unit:1800},outsource:{used:true,vendor:'電装プロ仲宗根',cost:88000,paid:false}}),
+    mk({status:'請求済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:11,unitFee:'25000',workedAt:'2026-05-28',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31',etc:{used:true,count:11,unit:1800},outsource:{used:true,vendor:'諸見里 貢',cost:88000,paid:false}}),
     mk({status:'請求済',carModel:'ヤリスクロス',endUser:'レンタリースラボ',workDesc:'ドラレコ前後',qty:1,unitFee:'7000',workedAt:'2026-05-29',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
     // ── 4月分 入金済(INV-0000000204 / 合計税込907,500) ※摘要は車種+相手先様のみ ──
     mk({status:'入金済',carModel:'ハスラー',endUser:'NEWS',billingDesc:'ハスラー　NEWS様',qty:10,unitFee:'20000',workedAt:'2026-04-01',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
