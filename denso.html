@@ -274,7 +274,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28m';
+const APP_VERSION = '2026-05-28n';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -397,6 +397,7 @@ function promptModal(label,val=''){ return Promise.resolve(window.prompt(label,v
 /* ───────── タブ切替 ───────── */
 let curTab='home';
 function switchTab(t){
+  if(t==='billing' && !isAdmin()){ toast('売上・請求は管理者のみ表示できます','err'); t='home'; }
   curTab=t;
   document.querySelectorAll('.m-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -407,6 +408,28 @@ function switchTab(t){
 }
 function refresh(){ if(curTab==='home')renderHome(); else if(curTab==='jobs')renderJobsList(); else if(curTab==='billing')renderBilling(); else if(curTab==='master')renderMaster(); }
 function stamp(j){ j.updatedAt=Date.now(); j.updatedBy=DATA.settings.person||'—'; }
+
+/* ───────── 権限(管理者のみ売上表示) ───────── */
+function isAdmin(){ return localStorage.getItem('denso_admin')==='1'; }
+function applyRole(){
+  const admin=isAdmin();
+  const bt=document.querySelector('.m-tab[data-tab="billing"]'); if(bt) bt.style.display=admin?'':'none';
+  if(!admin && curTab==='billing'){ switchTab('home'); return; }
+  refresh();
+}
+async function adminLogin(){
+  const pin=DATA.settings.adminPin;
+  if(!pin){
+    const np=await promptModal('管理者PINを新規設定してください(この端末が管理者になります)');
+    if(np==null||String(np).trim()==='') return;
+    DATA.settings.adminPin=String(np).trim(); DATA.settings._updatedAt=Date.now();
+    localStorage.setItem('denso_admin','1'); save(); toast('管理者PINを設定し、ONにしました','ok'); openSettings(); applyRole(); return;
+  }
+  const inp=await promptModal('管理者PINを入力'); if(inp==null) return;
+  if(String(inp).trim()===String(pin)){ localStorage.setItem('denso_admin','1'); toast('管理者モード ON','ok'); openSettings(); applyRole(); }
+  else toast('PINが違います','err');
+}
+function adminLogout(){ localStorage.removeItem('denso_admin'); toast('管理者モードを解除しました'); openSettings(); applyRole(); }
 
 /* ───────── ホーム ───────── */
 function renderHome(){
@@ -436,13 +459,13 @@ function renderHome(){
     ${todayWork.length? todayWork.map(jobCardMini).join('') : '<div style="color:var(--muted);font-size:13px;padding:6px 0">本日予定の作業はありません</div>'}</div>
   ${dlJobs.length?`<div class="card"><div class="card-title">⏰ 作業期日 ${dlAlert?`<span style="color:var(--red);font-size:11px">超過/間近 ${dlAlert}件</span>`:''}</div>
     ${dlJobs.slice(0,6).map(j=>{const ds=deadlineState(j);const cl=clientById(j.clientId);return `<div class="list-row" onclick="openJobDetail('${j.id}')"><div class="ic" style="${ds==='over'?'background:#FCE2E3;color:#C0303A':ds==='soon'?'background:#FDF0D5;color:#B45309':''}">${ds==='over'?'⚠️':ds==='soon'?'⏰':'📅'}</div><div class="tx"><div class="t1">${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''} <span style="color:var(--text-dim);font-weight:500;font-size:12px">${esc(cl?cl.name:j.clientName||'')}</span></div><div class="t2">期日 ${fmtD(j.deadline)} ・ ${j.workDesc?esc(j.workDesc):''}</div></div><span class="badge st-${j.status}">${j.status}</span></div>`;}).join('')}</div>`:''}
-  <div class="card"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
+  ${isAdmin()?`<div class="card"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
     <div class="money-box" style="margin:0">
       <div class="money-row total"><span>請求見込(税抜)</span><b>${yen(monthBill)}</b></div>
       <div class="money-row profit"><span>粗利見込</span><b>${yen(monthProfit)}</b></div>
       <div class="money-row"><span>対象案件</span><b>${monthJobs.length}件</b></div>
     </div>
-    <button class="btn btn-secondary btn-full btn-sm" style="margin-top:10px" onclick="switchTab('billing')">月次請求へ →</button></div>
+    <button class="btn btn-secondary btn-full btn-sm" style="margin-top:10px" onclick="switchTab('billing')">月次請求へ →</button></div>`:''}
   ${reportPending? `<div class="card"><div class="card-title">⚠️ 報告未提出</div>${jobs.filter(j=>j.status==='作業完了').map(jobCardMini).join('')}</div>`:''}
   `;
   document.getElementById('page-home').innerHTML=html;
@@ -497,7 +520,7 @@ function jobCard(j){
   return `<div class="job-card s-${j.status}" onclick="openJobDetail('${j.id}')">
     <div class="job-row1"><span class="job-no">${esc(j.jobNo||'')}</span><span class="badge st-${j.status}">${j.status}</span></div>
     <div class="job-client">${esc(cl?cl.name:j.clientName||'(取引先未設定)')}</div>
-    <div class="job-meta"><b>${esc(j.carModel||'車種未設定')}</b>${j.endUser?' ／ '+esc(j.endUser)+'様':''} ${esc(j.carPlate||'')}<br>${esc(j.workDesc||'内容未設定')} ・ <b>${yen(jobSubtotal(j))}</b><span style="font-size:10px;color:var(--muted)"> 税抜</span>${qtyStr}</div>
+    <div class="job-meta"><b>${esc(j.carModel||'車種未設定')}</b>${j.endUser?' ／ '+esc(j.endUser)+'様':''} ${esc(j.carPlate||'')}<br>${esc(j.workDesc||'内容未設定')}${num(j.qty)>1?' ・ '+num(j.qty)+'台':''}${isAdmin()?' ・ <b>'+yen(jobSubtotal(j))+'</b><span style="font-size:10px;color:var(--muted)"> 税抜</span>':''}</div>
     <div class="job-tags">${tags.join('')}</div>
     ${next?`<div style="margin-top:10px" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm btn-full" onclick="advanceStatus('${j.id}')">${nextActionLabel(j.status)} →</button></div>`:''}
   </div>`;
@@ -655,6 +678,7 @@ function recalcMoney(){
   const qty=num((document.getElementById('f-qty')||{}).value||1)||1;
   const unit=num((document.getElementById('f-unitfee')||{}).value);
   editingJob.qty=qty; editingJob.unitFee=(document.getElementById('f-unitfee')||{}).value||'';
+  const _mel=document.getElementById('f-money'); if(_mel && !isAdmin()){ _mel.style.display='none'; _mel.innerHTML=''; return; }
   const sub=qty*unit, parts=jobPartsCost(editingJob);
   const outOn=document.getElementById('f-out-chk') && document.getElementById('f-out-chk').classList.contains('on');
   const outCost=outOn? num((document.getElementById('f-out-cost')||{}).value):0;
@@ -801,14 +825,14 @@ function openJobDetail(id){
       ${j.billingMonth?`<dt>請求月</dt><dd>${fmtMonth(j.billingMonth)}</dd>`:''}
       ${j.invoiceNo?`<dt>請求No</dt><dd>${esc(j.invoiceNo)}</dd>`:''}
     </dl>
-    <div class="money-box">
+    ${isAdmin()?`<div class="money-box">
       <div class="money-row total"><span>請求額(税抜) ${num(j.qty)>1?num(j.qty)+'台 × '+yen(j.unitFee):''}</span><b>${yen(jobSubtotal(j))}</b></div>
       <div class="money-row" style="font-size:11px"><span>税込(${taxRate()}%)</span><b>${yen(withTax(jobSubtotal(j)))}</b></div>
       ${jobPartsCost(j)?`<div class="money-row"><span>部品原価(当社購入)</span><b>−${yen(jobPartsCost(j))}</b></div>`:''}
       ${jobEtcCost(j)?`<div class="money-row"><span>ETCセットアップ ${num(j.etc.count)}台×${yen(j.etc.unit||DATA.settings.etcSetupFee)}</span><b>−${yen(jobEtcCost(j))}</b></div>`:''}
       ${jobOutsource(j)?`<div class="money-row"><span>外注費 ${j.outsource&&j.outsource.used?'('+esc(j.outsource.vendor||'未定')+(j.outsource.paid?'/支払済':'/未払')+')':''}</span><b>−${yen(jobOutsource(j))}</b></div>`:''}
       <div class="money-row profit total"><span>粗利</span><b>${yen(jobProfit(j))}</b></div>
-    </div>
+    </div>`:''}
     <div class="sec-label">📦 部品 ${j.partsDest==='現場・エンド直送'?'<span class="tag place" style="margin-left:4px">🚚 現場・エンド直送</span>':'<span class="tag" style="margin-left:4px">🏢 当社着荷</span>'} ${(j.parts||[]).length?`<span style="color:var(--text-dim);font-weight:400">(${(j.parts||[]).filter(p=>p.arrived).length}/${(j.parts||[]).length}着荷)</span>`:''}</div>
     ${partsHtml}
     <div class="sec-label">📝 作業報告</div>
@@ -1418,6 +1442,10 @@ function openSettings(){
       ${s.logo?`<img src="${s.logo}" style="max-height:50px;margin-top:8px;background:#fff;padding:4px;border-radius:6px">`:''}</div>
     <div class="sec-label">👤 操作者</div>
     <div class="field"><label>あなたの名前(更新者として記録)</label><input id="st-person" value="${esc(s.person)}"></div>
+    <div class="sec-label">🔒 管理者モード</div>
+    <div class="field"><div style="font-size:13px;margin-bottom:8px">状態: <b style="color:${isAdmin()?'var(--green)':'var(--text-dim)'}">${isAdmin()?'管理者 ✓（売上を表示）':'一般（売上は非表示）'}</b></div>
+      <div class="btn-row">${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="adminLogout()">管理者モードを解除</button>`:`<button class="btn btn-primary btn-sm btn-full" onclick="adminLogin()">${s.adminPin?'🔑 管理者ログイン':'🔑 管理者PINを設定する'}</button>`}</div>
+      <div class="hint">売上・粗利・月次請求は管理者のみ表示。現場のスマホはOFFのまま使えます（端末ごとに記憶）</div></div>
     <div class="sec-label">☁️ Dropbox同期(端末間で共有)</div>
     <div class="field"><div style="font-size:13px;margin-bottom:8px">状態: <b id="dbx-status">${DBX_TOKEN?'連携済み ✓':'未連携'}</b></div>
       <div class="btn-row">${DBX_TOKEN?`<button class="btn btn-secondary btn-sm" onclick="syncNow()">🔄 今すぐ同期</button><button class="btn btn-ghost btn-sm" onclick="dbxLogout()">連携解除</button>`:`<button class="btn btn-primary btn-sm btn-full" onclick="dbxAuthorize()">📦 Dropboxと連携する</button>`}</div>
@@ -1594,6 +1622,7 @@ async function init(){
   restoreSyncSnapshot();
   updateSyncStatus('ok','');
   switchTab('home');
+  applyRole();
   if(DBX_TOKEN){ await loadFromDropbox(); }
   _startProactiveRefresh();
 }
