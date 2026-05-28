@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="電装取付管理">
+<meta name="format-detection" content="telephone=yes">
+<meta name="theme-color" content="#0A0E1A">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>電装取付管理 — 現場/事務</title>
+<style>
+/* ───── 電装(ELECTRO)カラーパレット ───── */
+:root{
+  --bg:#EEF1F7;
+  --bg2:#F6F8FC;
+  --card:#FFFFFF;
+  --card2:#F1F4FA;
+  --accent:#2563EB;
+  --accent-light:#3B82F6;
+  --accent-deep:#1D4ED8;
+  --accent-dim:#EAF1FE;
+  --accent-border:#C7DBFB;
+  --lime:#15A34A;
+  --text:#1B2433;
+  --text-dim:#5B6B82;
+  --muted:#9AA7B8;
+  --red:#E5484D;
+  --green:#16A34A;
+  --orange:#D97706;
+  --purple:#7C3AED;
+  --border:#E4E9F1;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow-md:0 1px 2px rgba(16,24,40,.05),0 4px 14px rgba(16,24,40,.06);
+  --shadow-lg:0 12px 34px rgba(16,24,40,.16);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;
+  font-size:15px;color:var(--text);
+  background:var(--bg);
+  -webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer;padding:0;user-select:none}
+input,select,textarea{
+  width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;
+  background:var(--bg2);font-size:16px;color:var(--text);
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+textarea{resize:vertical;min-height:70px;line-height:1.5}
+a{color:var(--accent-light);text-decoration:none}
+::placeholder{color:var(--muted)}
+
+#app{display:flex;flex-direction:column;height:100%;padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
+.m-header{
+  background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid var(--border);
+  color:var(--text);height:56px;display:flex;align-items:center;
+  padding:0 14px;gap:11px;flex-shrink:0;position:relative;z-index:10;
+}
+.m-logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent-deep),var(--accent-light));display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,.35)}
+.m-title{font-size:16px;letter-spacing:.2px;color:var(--text);font-weight:800;flex:1;line-height:1.15}
+.m-title small{display:block;font-size:9.5px;letter-spacing:1.5px;color:var(--accent);font-weight:700;margin-top:1px}
+.m-header-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--accent);background:var(--accent-dim);border:1px solid var(--accent-border)}
+.m-header-btn:active{background:#dbe7fd}
+
+.m-main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 12px 96px}
+.page{display:none;animation:fadeIn .22s}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.page-h{font-size:20px;letter-spacing:-.3px;color:var(--text);font-weight:800;margin:4px 2px 15px;display:flex;align-items:center;gap:8px}
+
+.m-bottomnav{
+  position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);
+  backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);
+  border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(4,1fr);
+  padding:6px 0 calc(var(--safe-bottom) + 6px);z-index:20;box-shadow:0 -1px 0 rgba(16,24,40,.04),0 -8px 22px rgba(16,24,40,.05);
+}
+.m-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 4px;font-size:11px;color:var(--muted);transition:color .15s,transform .12s;min-height:52px}
+.m-tab:active{transform:scale(.92)}
+.m-tab.active{color:var(--accent)}
+.m-tab.active .icon{transform:scale(1.08)}
+.m-tab .icon{font-size:21px;line-height:1;transition:transform .15s}
+.m-tab .label{font-size:10.5px;letter-spacing:.5px;font-weight:600}
+
+.m-fab{
+  position:fixed;right:16px;bottom:calc(72px + var(--safe-bottom));z-index:25;
+  height:54px;padding:0 20px;border-radius:27px;
+  background:linear-gradient(135deg,var(--accent-deep),var(--accent));color:#fff;
+  font-size:15px;font-weight:800;letter-spacing:.5px;
+  box-shadow:0 6px 18px rgba(37,99,235,.42);display:flex;align-items:center;gap:6px;
+}
+.m-fab:active{transform:scale(.95)}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 17px;margin-bottom:13px;box-shadow:var(--shadow-md)}
+.card-title{font-size:13px;letter-spacing:.2px;color:var(--text);font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-md);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.kpi.amber::before{background:var(--orange)}.kpi.red::before{background:var(--red)}.kpi.green::before{background:var(--green)}.kpi.purple::before{background:var(--purple)}
+.kpi-lbl{font-size:11px;color:var(--text-dim);letter-spacing:.2px;font-weight:600}
+.kpi-val{font-size:27px;color:var(--text);margin-top:4px;line-height:1.05;font-weight:800;letter-spacing:-.5px}
+.kpi-val small{font-size:13px;color:var(--text-dim);font-weight:600;margin-left:3px}
+.kpi-sub{font-size:10.5px;color:var(--muted);margin-top:3px}
+
+.job-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--muted);border-radius:14px;padding:14px 16px;margin-bottom:11px;transition:box-shadow .15s,transform .1s;position:relative;box-shadow:var(--shadow-md)}
+.job-card:active{transform:scale(.995);box-shadow:var(--shadow-lg)}
+.job-card.s-依頼{border-left-color:#94A3B8}
+.job-card.s-受注{border-left-color:var(--accent)}
+.job-card.s-部品手配{border-left-color:var(--orange)}
+.job-card.s-着荷済{border-left-color:var(--purple)}
+.job-card.s-作業中{border-left-color:var(--accent)}
+.job-card.s-作業完了{border-left-color:var(--green)}
+.job-card.s-報告済{border-left-color:var(--green)}
+.job-card.s-請求済{border-left-color:#0F766E}
+.job-card.s-入金済{border-left-color:var(--green)}
+.job-card.s-キャンセル{border-left-color:var(--red)}
+.job-row1{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px}
+.job-no{font-size:11.5px;color:var(--text-dim);letter-spacing:.3px;font-weight:700}
+.job-client{font-size:16.5px;color:var(--text);font-weight:800;letter-spacing:.2px;margin-bottom:3px}
+.job-meta{font-size:12px;color:var(--text-dim);line-height:1.6}
+.job-meta b{color:var(--text);font-weight:700}
+.badge{font-size:10.5px;padding:4px 11px;border-radius:999px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.st-依頼{background:#EDF1F6;color:#566273}
+.st-受注{background:#E4EDFE;color:#1D4ED8}
+.st-部品手配{background:#FDF0D5;color:#B45309}
+.st-着荷済{background:#EEE7FE;color:#6D28D9}
+.st-作業中{background:#DBEAFE;color:#1D4ED8}
+.st-作業完了{background:#D8F6E2;color:#15803D}
+.st-報告済{background:#CBEFD7;color:#15803D}
+.st-請求済{background:#D3F0E6;color:#0F766E}
+.st-入金済{background:#16A34A;color:#FFFFFF}
+.st-キャンセル{background:#FCE2E3;color:#C0303A}
+.job-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.tag{font-size:10.5px;padding:3px 9px;border-radius:7px;background:var(--card2);color:var(--text-dim);border:1px solid var(--border)}
+.tag.alert{background:#FDF0D5;color:#B45309;border-color:#F6DCA8}
+.tag.ok{background:#DBF5E4;color:#15803D;border-color:#B6E6C6}
+.tag.place{background:#EEE7FE;color:#6D28D9;border-color:#D9CDFB}
+.tag.danger{background:#FCE2E3;color:#C0303A;border-color:#F4C9CB;font-weight:700}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border-radius:11px;font-size:14.5px;font-weight:700;transition:transform .1s,box-shadow .15s,background .15s;min-height:46px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(37,99,235,.25)}
+.btn-primary:active{background:var(--accent-deep)}
+.btn-secondary{background:#fff;color:var(--text);border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+.btn-secondary:active{background:var(--card2)}
+.btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+.btn-danger{background:#FCE9EA;color:var(--red);border:1px solid #F4C9CB}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:active{background:#12823b}
+.btn-full{width:100%}
+.btn-sm{padding:8px 13px;min-height:38px;font-size:13px}
+.btn-row{display:flex;gap:9px}
+.btn-row>.btn{flex:1}
+
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;color:var(--text-dim);font-weight:600;margin-bottom:5px;letter-spacing:.3px}
+.field-row{display:flex;gap:9px}
+.field-row>.field{flex:1}
+.hint{font-size:11px;color:var(--muted);margin-top:4px}
+.sec-label{font-size:11px;letter-spacing:1.5px;color:var(--accent);font-weight:700;margin:18px 0 9px;padding-top:13px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.sec-label:first-child{border-top:none;padding-top:0;margin-top:0}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.chip{padding:7px 13px;border-radius:18px;font-size:12.5px;font-weight:600;background:var(--card);border:1px solid var(--border);color:var(--text-dim);white-space:nowrap}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip:active{transform:scale(.95)}
+
+.line{display:flex;gap:7px;align-items:flex-start;margin-bottom:8px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:9px}
+.line-main{flex:1;min-width:0}
+.line input{padding:8px 10px;font-size:14px;margin-bottom:5px}
+.line input:last-child{margin-bottom:0}
+.line .del{width:30px;height:30px;border-radius:7px;background:rgba(255,107,107,.12);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;align-self:center}
+.add-line{font-size:13px;color:var(--accent);font-weight:700;padding:8px;display:inline-flex;align-items:center;gap:5px}
+.chk-row{display:flex;align-items:center;gap:9px;padding:9px 0}
+.chk{width:24px;height:24px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;color:transparent;background:var(--bg2)}
+.chk.on{background:var(--green);border-color:var(--green);color:#fff}
+
+.money-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:10px 0}
+.money-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--text-dim)}
+.money-row b{color:var(--text);font-weight:700}
+.money-row.total{border-top:1px solid var(--border);margin-top:6px;padding-top:8px;font-size:15px}
+.money-row.profit{color:var(--lime)}.money-row.profit b{color:var(--lime)}
+
+.modal-bg{position:fixed;inset:0;background:rgba(16,24,40,.45);backdrop-filter:blur(3px);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border-top:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:600px;max-height:94vh;display:flex;flex-direction:column;animation:slideUp .26s cubic-bezier(.2,.8,.2,1);box-shadow:0 -12px 44px rgba(16,24,40,.22)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-head{display:flex;align-items:center;gap:10px;padding:15px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-head h2{font-size:16px;font-weight:700;flex:1;letter-spacing:.3px}
+.modal-head .sub{font-size:11px;color:var(--accent);font-weight:600}
+.modal-x{width:34px;height:34px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:19px;color:var(--text-dim);flex-shrink:0}
+.modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;flex:1}
+.modal-foot{padding:12px 16px calc(12px + var(--safe-bottom));border-top:1px solid var(--border);background:var(--card);flex-shrink:0;display:flex;gap:9px}
+.modal-foot>.btn{flex:1}
+
+.flow{display:flex;align-items:center;gap:2px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.flow-step{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;min-width:50px}
+.flow-dot{width:26px;height:26px;border-radius:50%;background:var(--card2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);font-weight:700}
+.flow-step.done .flow-dot{background:var(--accent-deep);border-color:var(--accent);color:#fff}
+.flow-step.cur .flow-dot{background:var(--accent);border-color:var(--accent-light);color:#fff;box-shadow:0 0 0 4px var(--accent-dim)}
+.flow-lbl{font-size:9px;color:var(--text-dim);letter-spacing:.2px}
+.flow-step.cur .flow-lbl{color:var(--accent-light);font-weight:700}
+.flow-bar{height:1.5px;background:var(--border);flex:1;min-width:6px}
+.flow-bar.done{background:var(--accent)}
+
+.dl{display:grid;grid-template-columns:90px 1fr;gap:6px 10px;font-size:13.5px;margin-bottom:4px}
+.dl dt{color:var(--text-dim);font-size:12px;padding-top:1px}
+.dl dd{color:var(--text);font-weight:500}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
+.photo{aspect-ratio:1;border-radius:9px;overflow:hidden;position:relative;background:var(--card2);border:1px solid var(--border)}
+.photo img{width:100%;height:100%;object-fit:cover}
+.photo .rm{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px}
+.photo-add{aspect-ratio:1;border-radius:9px;border:2px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text-dim);font-size:11px}
+
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty .ico{font-size:42px;margin-bottom:12px;opacity:.5}
+.empty .t{font-size:14px;color:var(--text-dim)}
+
+#toast-host{position:fixed;left:0;right:0;bottom:calc(82px + var(--safe-bottom));z-index:300;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{background:var(--card);border:1px solid var(--accent-border);color:var(--text);padding:11px 18px;border-radius:24px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow-lg);animation:toastIn .25s;max-width:90vw}
+.toast.err{border-color:rgba(255,107,107,.5);color:var(--red)}
+.toast.ok{border-color:rgba(74,222,128,.5)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.divider{height:1px;background:var(--border);margin:14px 0}
+.list-row{display:flex;align-items:center;gap:11px;padding:13px 4px;border-bottom:1px solid var(--border)}
+.list-row:active{background:var(--card2)}
+.list-row .ic{width:36px;height:36px;border-radius:9px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.list-row .tx{flex:1;min-width:0}
+.list-row .t1{font-size:14.5px;font-weight:600}
+.list-row .t2{font-size:11.5px;color:var(--text-dim);margin-top:2px}
+.list-row .arr{color:var(--muted);font-size:18px}
+.search{margin-bottom:12px}
+.search-wrap{position:relative}
+.search-wrap input{padding-left:38px}
+.search-wrap .si{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none}
+.paste-btn{width:100%;padding:12px;border-radius:11px;border:1.5px dashed var(--accent);background:var(--accent-dim);color:var(--accent-deep);font-size:14px;font-weight:700;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="m-header">
+    <div class="m-logo">⚡</div>
+    <div class="m-title">電装取付管理<small id="hdr-ver">v—</small></div>
+    <button class="m-header-btn" onclick="openSettings()">⚙️</button>
+  </header>
+  <main class="m-main">
+    <section class="page active" id="page-home"></section>
+    <section class="page" id="page-jobs"></section>
+    <section class="page" id="page-billing"></section>
+    <section class="page" id="page-master"></section>
+  </main>
+  <button class="m-fab" id="fab" onclick="openJobModal()">＋ 新規依頼</button>
+  <nav class="m-bottomnav">
+    <button class="m-tab active" data-tab="home" onclick="switchTab('home')"><span class="icon">🏠</span><span class="label">ホーム</span></button>
+    <button class="m-tab" data-tab="jobs" onclick="switchTab('jobs')"><span class="icon">📋</span><span class="label">案件</span></button>
+    <button class="m-tab" data-tab="billing" onclick="switchTab('billing')"><span class="icon">💴</span><span class="label">請求</span></button>
+    <button class="m-tab" data-tab="master" onclick="switchTab('master')"><span class="icon">🗂️</span><span class="label">マスタ</span></button>
+  </nav>
+</div>
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
+<div id="toast-host"></div>
+
+<script>
+"use strict";
+const APP_VERSION = '2026-05-28j';
+const LS_KEY = 'denso_mgmt_v1';
+const TAX_DEFAULT = 10;
+const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
+const FLOW = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済'];
+const FLOW_SHORT = {'依頼':'依頼','受注':'受注','部品手配':'手配','着荷済':'着荷','作業中':'作業','作業完了':'完了','報告済':'報告','請求済':'請求','入金済':'入金'};
+
+/* ───────── データ層 ───────── */
+let DATA = null;
+function defaultData(){
+  return {
+    jobs:[], clients:[], subcontractors:[],
+    presets:[
+      {id:uid(),name:'ドラレコ前後取付',price:''},
+      {id:uid(),name:'ナビ取付',price:''},
+      {id:uid(),name:'マット設置',price:''},
+      {id:uid(),name:'CDオーディオ取付',price:''},
+    ],
+    settings:{
+      company:'株式会社Hari Terrace', company2:'ライムレンタカー&コーティング',
+      regNo:'T5360001022886', zip:'901-0513', address:'沖縄県島尻郡八重瀬町玻名城105番地',
+      tel:'098-901-3817', fax:'098-901-3817',
+      bank:'沖縄海邦銀行（0596）八重瀬支店（058）\n普通0003911\nカ）ハリテラス',
+      subject:'電装品取付',
+      note:'恐れ入りますが、お振込にかかる手数料はご負担頂きますよう宜しくお願い致します。',
+      taxRate:TAX_DEFAULT, person:'', logo:'', nextInvoiceNo:205, etcSetupFee:1800
+    },
+    seq:{}
+  };
+}
+function load(){
+  try{ const raw=localStorage.getItem(LS_KEY); DATA = raw? JSON.parse(raw): defaultData(); }
+  catch(e){ DATA = defaultData(); }
+  const d=defaultData();
+  for(const k of Object.keys(d)){ if(DATA[k]===undefined) DATA[k]=d[k]; }
+  for(const k of Object.keys(d.settings)){ if(DATA.settings[k]===undefined) DATA.settings[k]=d.settings[k]; }
+  // 旧モデル(workItems)→新モデル(workDesc/qty/unitFee)移行
+  (DATA.jobs||[]).forEach(j=>{
+    if(j.unitFee===undefined && Array.isArray(j.workItems)){
+      j.workDesc=(j.workItems||[]).map(w=>w.name).join('＋');
+      j.qty=1; j.unitFee=(j.workItems||[]).reduce((s,w)=>s+(Number(w.qty||1)*Number(w.price||0)),0);
+    }
+    if(j.qty===undefined) j.qty=1;
+    if(j.unitFee===undefined) j.unitFee='';
+    if(j.workDesc===undefined) j.workDesc='';
+    ['endUser','workPlace','siteContact','siteTel','partsEta','workableFrom','deadline','billingDesc','scheduledEndAt','workEndAt'].forEach(f=>{ if(j[f]===undefined) j[f]=''; });
+    if(j.etc===undefined) j.etc={used:false,count:'',unit:''};
+    if(j.partsDest===undefined) j.partsDest='当社';
+  });
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(DATA)); }
+  catch(e){ toast('保存に失敗(容量超過の可能性)','err'); console.error(e); }
+}
+
+/* ───────── ユーティリティ ───────── */
+function uid(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function yen(n){ n=Math.round(Number(n)||0); return '¥'+n.toLocaleString('ja-JP'); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function curMonth(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
+function parseISO(s){ if(!s) return null; const p=String(s).slice(0,10).split('-'); if(p.length<3) return null; const d=new Date(+p[0],+p[1]-1,+p[2]); return isNaN(d)?null:d; }
+function fmtD(s){ const d=parseISO(s); if(!d) return '—'; const w=['日','月','火','水','木','金','土'][d.getDay()]; return (d.getMonth()+1)+'/'+d.getDate()+'('+w+')'; }
+function fmtMonth(m){ if(!m) return '—'; const p=m.split('-'); return p[0]+'年'+(+p[1])+'月'; }
+function fmtFullDate(s){ const d=parseISO(s); if(!d) return ''; return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; }
+function endOfMonth(m){ const p=m.split('-'); const e=new Date(+p[0],+p[1],0); return e.getFullYear()+'-'+pad2(e.getMonth()+1)+'-'+pad2(e.getDate()); }
+function endOfNextMonth(m){ const p=m.split('-'); const e=new Date(+p[0],+p[1]+1,0); return e.getFullYear()+'-'+pad2(e.getMonth()+1)+'-'+pad2(e.getDate()); }
+function num(v){ const n=Number(String(v==null?'':v).replace(/[,¥\s]/g,'')); return isNaN(n)?0:n; }
+function nextSeq(month){ DATA.seq[month]=(DATA.seq[month]||0)+1; return DATA.seq[month]; }
+function genJobNo(){ const m=curMonth(); const n=nextSeq(m); return m+'-'+String(n).padStart(4,'0'); }
+function clientById(id){ return DATA.clients.find(c=>c.id===id); }
+
+/* 金額: 明細金額(税抜)= 数量 × 工賃単価(税別) */
+function jobSubtotal(j){ return num(j.qty||1)*num(j.unitFee); }
+function jobPartsCost(j){ return (j.parts||[]).reduce((s,p)=> s + num(p.cost),0); }
+function jobOutsource(j){ return (j.outsource && j.outsource.used)? num(j.outsource.cost):0; }
+function jobEtcCost(j){ return (j.etc && j.etc.used)? num(j.etc.count)*num(j.etc.unit||DATA.settings.etcSetupFee||0):0; }
+function jobProfit(j){ return jobSubtotal(j) - jobPartsCost(j) - jobOutsource(j) - jobEtcCost(j); }
+function taxRate(){ return num(DATA.settings.taxRate)||0; }
+function withTax(n){ return Math.round(n*(1+taxRate()/100)); }
+function billingDescOf(j){
+  if(j.billingDesc && j.billingDesc.trim()) return j.billingDesc.trim();
+  const p=[]; if(j.carModel) p.push(j.carModel); if(j.endUser) p.push(j.endUser+'様'); if(j.workDesc) p.push(j.workDesc);
+  return p.join('　').trim() || (j.workDesc||'');
+}
+function workScheduleStr(j){ const s=j.scheduledAt,e=j.scheduledEndAt; if(s&&e&&e!==s) return fmtD(s)+' 〜 '+fmtD(e); if(s) return fmtD(s); return '未定'; }
+function workDoneStr(j){ const s=j.workedAt,e=j.workEndAt; if(s&&e&&e!==s) return fmtD(s)+' 〜 '+fmtD(e); if(s) return fmtD(s); return ''; }
+function isWorkDone(j){ return ['作業完了','報告済','請求済','入金済','キャンセル'].includes(j.status); }
+function deadlineState(j){ if(!j.deadline||isWorkDone(j)) return ''; const d=parseISO(j.deadline); if(!d) return ''; const days=Math.round((d-parseISO(todayISO()))/86400000); if(days<0) return 'over'; if(days<=3) return 'soon'; return ''; }
+
+/* ───────── トースト/確認 ───────── */
+function toast(msg,type){
+  const h=document.getElementById('toast-host');
+  const el=document.createElement('div');
+  el.className='toast'+(type==='err'?' err':type==='ok'?' ok':'');
+  el.textContent=msg; h.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 2300);
+  try{ if(navigator.vibrate) navigator.vibrate(type==='err'?[30,40,30]:12); }catch(e){}
+}
+function confirmModal(msg,{danger=false,okText='OK',cancelText='キャンセル'}={}){
+  return new Promise(res=>{
+    const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+    m.innerHTML=`<div class="modal-body" style="padding:22px 18px"><div style="font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(msg)}</div></div>
+      <div class="modal-foot"><button class="btn btn-ghost" id="cm-no">${esc(cancelText)}</button><button class="btn ${danger?'btn-danger':'btn-primary'}" id="cm-yes">${esc(okText)}</button></div>`;
+    bg.classList.add('open');
+    m.querySelector('#cm-no').onclick=()=>{ closeModal(); res(false); };
+    m.querySelector('#cm-yes').onclick=()=>{ closeModal(); res(true); };
+  });
+}
+function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }
+document.getElementById('modal-bg').addEventListener('click',e=>{ if(e.target.id==='modal-bg') closeModal(); });
+function promptModal(label,val=''){ return Promise.resolve(window.prompt(label,val)); }
+
+/* ───────── タブ切替 ───────── */
+let curTab='home';
+function switchTab(t){
+  curTab=t;
+  document.querySelectorAll('.m-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+t).classList.add('active');
+  document.getElementById('fab').style.display = (t==='home'||t==='jobs')?'flex':'none';
+  if(t==='home') renderHome(); else if(t==='jobs') renderJobs(); else if(t==='billing') renderBilling(); else if(t==='master') renderMaster();
+  document.querySelector('.m-main').scrollTop=0;
+}
+function refresh(){ if(curTab==='home')renderHome(); else if(curTab==='jobs')renderJobsList(); else if(curTab==='billing')renderBilling(); else if(curTab==='master')renderMaster(); }
+function stamp(j){ j.updatedAt=Date.now(); j.updatedBy=DATA.settings.person||'—'; }
+
+/* ───────── ホーム ───────── */
+function renderHome(){
+  const jobs=DATA.jobs.filter(j=>j.status!=='キャンセル');
+  const active=jobs.filter(j=>!['請求済','入金済'].includes(j.status));
+  const cnt=s=>jobs.filter(j=>j.status===s).length;
+  const inquiry=cnt('依頼')+cnt('受注');
+  const awaitingParts=jobs.filter(j=>j.status==='部品手配' || ((j.parts||[]).some(p=>!p.arrived) && ['受注','部品手配'].includes(j.status))).length;
+  const reportPending=cnt('作業完了');
+  const today=todayISO();
+  const todayWork=jobs.filter(j=>j.scheduledAt===today && ['着荷済','作業中','部品手配','受注'].includes(j.status));
+  const dlJobs=jobs.filter(j=>j.deadline && !isWorkDone(j)).sort((a,b)=>(a.deadline||'').localeCompare(b.deadline||''));
+  const dlAlert=dlJobs.filter(j=>deadlineState(j)).length;
+  const m=curMonth();
+  const monthJobs=jobs.filter(j=> billMonthOf(j)===m && ['作業完了','報告済','請求済','入金済'].includes(j.status));
+  const monthBill=monthJobs.reduce((s,j)=>s+withTax(jobSubtotal(j)),0);
+  const monthProfit=monthJobs.reduce((s,j)=>s+jobProfit(j),0);
+  const html=`
+  <div class="page-h">⚡ ダッシュボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">依頼・受注</div><div class="kpi-val">${inquiry}<small>件</small></div><div class="kpi-sub">処理待ち</div></div>
+    <div class="kpi amber"><div class="kpi-lbl">部品着荷待ち</div><div class="kpi-val">${awaitingParts}<small>件</small></div><div class="kpi-sub">手配中</div></div>
+    <div class="kpi red"><div class="kpi-lbl">報告未提出</div><div class="kpi-val">${reportPending}<small>件</small></div><div class="kpi-sub">作業完了</div></div>
+    <div class="kpi green"><div class="kpi-lbl">進行中 合計</div><div class="kpi-val">${active.length}<small>件</small></div><div class="kpi-sub">全アクティブ</div></div>
+  </div>
+  <div class="card"><div class="card-title">📅 本日の作業予定</div>
+    ${todayWork.length? todayWork.map(jobCardMini).join('') : '<div style="color:var(--muted);font-size:13px;padding:6px 0">本日予定の作業はありません</div>'}</div>
+  ${dlJobs.length?`<div class="card"><div class="card-title">⏰ 作業期日 ${dlAlert?`<span style="color:var(--red);font-size:11px">超過/間近 ${dlAlert}件</span>`:''}</div>
+    ${dlJobs.slice(0,6).map(j=>{const ds=deadlineState(j);const cl=clientById(j.clientId);return `<div class="list-row" onclick="openJobDetail('${j.id}')"><div class="ic" style="${ds==='over'?'background:#FCE2E3;color:#C0303A':ds==='soon'?'background:#FDF0D5;color:#B45309':''}">${ds==='over'?'⚠️':ds==='soon'?'⏰':'📅'}</div><div class="tx"><div class="t1">${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''} <span style="color:var(--text-dim);font-weight:500;font-size:12px">${esc(cl?cl.name:j.clientName||'')}</span></div><div class="t2">期日 ${fmtD(j.deadline)} ・ ${j.workDesc?esc(j.workDesc):''}</div></div><span class="badge st-${j.status}">${j.status}</span></div>`;}).join('')}</div>`:''}
+  <div class="card"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
+    <div class="money-box" style="margin:0">
+      <div class="money-row total"><span>請求見込(税込)</span><b>${yen(monthBill)}</b></div>
+      <div class="money-row profit"><span>粗利見込</span><b>${yen(monthProfit)}</b></div>
+      <div class="money-row"><span>対象案件</span><b>${monthJobs.length}件</b></div>
+    </div>
+    <button class="btn btn-secondary btn-full btn-sm" style="margin-top:10px" onclick="switchTab('billing')">月次請求へ →</button></div>
+  ${reportPending? `<div class="card"><div class="card-title">⚠️ 報告未提出</div>${jobs.filter(j=>j.status==='作業完了').map(jobCardMini).join('')}</div>`:''}
+  `;
+  document.getElementById('page-home').innerHTML=html;
+}
+function jobCardMini(j){
+  const cl=clientById(j.clientId);
+  return `<div class="list-row" onclick="openJobDetail('${j.id}')">
+    <div class="ic">${j.outsource&&j.outsource.used?'🤝':'🔧'}</div>
+    <div class="tx"><div class="t1">${esc(cl?cl.name:j.clientName||'—')}</div>
+    <div class="t2">${esc(j.carModel||'')} ${esc(j.workPlace?'＠'+j.workPlace:'')} ・ ${esc(j.workDesc||'内容未設定')}</div></div>
+    <span class="badge st-${j.status}">${j.status}</span></div>`;
+}
+
+/* ───────── 案件一覧 ───────── */
+let jobFilter='active', jobSearch='';
+function jobsFiltered(){
+  let jobs=DATA.jobs.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  if(jobFilter==='active') jobs=jobs.filter(j=>!['請求済','入金済','キャンセル'].includes(j.status));
+  else if(jobFilter==='all'){} else jobs=jobs.filter(j=>j.status===jobFilter);
+  if(jobSearch){ const q=jobSearch.toLowerCase(); jobs=jobs.filter(j=>{ const cl=clientById(j.clientId); return [j.jobNo,cl?cl.name:j.clientName,j.carModel,j.carPlate,j.endUser,j.workPlace,j.siteContact,j.workDesc,j.memo].join(' ').toLowerCase().includes(q); }); }
+  return jobs;
+}
+function renderJobs(){
+  const filters=[['active','進行中'],['依頼','依頼'],['受注','受注'],['部品手配','部品手配'],['着荷済','着荷済'],['作業中','作業中'],['作業完了','作業完了'],['報告済','報告済'],['請求済','請求済'],['入金済','入金済'],['all','全て'],['キャンセル','ｷｬﾝｾﾙ']];
+  const jobs=jobsFiltered();
+  document.getElementById('page-jobs').innerHTML=`
+  <div class="page-h">📋 案件一覧 <span style="color:var(--muted);font-weight:500;font-size:11px">${jobs.length}件</span></div>
+  <div class="search search-wrap"><span class="si">🔍</span><input id="job-search" placeholder="取引先・車種・場所・内容で検索" value="${esc(jobSearch)}" oninput="jobSearch=this.value;renderJobsList()"></div>
+  <div class="chips">${filters.map(f=>`<button class="chip ${jobFilter===f[0]?'active':''}" onclick="jobFilter='${f[0]}';renderJobs()">${f[1]}</button>`).join('')}</div>
+  <div id="job-list"></div>`;
+  renderJobsList();
+}
+function renderJobsList(){
+  const jobs=jobsFiltered();
+  const el=document.getElementById('job-list'); if(!el) return;
+  el.innerHTML=jobs.length? jobs.map(jobCard).join('') : '<div class="empty"><div class="ico">📭</div><div class="t">該当する案件がありません</div></div>';
+}
+function jobCard(j){
+  const cl=clientById(j.clientId);
+  const tags=[];
+  const ds=deadlineState(j);
+  if(j.deadline && !isWorkDone(j)) tags.push(`<span class="tag ${ds==='over'?'danger':ds==='soon'?'alert':''}">${ds==='over'?'⚠️期日超過 ':ds==='soon'?'⏰期日 ':'期日 '}${fmtD(j.deadline)}</span>`);
+  if(j.workPlace) tags.push(`<span class="tag place">📍${esc(j.workPlace)}</span>`);
+  const partsAll=(j.parts||[]).length, partsIn=(j.parts||[]).filter(p=>p.arrived).length;
+  if(partsAll) tags.push(partsIn<partsAll? `<span class="tag alert">部品 ${partsIn}/${partsAll}着荷</span>` : `<span class="tag ok">部品 全着荷</span>`);
+  else if(j.partsEta && ['受注','部品手配'].includes(j.status)) tags.push(`<span class="tag alert">${esc(j.partsEta)}</span>`);
+  if(j.outsource&&j.outsource.used) tags.push(`<span class="tag">🤝${esc(j.outsource.vendor||'外注')}</span>`);
+  if(j.scheduledAt) tags.push(`<span class="tag">作業 ${fmtD(j.scheduledAt)}</span>`);
+  const idx=FLOW.indexOf(j.status);
+  const next=(idx>=0&&idx<FLOW.length-1&&j.status!=='報告済');
+  const qtyStr=num(j.qty)>1?` ×${num(j.qty)}台`:'';
+  return `<div class="job-card s-${j.status}" onclick="openJobDetail('${j.id}')">
+    <div class="job-row1"><span class="job-no">${esc(j.jobNo||'')}</span><span class="badge st-${j.status}">${j.status}</span></div>
+    <div class="job-client">${esc(cl?cl.name:j.clientName||'(取引先未設定)')}</div>
+    <div class="job-meta"><b>${esc(j.carModel||'車種未設定')}</b>${j.endUser?' ／ '+esc(j.endUser)+'様':''} ${esc(j.carPlate||'')}<br>${esc(j.workDesc||'内容未設定')} ・ <b>${yen(withTax(jobSubtotal(j)))}</b>${qtyStr}</div>
+    <div class="job-tags">${tags.join('')}</div>
+    ${next?`<div style="margin-top:10px" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm btn-full" onclick="advanceStatus('${j.id}')">${nextActionLabel(j.status)} →</button></div>`:''}
+  </div>`;
+}
+function nextActionLabel(s){
+  return {'依頼':'受注にする','受注':'部品手配する','部品手配':'着荷を記録','着荷済':'作業開始','作業中':'作業完了','作業完了':'報告完了'}[s]||'次へ';
+}
+async function advanceStatus(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const idx=FLOW.indexOf(j.status); if(idx<0||idx>=FLOW.length-1) return;
+  if(j.status==='部品手配'){ openPartsCheck(id); return; }
+  if(j.status==='着荷済'){ j.status='作業中'; if(!j.workedAt) j.workedAt=todayISO(); }
+  else if(j.status==='作業中'){ openReportModal(id); return; }
+  else j.status=FLOW[idx+1];
+  stamp(j); save(); toast(j.status+'に更新','ok'); refresh();
+}
+
+/* ───────── 案件 新規/編集 ───────── */
+let editingJob=null;
+function newJob(){
+  return { id:uid(), jobNo:'(保存時に採番)', status:'依頼', requestedAt:todayISO(), clientId:'', clientName:'', contact:'',
+    carModel:'', carPlate:'', endUser:'', workDesc:'', qty:1, unitFee:'',
+    workPlace:'', siteContact:'', siteTel:'', partsEta:'', workableFrom:'', deadline:'', scheduledAt:'', scheduledEndAt:'', workedAt:'', workEndAt:'', worker:'',
+    parts:[], partsDest:'当社', etc:{used:false,count:'',unit:''}, outsource:{used:false,vendor:'',cost:'',paid:false},
+    billingDesc:'', reportNote:'', photos:[], billingMonth:'', invoiceNo:'', invoicedAt:'', paidAt:'', memo:'',
+    createdAt:Date.now(), updatedAt:Date.now(), updatedBy:DATA.settings.person||'' };
+}
+function openJobModal(id){
+  editingJob = id? JSON.parse(JSON.stringify(DATA.jobs.find(j=>j.id===id))) : newJob();
+  const j=editingJob, isNew=!id;
+  const clientOpts=`<option value="">— 取引先(請求先)を選択 —</option>`+DATA.clients.map(c=>`<option value="${c.id}" ${j.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  const subOpts=`<option value="">— 外注先 —</option>`+DATA.subcontractors.map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('')+`<option value="__manual__">手入力…</option>`;
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`
+  <div class="modal-head"><h2>${isNew?'新規依頼':'案件編集'}</h2>${isNew?'':`<span class="sub">${esc(j.jobNo)}</span>`}<button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    ${isNew?`<button class="paste-btn" onclick="pasteRequest()">📋 依頼文を貼り付けて自動入力</button><div class="hint" style="margin-bottom:10px">LINE/メールの依頼文をそのまま貼ると、車種・場所・担当・工賃などを自動で振り分けます</div>`:''}
+    <div class="sec-label">📇 取引先(請求先)</div>
+    <div class="field"><label>取引先</label><select id="f-client" onchange="onClientPick()">${clientOpts}</select>
+      <div class="hint">未登録なら<a onclick="quickAddClient()">＋取引先を新規追加</a></div></div>
+    <div class="field"><label>取引先の担当者</label><input id="f-contact" value="${esc(j.contact)}" placeholder="請求先の窓口担当"></div>
+
+    <div class="sec-label">🔧 取付内容</div>
+    <div class="chips" style="margin-bottom:9px">${DATA.presets.map(p=>`<button class="chip" onclick="appendPreset('${p.id}')">＋${esc(p.name)}</button>`).join('')}</div>
+    <div class="field"><textarea id="f-workdesc" placeholder="例: オンダッシュナビ＋カメラ＋ドラレコ前後取付" oninput="editingJob.workDesc=this.value;syncBillingHint()">${esc(j.workDesc)}</textarea></div>
+
+    <div class="sec-label">🚗 車両・相手先</div>
+    <div class="field"><label>車種</label><input id="f-carmodel" value="${esc(j.carModel)}" placeholder="例: ハイゼットカーゴ" oninput="syncBillingHint()"></div>
+    <div class="field-row">
+      <div class="field"><label>ナンバー(分かれば)</label><input id="f-carplate" value="${esc(j.carPlate)}" placeholder="後で可"></div>
+      <div class="field"><label>エンド需要者(請求書の摘要用)</label><input id="f-enduser" value="${esc(j.endUser)}" placeholder="例: NEWS / フジレンタカー" oninput="syncBillingHint()"></div>
+    </div>
+
+    <div class="sec-label">📍 作業場所・現場担当</div>
+    <div class="field"><label>作業場所</label><input id="f-workplace" value="${esc(j.workPlace)}" placeholder="例: 沖縄ユーポス 豊見城"></div>
+    <div class="field-row">
+      <div class="field"><label>現場担当者</label><input id="f-sitecontact" value="${esc(j.siteContact)}" placeholder="例: 堤さん"></div>
+      <div class="field"><label>現場TEL</label><input id="f-sitetel" value="${esc(j.siteTel)}" inputmode="tel" placeholder="080-..."></div>
+    </div>
+
+    <div class="sec-label">🗓 日程</div>
+    <div class="field-row">
+      <div class="field"><label>依頼日</label><input type="date" id="f-reqdate" value="${esc(j.requestedAt)}"></div>
+      <div class="field"><label>着荷予定</label><input id="f-partseta" value="${esc(j.partsEta)}" placeholder="例: 30日着荷予定"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>作業可能日(以降)</label><input id="f-workablefrom" value="${esc(j.workableFrom)}" placeholder="例: 6/1以降"></div>
+      <div class="field"><label>作業期日(この日まで)</label><input type="date" id="f-deadline" value="${esc(j.deadline)}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>作業予定日</label><input type="date" id="f-scheduled" value="${esc(j.scheduledAt)}"></div>
+      <div class="field"><label>終了予定(複数日)</label><input type="date" id="f-scheduledend" value="${esc(j.scheduledEndAt)}"></div>
+    </div>
+    <div class="hint" style="margin-top:-4px">同車種を多数(レンタカー会社で20台等)・2日にまたがる時は終了予定日も入力</div>
+
+    <div class="sec-label">💴 工賃</div>
+    <div class="field-row">
+      <div class="field" style="flex:0 0 84px"><label>数量(台)</label><input id="f-qty" inputmode="numeric" value="${esc(j.qty||1)}" oninput="recalcMoney()"></div>
+      <div class="field"><label>工賃単価(税別/1台)</label><input id="f-unitfee" inputmode="numeric" value="${esc(j.unitFee)}" placeholder="例: 25000" oninput="recalcMoney()"></div>
+    </div>
+    <div class="field"><label>請求書の摘要 <span style="color:var(--muted);font-weight:400">(空欄なら「車種＋相手先様＋取付内容」)</span></label><input id="f-billingdesc" value="${esc(j.billingDesc)}" placeholder="" oninput="syncBillingHint()"><div class="hint" id="billing-hint"></div></div>
+
+    <div class="sec-label">📦 部品(取引先支給)</div>
+    <div class="hint" style="margin-top:-4px;margin-bottom:8px">基本は取引先支給(原価0)で着荷管理に使用。当社購入分のみ原価を入力</div>
+    <div class="field"><label>部品の届け先</label>
+      <div class="chips" style="margin-bottom:0"><button type="button" class="chip ${(!j.partsDest||j.partsDest==='当社')?'active':''}" id="pd-当社" onclick="pickPartsDest('当社')">🏢 当社(店舗)に着荷</button><button type="button" class="chip ${j.partsDest==='現場・エンド直送'?'active':''}" id="pd-現場・エンド直送" onclick="pickPartsDest('現場・エンド直送')">🚚 現場・エンド直送</button></div>
+      <div class="hint">エンド直送の時は当社で受けず、現場/エンドへ直接届く</div></div>
+    <div id="parts-lines"></div>
+    <a class="add-line" onclick="addPartLine()">＋ 部品を追加</a>
+
+    <div class="sec-label">🅴 ETCセットアップ <span style="color:var(--muted);font-weight:400;font-size:11px">当社負担</span></div>
+    <div class="chk-row" onclick="toggleEtc()"><div class="chk ${j.etc&&j.etc.used?'on':''}" id="f-etc-chk">✓</div><span>ETCセットアップあり (台数×単価を原価計上)</span></div>
+    <div class="field-row" id="etc-fields" style="display:${j.etc&&j.etc.used?'flex':'none'}">
+      <div class="field" style="flex:0 0 90px"><label>台数</label><input id="f-etc-count" inputmode="numeric" value="${j.etc&&j.etc.count!==''&&j.etc.count!=null?esc(j.etc.count):''}" oninput="recalcMoney()"></div>
+      <div class="field"><label>1台あたり(円)</label><input id="f-etc-unit" inputmode="numeric" value="${j.etc&&j.etc.unit?esc(j.etc.unit):''}" placeholder="${esc(DATA.settings.etcSetupFee)}" oninput="recalcMoney()"></div>
+    </div>
+
+    <div class="sec-label">🤝 外注</div>
+    <div class="chk-row" onclick="toggleOutsource()"><div class="chk ${j.outsource&&j.outsource.used?'on':''}" id="f-out-chk">✓</div><span>外注を使う(外注費を計上)</span></div>
+    <div id="out-fields" style="display:${j.outsource&&j.outsource.used?'block':'none'}">
+      <div class="field"><label>外注先</label><select id="f-out-vendor" onchange="onOutVendorPick()">${subOpts}</select></div>
+      <div class="field" id="f-out-manual-wrap" style="display:none"><label>外注先(手入力)</label><input id="f-out-manual" value=""></div>
+      <div class="field"><label>外注費(税抜・支払額)</label><input id="f-out-cost" inputmode="numeric" value="${j.outsource&&j.outsource.cost?esc(j.outsource.cost):''}" placeholder="0" oninput="recalcMoney()"></div>
+      <div class="chk-row" onclick="toggleOutPaid()"><div class="chk ${j.outsource&&j.outsource.paid?'on':''}" id="f-out-paid">✓</div><span>外注先へ支払済み</span></div>
+    </div>
+
+    <div class="sec-label">🗒 メモ・依頼条件</div>
+    <div class="field"><textarea id="f-memo" placeholder="例: 車両は店舗にあります。着荷後に堤さんへ連絡し早めに取付。">${esc(j.memo)}</textarea></div>
+
+    <div class="money-box" id="f-money"></div>
+  </div>
+  <div class="modal-foot">
+    ${isNew?'':`<button class="btn btn-danger btn-sm" style="flex:0 0 auto" onclick="deleteJob('${j.id}')">削除</button>`}
+    <button class="btn btn-ghost" onclick="closeModal()">閉じる</button>
+    <button class="btn btn-primary" onclick="saveJob()">保存</button>
+  </div>`;
+  bg.classList.add('open');
+  document.getElementById('f-client').value=j.clientId||'';
+  // 外注先select初期値
+  if(j.outsource&&j.outsource.used&&j.outsource.vendor){
+    const sel=document.getElementById('f-out-vendor');
+    if(DATA.subcontractors.some(s=>s.name===j.outsource.vendor)){ sel.value=j.outsource.vendor; }
+    else { sel.value='__manual__'; document.getElementById('f-out-manual-wrap').style.display='block'; document.getElementById('f-out-manual').value=j.outsource.vendor; }
+  }
+  renderPartLines(); recalcMoney(); syncBillingHint();
+}
+function syncBillingHint(){
+  const cm=(document.getElementById('f-carmodel')||{}).value||'';
+  const eu=(document.getElementById('f-enduser')||{}).value||'';
+  const bd=(document.getElementById('f-billingdesc')||{}).value||'';
+  const wd=(document.getElementById('f-workdesc')||{}).value||'';
+  const el=document.getElementById('billing-hint'); if(!el) return;
+  const auto=[cm, eu?eu+'様':'', wd].filter(Boolean).join('　').trim();
+  el.textContent = bd?('摘要: '+bd) : ('摘要: '+(auto||'(未設定)'));
+}
+function onClientPick(){ const id=document.getElementById('f-client').value; const cl=clientById(id); if(cl && !document.getElementById('f-contact').value && (cl.contacts||[]).length) document.getElementById('f-contact').value=cl.contacts[0].name||''; }
+function pickPartsDest(v){ editingJob.partsDest=v; const a=document.getElementById('pd-当社'), b=document.getElementById('pd-現場・エンド直送'); if(a)a.classList.toggle('active',v==='当社'); if(b)b.classList.toggle('active',v==='現場・エンド直送'); }
+function toggleEtc(){ const c=document.getElementById('f-etc-chk'); c.classList.toggle('on'); const on=c.classList.contains('on'); document.getElementById('etc-fields').style.display=on?'flex':'none';
+  if(on){ const cnt=document.getElementById('f-etc-count'), unit=document.getElementById('f-etc-unit'); if(!cnt.value) cnt.value=num(document.getElementById('f-qty').value)||1; if(!unit.value) unit.value=DATA.settings.etcSetupFee||1800; }
+  recalcMoney(); }
+function toggleOutsource(){ const c=document.getElementById('f-out-chk'); c.classList.toggle('on'); document.getElementById('out-fields').style.display=c.classList.contains('on')?'block':'none'; recalcMoney(); }
+function toggleOutPaid(){ document.getElementById('f-out-paid').classList.toggle('on'); }
+function onOutVendorPick(){ const v=document.getElementById('f-out-vendor').value; document.getElementById('f-out-manual-wrap').style.display=v==='__manual__'?'block':'none'; }
+function appendPreset(pid){ const p=DATA.presets.find(x=>x.id===pid); if(!p) return; const t=document.getElementById('f-workdesc'); t.value=(t.value?t.value+'＋':'')+p.name; editingJob.workDesc=t.value; if(p.price && !document.getElementById('f-unitfee').value){ document.getElementById('f-unitfee').value=p.price; recalcMoney(); } }
+function renderPartLines(){
+  const el=document.getElementById('parts-lines'); if(!el) return;
+  el.innerHTML=(editingJob.parts||[]).map((p,i)=>`<div class="line"><div class="line-main">
+    <input value="${esc(p.name)}" placeholder="部品名" oninput="editingJob.parts[${i}].name=this.value">
+    <div style="display:flex;gap:6px">
+      <input value="${esc(p.supplier)}" placeholder="仕入先" oninput="editingJob.parts[${i}].supplier=this.value">
+      <input value="${esc(p.cost)}" inputmode="numeric" placeholder="原価" oninput="editingJob.parts[${i}].cost=this.value;recalcMoney()" style="max-width:90px">
+    </div>
+    <div class="chk-row" style="padding:6px 0 0" onclick="editingJob.parts[${i}].arrived=!editingJob.parts[${i}].arrived;editingJob.parts[${i}].arrivedAt=editingJob.parts[${i}].arrived?todayISO():'';renderPartLines()"><div class="chk ${p.arrived?'on':''}">✓</div><span style="font-size:13px">${p.arrived?'着荷済 '+(p.arrivedAt?fmtD(p.arrivedAt):''):'着荷待ち'}</span></div>
+    </div><div class="del" onclick="editingJob.parts.splice(${i},1);renderPartLines();recalcMoney()">🗑</div></div>`).join('');
+}
+function addPartLine(){ editingJob.parts.push({name:'',supplier:'',cost:'',arrived:false,arrivedAt:''}); renderPartLines(); }
+function recalcMoney(){
+  const qty=num((document.getElementById('f-qty')||{}).value||1)||1;
+  const unit=num((document.getElementById('f-unitfee')||{}).value);
+  editingJob.qty=qty; editingJob.unitFee=(document.getElementById('f-unitfee')||{}).value||'';
+  const sub=qty*unit, parts=jobPartsCost(editingJob);
+  const outOn=document.getElementById('f-out-chk') && document.getElementById('f-out-chk').classList.contains('on');
+  const outCost=outOn? num((document.getElementById('f-out-cost')||{}).value):0;
+  const etcOn=document.getElementById('f-etc-chk') && document.getElementById('f-etc-chk').classList.contains('on');
+  const etcCnt=etcOn? (num((document.getElementById('f-etc-count')||{}).value)||0):0;
+  const etcUnit=etcOn? (num((document.getElementById('f-etc-unit')||{}).value)||num(DATA.settings.etcSetupFee)):0;
+  const etcCost=etcCnt*etcUnit;
+  const el=document.getElementById('f-money'); if(!el) return;
+  el.innerHTML=`
+    <div class="money-row"><span>明細金額(税抜) ${qty>1?qty+'台 × '+yen(unit):''}</span><b>${yen(sub)}</b></div>
+    <div class="money-row"><span>消費税(${taxRate()}%)</span><b>${yen(sub*taxRate()/100)}</b></div>
+    <div class="money-row total"><span>請求額(税込)</span><b>${yen(withTax(sub))}</b></div>
+    ${parts?`<div class="money-row"><span>部品原価(当社購入分)</span><b>−${yen(parts)}</b></div>`:''}
+    ${etcCost?`<div class="money-row"><span>ETCセットアップ ${etcCnt}台×${yen(etcUnit)}</span><b>−${yen(etcCost)}</b></div>`:''}
+    ${outCost?`<div class="money-row"><span>外注費</span><b>−${yen(outCost)}</b></div>`:''}
+    <div class="money-row profit total"><span>粗利</span><b>${yen(sub-parts-outCost-etcCost)}</b></div>`;
+}
+function saveJob(){
+  const j=editingJob;
+  j.clientId=document.getElementById('f-client').value;
+  const cl=clientById(j.clientId); j.clientName=cl?cl.name:'';
+  j.contact=document.getElementById('f-contact').value.trim();
+  j.workDesc=document.getElementById('f-workdesc').value.trim();
+  j.carModel=document.getElementById('f-carmodel').value.trim();
+  j.carPlate=document.getElementById('f-carplate').value.trim();
+  j.endUser=document.getElementById('f-enduser').value.trim();
+  j.workPlace=document.getElementById('f-workplace').value.trim();
+  j.siteContact=document.getElementById('f-sitecontact').value.trim();
+  j.siteTel=document.getElementById('f-sitetel').value.trim();
+  j.requestedAt=document.getElementById('f-reqdate').value;
+  j.partsEta=document.getElementById('f-partseta').value.trim();
+  j.workableFrom=document.getElementById('f-workablefrom').value.trim();
+  j.deadline=document.getElementById('f-deadline').value;
+  j.scheduledAt=document.getElementById('f-scheduled').value;
+  j.scheduledEndAt=document.getElementById('f-scheduledend').value;
+  j.qty=num(document.getElementById('f-qty').value)||1;
+  j.unitFee=document.getElementById('f-unitfee').value.trim();
+  j.billingDesc=document.getElementById('f-billingdesc').value.trim();
+  j.memo=document.getElementById('f-memo').value;
+  const outOn=document.getElementById('f-out-chk').classList.contains('on');
+  let vendor=document.getElementById('f-out-vendor').value;
+  if(vendor==='__manual__') vendor=document.getElementById('f-out-manual').value.trim();
+  j.outsource={ used:outOn, vendor:outOn?vendor:'', cost:outOn?num(document.getElementById('f-out-cost').value):'', paid:document.getElementById('f-out-paid').classList.contains('on') };
+  const etcOn=document.getElementById('f-etc-chk').classList.contains('on');
+  j.etc={ used:etcOn, count:etcOn?(num(document.getElementById('f-etc-count').value)||0):'', unit:etcOn?(num(document.getElementById('f-etc-unit').value)||num(DATA.settings.etcSetupFee)):'' };
+  j.parts=(j.parts||[]).filter(p=>String(p.name).trim()!=='');
+  if(!j.clientId && !j.clientName){ toast('取引先を選択してください','err'); return; }
+  const existing=DATA.jobs.find(x=>x.id===j.id);
+  if(!existing){ j.jobNo=genJobNo(); j.createdAt=Date.now(); }
+  stamp(j);
+  if(existing){ Object.assign(existing,j); } else { DATA.jobs.push(j); }
+  save(); toast('保存しました','ok'); refresh();
+  if(existing){ closeModal(); } else { openJobDetail(j.id); }  // 新規は詳細へジャンプ(ラベル印刷/次工程へ)
+}
+async function deleteJob(id){
+  const ok=await confirmModal('この案件をキャンセル状態にして非表示にしますか？\n(履歴として残り、後で復元できます)',{danger:true,okText:'キャンセルにする'});
+  if(!ok) return;
+  const j=DATA.jobs.find(x=>x.id===id); if(j){ j.status='キャンセル'; stamp(j); save(); }
+  closeModal(); toast('キャンセルにしました'); refresh();
+}
+async function quickAddClient(){
+  const name=await promptModal('取引先名(法人名)を入力'); if(!name) return;
+  const c={id:uid(),name:name.trim(),contacts:[],tel:'',address:'',closingDay:'',memo:''};
+  DATA.clients.push(c); save();
+  const sel=document.getElementById('f-client'); sel.innerHTML=`<option value="">— 取引先(請求先)を選択 —</option>`+DATA.clients.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  sel.value=c.id; editingJob.clientId=c.id; toast('取引先を追加しました','ok');
+}
+
+/* 依頼文 貼り付け取込 */
+async function pasteRequest(){
+  let text='';
+  try{ if(navigator.clipboard&&navigator.clipboard.readText) text=await navigator.clipboard.readText(); }catch(e){}
+  if(!text){ text=await promptModal('依頼文を貼り付けてください'); }
+  if(!text) return;
+  const r=parseRequestText(text);
+  const setv=(id,v)=>{ const el=document.getElementById(id); if(el&&v) el.value=v; };
+  setv('f-workdesc',r.workDesc); setv('f-carmodel',r.carModel); setv('f-enduser',r.endUser); setv('f-workplace',r.workPlace);
+  setv('f-sitecontact',r.siteContact); setv('f-sitetel',r.siteTel); setv('f-partseta',r.partsEta);
+  setv('f-workablefrom',r.workableFrom); setv('f-unitfee',r.unitFee);
+  if(r.memo){ const mm=document.getElementById('f-memo'); mm.value=(mm.value?mm.value+'\n':'')+r.memo; }
+  recalcMoney(); syncBillingHint();
+  toast('依頼文を取り込みました。内容を確認してください','ok');
+}
+function parseRequestText(text){
+  const lines=String(text).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const r={workDesc:'',carModel:'',endUser:'',workPlace:'',siteContact:'',siteTel:'',unitFee:'',partsEta:'',workableFrom:'',memo:''};
+  const memoLines=[]; const phoneRe=/0\d{1,3}[-\s]?\d{2,4}[-\s]?\d{3,4}/;
+  let lastKey='';
+  lines.forEach(raw=>{
+    const l=raw.replace(/^[※・\-\s]+/,'').trim();
+    if(/^(車両|車種)[\s:：]/.test(l) && !r.carModel && l.length<40){
+      let v=l.replace(/^(車両|車種)[:：\s]*/,'').trim();
+      const mm=v.match(/[（(]([^（）()]*?)様[^（）()]*[）)]/); if(mm) r.endUser=mm[1].trim();
+      v=v.replace(/[（(][^（）()]*[）)]/g,'').trim();
+      r.carModel=v; lastKey='car'; return;
+    }
+    if(/^(作業場所|場所)[\s:：]/.test(l)){ r.workPlace=l.replace(/^(作業場所|場所)[:：\s]*/,'').trim(); lastKey='place'; return; }
+    if(/^担当者?[\s:：]/.test(l)){ const mt=l.match(phoneRe); if(mt) r.siteTel=mt[0].replace(/\s/g,''); r.siteContact=l.replace(/^担当者?[:：\s]*/,'').replace(phoneRe,'').trim(); lastKey='contact'; return; }
+    if(/工賃|作業料金/.test(l)){ const mt=l.match(/[\d,]{3,}/); if(mt) r.unitFee=mt[0].replace(/,/g,''); lastKey='fee'; return; }
+    if(/着荷/.test(l) && l.length<30){
+      const dm=l.match(/(\d+\/\d+|\d+月\d*日?|\d+日)\s*着荷/); r.partsEta = dm? dm[1]+'着荷予定' : l;
+      const pm=l.match(/[（(]([^（）()]+)[）)]/); if(pm){ if(r.workDesc) r.workDesc+='（'+pm[1]+'）'; else memoLines.push('部品: '+pm[1]); }
+      lastKey='eta'; return;
+    }
+    if(/取付|ナビ|カメラ|ドラレコ|ETC|配線|電装|コーティング|マット|オーディオ/.test(l) && !r.workDesc && l.length<70){ r.workDesc=l; lastKey='desc'; return; }
+    if(lastKey==='place' && (/^[（(]/.test(l) || /[都道府県市区町村]|番地|丁目|字|\d+番/.test(l)) && l.length<44){ r.workPlace+=' '+l.replace(/^[（(]|[）)]$/g,''); return; }
+    lastKey=''; memoLines.push(raw);
+  });
+  if(!r.workableFrom){ const mt=String(text).match(/(\d+月\d+日?|\d+\/\d+)以降/); if(mt) r.workableFrom=mt[0]; }
+  r.memo=memoLines.join('\n');
+  return r;
+}
+
+/* ───────── 案件詳細 ───────── */
+function openJobDetail(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const cl=clientById(j.clientId);
+  const fi=FLOW.indexOf(j.status);
+  const flowHtml=`<div class="flow">`+FLOW.map((s,i)=>{
+    const done=fi>=0&&i<fi, cur=i===fi;
+    return (i>0?`<div class="flow-bar ${fi>=0&&i<=fi?'done':''}"></div>`:'')+
+      `<div class="flow-step ${done?'done':''} ${cur?'cur':''}"><div class="flow-dot">${done?'✓':i+1}</div><div class="flow-lbl">${FLOW_SHORT[s]}</div></div>`;
+  }).join('')+`</div>`;
+  const partsHtml=(j.parts||[]).length? (j.parts||[]).map(p=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${p.arrived?'✅':'⏳'} ${esc(p.name)} <span style="color:var(--muted)">${esc(p.supplier||'')}</span></span><span style="color:var(--text-dim)">${yen(p.cost)}</span></div>`).join('') : (j.partsEta?`<span style="color:var(--orange);font-size:13px">⏳ ${esc(j.partsEta)}</span>`:'<span style="color:var(--muted);font-size:13px">部品なし</span>');
+  const photosHtml=(j.photos||[]).length? `<div class="photos">`+(j.photos||[]).map((src,i)=>`<div class="photo"><img src="${src}" onclick="viewPhoto('${id}',${i})"></div>`).join('')+`</div>`:'';
+  const idx=FLOW.indexOf(j.status), next=(idx>=0&&idx<FLOW.length-1&&j.status!=='報告済');
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`
+  <div class="modal-head"><h2>${esc(cl?cl.name:j.clientName||'案件')}</h2><span class="sub">${esc(j.jobNo)}</span><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    ${flowHtml}
+    <div style="text-align:center;margin-bottom:14px"><span class="badge st-${j.status}" style="font-size:13px;padding:5px 16px">${j.status}</span></div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:10px">${esc(j.workDesc||'(取付内容未設定)')}</div>
+    <dl class="dl">
+      <dt>車両</dt><dd>${esc(j.carModel||'—')} ${esc(j.carPlate||'')}${j.endUser?'　／　'+esc(j.endUser)+'様':''}</dd>
+      <dt>作業場所</dt><dd>${esc(j.workPlace||'—')}</dd>
+      <dt>現場担当</dt><dd>${esc(j.siteContact||'—')} ${j.siteTel?`<a href="tel:${esc(j.siteTel)}">${esc(j.siteTel)}</a>`:''}</dd>
+      <dt>取引先担当</dt><dd>${esc(j.contact||'—')}</dd>
+      <dt>依頼日</dt><dd>${fmtD(j.requestedAt)}</dd>
+      ${j.partsEta?`<dt>着荷予定</dt><dd>${esc(j.partsEta)}</dd>`:''}
+      ${j.workableFrom?`<dt>作業可能</dt><dd>${esc(j.workableFrom)}</dd>`:''}
+      ${j.deadline?`<dt>作業期日</dt><dd>${fmtD(j.deadline)}${deadlineState(j)==='over'?' <b style="color:var(--red)">⚠️超過</b>':deadlineState(j)==='soon'?' <b style="color:var(--orange)">⏰間近</b>':''}</dd>`:''}
+      <dt>作業予定</dt><dd>${workScheduleStr(j)}</dd>
+      ${j.workedAt?`<dt>作業日</dt><dd>${workDoneStr(j)} ${esc(j.worker||'')}${j.outsource&&j.outsource.used?'＋外注'+esc(j.outsource.vendor||''):''}</dd>`:''}
+      ${j.billingMonth?`<dt>請求月</dt><dd>${fmtMonth(j.billingMonth)}</dd>`:''}
+      ${j.invoiceNo?`<dt>請求No</dt><dd>${esc(j.invoiceNo)}</dd>`:''}
+    </dl>
+    <div class="money-box">
+      <div class="money-row"><span>工賃 ${num(j.qty)>1?num(j.qty)+'台 × '+yen(j.unitFee):'(税別)'}</span><b>${yen(jobSubtotal(j))}</b></div>
+      <div class="money-row total"><span>請求額(税込)</span><b>${yen(withTax(jobSubtotal(j)))}</b></div>
+      ${jobPartsCost(j)?`<div class="money-row"><span>部品原価(当社購入)</span><b>−${yen(jobPartsCost(j))}</b></div>`:''}
+      ${jobEtcCost(j)?`<div class="money-row"><span>ETCセットアップ ${num(j.etc.count)}台×${yen(j.etc.unit||DATA.settings.etcSetupFee)}</span><b>−${yen(jobEtcCost(j))}</b></div>`:''}
+      ${jobOutsource(j)?`<div class="money-row"><span>外注費 ${j.outsource&&j.outsource.used?'('+esc(j.outsource.vendor||'未定')+(j.outsource.paid?'/支払済':'/未払')+')':''}</span><b>−${yen(jobOutsource(j))}</b></div>`:''}
+      <div class="money-row profit total"><span>粗利</span><b>${yen(jobProfit(j))}</b></div>
+    </div>
+    <div class="sec-label">📦 部品 ${j.partsDest==='現場・エンド直送'?'<span class="tag place" style="margin-left:4px">🚚 現場・エンド直送</span>':'<span class="tag" style="margin-left:4px">🏢 当社着荷</span>'} ${(j.parts||[]).length?`<span style="color:var(--text-dim);font-weight:400">(${(j.parts||[]).filter(p=>p.arrived).length}/${(j.parts||[]).length}着荷)</span>`:''}</div>
+    ${partsHtml}
+    <div class="sec-label">📝 作業報告</div>
+    <div style="font-size:13.5px;white-space:pre-wrap;color:${j.reportNote?'var(--text)':'var(--muted)'}">${j.reportNote?esc(j.reportNote):'未記入'}</div>
+    ${photosHtml}
+    ${j.memo?`<div class="sec-label">🗒 メモ・依頼条件</div><div style="font-size:13px;white-space:pre-wrap;color:var(--text-dim)">${esc(j.memo)}</div>`:''}
+    <div style="height:6px"></div>
+    <div class="btn-row" style="margin-top:10px">
+      ${(j.status==='部品手配'||(j.parts||[]).some(p=>!p.arrived))?`<button class="btn btn-secondary btn-sm" onclick="openPartsCheck('${id}')">📦 着荷チェック</button>`:''}
+      <button class="btn btn-secondary btn-sm" onclick="openReportModal('${id}')">📝 報告/写真</button>
+    </div>
+    <div class="sec-label">📄 書類</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary btn-sm" onclick="generateWorkOrder('${id}')">🖨 作業指示書(外注)</button>
+      <button class="btn btn-secondary btn-sm" onclick="generatePartsLabel('${id}')">🏷 受入ラベル</button>
+    </div>
+    <div class="btn-row" style="margin-top:9px">
+      <button class="btn btn-secondary btn-sm" onclick="generateWorkReport('${id}')">🖨 作業報告書</button>
+      <button class="btn btn-primary btn-sm" onclick="shareWorkReport('${id}')">📤 報告書をLINE</button>
+    </div>
+    <div class="hint" style="margin-top:6px">「報告書をLINE」は写真つき報告書を画像にして共有先(LINE等)を選べます</div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="openJobModal('${id}')">✏️ 編集</button>
+    ${next?`<button class="btn btn-primary" onclick="advanceStatus('${id}')">${nextActionLabel(j.status)} →</button>`:'<button class="btn btn-secondary" onclick="closeModal()">閉じる</button>'}
+  </div>`;
+  bg.classList.add('open');
+}
+
+/* ───────── 部品着荷チェック ───────── */
+function openPartsCheck(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  if(!(j.parts||[]).length){ confirmModal('この案件に部品が登録されていません。\n着荷済として作業準備に進めますか？',{okText:'着荷済にする'}).then(ok=>{ if(ok){ j.status='着荷済'; stamp(j); save(); closeModal(); toast('着荷済に更新','ok'); refresh(); } }); return; }
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`<div class="modal-head"><h2>📦 部品着荷チェック</h2><span class="sub">${esc(j.jobNo)}</span><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body" id="pc-body"></div>
+  <div class="modal-foot"><button class="btn btn-ghost" onclick="openJobDetail('${id}')">戻る</button><button class="btn btn-success" id="pc-done" onclick="finishPartsCheck('${id}')">全着荷 → 作業準備OK</button></div>`;
+  bg.classList.add('open'); renderPartsCheckBody(id);
+}
+function renderPartsCheckBody(id){
+  const j=DATA.jobs.find(x=>x.id===id);
+  document.getElementById('pc-body').innerHTML=`<div style="margin-bottom:12px;font-size:13px;color:var(--text-dim)">届いた部品をタップしてチェック</div>`+
+    (j.parts||[]).map((p,i)=>`<div class="line" style="cursor:pointer" onclick="togglePartArrival('${id}',${i})"><div class="chk ${p.arrived?'on':''}" style="margin-right:4px">✓</div><div class="line-main"><div style="font-size:15px;font-weight:600">${esc(p.name)}</div><div style="font-size:12px;color:var(--text-dim);margin-top:2px">${esc(p.supplier||'仕入先未設定')} ・ ${yen(p.cost)} ${p.arrived&&p.arrivedAt?'・着荷'+fmtD(p.arrivedAt):''}</div></div></div>`).join('');
+  const allIn=(j.parts||[]).every(p=>p.arrived);
+  const btn=document.getElementById('pc-done'); if(btn) btn.textContent=allIn?'全着荷 → 作業準備OK':'一部のみ着荷で保存';
+}
+function togglePartArrival(id,i){ const j=DATA.jobs.find(x=>x.id===id); j.parts[i].arrived=!j.parts[i].arrived; j.parts[i].arrivedAt=j.parts[i].arrived?todayISO():''; save(); renderPartsCheckBody(id); }
+function finishPartsCheck(id){
+  const j=DATA.jobs.find(x=>x.id===id);
+  const allIn=(j.parts||[]).every(p=>p.arrived);
+  if(allIn){ j.status='着荷済'; } else if(j.status==='受注'||j.status==='依頼'){ j.status='部品手配'; }
+  stamp(j); save(); closeModal(); toast(allIn?'全部品着荷 → 着荷済':'着荷状況を保存','ok'); refresh();
+}
+
+/* ───────── 作業報告/写真 ───────── */
+function openReportModal(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`<div class="modal-head"><h2>📝 作業報告</h2><span class="sub">${esc(j.jobNo)}</span><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="field-row">
+      <div class="field"><label>作業日(開始)</label><input type="date" id="r-worked" value="${esc(j.workedAt||todayISO())}"></div>
+      <div class="field"><label>終了日(複数日)</label><input type="date" id="r-workend" value="${esc(j.workEndAt)}"></div>
+    </div>
+    <div class="field"><label>作業者(自社)${j.outsource&&j.outsource.used?' ＋ 外注: '+esc(j.outsource.vendor||'')+' と合同':''}</label><input id="r-worker" value="${esc(j.worker||DATA.settings.person||'')}"></div>
+    <div class="field"><label>報告内容</label><textarea id="r-note" placeholder="取付状況・動作確認・申し送りなど" style="min-height:110px">${esc(j.reportNote)}</textarea></div>
+    <div class="sec-label">📷 写真</div>
+    <div class="photos" id="r-photos"></div>
+    <input type="file" id="r-file" accept="image/*" capture="environment" multiple style="display:none" onchange="onPhotoPick('${id}',this)">
+    <div class="hint">写真は端末内に圧縮保存されます(1枚あたり約100〜200KB)</div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="saveReport('${id}',false)">保存のみ</button>
+    <button class="btn btn-success" onclick="saveReport('${id}',true)">作業完了にする</button>
+  </div>`;
+  bg.classList.add('open'); renderReportPhotos(id);
+}
+function renderReportPhotos(id){
+  const j=DATA.jobs.find(x=>x.id===id);
+  const el=document.getElementById('r-photos'); if(!el) return;
+  el.innerHTML=(j.photos||[]).map((src,i)=>`<div class="photo"><img src="${src}"><div class="rm" onclick="removePhoto('${id}',${i})">✕</div></div>`).join('')+
+    `<div class="photo-add" onclick="document.getElementById('r-file').click()"><div style="font-size:24px">📷</div><div>追加</div></div>`;
+}
+async function onPhotoPick(id,input){
+  const j=DATA.jobs.find(x=>x.id===id); const files=Array.from(input.files||[]);
+  for(const f of files){
+    if((j.photos||[]).length>=12){ toast('写真は12枚までです','err'); break; }
+    try{ const d=await compressImage(f,1280,0.6); (j.photos=j.photos||[]).push(d); }catch(e){ toast('画像の処理に失敗','err'); }
+  }
+  input.value=''; save(); renderReportPhotos(id);
+}
+function compressImage(file,maxDim,quality){
+  return new Promise((res,rej)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{ URL.revokeObjectURL(url);
+      let w=img.width,h=img.height; if(w>h){ if(w>maxDim){h=h*maxDim/w;w=maxDim;} } else { if(h>maxDim){w=w*maxDim/h;h=maxDim;} }
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+      res(cv.toDataURL('image/jpeg',quality)); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('img load')); };
+    img.src=url;
+  });
+}
+async function removePhoto(id,i){ const j=DATA.jobs.find(x=>x.id===id); j.photos.splice(i,1); save(); renderReportPhotos(id); }
+function viewPhoto(id,i){ const j=DATA.jobs.find(x=>x.id===id); const src=j.photos[i]; const w=window.open(''); if(w) w.document.write(`<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><img src="${src}" style="max-width:100%;max-height:100%"></body>`); }
+function saveReport(id,complete){
+  const j=DATA.jobs.find(x=>x.id===id);
+  j.workedAt=document.getElementById('r-worked').value;
+  j.workEndAt=document.getElementById('r-workend').value;
+  j.worker=document.getElementById('r-worker').value.trim();
+  j.reportNote=document.getElementById('r-note').value;
+  if(complete){ j.status='作業完了'; if(!j.billingMonth) j.billingMonth=(j.workedAt||todayISO()).slice(0,7); }
+  else if(j.status==='着荷済'||j.status==='部品手配'){ j.status='作業中'; }
+  stamp(j); save(); closeModal(); toast(complete?'作業完了 → 報告/請求へ':'報告を保存','ok'); refresh();
+}
+
+/* ───────── 月次請求 ───────── */
+let billMonth=curMonth(); let billMode='sales';
+function billMonthOf(j){ return j.billingMonth || ((['作業完了','報告済'].includes(j.status))?(j.workedAt||'').slice(0,7):''); }
+function billingMonths(){ const a=[]; const now=new Date(); for(let i=0;i<12;i++){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); a.push(d.getFullYear()+'-'+pad2(d.getMonth()+1)); } return a; }
+function renderBilling(){
+  const months=billingMonths();
+  const head=`<div class="page-h">💴 月次請求・清算</div>
+  <div class="field"><label>対象月(末締め)</label><select onchange="billMonth=this.value;renderBilling()">${months.map(mm=>`<option value="${mm}" ${mm===billMonth?'selected':''}>${fmtMonth(mm)}</option>`).join('')}</select></div>
+  <div class="chips"><button class="chip ${billMode==='sales'?'active':''}" onclick="billMode='sales';renderBilling()">📤 売上請求</button><button class="chip ${billMode==='outsource'?'active':''}" onclick="billMode='outsource';renderBilling()">🤝 外注費清算</button></div>`;
+  document.getElementById('page-billing').innerHTML=head + (billMode==='sales'? renderSalesBilling() : renderOutsourceSettle());
+}
+function renderSalesBilling(){
+  const target=DATA.jobs.filter(j=> j.status!=='キャンセル' && billMonthOf(j)===billMonth && ['作業完了','報告済','請求済','入金済'].includes(j.status));
+  const groups={}; target.forEach(j=>{ const k=j.clientId||('_'+j.clientName); (groups[k]=groups[k]||[]).push(j); });
+  const groupArr=Object.keys(groups).map(k=>({key:k,jobs:groups[k],client:clientById(groups[k][0].clientId)}));
+  const totalBill=target.reduce((s,j)=>s+withTax(jobSubtotal(j)),0);
+  const totalProfit=target.reduce((s,j)=>s+jobProfit(j),0);
+  return `<div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">請求合計(税込)</div><div class="kpi-val" style="font-size:21px">${yen(totalBill)}</div><div class="kpi-sub">${target.length}件 / ${groupArr.length}社</div></div>
+    <div class="kpi green"><div class="kpi-lbl">粗利合計</div><div class="kpi-val" style="font-size:21px">${yen(totalProfit)}</div></div>
+  </div>
+  ${groupArr.length? groupArr.map(billingGroupCard).join('') : '<div class="empty"><div class="ico">🗓</div><div class="t">この月の請求対象案件はありません</div><div style="font-size:11px;color:var(--muted);margin-top:6px">案件を「作業完了」にすると請求対象になります</div></div>'}`;
+}
+function renderOutsourceSettle(){
+  const jobs=DATA.jobs.filter(j=> j.status!=='キャンセル' && j.outsource&&j.outsource.used && num(j.outsource.cost)>0 && (j.workedAt||'').slice(0,7)===billMonth);
+  const groups={}; jobs.forEach(j=>{ const v=j.outsource.vendor||'(未設定)'; (groups[v]=groups[v]||[]).push(j); });
+  const vendors=Object.keys(groups);
+  const total=jobs.reduce((s,j)=>s+num(j.outsource.cost),0);
+  const unpaid=jobs.filter(j=>!j.outsource.paid).reduce((s,j)=>s+num(j.outsource.cost),0);
+  return `<div class="kpi-grid">
+    <div class="kpi purple"><div class="kpi-lbl">外注費 合計</div><div class="kpi-val" style="font-size:21px">${yen(total)}</div><div class="kpi-sub">${jobs.length}件 / ${vendors.length}社</div></div>
+    <div class="kpi red"><div class="kpi-lbl">未清算</div><div class="kpi-val" style="font-size:21px">${yen(unpaid)}</div></div>
+  </div>
+  <div class="hint" style="margin:-4px 2px 12px">作業実施月(${fmtMonth(billMonth)})の外注費。元請け金額は含みません</div>
+  ${vendors.length? vendors.map(v=>outsourceVendorCard(v,groups[v])).join('') : '<div class="empty"><div class="ico">🤝</div><div class="t">この月の外注費はありません</div></div>'}`;
+}
+function outsourceVendorCard(vendor,jobs){
+  const total=jobs.reduce((s,j)=>s+num(j.outsource.cost),0);
+  const allPaid=jobs.every(j=>j.outsource.paid);
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:700">🤝 ${esc(vendor)}</div>
+      <span class="badge ${allPaid?'st-入金済':'st-部品手配'}">${allPaid?'清算済':'未清算'}</span>
+    </div>
+    ${jobs.map(j=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)" onclick="openJobDetail('${j.id}')">
+      <span>${fmtD(j.workedAt)} ${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''} <span style="color:var(--muted)">${esc(j.workDesc||'')}</span></span>
+      <span style="white-space:nowrap">${j.outsource.paid?'<span style="color:var(--green)">済 </span>':''}${yen(j.outsource.cost)}</span></div>`).join('')}
+    <div class="money-box" style="margin:10px 0 8px"><div class="money-row total"><span>支払合計</span><b>${yen(total)}</b></div></div>
+    ${allPaid?'':`<button class="btn btn-success btn-sm btn-full" onclick="settleOutsource(this.dataset.v,'${billMonth}')" data-v="${esc(vendor)}">この外注先を清算済にする</button>`}
+  </div>`;
+}
+async function settleOutsource(vendor,month){
+  if(!await confirmModal(vendor+' の '+fmtMonth(month)+'分 外注費を清算済(支払済)にしますか？',{okText:'清算済にする'})) return;
+  DATA.jobs.forEach(j=>{ if(j.outsource&&j.outsource.used&&(j.outsource.vendor||'(未設定)')===vendor&&(j.workedAt||'').slice(0,7)===month){ j.outsource.paid=true; stamp(j); } });
+  save(); toast('清算済にしました','ok'); renderBilling();
+}
+function billingGroupCard(g){
+  const name=g.client?g.client.name:(g.jobs[0].clientName||'(取引先未設定)');
+  const sub=g.jobs.reduce((s,j)=>s+jobSubtotal(j),0);
+  const total=withTax(sub);
+  const allInvoiced=g.jobs.every(j=>['請求済','入金済'].includes(j.status));
+  const allPaid=g.jobs.every(j=>j.status==='入金済');
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:700">${esc(name)}</div>
+      <span class="badge ${allPaid?'st-入金済':allInvoiced?'st-請求済':'st-作業完了'}">${allPaid?'入金済':allInvoiced?'請求済':'未請求'}</span>
+    </div>
+    ${g.jobs.map(j=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)" onclick="openJobDetail('${j.id}')">
+      <span>${fmtD(j.workedAt||j.requestedAt)} ${esc(billingDescOf(j))}${num(j.qty)>1?' '+num(j.qty)+'台':''}</span>
+      <span style="white-space:nowrap">${yen(withTax(jobSubtotal(j)))}</span></div>`).join('')}
+    <div class="money-box" style="margin:10px 0 8px">
+      <div class="money-row"><span>小計(税抜)</span><b>${yen(sub)}</b></div>
+      <div class="money-row"><span>消費税(${taxRate()}%)</span><b>${yen(total-sub)}</b></div>
+      <div class="money-row total"><span>合計</span><b>${yen(total)}</b></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',false)">📄 プレビュー</button>
+      ${allInvoiced? (allPaid?'':`<button class="btn btn-success btn-sm" onclick="markPaid('${g.key}','${billMonth}')">入金済にする</button>`) : `<button class="btn btn-primary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',true)">請求書発行</button>`}
+    </div>
+  </div>`;
+}
+function groupJobs(key,month){
+  return DATA.jobs.filter(j=> j.status!=='キャンセル' && (j.clientId||('_'+j.clientName))===key && billMonthOf(j)===month && ['作業完了','報告済','請求済','入金済'].includes(j.status));
+}
+function generateInvoice(key,month,markInvoiced){
+  const jobs=groupJobs(key,month); if(!jobs.length){ toast('対象がありません','err'); return; }
+  const client=clientById(jobs[0].clientId);
+  const st=DATA.settings;
+  if(markInvoiced && !st.company){ toast('先に⚙️設定で自社情報を入力してください','err'); openSettings(); return; }
+  let invNo;
+  if(markInvoiced){
+    const n=num(st.nextInvoiceNo)||1; invNo='INV-'+String(n).padStart(10,'0'); st.nextInvoiceNo=n+1;
+    const issueDate=endOfMonth(month);
+    jobs.forEach(j=>{ if(j.status!=='入金済') j.status='請求済'; j.invoiceNo=invNo; j.invoicedAt=issueDate; if(!j.billingMonth) j.billingMonth=month; stamp(j); });
+    save();
+  } else { invNo=jobs[0].invoiceNo || '(プレビュー)'; }
+  openInvoiceWindow(client,jobs,month,invNo);
+  if(markInvoiced){ closeModal(); toast('請求書 '+invNo+' を発行しました','ok'); renderBilling(); }
+}
+function openInvoiceWindow(client,jobs,month,invNo){
+  const st=DATA.settings;
+  const sub=jobs.reduce((s,j)=>s+jobSubtotal(j),0);
+  const tax=Math.round(sub*taxRate()/100), total=sub+tax;
+  const issueDate=endOfMonth(month), dueDate=endOfNextMonth(month);
+  const hasDate=jobs.some(j=>j.workedAt); // 取引日列は作業完了(workedAtあり)がある時のみ表示
+  const dataRows=jobs.map(j=>`<tr>${hasDate?`<td>${esc(j.workedAt||'')}</td>`:''}<td>${esc(billingDescOf(j))}</td><td class="c">${num(j.qty)||1} 台</td><td class="r">${(num(j.unitFee)).toLocaleString('ja-JP')}</td><td class="r">${(jobSubtotal(j)).toLocaleString('ja-JP')}</td></tr>`).join('');
+  const minRows=12; let fillerRows=''; for(let i=jobs.length;i<minRows;i++) fillerRows+=`<tr>${hasDate?'<td>&nbsp;</td>':''}<td>&nbsp;</td><td></td><td></td><td></td></tr>`;
+  const logoImg=st.logo?`<img src="${st.logo}" style="max-height:64px;max-width:160px;margin-top:6px">`:'';
+  const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>請求書 ${esc(invNo)}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;color:#1a1a1a;padding:14mm 16mm;font-size:12px;line-height:1.5}
+    .title{text-align:center;font-size:26px;letter-spacing:14px;font-weight:700;margin-bottom:24px}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+    .to{font-size:20px;font-weight:700;border-bottom:2px solid #222;padding:0 30px 5px 4px;display:inline-block}
+    .from{text-align:left;font-size:11.5px;line-height:1.7;min-width:230px}
+    .from .meta{display:grid;grid-template-columns:auto auto;gap:2px 14px;margin-bottom:12px;font-size:11.5px}
+    .from .meta .l{color:#444}.from .meta .v{text-align:right;font-weight:600}
+    .from .name{font-size:15px;font-weight:700}
+    .lead{font-size:12px;margin:4px 0 10px}
+    .subject{font-size:13px;margin-bottom:8px}.subject b{font-size:15px;margin-left:14px}
+    table{width:100%;border-collapse:collapse}
+    .sumtbl td,.sumtbl th{border:1px solid #555;padding:6px 10px;text-align:center}
+    .sumtbl th{background:#f3f3f3;font-weight:600;font-size:11px}
+    .sumtbl .big{font-size:22px;font-weight:700}
+    .bank-l{text-align:left;font-size:11px;line-height:1.5}
+    .detail{margin-top:16px}
+    .detail th,.detail td{border:1px solid #888;padding:6px 8px;font-size:11.5px}
+    .detail th{background:#2b6cb0;color:#fff;font-weight:600;text-align:center}
+    .detail td.r{text-align:right}.detail td.c{text-align:center}
+    .breakdown{width:300px;margin-left:auto;margin-top:10px}
+    .breakdown td{border:1px solid #888;padding:4px 10px;font-size:11px}
+    .breakdown td.r{text-align:right}
+    .breakdown .small{font-size:10px;color:#555}
+    .note{margin-top:16px;border:1px solid #888;padding:10px 12px;font-size:11px}
+    .note .h{color:#555;margin-bottom:4px}
+    @media print{body{padding:14mm}.noprint{display:none}}
+    .noprint{text-align:center;margin-top:24px}
+    .noprint button{padding:12px 28px;font-size:15px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}
+  </style></head><body>
+    <div class="title">御請求書</div>
+    <div class="top">
+      <div><div class="to">${esc(client?client.name:jobs[0].clientName||'')}</div></div>
+      <div class="from">
+        <div class="meta"><span class="l">請求日</span><span class="v">${issueDate}</span>
+          <span class="l">請求書番号</span><span class="v">${esc(invNo)}</span>
+          <span class="l">登録番号</span><span class="v">${esc(st.regNo||'')}</span></div>
+        <div class="name">${esc(st.company||'')}</div>
+        ${st.company2?`<div>${esc(st.company2)}</div>`:''}
+        ${logoImg}
+        <div style="margin-top:6px">${st.zip?'〒'+esc(st.zip):''}</div>
+        <div>${esc(st.address||'')}</div>
+        <div>TEL :${esc(st.tel||'')}${st.fax?'　FAX:'+esc(st.fax):''}</div>
+      </div>
+    </div>
+    <div class="lead">下記の通りご請求申し上げます。</div>
+    <div class="subject">件名<b>${esc((st.subject||'')+'（'+parseInt(month.split('-')[1],10)+'月）')}</b></div>
+    <table class="sumtbl" style="margin-bottom:8px"><tr><th style="width:33%">小計</th><th style="width:33%">消費税</th><th>請求金額</th></tr>
+      <tr><td>${sub.toLocaleString('ja-JP')}円</td><td>${tax.toLocaleString('ja-JP')}円</td><td class="big">${total.toLocaleString('ja-JP')}円</td></tr></table>
+    <table class="sumtbl"><tr><th style="width:33%">入金期日</th><th>振込先</th></tr>
+      <tr><td>${dueDate}</td><td class="bank-l">${esc(st.bank||'').replace(/\n/g,'<br>')}</td></tr></table>
+    <table class="detail"><thead><tr>${hasDate?'<th style="width:90px">取引日</th>':''}<th>摘要</th><th style="width:64px">数量</th><th style="width:80px">単価</th><th style="width:96px">明細金額</th></tr></thead>
+      <tbody>${dataRows}${fillerRows}</tbody></table>
+    <table class="breakdown"><tr><td>内訳　10%対象(税抜)</td><td class="r">${sub.toLocaleString('ja-JP')}円</td></tr>
+      <tr><td class="small">10%消費税</td><td class="r small">${tax.toLocaleString('ja-JP')}円</td></tr></table>
+    ${st.note?`<div class="note"><div class="h">備考</div>${esc(st.note)}</div>`:''}
+    <div class="noprint"><button onclick="window.print()">🖨 印刷 / PDF保存</button></div>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){ toast('ポップアップを許可してください','err'); return; }
+  w.document.write(html); w.document.close();
+}
+async function markPaid(key,month){
+  const ok=await confirmModal('この取引先の'+fmtMonth(month)+'分を入金済にしますか？'); if(!ok) return;
+  groupJobs(key,month).forEach(j=>{ j.status='入金済'; j.paidAt=todayISO(); stamp(j); });
+  save(); toast('入金済にしました','ok'); renderBilling();
+}
+
+/* ───────── 作業指示書 / 受入ラベル(印刷) ───────── */
+function openPrintWindow(title,bodyHtml,extraCss){
+  const w=window.open('','_blank'); if(!w){ toast('ポップアップを許可してください','err'); return null; }
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;color:#16202E;padding:13mm 14mm;font-size:13px;line-height:1.6}
+    .noprint{text-align:center;margin-top:22px}
+    .noprint button{padding:12px 30px;font-size:15px;background:#2563EB;color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer}
+    @media print{body{padding:10mm}.noprint{display:none}}
+    ${extraCss||''}
+  </style></head><body>${bodyHtml}<div class="noprint"><button onclick="window.print()">🖨 印刷 / PDF保存</button></div></body></html>`);
+  w.document.close(); return w;
+}
+function generateWorkOrder(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const cl=clientById(j.clientId), st=DATA.settings, parts=(j.parts||[]);
+  const partsRows = parts.length? parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.supplier||'')}</td><td class="c">${p.arrived?'✓ 着荷済':'未着'}</td></tr>`).join('') : `<tr><td colspan="3" class="muted">（部品の登録なし）</td></tr>`;
+  const qtyTag=num(j.qty)>1?`　<b style="font-size:17px">×${num(j.qty)}台</b>`:'';
+  const body=`
+   <div class="wo-head"><div><div class="wo-title">作業指示書</div><div class="wo-sub">${esc(st.company||'')}${st.tel?'　TEL '+esc(st.tel):''}</div></div>
+     <div class="wo-meta"><div>No. ${esc(j.jobNo||'')}</div><div>発行 ${fmtFullDate(todayISO())}</div></div></div>
+   <table class="wo-tbl">
+     <tr><th>取引先</th><td>${esc(cl?cl.name:j.clientName||'')}</td><th>エンド</th><td>${esc(j.endUser?j.endUser+' 様':'—')}</td></tr>
+     <tr><th>車種</th><td><b style="font-size:17px">${esc(j.carModel||'—')}</b>${qtyTag}</td><th>ナンバー</th><td>${esc(j.carPlate||'—')}</td></tr>
+     <tr><th>作業場所</th><td colspan="3">${esc(j.workPlace||'—')}</td></tr>
+     <tr><th>現場担当</th><td>${esc(j.siteContact||'—')}　${esc(j.siteTel||'')}</td><th>作業予定</th><td><b>${workScheduleStr(j)}</b></td></tr>
+     <tr><th>自社担当</th><td>${esc(j.worker||'—')}</td><th>外注</th><td>${j.outsource&&j.outsource.used?esc(j.outsource.vendor||'—'):'—'}</td></tr>
+   </table>
+   <div class="wo-sec">作業内容</div><div class="wo-box big">${esc(j.workDesc||'')}</div>
+   <div class="wo-sec">部品${num(j.qty)>1?'　※各 '+num(j.qty)+'台分':''}　届け先: ${esc(j.partsDest||'当社')}</div>
+   <table class="wo-parts"><thead><tr><th>部品名</th><th>仕入先</th><th class="c">着荷</th></tr></thead><tbody>${partsRows}</tbody></table>
+   ${j.outsource&&j.outsource.used&&num(j.outsource.cost)?`<div class="wo-sec">外注費(税抜)</div><div class="wo-box">${yen(j.outsource.cost)}</div>`:''}
+   ${j.memo?`<div class="wo-sec">注意事項・連絡</div><div class="wo-box">${esc(j.memo)}</div>`:''}
+   <div class="wo-sign"><div>作業完了日　______________</div><div>担当サイン　______________</div></div>`;
+  const css=`
+   .wo-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #16202E;padding-bottom:10px;margin-bottom:14px}
+   .wo-title{font-size:26px;font-weight:800;letter-spacing:6px}.wo-sub{font-size:12px;color:#555;margin-top:4px}
+   .wo-meta{text-align:right;font-size:13px;line-height:1.8}
+   .wo-tbl{width:100%;border-collapse:collapse;margin-bottom:6px}
+   .wo-tbl th,.wo-tbl td{border:1px solid #9AA7B8;padding:8px 10px;font-size:13px;text-align:left}
+   .wo-tbl th{background:#EEF2F8;width:78px;font-weight:700;white-space:nowrap}
+   .wo-sec{font-weight:800;font-size:13px;margin:14px 0 6px;color:#1D4ED8}
+   .wo-box{border:1px solid #9AA7B8;border-radius:6px;padding:12px 14px;min-height:40px;white-space:pre-wrap}
+   .wo-box.big{font-size:18px;font-weight:700;min-height:58px}
+   .wo-parts{width:100%;border-collapse:collapse}
+   .wo-parts th,.wo-parts td{border:1px solid #9AA7B8;padding:7px 10px;font-size:13px}
+   .wo-parts th{background:#2563EB;color:#fff}.wo-parts .c{text-align:center}.muted{color:#888;text-align:center}
+   .wo-sign{display:flex;justify-content:space-between;margin-top:28px;font-size:14px}`;
+  openPrintWindow('作業指示書 '+(j.jobNo||''),body,css);
+}
+/* 作業報告書(印刷) */
+function generateWorkReport(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const cl=clientById(j.clientId), st=DATA.settings;
+  const photos=(j.photos||[]).map(src=>`<div class="rp-ph"><img src="${src}"></div>`).join('');
+  const body=`
+   <div class="rp-head"><div><div class="rp-title">作業報告書</div><div class="rp-sub">${esc(st.company||'')}${st.tel?'　TEL '+esc(st.tel):''}</div></div>
+     <div class="rp-meta"><div>No. ${esc(j.jobNo||'')}</div><div>報告日 ${fmtFullDate(todayISO())}</div></div></div>
+   <table class="rp-tbl">
+     <tr><th>取引先</th><td>${esc(cl?cl.name:j.clientName||'')} 御中</td></tr>
+     <tr><th>エンド/車両</th><td>${esc(j.endUser?j.endUser+'様　':'')}<b>${esc(j.carModel||'')}</b>${num(j.qty)>1?' ×'+num(j.qty)+'台':''}　${esc(j.carPlate||'')}</td></tr>
+     <tr><th>作業日</th><td>${workDoneStr(j)||workScheduleStr(j)}</td></tr>
+     <tr><th>担当</th><td>${esc(j.worker||'')}${j.outsource&&j.outsource.used?'　／外注 '+esc(j.outsource.vendor||''):''}</td></tr>
+     <tr><th>作業内容</th><td>${esc(j.workDesc||'')}</td></tr>
+   </table>
+   <div class="rp-sec">作業報告</div><div class="rp-box">${esc(j.reportNote||'（記入なし）')}</div>
+   ${photos?`<div class="rp-sec">作業写真</div><div class="rp-photos">${photos}</div>`:''}
+   <div class="rp-foot">上記の通り作業が完了致しましたのでご報告申し上げます。</div>`;
+  const css=`
+   .rp-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #16202E;padding-bottom:10px;margin-bottom:14px}
+   .rp-title{font-size:26px;font-weight:800;letter-spacing:6px}.rp-sub{font-size:12px;color:#555;margin-top:4px}
+   .rp-meta{text-align:right;font-size:13px;line-height:1.8}
+   .rp-tbl{width:100%;border-collapse:collapse;margin-bottom:6px}
+   .rp-tbl th,.rp-tbl td{border:1px solid #9AA7B8;padding:8px 11px;font-size:13.5px;text-align:left}
+   .rp-tbl th{background:#EEF2F8;width:96px;font-weight:700;white-space:nowrap}
+   .rp-sec{font-weight:800;font-size:13px;margin:14px 0 6px;color:#1D4ED8}
+   .rp-box{border:1px solid #9AA7B8;border-radius:6px;padding:12px 14px;min-height:46px;white-space:pre-wrap;font-size:14px}
+   .rp-photos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+   .rp-ph{border:1px solid #ccc;border-radius:6px;overflow:hidden;aspect-ratio:4/3}
+   .rp-ph img{width:100%;height:100%;object-fit:cover}
+   .rp-foot{margin-top:20px;font-size:13px;color:#333}
+   @media print{.rp-ph{break-inside:avoid}}`;
+  openPrintWindow('作業報告書 '+(j.jobNo||''),body,css);
+}
+/* 作業報告書を画像に合成してLINE等へ共有 */
+function _loadImg(src){ return new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; }); }
+function _wrapText(ctx,text,maxW){ const lines=[]; let line=''; const s=String(text==null?'':text); for(const ch of s){ if(ch==='\n'){ lines.push(line); line=''; continue; } const t=line+ch; if(ctx.measureText(t).width>maxW && line){ lines.push(line); line=ch; } else line=t; } if(line) lines.push(line); return lines.length?lines:['']; }
+function _drawCover(ctx,im,x,y,w,h){ const ir=im.width/im.height, r=w/h; let sw,sh,sx,sy; if(ir>r){ sh=im.height; sw=sh*r; sx=(im.width-sw)/2; sy=0; } else { sw=im.width; sh=sw/r; sx=0; sy=(im.height-sh)/2; } ctx.drawImage(im,sx,sy,sw,sh,x,y,w,h); }
+async function composeReportImage(j){
+  const cl=clientById(j.clientId), st=DATA.settings;
+  const photos=(await Promise.all((j.photos||[]).map(_loadImg))).filter(Boolean);
+  const W=860, pad=40, gap=14, big=document.createElement('canvas'); big.width=W; big.height=8000;
+  const ctx=big.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,8000); ctx.textBaseline='top';
+  let y=pad;
+  ctx.fillStyle='#16202E'; ctx.font='bold 34px sans-serif'; ctx.fillText('作業報告書',pad,y);
+  ctx.font='13px sans-serif'; ctx.fillStyle='#555'; ctx.textAlign='right';
+  ctx.fillText('No. '+(j.jobNo||''),W-pad,y+4); ctx.fillText('報告日 '+fmtFullDate(todayISO()),W-pad,y+24); ctx.textAlign='left';
+  y+=54; ctx.font='13px sans-serif'; ctx.fillStyle='#555'; ctx.fillText((st.company||'')+(st.tel?'　TEL '+st.tel:''),pad,y); y+=26;
+  ctx.strokeStyle='#16202E'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=18;
+  function row(label,val){ ctx.font='bold 14px sans-serif'; ctx.fillStyle='#666'; ctx.fillText(label,pad,y); ctx.font='15px sans-serif'; ctx.fillStyle='#16202E'; const ls=_wrapText(ctx,val,W-pad-140); ls.forEach((ln,i)=>ctx.fillText(ln,pad+120,y+i*22)); y+=Math.max(22,ls.length*22)+9; }
+  row('取引先',(cl?cl.name:j.clientName||'')+' 御中');
+  row('エンド/車両',(j.endUser?j.endUser+'様 ':'')+(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.carPlate?' '+j.carPlate:''));
+  row('作業日',workDoneStr(j)||workScheduleStr(j));
+  row('担当',(j.worker||'')+(j.outsource&&j.outsource.used?'／外注 '+(j.outsource.vendor||''):''));
+  row('作業内容',j.workDesc||'');
+  y+=4; ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('作業報告',pad,y); y+=24;
+  ctx.font='15px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.reportNote||'（記入なし）',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=23; }); y+=12;
+  if(photos.length){
+    ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('作業写真',pad,y); y+=26;
+    const cols=2, cw=(W-pad*2-gap)/cols, ch=cw*0.72;
+    for(let i=0;i<photos.length;i++){ const col=i%cols, x=pad+col*(cw+gap); _drawCover(ctx,photos[i],x,y,cw,ch); ctx.strokeStyle='#ddd'; ctx.lineWidth=1; ctx.strokeRect(x,y,cw,ch); if(col===cols-1||i===photos.length-1) y+=ch+gap; }
+  }
+  y+=pad-gap;
+  const out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y); out.getContext('2d').drawImage(big,0,0);
+  return await new Promise(res=>out.toBlob(b=>res(b),'image/jpeg',0.85));
+}
+function reportCaption(j){
+  const cl=clientById(j.clientId); const L=['【作業報告】 '+(j.jobNo||'')];
+  if(cl||j.clientName) L.push(cl?cl.name:j.clientName);
+  if(j.endUser) L.push('エンド: '+j.endUser+'様');
+  if(j.carModel) L.push('車両: '+j.carModel+(num(j.qty)>1?' ×'+num(j.qty)+'台':''));
+  L.push('作業内容: '+(j.workDesc||''));
+  if(j.workedAt) L.push('作業日: '+(workDoneStr(j)));
+  if(j.reportNote) L.push('報告: '+j.reportNote);
+  return L.join('\n');
+}
+async function shareWorkReport(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  toast('報告書を作成中…');
+  let blob; try{ blob=await composeReportImage(j); }catch(e){ console.error(e); toast('作成に失敗しました','err'); return; }
+  const file=new File([blob],'作業報告書_'+(j.jobNo||'')+'.jpg',{type:'image/jpeg'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:'作業報告書 '+(j.jobNo||''), text:reportCaption(j)}); return; }
+    catch(e){ if(e && e.name==='AbortError') return; }
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast('報告書画像を保存しました。LINEで添付して送ってください');
+}
+function generatePartsLabel(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const cl=clientById(j.clientId);
+  const parts=(j.parts||[]).map(p=>esc(p.name)).join('、')||esc(j.workDesc||'—');
+  const body=`<div class="lbl">
+     <div class="lbl-no">受入ラベル　No. ${esc(j.jobNo||'')}</div>
+     <div class="lbl-client">${esc(cl?cl.name:j.clientName||'')}</div>
+     ${j.endUser?`<div class="lbl-end">${esc(j.endUser)} 様</div>`:''}
+     <div class="lbl-car">${esc(j.carModel||'')}${num(j.qty)>1?`　×${num(j.qty)}台`:''}</div>
+     <div class="lbl-row"><span>取付内容</span><b>${esc(j.workDesc||'—')}</b></div>
+     <div class="lbl-row"><span>部品</span><b>${parts}</b></div>
+     <div class="lbl-row"><span>届け先</span><b>${esc(j.partsDest||'当社')}</b></div>
+     <div class="lbl-row"><span>作業場所</span><b>${esc(j.workPlace||'—')}</b></div>
+     <div class="lbl-grid"><div><span>着荷予定</span><b>${esc(j.partsEta||'—')}</b></div><div><span>作業予定</span><b>${workScheduleStr(j)}</b></div></div>
+   </div>`;
+  const css=`body{padding:10mm}
+   .lbl{border:4px solid #16202E;border-radius:16px;padding:24px 28px}
+   .lbl-no{font-size:15px;color:#2563EB;font-weight:800;letter-spacing:1px}
+   .lbl-client{font-size:30px;font-weight:800;margin-top:8px;line-height:1.2}
+   .lbl-end{font-size:22px;font-weight:700;color:#444;margin-top:2px}
+   .lbl-car{font-size:34px;font-weight:800;margin:14px 0;padding:12px 0;border-top:2px solid #16202E;border-bottom:2px solid #16202E}
+   .lbl-row{font-size:17px;margin:11px 0;display:flex;gap:12px}
+   .lbl-row span{color:#666;min-width:80px;font-size:13px;padding-top:3px}.lbl-row b{flex:1}
+   .lbl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+   .lbl-grid span{display:block;color:#666;font-size:12px}.lbl-grid b{font-size:18px}`;
+  openPrintWindow('受入ラベル '+(j.jobNo||''),body,css);
+}
+
+/* ───────── マスタ ───────── */
+let masterTab='clients';
+function renderMaster(){
+  const tabs=[['clients','取引先','📇'],['subs','外注先','🤝'],['presets','取付項目','🔧']];
+  document.getElementById('page-master').innerHTML=`
+  <div class="page-h">🗂️ マスタ管理</div>
+  <div class="chips">${tabs.map(t=>`<button class="chip ${masterTab===t[0]?'active':''}" onclick="masterTab='${t[0]}';renderMaster()">${t[2]} ${t[1]}</button>`).join('')}</div>
+  <div id="master-body"></div>`;
+  const b=document.getElementById('master-body');
+  b.innerHTML = masterTab==='clients'?renderClients() : masterTab==='subs'?renderSubs() : renderPresets();
+}
+function renderClients(){
+  return `<button class="btn btn-primary btn-full btn-sm" style="margin-bottom:12px" onclick="editClient()">＋ 取引先を追加</button>`+
+    (DATA.clients.length? DATA.clients.map(c=>`<div class="list-row" onclick="editClient('${c.id}')"><div class="ic">📇</div><div class="tx"><div class="t1">${esc(c.name)}</div><div class="t2">${esc(c.tel||'')} ${(c.contacts||[]).length?'・担当 '+esc(c.contacts[0].name):''}</div></div><span class="arr">›</span></div>`).join('') : '<div class="empty"><div class="ico">📇</div><div class="t">取引先を追加してください</div></div>');
+}
+function renderSubs(){
+  return `<button class="btn btn-primary btn-full btn-sm" style="margin-bottom:12px" onclick="editSub()">＋ 外注先を追加</button>`+
+    (DATA.subcontractors.length? DATA.subcontractors.map(s=>`<div class="list-row" onclick="editSub('${s.id}')"><div class="ic">🤝</div><div class="tx"><div class="t1">${esc(s.name)}</div><div class="t2">${esc(s.tel||'')} ${esc(s.memo||'')}</div></div><span class="arr">›</span></div>`).join('') : '<div class="empty"><div class="ico">🤝</div><div class="t">外注先を追加してください</div></div>');
+}
+function renderPresets(){
+  return `<div class="hint" style="margin-bottom:10px">取付内容の入力を早くするための定型文です(タップで取付内容に追加)</div><button class="btn btn-primary btn-full btn-sm" style="margin-bottom:12px" onclick="editPreset()">＋ 取付項目を追加</button>`+
+    DATA.presets.map(p=>`<div class="list-row" onclick="editPreset('${p.id}')"><div class="ic">🔧</div><div class="tx"><div class="t1">${esc(p.name)}</div><div class="t2">${p.price?'目安単価 '+yen(p.price):'単価未設定'}</div></div><span class="arr">›</span></div>`).join('');
+}
+function editClient(id){
+  const c=id?DATA.clients.find(x=>x.id===id):{id:uid(),name:'',contacts:[],tel:'',address:'',closingDay:'',memo:''}; const isNew=!id;
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`<div class="modal-head"><h2>${isNew?'取引先追加':'取引先編集'}</h2><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="field"><label>法人名 *</label><input id="c-name" value="${esc(c.name)}"></div>
+    <div class="field"><label>担当者名</label><input id="c-contact" value="${esc((c.contacts||[])[0]?c.contacts[0].name:'')}"></div>
+    <div class="field-row"><div class="field"><label>TEL</label><input id="c-tel" value="${esc(c.tel)}" inputmode="tel"></div>
+    <div class="field"><label>締め日</label><input id="c-closing" value="${esc(c.closingDay)}" placeholder="例: 末 / 20"></div></div>
+    <div class="field"><label>住所</label><input id="c-addr" value="${esc(c.address)}"></div>
+    <div class="field"><label>メモ</label><textarea id="c-memo">${esc(c.memo)}</textarea></div>
+  </div>
+  <div class="modal-foot">${isNew?'':`<button class="btn btn-danger btn-sm" style="flex:0 0 auto" onclick="delClient('${c.id}')">削除</button>`}<button class="btn btn-ghost" onclick="closeModal()">閉じる</button><button class="btn btn-primary" onclick="saveClient('${c.id}',${isNew})">保存</button></div>`;
+  bg.classList.add('open');
+}
+function saveClient(id,isNew){
+  const name=document.getElementById('c-name').value.trim(); if(!name){ toast('法人名は必須','err'); return; }
+  const contact=document.getElementById('c-contact').value.trim();
+  const obj={ id, name, contacts:contact?[{name:contact,tel:''}]:[], tel:document.getElementById('c-tel').value.trim(), address:document.getElementById('c-addr').value.trim(), closingDay:document.getElementById('c-closing').value.trim(), memo:document.getElementById('c-memo').value };
+  if(isNew) DATA.clients.push(obj); else Object.assign(DATA.clients.find(x=>x.id===id),obj);
+  save(); closeModal(); toast('保存しました','ok'); renderMaster();
+}
+async function delClient(id){ if(!await confirmModal('この取引先を削除しますか？',{danger:true,okText:'削除'})) return; DATA.clients=DATA.clients.filter(x=>x.id!==id); save(); closeModal(); renderMaster(); }
+function editSub(id){
+  const s=id?DATA.subcontractors.find(x=>x.id===id):{id:uid(),name:'',tel:'',memo:''}; const isNew=!id;
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`<div class="modal-head"><h2>${isNew?'外注先追加':'外注先編集'}</h2><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body"><div class="field"><label>外注先名 *</label><input id="s-name" value="${esc(s.name)}"></div>
+  <div class="field"><label>TEL</label><input id="s-tel" value="${esc(s.tel)}" inputmode="tel"></div>
+  <div class="field"><label>メモ(得意分野・単価目安など)</label><textarea id="s-memo">${esc(s.memo)}</textarea></div></div>
+  <div class="modal-foot">${isNew?'':`<button class="btn btn-danger btn-sm" style="flex:0 0 auto" onclick="delSub('${s.id}')">削除</button>`}<button class="btn btn-ghost" onclick="closeModal()">閉じる</button><button class="btn btn-primary" onclick="saveSub('${s.id}',${isNew})">保存</button></div>`;
+  bg.classList.add('open');
+}
+function saveSub(id,isNew){ const name=document.getElementById('s-name').value.trim(); if(!name){toast('名称は必須','err');return;} const obj={id,name,tel:document.getElementById('s-tel').value.trim(),memo:document.getElementById('s-memo').value}; if(isNew)DATA.subcontractors.push(obj); else Object.assign(DATA.subcontractors.find(x=>x.id===id),obj); save(); closeModal(); renderMaster(); toast('保存しました','ok'); }
+async function delSub(id){ if(!await confirmModal('削除しますか？',{danger:true,okText:'削除'}))return; DATA.subcontractors=DATA.subcontractors.filter(x=>x.id!==id); save(); closeModal(); renderMaster(); }
+function editPreset(id){
+  const p=id?DATA.presets.find(x=>x.id===id):{id:uid(),name:'',price:''}; const isNew=!id;
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`<div class="modal-head"><h2>${isNew?'取付項目追加':'取付項目編集'}</h2><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body"><div class="field"><label>項目名 *</label><input id="p-name" value="${esc(p.name)}"></div>
+  <div class="field"><label>目安単価(税別・任意)</label><input id="p-price" inputmode="numeric" value="${esc(p.price)}"></div></div>
+  <div class="modal-foot">${isNew?'':`<button class="btn btn-danger btn-sm" style="flex:0 0 auto" onclick="delPreset('${p.id}')">削除</button>`}<button class="btn btn-ghost" onclick="closeModal()">閉じる</button><button class="btn btn-primary" onclick="savePreset('${p.id}',${isNew})">保存</button></div>`;
+  bg.classList.add('open');
+}
+function savePreset(id,isNew){ const name=document.getElementById('p-name').value.trim(); if(!name){toast('項目名は必須','err');return;} const obj={id,name,price:document.getElementById('p-price').value.trim()}; if(isNew)DATA.presets.push(obj); else Object.assign(DATA.presets.find(x=>x.id===id),obj); save(); closeModal(); renderMaster(); }
+async function delPreset(id){ if(!await confirmModal('削除しますか？',{danger:true,okText:'削除'}))return; DATA.presets=DATA.presets.filter(x=>x.id!==id); save(); closeModal(); renderMaster(); }
+
+/* ───────── 設定 ───────── */
+function openSettings(){
+  const s=DATA.settings;
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`<div class="modal-head"><h2>⚙️ 設定</h2><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="sec-label">🏢 自社情報(請求書に印字)</div>
+    <div class="field"><label>自社名</label><input id="st-company" value="${esc(s.company)}"></div>
+    <div class="field"><label>自社名(2行目・任意)</label><input id="st-company2" value="${esc(s.company2)}"></div>
+    <div class="field-row"><div class="field" style="flex:0 0 110px"><label>郵便番号</label><input id="st-zip" value="${esc(s.zip)}"></div>
+    <div class="field"><label>住所</label><input id="st-address" value="${esc(s.address)}"></div></div>
+    <div class="field-row"><div class="field"><label>TEL</label><input id="st-tel" value="${esc(s.tel)}" inputmode="tel"></div>
+    <div class="field"><label>FAX</label><input id="st-fax" value="${esc(s.fax)}" inputmode="tel"></div></div>
+    <div class="field"><label>インボイス登録番号</label><input id="st-reg" value="${esc(s.regNo)}" placeholder="T..."></div>
+    <div class="field"><label>振込先(改行可)</label><textarea id="st-bank">${esc(s.bank)}</textarea></div>
+    <div class="field-row"><div class="field"><label>件名(請求書)</label><input id="st-subject" value="${esc(s.subject)}"></div>
+    <div class="field" style="flex:0 0 120px"><label>消費税率(%)</label><input id="st-tax" inputmode="numeric" value="${esc(s.taxRate)}"></div></div>
+    <div class="field"><label>ETCセットアップ単価(1台・既定)</label><input id="st-etcfee" inputmode="numeric" value="${esc(s.etcSetupFee)}"><div class="hint">部品は取引先支給が基本。ETCセットアップのみ当社負担＝新規案件で使う既定単価</div></div>
+    <div class="field"><label>備考(請求書下部)</label><textarea id="st-note">${esc(s.note)}</textarea></div>
+    <div class="field"><label>次の請求書番号</label><input id="st-invno" inputmode="numeric" value="${esc(s.nextInvoiceNo)}"><div class="hint">INV-0000000000 形式(10桁)で発行。例: 205 → INV-0000000205</div></div>
+    <div class="field"><label>ロゴ(請求書右上・任意)</label>
+      <div class="btn-row"><button class="btn btn-secondary btn-sm" onclick="document.getElementById('logo-file').click()">画像を選ぶ</button>${s.logo?'<button class="btn btn-ghost btn-sm" onclick="DATA.settings.logo=\'\';save();openSettings()">削除</button>':''}</div>
+      <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="onLogoPick(this)">
+      ${s.logo?`<img src="${s.logo}" style="max-height:50px;margin-top:8px;background:#fff;padding:4px;border-radius:6px">`:''}</div>
+    <div class="sec-label">👤 操作者</div>
+    <div class="field"><label>あなたの名前(更新者として記録)</label><input id="st-person" value="${esc(s.person)}"></div>
+    <div class="sec-label">💾 データ</div>
+    <div class="btn-row" style="margin-bottom:9px"><button class="btn btn-secondary btn-sm" onclick="exportData()">⬇️ バックアップ書出</button><button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file').click()">⬆️ 復元(取込)</button></div>
+    <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(this)">
+    <button class="btn btn-ghost btn-sm btn-full" style="margin-bottom:9px" onclick="seedDemo()">🧪 サンプルデータを入れて試す</button>
+    <button class="btn btn-danger btn-sm btn-full" onclick="wipeData()">全データ削除</button>
+    <div class="hint" style="margin-top:12px;text-align:center">電装取付管理 ${APP_VERSION}<br>データはこの端末内(localStorage)に保存されます</div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">閉じる</button><button class="btn btn-primary" onclick="saveSettings()">保存</button></div>`;
+  bg.classList.add('open');
+}
+async function onLogoPick(input){ const f=input.files[0]; if(!f) return; try{ DATA.settings.logo=await compressImage(f,400,0.85); save(); openSettings(); toast('ロゴを設定','ok'); }catch(e){ toast('画像エラー','err'); } input.value=''; }
+function saveSettings(){
+  const g=id=>document.getElementById(id).value;
+  Object.assign(DATA.settings,{
+    company:g('st-company').trim(), company2:g('st-company2').trim(), zip:g('st-zip').trim(),
+    address:g('st-address').trim(), tel:g('st-tel').trim(), fax:g('st-fax').trim(),
+    regNo:g('st-reg').trim(), bank:g('st-bank'), subject:g('st-subject').trim(),
+    note:g('st-note'), taxRate:num(g('st-tax')), nextInvoiceNo:num(g('st-invno'))||1, etcSetupFee:num(g('st-etcfee'))||1800, person:g('st-person').trim()
+  });
+  save(); closeModal(); toast('設定を保存','ok'); refresh();
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(DATA,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='電装取付管理_backup_'+todayISO()+'.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+async function importData(input){
+  const f=input.files[0]; if(!f) return;
+  if(!await confirmModal('現在のデータを取込ファイルで上書きします。よろしいですか？',{danger:true,okText:'取込む'})){ input.value=''; return; }
+  try{ DATA=JSON.parse(await f.text()); save(); closeModal(); toast('復元しました','ok'); switchTab('home'); }
+  catch(e){ toast('ファイルが不正です','err'); }
+  input.value='';
+}
+async function wipeData(){
+  if(!await confirmModal('全ての案件・マスタ・設定を削除します。\nこの操作は取り消せません。\n先にバックアップ書出を推奨。',{danger:true,okText:'全削除する'})) return;
+  if(!await confirmModal('本当に削除しますか？',{danger:true,okText:'はい、削除'})) return;
+  DATA=defaultData(); save(); closeModal(); toast('削除しました'); switchTab('home');
+}
+function seedDemo(){
+  const c1={id:uid(),name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'};
+  DATA.clients.push(c1);
+  const s1={id:uid(),name:'電装プロ仲宗根',tel:'090-1234-5678',memo:'特殊配線・本格作業'}; DATA.subcontractors.push(s1);
+  DATA.settings.nextInvoiceNo=214; // 5月=INV-213が実発行。6月(214)は作業完了時に発行する運用
+  const mk=(over)=>Object.assign(newJob(),{jobNo:genJobNo(),clientId:c1.id,clientName:c1.name,worker:'大嶺'},over);
+  DATA.jobs.push(
+    // ── 進行中の依頼(実依頼文より) ──
+    mk({status:'依頼',workDesc:'オンダッシュナビ＋カメラ＋ドラレコ前後取付',carModel:'ハイゼットカーゴ',workPlace:'沖縄ユーポス 豊見城',siteContact:'堤さん',siteTel:'080-9427-9341',partsEta:'30日着荷予定',workableFrom:'6/1以降',deadline:'2026-06-05',qty:1,unitFee:'25000',memo:'車両は店舗にあります。着荷後に堤さんへ連絡し6月1日以降早めの取付作業をお願いいたします。'}),
+    mk({status:'部品手配',workDesc:'ドラレコ前後取付（ZDR018＋GS29）',carModel:'ヤリスクロス',endUser:'レンタリースラボ',workPlace:'スカイレンタリース株式会社 スカイ倶楽部豊崎 沖縄県豊見城市豊崎3番60',siteContact:'金城さん',siteTel:'070-5403-0780',partsEta:'27日着荷予定',deadline:'2026-06-02',qty:1,unitFee:'7000',parts:[{name:'ドラレコ ZDR018',supplier:'コムテック',cost:0,arrived:true,arrivedAt:'2026-05-27'},{name:'GS29',supplier:'コムテック',cost:0,arrived:false,arrivedAt:''}],memo:'車両はありますので、いつでも作業可能です。'}),
+    // ── 5月分 請求済(INV-0000000213 / 合計税込349,800) ──
+    mk({status:'請求済',carModel:'ジムニーノマド',endUser:'ユーポス奥武山',workDesc:'ドラレコ前後取付',qty:1,unitFee:'7000',workedAt:'2026-05-13',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
+    mk({status:'請求済',carModel:'ハイゼットカーゴ',endUser:'フジレンオートサービス',workDesc:'ドラレコ前後　CDオーディオ取付',qty:1,unitFee:'12000',workedAt:'2026-05-20',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
+    mk({status:'請求済',carModel:'ヤリスクロス',endUser:'NEWS',workDesc:'マット設置',qty:34,unitFee:'500',workedAt:'2026-05-23',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
+    mk({status:'請求済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:11,unitFee:'25000',workedAt:'2026-05-28',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31',etc:{used:true,count:11,unit:1800},outsource:{used:true,vendor:'電装プロ仲宗根',cost:88000,paid:false}}),
+    mk({status:'請求済',carModel:'ヤリスクロス',endUser:'レンタリースラボ',workDesc:'ドラレコ前後',qty:1,unitFee:'7000',workedAt:'2026-05-29',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
+    // ── 4月分 入金済(INV-0000000204 / 合計税込907,500) ※摘要は車種+相手先様のみ ──
+    mk({status:'入金済',carModel:'ハスラー',endUser:'NEWS',billingDesc:'ハスラー　NEWS様',qty:10,unitFee:'20000',workedAt:'2026-04-01',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
+    mk({status:'入金済',carModel:'ハスラー',endUser:'フジレンタカー',billingDesc:'ハスラー　フジレンタカー様',qty:15,unitFee:'25000',workedAt:'2026-04-02',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
+    mk({status:'入金済',carModel:'スペーシア',endUser:'NEWS',billingDesc:'スペーシア　NEWS様',qty:10,unitFee:'25000',workedAt:'2026-04-29',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
+    // ── 6月予定 まだ作業未完了(完了したら請求発行→INV-214採番。取引日なし=作業前) ──
+    mk({status:'受注',carModel:'ヤリスクロス',endUser:'NEWS',workDesc:'マット設置',qty:44,unitFee:'500',billingMonth:'2026-06',deadline:'2026-06-18'}),
+    mk({status:'着荷済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:8,unitFee:'25000',billingMonth:'2026-06',deadline:'2026-06-22',partsDest:'現場・エンド直送'}),
+    mk({status:'受注',carModel:'スペーシア',workDesc:'ナビ取付',qty:20,unitFee:'25000',billingMonth:'2026-06',deadline:'2026-06-27'}),
+  );
+  save(); closeModal(); toast('実データ(4月・5月の請求＋進行中)を投入しました','ok'); switchTab('home');
+}
+
+/* ───────── 起動 ───────── */
+function init(){
+  load();
+  document.getElementById('hdr-ver').textContent='v'+APP_VERSION;
+  switchTab('home');
+}
+init();
+</script>
+</body>
+</html>
