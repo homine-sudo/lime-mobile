@@ -789,7 +789,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-24w';
+const APP_VERSION = '2026-05-28a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1149,44 +1149,31 @@ function detaliaPipeline(){
   return order.map(s=>({s,n:cnt[s]}));
 }
 
-// 「いま稼働中」の案件 — 売上日額(run rate)計算用
-//   PC LIMEOne.html line 6598 と一致 (3ステータス)
-//   ① status='利用中'
-//   ② status='回収連絡'
-//   ③ status='配車済' かつ useStart<=today かつ (useEnd未設定 or useEnd>=today)
-function currentlyDispatchedCases(){
+// ★「本日 車が出ている」統一述語 — PC LIMEOne.html line 6603 (_isOutToday) と完全一致 (2026-05-28b)
+//   status ∈ {配車済, 利用中, 回収連絡, 手配書FAX済} (返却済は車庫に戻ってるので除外)
+//   ∧ useStart <= today (未来開始を除外)
+//   ∧ (useEnd空=返却日未定でまだ稼働 / useEndありなら today <= useEnd)
+//   ※ useEnd空を +30日でカットしない (旧バグ。長期案件が30日で消えていた)
+function isOutToday(c){
   const today=todayISO();
-  return rentalCases().filter(c=>{
-    if(c.status==='キャンセル') return false;
-    if(c.status==='利用中') return true;
-    if(c.status==='回収連絡') return true;
-    if(c.status==='配車済' && c.useStart && c.useStart<=today && (!c.useEnd || c.useEnd>=today)) return true;
-    return false;
-  });
+  if(!c || c.status==='キャンセル') return false;
+  if(!['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)) return false;
+  if(!c.useStart || c.useStart > today) return false;
+  if(c.useEnd && c.useEnd < today) return false;
+  return true;
 }
-// 「本日 瞬間稼働率」用の vehicle set — PC LIMEOne.html line 6611 と一致
-//   5ステータス + 全ステータスに useStart<=today<=useEnd の期間フィルタ
-function activeVehicleIds(){
+// 「利用中」案件 (= 売上日額の母数) — 利用中KPIと同一述語
+function currentlyDispatchedCases(){
+  return rentalCases().filter(isOutToday);
+}
+// vehicle utilization (PC dashboard 本日稼働中 と一致) — 利用中と同一述語で vehicleId ユニーク数
+function vehicleStats(){
   const today=todayISO();
   const vehAll=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車' && v.status!=='売却済');
   const vehIdSet=new Set(vehAll.map(v=>v.id));
-  const activeStatus=new Set(['配車済','利用中','回収連絡','手配書FAX済','返却済']);
-  const activeIds=new Set();
-  rentalCases().forEach(c=>{
-    if(!vehIdSet.has(c.vehicleId) || !c.useStart) return;
-    if(!activeStatus.has(c.status)) return;
-    const s=c.useStart;
-    const e=c.useEnd || addDays(c.useStart, 30);
-    if(s<=today && today<=e) activeIds.add(c.vehicleId);
-  });
-  return {activeIds, vehAll};
-}
-// vehicle utilization (PC dashboard と一致)
-function vehicleStats(){
-  const {activeIds, vehAll}=activeVehicleIds();
+  const inUse=new Set();
+  rentalCases().filter(isOutToday).forEach(c=>{ if(vehIdSet.has(c.vehicleId)) inUse.add(c.vehicleId); });
   const tot=vehAll.length;
-  const today=todayISO();
-  const inUse=activeIds;
   const vehicles=vehAll;
   // last 30 days utilization
   const end=new Date();const start=new Date(); start.setDate(start.getDate()-29);
