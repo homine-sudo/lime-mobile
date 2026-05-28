@@ -273,7 +273,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28k';
+const APP_VERSION = '2026-05-28l';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -576,7 +576,7 @@ function openJobModal(id){
     <div class="field"><label>請求書の摘要 <span style="color:var(--muted);font-weight:400">(空欄なら「車種＋相手先様＋取付内容」)</span></label><input id="f-billingdesc" value="${esc(j.billingDesc)}" placeholder="" oninput="syncBillingHint()"><div class="hint" id="billing-hint"></div></div>
 
     <div class="sec-label">📦 部品(取引先支給)</div>
-    <div class="hint" style="margin-top:-4px;margin-bottom:8px">基本は取引先支給(原価0)で着荷管理に使用。当社購入分のみ原価を入力</div>
+    <div class="hint" style="margin-top:-4px;margin-bottom:8px">部品は取引先支給が基本。届いたか(着荷)の管理に使います・値段は不要</div>
     <div class="field"><label>部品の届け先</label>
       <div class="chips" style="margin-bottom:0"><button type="button" class="chip ${(!j.partsDest||j.partsDest==='当社')?'active':''}" id="pd-当社" onclick="pickPartsDest('当社')">🏢 当社(店舗)に着荷</button><button type="button" class="chip ${j.partsDest==='現場・エンド直送'?'active':''}" id="pd-現場・エンド直送" onclick="pickPartsDest('現場・エンド直送')">🚚 現場・エンド直送</button></div>
       <div class="hint">エンド直送の時は当社で受けず、現場/エンドへ直接届く</div></div>
@@ -641,12 +641,9 @@ function renderPartLines(){
   const el=document.getElementById('parts-lines'); if(!el) return;
   el.innerHTML=(editingJob.parts||[]).map((p,i)=>`<div class="line"><div class="line-main">
     <input value="${esc(p.name)}" placeholder="部品名" oninput="editingJob.parts[${i}].name=this.value">
-    <div style="display:flex;gap:6px">
-      <input value="${esc(p.supplier)}" placeholder="仕入先" oninput="editingJob.parts[${i}].supplier=this.value">
-      <input value="${esc(p.cost)}" inputmode="numeric" placeholder="原価" oninput="editingJob.parts[${i}].cost=this.value;recalcMoney()" style="max-width:90px">
-    </div>
+    <input value="${esc(p.supplier)}" placeholder="仕入先・型番など(任意)" oninput="editingJob.parts[${i}].supplier=this.value">
     <div class="chk-row" style="padding:6px 0 0" onclick="editingJob.parts[${i}].arrived=!editingJob.parts[${i}].arrived;editingJob.parts[${i}].arrivedAt=editingJob.parts[${i}].arrived?todayISO():'';renderPartLines()"><div class="chk ${p.arrived?'on':''}">✓</div><span style="font-size:13px">${p.arrived?'着荷済 '+(p.arrivedAt?fmtD(p.arrivedAt):''):'着荷待ち'}</span></div>
-    </div><div class="del" onclick="editingJob.parts.splice(${i},1);renderPartLines();recalcMoney()">🗑</div></div>`).join('');
+    </div><div class="del" onclick="editingJob.parts.splice(${i},1);renderPartLines()">🗑</div></div>`).join('');
 }
 function addPartLine(){ editingJob.parts.push({name:'',supplier:'',cost:'',arrived:false,arrivedAt:''}); renderPartLines(); }
 function recalcMoney(){
@@ -775,7 +772,7 @@ function openJobDetail(id){
     return (i>0?`<div class="flow-bar ${fi>=0&&i<=fi?'done':''}"></div>`:'')+
       `<div class="flow-step ${done?'done':''} ${cur?'cur':''}"><div class="flow-dot">${done?'✓':i+1}</div><div class="flow-lbl">${FLOW_SHORT[s]}</div></div>`;
   }).join('')+`</div>`;
-  const partsHtml=(j.parts||[]).length? (j.parts||[]).map(p=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${p.arrived?'✅':'⏳'} ${esc(p.name)} <span style="color:var(--muted)">${esc(p.supplier||'')}</span></span><span style="color:var(--text-dim)">${yen(p.cost)}</span></div>`).join('') : (j.partsEta?`<span style="color:var(--orange);font-size:13px">⏳ ${esc(j.partsEta)}</span>`:'<span style="color:var(--muted);font-size:13px">部品なし</span>');
+  const partsHtml=(j.parts||[]).length? (j.parts||[]).map(p=>`<div style="font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)">${p.arrived?'✅':'⏳'} ${esc(p.name)} <span style="color:var(--muted)">${esc(p.supplier||'')}</span>${p.arrived&&p.arrivedAt?'<span style="color:var(--green);font-size:11px"> ・'+fmtD(p.arrivedAt)+'着荷</span>':''}</div>`).join('') : (j.partsEta?`<span style="color:var(--orange);font-size:13px">⏳ ${esc(j.partsEta)}</span>`:'<span style="color:var(--muted);font-size:13px">部品なし</span>');
   const photosHtml=(j.photos||[]).length? `<div class="photos">`+(j.photos||[]).map((src,i)=>`<div class="photo"><img src="${src}" onclick="viewPhoto('${id}',${i})"></div>`).join('')+`</div>`:'';
   const idx=FLOW.indexOf(j.status), next=(idx>=0&&idx<FLOW.length-1&&j.status!=='報告済');
   const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
@@ -819,15 +816,19 @@ function openJobDetail(id){
       <button class="btn btn-secondary btn-sm" onclick="openReportModal('${id}')">📝 報告/写真</button>
     </div>
     <div class="sec-label">📄 書類</div>
+    <div style="font-size:11px;color:var(--text-dim);font-weight:700;margin-bottom:6px">外注向け（諸見里さん等・元請け金額は非表示）</div>
     <div class="btn-row">
-      <button class="btn btn-secondary btn-sm" onclick="generateWorkOrder('${id}')">🖨 作業指示書(外注)</button>
-      <button class="btn btn-secondary btn-sm" onclick="generatePartsLabel('${id}')">🏷 受入ラベル</button>
+      <button class="btn btn-secondary btn-sm" onclick="generateWorkOrder('${id}')">🖨 作業指示書</button>
+      <button class="btn btn-primary btn-sm" onclick="shareWorkOrder('${id}')">📤 指示書をLINE</button>
     </div>
-    <div class="btn-row" style="margin-top:9px">
+    <div style="font-size:11px;color:var(--text-dim);font-weight:700;margin:11px 0 6px">取引先向け（プロシード・外注は非表示）</div>
+    <div class="btn-row">
       <button class="btn btn-secondary btn-sm" onclick="generateWorkReport('${id}')">🖨 作業報告書</button>
       <button class="btn btn-primary btn-sm" onclick="shareWorkReport('${id}')">📤 報告書をLINE</button>
     </div>
-    <div class="hint" style="margin-top:6px">「報告書をLINE」は写真つき報告書を画像にして共有先(LINE等)を選べます</div>
+    <div class="btn-row" style="margin-top:11px">
+      <button class="btn btn-secondary btn-sm" onclick="generatePartsLabel('${id}')">🏷 受入ラベル</button>
+    </div>
   </div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="openJobModal('${id}')">✏️ 編集</button>
@@ -849,7 +850,7 @@ function openPartsCheck(id){
 function renderPartsCheckBody(id){
   const j=DATA.jobs.find(x=>x.id===id);
   document.getElementById('pc-body').innerHTML=`<div style="margin-bottom:12px;font-size:13px;color:var(--text-dim)">届いた部品をタップしてチェック</div>`+
-    (j.parts||[]).map((p,i)=>`<div class="line" style="cursor:pointer" onclick="togglePartArrival('${id}',${i})"><div class="chk ${p.arrived?'on':''}" style="margin-right:4px">✓</div><div class="line-main"><div style="font-size:15px;font-weight:600">${esc(p.name)}</div><div style="font-size:12px;color:var(--text-dim);margin-top:2px">${esc(p.supplier||'仕入先未設定')} ・ ${yen(p.cost)} ${p.arrived&&p.arrivedAt?'・着荷'+fmtD(p.arrivedAt):''}</div></div></div>`).join('');
+    (j.parts||[]).map((p,i)=>`<div class="line" style="cursor:pointer" onclick="togglePartArrival('${id}',${i})"><div class="chk ${p.arrived?'on':''}" style="margin-right:4px">✓</div><div class="line-main"><div style="font-size:15px;font-weight:600">${esc(p.name)}</div><div style="font-size:12px;color:var(--text-dim);margin-top:2px">${esc(p.supplier||'')} ${p.arrived&&p.arrivedAt?'・着荷'+fmtD(p.arrivedAt):''}</div></div></div>`).join('');
   const allIn=(j.parts||[]).every(p=>p.arrived);
   const btn=document.getElementById('pc-done'); if(btn) btn.textContent=allIn?'全着荷 → 作業準備OK':'一部のみ着荷で保存';
 }
@@ -1127,13 +1128,14 @@ function generateWorkOrder(id){
      <tr><th>車種</th><td><b style="font-size:17px">${esc(j.carModel||'—')}</b>${qtyTag}</td><th>ナンバー</th><td>${esc(j.carPlate||'—')}</td></tr>
      <tr><th>作業場所</th><td colspan="3">${esc(j.workPlace||'—')}</td></tr>
      <tr><th>現場担当</th><td>${esc(j.siteContact||'—')}　${esc(j.siteTel||'')}</td><th>作業予定</th><td><b>${workScheduleStr(j)}</b></td></tr>
+     <tr><th>日程</th><td colspan="3">着荷予定: ${esc(j.partsEta||'—')}　／　作業可能: ${esc(j.workableFrom||'—')}　／　作業期日: ${j.deadline?fmtD(j.deadline):'—'}</td></tr>
      <tr><th>自社担当</th><td>${esc(j.worker||'—')}</td><th>外注</th><td>${j.outsource&&j.outsource.used?esc(j.outsource.vendor||'—'):'—'}</td></tr>
    </table>
    <div class="wo-sec">作業内容</div><div class="wo-box big">${esc(j.workDesc||'')}</div>
    <div class="wo-sec">部品${num(j.qty)>1?'　※各 '+num(j.qty)+'台分':''}　届け先: ${esc(j.partsDest||'当社')}</div>
    <table class="wo-parts"><thead><tr><th>部品名</th><th>仕入先</th><th class="c">着荷</th></tr></thead><tbody>${partsRows}</tbody></table>
    ${j.outsource&&j.outsource.used&&num(j.outsource.cost)?`<div class="wo-sec">外注費(税抜)</div><div class="wo-box">${yen(j.outsource.cost)}</div>`:''}
-   ${j.memo?`<div class="wo-sec">注意事項・連絡</div><div class="wo-box">${esc(j.memo)}</div>`:''}
+   <div class="wo-sec">備考・注意事項</div><div class="wo-box" style="min-height:64px">${esc(j.memo||'')}</div>
    <div class="wo-sign"><div>作業完了日　______________</div><div>担当サイン　______________</div></div>`;
   const css=`
    .wo-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #16202E;padding-bottom:10px;margin-bottom:14px}
@@ -1163,7 +1165,7 @@ function generateWorkReport(id){
      <tr><th>取引先</th><td>${esc(cl?cl.name:j.clientName||'')} 御中</td></tr>
      <tr><th>エンド/車両</th><td>${esc(j.endUser?j.endUser+'様　':'')}<b>${esc(j.carModel||'')}</b>${num(j.qty)>1?' ×'+num(j.qty)+'台':''}　${esc(j.carPlate||'')}</td></tr>
      <tr><th>作業日</th><td>${workDoneStr(j)||workScheduleStr(j)}</td></tr>
-     <tr><th>担当</th><td>${esc(j.worker||'')}${j.outsource&&j.outsource.used?'　／外注 '+esc(j.outsource.vendor||''):''}</td></tr>
+     <tr><th>担当</th><td>${esc(j.worker||DATA.settings.company||'')}</td></tr>
      <tr><th>作業内容</th><td>${esc(j.workDesc||'')}</td></tr>
    </table>
    <div class="rp-sec">作業報告</div><div class="rp-box">${esc(j.reportNote||'（記入なし）')}</div>
@@ -1204,7 +1206,7 @@ async function composeReportImage(j){
   row('取引先',(cl?cl.name:j.clientName||'')+' 御中');
   row('エンド/車両',(j.endUser?j.endUser+'様 ':'')+(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.carPlate?' '+j.carPlate:''));
   row('作業日',workDoneStr(j)||workScheduleStr(j));
-  row('担当',(j.worker||'')+(j.outsource&&j.outsource.used?'／外注 '+(j.outsource.vendor||''):''));
+  row('担当',(j.worker||DATA.settings.company||''));
   row('作業内容',j.workDesc||'');
   y+=4; ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('作業報告',pad,y); y+=24;
   ctx.font='15px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.reportNote||'（記入なし）',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=23; }); y+=12;
@@ -1238,6 +1240,54 @@ async function shareWorkReport(id){
   }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
   toast('報告書画像を保存しました。LINEで添付して送ってください');
+}
+/* 作業指示書を画像に合成して外注へLINE共有 (元請け金額=工賃は出さない) */
+async function composeWorkOrderImage(j){
+  const cl=clientById(j.clientId), st=DATA.settings;
+  const W=860, pad=40, big=document.createElement('canvas'); big.width=W; big.height=3200;
+  const ctx=big.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,3200); ctx.textBaseline='top';
+  let y=pad;
+  ctx.fillStyle='#16202E'; ctx.font='bold 34px sans-serif'; ctx.fillText('作業指示書',pad,y);
+  ctx.font='13px sans-serif'; ctx.fillStyle='#555'; ctx.textAlign='right';
+  ctx.fillText('No. '+(j.jobNo||''),W-pad,y+4); ctx.fillText('発行 '+fmtFullDate(todayISO()),W-pad,y+24); ctx.textAlign='left';
+  y+=54; ctx.fillText((st.company||'')+(st.tel?'　TEL '+st.tel:''),pad,y); y+=26;
+  ctx.strokeStyle='#16202E'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=18;
+  function row(label,val,bold){ ctx.font='bold 14px sans-serif'; ctx.fillStyle='#666'; ctx.fillText(label,pad,y); ctx.font=(bold?'bold ':'')+'15px sans-serif'; ctx.fillStyle='#16202E'; const ls=_wrapText(ctx,val,W-pad-140); ls.forEach((ln,i)=>ctx.fillText(ln,pad+120,y+i*22)); y+=Math.max(22,ls.length*22)+9; }
+  row('取引先',(cl?cl.name:j.clientName||''));
+  row('エンド/車両',(j.endUser?j.endUser+'様 ':'')+(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.carPlate?' '+j.carPlate:''),true);
+  row('作業場所',j.workPlace||'—');
+  row('現場担当',(j.siteContact||'—')+(j.siteTel?'　'+j.siteTel:''));
+  row('日程','着荷予定 '+(j.partsEta||'—')+' ／ 作業可能 '+(j.workableFrom||'—')+' ／ 期日 '+(j.deadline?fmtD(j.deadline):'—'));
+  row('作業予定',workScheduleStr(j),true);
+  row('担当','自社 '+(j.worker||'—')+(j.outsource&&j.outsource.used?'　外注 '+(j.outsource.vendor||''):''));
+  y+=4; ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('作業内容',pad,y); y+=24;
+  ctx.font='bold 17px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.workDesc||'',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=25; }); y+=8;
+  if((j.parts||[]).length){ ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('部品'+(num(j.qty)>1?'（各'+num(j.qty)+'台分）':'')+'　届け先: '+(j.partsDest||'当社'),pad,y); y+=24; ctx.font='14px sans-serif'; ctx.fillStyle='#16202E'; (j.parts||[]).forEach(p=>{ ctx.fillText('・'+p.name+(p.arrived?'（着荷済）':'（未着）'),pad,y); y+=21; }); y+=6; }
+  if(j.outsource&&j.outsource.used&&num(j.outsource.cost)){ ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('外注費(税抜)',pad,y); y+=24; ctx.font='16px sans-serif'; ctx.fillStyle='#16202E'; ctx.fillText(yen(j.outsource.cost),pad,y); y+=26; }
+  ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('備考・注意事項',pad,y); y+=24;
+  ctx.font='15px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.memo||'（なし）',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=23; });
+  y+=pad;
+  const out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y); out.getContext('2d').drawImage(big,0,0);
+  return await new Promise(res=>out.toBlob(b=>res(b),'image/jpeg',0.9));
+}
+function workOrderCaption(j){
+  const L=['【作業指示】 '+(j.jobNo||'')];
+  if(j.carModel) L.push(j.carModel+(num(j.qty)>1?' ×'+num(j.qty)+'台':''));
+  L.push('内容: '+(j.workDesc||''));
+  if(j.workPlace) L.push('場所: '+j.workPlace);
+  if(j.siteContact) L.push('現場: '+j.siteContact+(j.siteTel?' '+j.siteTel:''));
+  L.push('予定: '+workScheduleStr(j));
+  if(j.deadline) L.push('期日: '+fmtD(j.deadline));
+  return L.join('\n');
+}
+async function shareWorkOrder(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  toast('作業指示書を作成中…');
+  let blob; try{ blob=await composeWorkOrderImage(j); }catch(e){ console.error(e); toast('作成に失敗','err'); return; }
+  const file=new File([blob],'作業指示書_'+(j.jobNo||'')+'.jpg',{type:'image/jpeg'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:'作業指示書 '+(j.jobNo||''),text:workOrderCaption(j)}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast('指示書画像を保存しました。LINEで添付してください');
 }
 function generatePartsLabel(id){
   const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
