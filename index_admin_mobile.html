@@ -242,17 +242,27 @@
   /* section bottom spacing so content isn't covered by FAB */
   section{padding-bottom:120px !important}
 
-  /* ===== クラス別 稼働率 ===== */
+  /* ===== 本日稼働率 大ゲージ (Portugieser subdial風) ===== */
+  .gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:10px 0 4px}
+  .gauge{width:172px;height:172px;display:block}
+  .gauge .g-track{fill:none;stroke:var(--line);stroke-width:4.5}
+  .gauge .g-fill{fill:none;stroke:var(--acc);stroke-width:4.5;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)}
+  .gauge .g-num{font-family:var(--serif);font-size:32px;font-weight:500;fill:var(--ink)}
+  .gauge .g-lbl{font-family:var(--sans);font-size:5.5px;letter-spacing:.4em;fill:var(--ink3)}
+  .gauge-cap{font-family:var(--serif);font-size:15px;color:var(--ink2);margin-top:-4px;letter-spacing:.02em}
+  .gauge-sub{font-size:10.5px;color:var(--ink3);margin-top:5px;letter-spacing:.08em}
+
+  /* ===== クラス別 稼働率 (案A: 太め横バー + 稼働度カラー) ===== */
   .cls-util{display:flex;flex-direction:column;gap:0;margin-top:4px}
-  .cls-row{display:grid;grid-template-columns:1fr 90px 52px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px dotted var(--line)}
+  .cls-row{display:grid;grid-template-columns:74px 1fr 44px;gap:11px;align-items:center;padding:10px 0;border-bottom:1px dotted var(--line)}
   .cls-row:last-child{border-bottom:0}
-  .cls-row.cls-total{border-top:1px solid var(--line2);border-bottom:0;margin-top:2px;padding-top:11px}
+  .cls-row.cls-total{border-top:1px solid var(--line2);border-bottom:0;margin-top:2px;padding-top:12px}
   .cls-row.cls-total .cls-nm{color:var(--ink3);letter-spacing:.18em;text-transform:uppercase;font-size:10px;font-family:var(--sans)}
-  .cls-nm{font-size:13px;color:var(--ink);letter-spacing:.04em;display:flex;align-items:baseline;gap:8px;font-family:var(--serif)}
-  .cls-cnt{font-size:9.5px;color:var(--ink3);letter-spacing:.06em;font-family:var(--sans)}
-  .cls-bar{height:2px;background:var(--line);position:relative}
-  .cls-bar > i{display:block;height:100%;background:var(--acc)}
-  .cls-rate{font-family:var(--serif);font-size:20px;color:var(--ink);font-weight:500;text-align:right;line-height:1}
+  .cls-nm{font-size:14px;color:var(--ink);letter-spacing:.02em;display:flex;align-items:baseline;gap:6px;font-family:var(--serif);white-space:nowrap}
+  .cls-cnt{font-size:9px;color:var(--ink3);letter-spacing:.04em;font-family:var(--sans)}
+  .cls-bar{height:7px;background:var(--line);border-radius:4px;position:relative;overflow:hidden}
+  .cls-bar > i{display:block;height:100%;border-radius:4px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+  .cls-rate{font-family:var(--serif);font-size:19px;color:var(--ink);font-weight:500;text-align:right;line-height:1}
 
   /* ===== Dual stat (台 / % 並列) ===== */
   .dual-stat{display:flex;align-items:baseline;gap:14px;margin-top:2px}
@@ -661,37 +671,26 @@
     </div>
   </section>
 
-  <!-- ========== 稼働 ========== -->
+  <!-- ========== 稼働 (案A: 大ゲージ + クラスバー) ========== -->
   <section id="sec-ops">
     <div class="card">
-      <div class="lbl">いま稼働中</div>
-      <div class="big num" id="ops-now">—<span class="unit">台</span></div>
-      <div class="sm" id="ops-now-cap">— / — 台</div>
-      <div class="bar"><i id="ops-now-bar" style="width:0%"></i></div>
-    </div>
-
-    <div class="grid2" style="margin:14px 16px">
-      <div class="card tight" style="margin:0">
-        <div class="lbl">直近30日 稼働率</div>
-        <div class="med num" id="ops-30">—<span class="unit" style="font-size:12px">%</span></div>
-        <div class="sm" id="ops-30-cap">—</div>
-      </div>
-      <div class="card tight" style="margin:0">
-        <div class="lbl">空き</div>
-        <div class="med num" id="ops-free">—<span class="unit" style="font-size:12px">台</span></div>
-        <div class="sm" id="ops-free-cap">即稼働可</div>
+      <div class="lbl" style="text-align:center">本日 稼働率</div>
+      <div class="gauge-wrap">
+        <svg class="gauge" viewBox="0 0 100 100">
+          <circle class="g-track" cx="50" cy="50" r="42"/>
+          <circle class="g-fill" id="ops-gauge-fill" cx="50" cy="50" r="42" transform="rotate(-90 50 50)"/>
+          <text class="g-num" id="ops-gauge-num" x="50" y="50" text-anchor="middle">—</text>
+          <text class="g-lbl" x="50" y="63" text-anchor="middle">PERCENT</text>
+        </svg>
+        <div class="gauge-cap" id="ops-gauge-cap">— / — 台 稼働中</div>
+        <div class="gauge-sub" id="ops-gauge-sub">空き — 台 · 即稼働可</div>
       </div>
     </div>
 
-    <!-- クラスグループ別 稼働率 (PC経営分析 2026-05-28c と同方式) -->
+    <!-- クラスグループ別 稼働率 (PC経営分析 2026-05-28c と同方式・稼働順) -->
     <div class="card">
       <div class="lbl">クラス別 稼働率 (直近30日)</div>
       <div class="cls-util" id="ops-class"></div>
-    </div>
-
-    <div class="card">
-      <div class="lbl">稼働ゼロ (直近30日)</div>
-      <div class="list" id="ops-idle"></div>
     </div>
   </section>
 
@@ -802,7 +801,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-28d';
+const APP_VERSION = '2026-05-28e';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1518,23 +1517,35 @@ function renderRev(){
   $('rev-cat').innerHTML=rowsCat.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${yen(v)} 円</td></tr>`).join('') || '<tr><td colspan=2 class="ink3">データなし</td></tr>';
 }
 
+// 稼働度に応じた焼入れブルーの濃淡 (高稼働=濃 / 遊休=淡)
+function utilColor(rate){
+  if(rate>=50) return '#1E40AF';
+  if(rate>=35) return '#3056C5';
+  if(rate>=20) return '#5A7DDB';
+  if(rate>=8)  return '#9BB0E0';
+  return '#C5D0EC';
+}
 function renderOps(){
   const s=vehicleStats();
-  $('ops-now').innerHTML=s.inUse+'<span class="unit">台</span>';
-  $('ops-now-cap').textContent=s.inUse+' / '+s.tot+' 台';
-  $('ops-now-bar').style.width=s.tot?Math.round(s.inUse*100/s.tot)+'%':'0%';
-  $('ops-30').innerHTML=s.avg+'<span class="unit" style="font-size:12px">%</span>';
-  $('ops-30-cap').textContent='平均 (登録 '+s.tot+' 台)';
-  $('ops-free').innerHTML=s.free+'<span class="unit" style="font-size:12px">台</span>';
-  $('ops-free-cap').textContent='今日 即稼働可';
+  const pct = s.tot ? Math.round(s.inUse*100/s.tot) : 0;
+  // 本日稼働率 大ゲージ (円弧)
+  const C = 2*Math.PI*42;
+  const fill=$('ops-gauge-fill');
+  if(fill){
+    fill.style.strokeDasharray = C.toFixed(1);
+    fill.style.strokeDashoffset = (C*(1 - pct/100)).toFixed(1);
+  }
+  $('ops-gauge-num').textContent = pct;
+  $('ops-gauge-cap').textContent = s.inUse+' / '+s.tot+' 台 稼働中';
+  $('ops-gauge-sub').textContent = '空き '+s.free+' 台 · 即稼働可';
 
-  // クラスグループ別 稼働率
+  // クラスグループ別 稼働率 (稼働順ソート + 稼働度カラー)
   const cg=classGroupUtil(s.rows, s.span);
-  const cgMax=Math.max(1,...cg.groups.map(g=>g.rate));
-  $('ops-class').innerHTML = cg.groups.map(g=>`
+  const groups=[...cg.groups].sort((a,b)=>b.rate-a.rate);
+  $('ops-class').innerHTML = groups.map(g=>`
     <div class="cls-row">
       <div class="cls-nm">${esc(g.key)}<span class="cls-cnt">${g.count}台</span></div>
-      <div class="cls-bar"><i style="width:${Math.round(g.rate/cgMax*100)}%"></i></div>
+      <div class="cls-bar"><i style="width:${Math.max(2,Math.round(g.rate))}%;background:${utilColor(g.rate)}"></i></div>
       <div class="cls-rate num">${g.rate.toFixed(0)}<span class="ink3" style="font-size:11px">%</span></div>
     </div>
   `).join('') + (cg.total.count?`
@@ -1543,16 +1554,6 @@ function renderOps(){
       <div class="cls-bar"></div>
       <div class="cls-rate num">${cg.total.rate.toFixed(0)}<span class="ink3" style="font-size:11px">%</span></div>
     </div>`:'') || '<div class="ink3 sm">データなし</div>';
-
-  $('ops-idle').innerHTML=s.idle.slice(0,20).map(r=>`
-    <div class="item">
-      <div class="nm">
-        <div class="t">${esc(r.v.name||r.v.code||r.v.id)}</div>
-        <div class="s">${esc(r.v.plateNo||'')}</div>
-      </div>
-      <div class="val ink3" style="font-size:12px">0日</div>
-    </div>
-  `).join('') || '<div class="ink3 sm">無し</div>';
 }
 
 function renderPipe(){
