@@ -807,7 +807,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-28b';
+const APP_VERSION = '2026-05-28c';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1169,9 +1169,9 @@ function detaliaPipeline(){
 
 // ★ クラスグループ別稼働率 — PC LIMEOne.html 2026-05-28c (BI_CLASS_GROUPS) と一致
 const BI_CLASS_GROUPS = [
-  { key:'軽乗用',     codes:['K','KEV'] },
+  { key:'K',          codes:['K','KEV'] },
   { key:'商用',       codes:['VK','TK'] },
-  { key:'コンパクト', codes:['S'] },
+  { key:'S',          codes:['S'] },
   { key:'SH〜MH',     codes:['SH','SV','SVH','BVH','MV','MVH','MH'] },
   { key:'WS〜WAH',    codes:['WS','WSH','WA','WAH'] },
   { key:'P〜PMH',     codes:['P','PM','PMH'] },
