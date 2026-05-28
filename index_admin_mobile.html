@@ -690,11 +690,6 @@
     </div>
 
     <div class="card">
-      <div class="lbl">稼働率ランキング (直近30日)</div>
-      <div class="list" id="ops-rank"></div>
-    </div>
-
-    <div class="card">
       <div class="lbl">稼働ゼロ (直近30日)</div>
       <div class="list" id="ops-idle"></div>
     </div>
@@ -807,7 +802,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-28c';
+const APP_VERSION = '2026-05-28d';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1548,17 +1543,6 @@ function renderOps(){
       <div class="cls-bar"></div>
       <div class="cls-rate num">${cg.total.rate.toFixed(0)}<span class="ink3" style="font-size:11px">%</span></div>
     </div>`:'') || '<div class="ink3 sm">データなし</div>';
-
-  const top=s.rows.slice(0,10);
-  $('ops-rank').innerHTML=top.map(r=>`
-    <div class="item">
-      <div class="nm">
-        <div class="t">${esc(r.v.name||r.v.code||r.v.id)}</div>
-        <div class="s">${esc(r.v.plateNo||'')} · ${r.days}日</div>
-      </div>
-      <div class="val">${r.rate}<span class="ink3" style="font-size:12px">%</span></div>
-    </div>
-  `).join('') || '<div class="ink3 sm">データなし</div>';
 
   $('ops-idle').innerHTML=s.idle.slice(0,20).map(r=>`
     <div class="item">
