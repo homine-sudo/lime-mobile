@@ -288,6 +288,14 @@ a{color:var(--accent-light);text-decoration:none}
 .search-wrap .si{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none}
 .paste-btn{width:100%;padding:12px;border-radius:11px;border:1.5px dashed var(--accent);background:var(--accent-dim);color:var(--accent-deep);font-size:14px;font-weight:700;margin-bottom:6px}
 
+/* 視覚的にわかりやすく: 状況タイルのアイコン / カードの段階プログレス */
+.bt-ic{font-size:15px;line-height:1;margin-bottom:2px}
+.jp{display:flex;align-items:center;gap:8px;margin:11px 0 1px}
+.jp-track{display:flex;gap:3px;flex:1}
+.jp-seg{height:5px;flex:1;border-radius:3px;background:var(--border);transition:background .25s}
+.jp-seg.fill{background:var(--jpc,var(--accent))}
+.jp-cap{font-size:10px;font-weight:800;white-space:nowrap;letter-spacing:.2px;color:var(--jpc,var(--text-dim))}
+
 /* ═══════════ デスクトップ版 (≥980px・同一ファイルをレスポンシブ化) ═══════════ */
 @media (min-width:980px){
   /* シェル: トップバー + 左サイドバー + コンテンツ */
@@ -369,7 +377,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29d';
+const APP_VERSION = '2026-05-29e';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -559,17 +567,17 @@ function renderHome(){
   const monthProfit=monthJobs.reduce((s,j)=>s+jobProfit(j),0);
   const billable=DATA.jobs.filter(j=>['作業完了','報告済'].includes(j.status) && billMonthOf(j)===m).length;
   const COLS=[{k:'依頼・受注',f:j=>['依頼','受注'].includes(j.status),c:'#64748B'},{k:'部品待ち',f:j=>j.status==='部品手配',c:'#D97706'},{k:'作業待ち',f:j=>j.status==='着荷済',c:'#7C3AED'},{k:'作業中',f:j=>j.status==='作業中',c:'#2563EB'},{k:'完了・報告',f:j=>['作業完了','報告済'].includes(j.status),c:'#16A34A'}];
-  const tile=(l,n,act,tone)=>`<div class="btile ${tone||''}" onclick="${act}"><div class="l">${l}</div><div class="n">${n}</div></div>`;
+  const tile=(l,n,act,tone,ic)=>`<div class="btile ${tone||''}" onclick="${act}"><div class="bt-ic">${ic}</div><div class="l">${l}</div><div class="n">${n}</div></div>`;
   let anyBoard=false;
   const board=COLS.map(col=>{ const cs=jobs.filter(col.f).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')); const empty=!cs.length; if(!empty) anyBoard=true; return `<div class="bsec${empty?' empty':''}"><div class="bsec-h"><span class="bsec-dot" style="background:${col.c}"></span><span class="bsec-k">${col.k}</span><span class="bsec-n">${cs.length}</span></div><div class="bcards">${empty?'<div class="bcol-empty">なし</div>':cs.map(boardCard).join('')}</div></div>`; }).join('');
   const boardHtml=anyBoard?board:'<div class="bcol-empty" style="margin:6px 0 4px">進行中の案件はありません</div>';
   const html=`
   <div class="page-h">📋 作業ボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
   <div class="btiles">
-    ${tile('本日作業',todayCnt,"openJobsFiltered('today')",todayCnt?'blue':'')}
-    ${tile('着荷待ち',awaiting,"openJobsFiltered('awaiting')",awaiting?'amber':'')}
-    ${tile('報告待ち',reportPending,"openJobsFiltered('作業完了')",reportPending?'red':'')}
-    ${tile('期日',dlAlert,"openJobsFiltered('deadline')",dlAlert?'red':'')}
+    ${tile('本日作業',todayCnt,"openJobsFiltered('today')",todayCnt?'blue':'','🔧')}
+    ${tile('着荷待ち',awaiting,"openJobsFiltered('awaiting')",awaiting?'amber':'','📦')}
+    ${tile('報告待ち',reportPending,"openJobsFiltered('作業完了')",reportPending?'red':'','📝')}
+    ${tile('期日',dlAlert,"openJobsFiltered('deadline')",dlAlert?'red':'','⏰')}
   </div>
   <div class="board">${boardHtml}</div>
   ${isAdmin()?`<div class="card" style="margin-top:13px"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
@@ -645,6 +653,14 @@ function renderJobsList(){
         </div></div>`
       : `<div class="empty"><div class="ico">📭</div><div class="t">該当する案件がありません</div></div>`);
 }
+const STAGE_COLOR={'依頼':'#94A3B8','受注':'#2563EB','部品手配':'#D97706','着荷済':'#7C3AED','作業中':'#2563EB','作業完了':'#16A34A','報告済':'#16A34A','請求済':'#0F766E','入金済':'#16A34A','キャンセル':'#C0303A'};
+function stageColor(s){ return STAGE_COLOR[s]||'#94A3B8'; }
+function jobProgress(j){
+  const idx=FLOW.indexOf(j.status); if(idx<0) return '';
+  const c=stageColor(j.status);
+  const segs=FLOW.map((s,i)=>`<span class="jp-seg${i<=idx?' fill':''}"></span>`).join('');
+  return `<div class="jp" style="--jpc:${c}"><div class="jp-track">${segs}</div><span class="jp-cap">${idx+1}/${FLOW.length}・${FLOW_SHORT[j.status]}</span></div>`;
+}
 function jobCard(j){
   const cl=clientById(j.clientId);
   const tags=[];
@@ -666,6 +682,7 @@ function jobCard(j){
     <div class="job-client">${who}</div>
     <div class="job-meta">${metaCar}<br>${esc(j.workDesc||'内容未設定')}${isAdmin()?' ・ <b>'+yen(jobSubtotal(j))+'</b><span style="font-size:10px;color:var(--muted)"> 税抜</span>':''}</div>
     <div class="job-tags">${tags.join('')}</div>
+    ${jobProgress(j)}
     ${next?`<div style="margin-top:10px" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm btn-full" onclick="advanceStatus('${j.id}')">${nextActionLabel(j.status)} →</button></div>`:''}
   </div>`;
 }
