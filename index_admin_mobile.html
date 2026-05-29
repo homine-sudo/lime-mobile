@@ -242,15 +242,22 @@
   /* section bottom spacing so content isn't covered by FAB */
   section{padding-bottom:120px !important}
 
-  /* ===== 本日稼働率 大ゲージ (Portugieser subdial風) ===== */
-  .gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:10px 0 4px}
-  .gauge{width:172px;height:172px;display:block}
-  .gauge .g-track{fill:none;stroke:var(--line);stroke-width:4.5}
-  .gauge .g-fill{fill:none;stroke:var(--acc);stroke-width:4.5;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)}
-  .gauge .g-num{font-family:var(--serif);font-size:32px;font-weight:500;fill:var(--ink)}
-  .gauge .g-lbl{font-family:var(--sans);font-size:5.5px;letter-spacing:.4em;fill:var(--ink3)}
-  .gauge-cap{font-family:var(--serif);font-size:15px;color:var(--ink2);margin-top:-4px;letter-spacing:.02em}
-  .gauge-sub{font-size:10.5px;color:var(--ink3);margin-top:5px;letter-spacing:.08em}
+  /* ===== 本日稼働率 時計の針式アナログメーター ===== */
+  .ng-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px}
+  .ng{width:210px;height:210px;display:block}
+  .ng .ng-face{fill:var(--panel);stroke:none}
+  .ng .ng-ring{fill:none;stroke:var(--line2);stroke-width:.8}
+  .ng .ng-tick{stroke:var(--ink2);stroke-width:.7}
+  .ng .ng-tick.major{stroke:var(--ink);stroke-width:1.3}
+  .ng .ng-numlbl{fill:var(--ink3);font-family:var(--sans);font-size:5px;letter-spacing:.06em}
+  .ng .ng-arc{fill:none;stroke:var(--acc);stroke-width:3;stroke-linecap:round;opacity:.85}
+  /* feuille 焼入れブルー針 */
+  .ng .ng-hand{fill:var(--acc);stroke:var(--acc-hi);stroke-width:.3;transition:transform .9s cubic-bezier(.34,1.15,.5,1)}
+  .ng .ng-tail{stroke:var(--acc);stroke-width:2.4;stroke-linecap:round}
+  .ng #ng-needle{transition:transform .9s cubic-bezier(.34,1.15,.5,1)}
+  .ng .ng-pivot{fill:var(--acc);stroke:var(--panel);stroke-width:1}
+  .ng .ng-pct{font-family:var(--serif);font-size:18px;font-weight:500;fill:var(--ink)}
+  .ng-cap{font-family:var(--serif);font-size:13.5px;color:var(--ink2);margin-top:2px;letter-spacing:.02em}
 
   /* ===== クラス別 稼働率 (案A: 太め横バー + 稼働度カラー) ===== */
   .cls-util{display:flex;flex-direction:column;gap:0;margin-top:4px}
@@ -686,19 +693,29 @@
     </div>
   </section>
 
-  <!-- ========== 稼働 (案A: 大ゲージ + クラスバー) ========== -->
+  <!-- ========== 稼働 (時計の針式アナログメーター + クラスバー) ========== -->
   <section id="sec-ops">
     <div class="card">
       <div class="lbl" style="text-align:center">本日 稼働率</div>
-      <div class="gauge-wrap">
-        <svg class="gauge" viewBox="0 0 100 100">
-          <circle class="g-track" cx="50" cy="50" r="42"/>
-          <circle class="g-fill" id="ops-gauge-fill" cx="50" cy="50" r="42" transform="rotate(-90 50 50)"/>
-          <text class="g-num" id="ops-gauge-num" x="50" y="50" text-anchor="middle">—</text>
-          <text class="g-lbl" x="50" y="63" text-anchor="middle">PERCENT</text>
+      <div class="ng-wrap">
+        <svg class="ng" viewBox="0 0 100 100">
+          <!-- 文字盤 -->
+          <circle class="ng-face" cx="50" cy="50" r="47"/>
+          <circle class="ng-ring" cx="50" cy="50" r="47"/>
+          <!-- 目盛 (JS生成) -->
+          <g id="ng-scale"></g>
+          <!-- 値まで塗る弧 (JS生成) -->
+          <path id="ng-arc" class="ng-arc"/>
+          <!-- 針 (feuille blued hand) -->
+          <g id="ng-needle" transform="rotate(-135 50 50)">
+            <path class="ng-hand" d="M50 11 C53 26 53 42 50 50 C47 42 47 26 50 11 Z"/>
+            <line class="ng-tail" x1="50" y1="50" x2="50" y2="60"/>
+          </g>
+          <circle class="ng-pivot" cx="50" cy="50" r="3.2"/>
+          <!-- 中央下 デジタル読み -->
+          <text class="ng-pct" id="ng-pct" x="50" y="78" text-anchor="middle">—</text>
         </svg>
-        <div class="gauge-cap" id="ops-gauge-cap">— / — 台 稼働中</div>
-        <div class="gauge-sub" id="ops-gauge-sub">空き — 台 · 即稼働可</div>
+        <div class="ng-cap" id="ng-cap">— / — 台 稼働中 · 空き —</div>
       </div>
     </div>
 
@@ -816,7 +833,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-28f';
+const APP_VERSION = '2026-05-28g';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1562,19 +1579,45 @@ function utilColor(rate){
   if(rate>=8)  return '#9BB0E0';
   return '#C5D0EC';
 }
+// メーター角度: 0%→-135°(左下) 〜 100%→+135°(右下) の 270°スイープ
+function gaugeAngle(pct){ return -135 + Math.max(0,Math.min(100,pct))/100*270; }
+function polar(cx,cy,r,deg){ const a=(deg-90)*Math.PI/180; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; }
 function renderOps(){
   const s=vehicleStats();
   const pct = s.tot ? Math.round(s.inUse*100/s.tot) : 0;
-  // 本日稼働率 大ゲージ (円弧)
-  const C = 2*Math.PI*42;
-  const fill=$('ops-gauge-fill');
-  if(fill){
-    fill.style.strokeDasharray = C.toFixed(1);
-    fill.style.strokeDashoffset = (C*(1 - pct/100)).toFixed(1);
+
+  // ─── 時計の針式アナログメーター ───
+  // 目盛 (0/10/.../100% を 270°に配置・主目盛=0/25/50/75/100)
+  const scaleEl=document.getElementById('ng-scale');
+  if(scaleEl && !scaleEl.children.length){
+    let ticks='';
+    for(let p=0;p<=100;p+=10){
+      const ang=gaugeAngle(p);
+      const major=(p%25===0);
+      const [x1,y1]=polar(50,50,47,ang);
+      const [x2,y2]=polar(50,50,major?40:43,ang);
+      ticks+=`<line class="ng-tick${major?' major':''}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+    }
+    // 主目盛の数字 (0/50/100)
+    [0,50,100].forEach(p=>{
+      const ang=gaugeAngle(p); const [tx,ty]=polar(50,50,33,ang);
+      ticks+=`<text class="ng-numlbl" x="${tx.toFixed(1)}" y="${(ty+1.8).toFixed(1)}" text-anchor="middle">${p}</text>`;
+    });
+    scaleEl.innerHTML=ticks;
   }
-  $('ops-gauge-num').textContent = pct;
-  $('ops-gauge-cap').textContent = s.inUse+' / '+s.tot+' 台 稼働中';
-  $('ops-gauge-sub').textContent = '空き '+s.free+' 台 · 即稼働可';
+  // 値まで塗る弧 (0% 始点 → 現在値)
+  const arcEl=document.getElementById('ng-arc');
+  if(arcEl){
+    const a0=gaugeAngle(0), a1=gaugeAngle(pct);
+    const [sx,sy]=polar(50,50,45,a0), [ex,ey]=polar(50,50,45,a1);
+    const large=(a1-a0)>180?1:0;
+    arcEl.setAttribute('d', pct>0?`M ${sx.toFixed(1)} ${sy.toFixed(1)} A 45 45 0 ${large} 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`:'');
+  }
+  // 針を回転
+  const nd=document.getElementById('ng-needle');
+  if(nd) nd.setAttribute('transform','rotate('+gaugeAngle(pct).toFixed(1)+' 50 50)');
+  $('ng-pct').textContent = pct+'%';
+  $('ng-cap').textContent = s.inUse+' / '+s.tot+' 台 稼働中 · 空き '+s.free;
 
   // クラスグループ別 稼働率 (稼働順ソート + 稼働度カラー)
   const cg=classGroupUtil(s.rows, s.span);
