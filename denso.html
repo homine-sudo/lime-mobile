@@ -311,7 +311,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28t';
+const APP_VERSION = '2026-05-28u';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -363,7 +363,9 @@ function _migrate(D){
     ['endUser','workPlace','siteContact','siteTel','partsEta','workableFrom','deadline','billingDesc','scheduledEndAt','workEndAt'].forEach(f=>{ if(j[f]===undefined) j[f]=''; });
     if(j.etc===undefined) j.etc={used:false,count:'',unit:''};
     if(j.partsDest===undefined) j.partsDest='当社';
+    if(SEED_JOBNO[j.id]) j.jobNo=SEED_JOBNO[j.id]; // 既存データも一貫連番(D-000N)に揃える
   });
+  if((Number(D.seq&&D.seq.jobGlobal)||0)<13){ D.seq=D.seq||{}; D.seq.jobGlobal=13; } // 実データ13件分を確保→新規はD-0014から
   return D;
 }
 function save(){
@@ -387,7 +389,8 @@ function endOfMonth(m){ const p=m.split('-'); const e=new Date(+p[0],+p[1],0); r
 function endOfNextMonth(m){ const p=m.split('-'); const e=new Date(+p[0],+p[1]+1,0); return e.getFullYear()+'-'+pad2(e.getMonth()+1)+'-'+pad2(e.getDate()); }
 function num(v){ const n=Number(String(v==null?'':v).replace(/[,¥\s]/g,'')); return isNaN(n)?0:n; }
 function nextSeq(month){ DATA.seq[month]=(DATA.seq[month]||0)+1; return DATA.seq[month]; }
-function genJobNo(){ const m=curMonth(); const n=nextSeq(m); return m+'-'+String(n).padStart(4,'0'); }
+function genJobNo(){ DATA.seq.jobGlobal=(Number(DATA.seq.jobGlobal)||0)+1; return 'D-'+String(DATA.seq.jobGlobal).padStart(4,'0'); }
+const SEED_JOBNO={'j-2604-1':'D-0001','j-2604-2':'D-0002','j-2604-3':'D-0003','j-2605-1':'D-0004','j-2605-2':'D-0005','j-2605-3':'D-0006','j-2605-4':'D-0007','j-2605-5':'D-0008','j-req-haiace':'D-0009','j-req-yaris':'D-0010','j-2606-1':'D-0011','j-2606-2':'D-0012','j-2606-3':'D-0013'};
 function clientById(id){ return DATA.clients.find(c=>c.id===id); }
 
 /* 金額: 明細金額(税抜)= 数量 × 工賃単価(税別) */
@@ -527,10 +530,13 @@ function boardCard(j){
   if(j.status==='部品手配'&&pAll) foot='📦 '+pIn+'/'+pAll+'着荷';
   else if(j.deadline&&!isWorkDone(j)) foot=(ds==='over'?'⚠️ ':ds==='soon'?'⏰ ':'')+'期日 '+fmtD(j.deadline);
   else if(j.scheduledAt) foot='作業 '+fmtD(j.scheduledAt);
+  const who=j.endUser?esc(j.endUser)+' 様':esc(j.carModel||'(相手先未設定)');
+  const sub=j.endUser?(esc(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')):(num(j.qty)>1?'×'+num(j.qty)+'台':'');
+  const clName=esc(cl?cl.name:j.clientName||'');
   return `<div class="bcard${ds==='over'?' over':''}" onclick="openJobDetail('${j.id}')">
-    <div class="bc-no">${esc(j.jobNo||'')}</div>
-    <div class="bc-cl">${esc(cl?cl.name:j.clientName||'')}</div>
-    <div class="bc-meta">${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''}${j.endUser?' / '+esc(j.endUser)+'様':''}</div>
+    <div class="bc-no">${esc(j.jobNo||'')}${clName?' ・ '+clName:''}</div>
+    <div class="bc-cl">${who}</div>
+    ${sub?`<div class="bc-meta">${sub}</div>`:''}
     ${j.workDesc?`<div class="bc-desc">${esc(j.workDesc)}</div>`:''}
     ${foot?`<div class="bc-foot${ds==='over'?' over':''}">${foot}</div>`:''}
   </div>`;
@@ -594,10 +600,12 @@ function jobCard(j){
   const idx=FLOW.indexOf(j.status);
   const next=(idx>=0&&idx<FLOW.length-1&&j.status!=='報告済');
   const qtyStr=num(j.qty)>1?` ×${num(j.qty)}台`:'';
+  const who=j.endUser?esc(j.endUser)+' 様':esc(j.carModel||'(相手先未設定)');
+  const metaCar=j.endUser?`<b>${esc(j.carModel||'車種未設定')}</b>${num(j.qty)>1?' ×'+num(j.qty)+'台':''} ${esc(j.carPlate||'')}`:`${num(j.qty)>1?'×'+num(j.qty)+'台 ':''}${esc(j.carPlate||'')}`;
   return `<div class="job-card s-${j.status}" onclick="openJobDetail('${j.id}')">
-    <div class="job-row1"><span class="job-no">${esc(j.jobNo||'')}</span><span class="badge st-${j.status}">${j.status}</span></div>
-    <div class="job-client">${esc(cl?cl.name:j.clientName||'(取引先未設定)')}</div>
-    <div class="job-meta"><b>${esc(j.carModel||'車種未設定')}</b>${j.endUser?' ／ '+esc(j.endUser)+'様':''} ${esc(j.carPlate||'')}<br>${esc(j.workDesc||'内容未設定')}${num(j.qty)>1?' ・ '+num(j.qty)+'台':''}${isAdmin()?' ・ <b>'+yen(jobSubtotal(j))+'</b><span style="font-size:10px;color:var(--muted)"> 税抜</span>':''}</div>
+    <div class="job-row1"><span class="job-no">${esc(j.jobNo||'')}${cl?' ・ '+esc(cl.name):(j.clientName?' ・ '+esc(j.clientName):'')}</span><span class="badge st-${j.status}">${j.status}</span></div>
+    <div class="job-client">${who}</div>
+    <div class="job-meta">${metaCar}<br>${esc(j.workDesc||'内容未設定')}${isAdmin()?' ・ <b>'+yen(jobSubtotal(j))+'</b><span style="font-size:10px;color:var(--muted)"> 税抜</span>':''}</div>
     <div class="job-tags">${tags.join('')}</div>
     ${next?`<div style="margin-top:10px" onclick="event.stopPropagation()"><button class="btn btn-primary btn-sm btn-full" onclick="advanceStatus('${j.id}')">${nextActionLabel(j.status)} →</button></div>`:''}
   </div>`;
@@ -884,7 +892,7 @@ function openJobDetail(id){
   const idx=FLOW.indexOf(j.status), next=(idx>=0&&idx<FLOW.length-1&&j.status!=='報告済');
   const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
   m.innerHTML=`
-  <div class="modal-head"><h2>${esc(cl?cl.name:j.clientName||'案件')}</h2><span class="sub">${esc(j.jobNo)}</span><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-head"><h2>${j.endUser?esc(j.endUser)+' 様':esc(j.carModel||(cl&&cl.name)||'案件')}</h2><span class="sub">${esc(j.jobNo)}</span><button class="modal-x" onclick="closeModal()">✕</button></div>
   <div class="modal-body">
     ${flowHtml}
     <div style="text-align:center;margin-bottom:14px"><span class="badge st-${j.status}" style="font-size:13px;padding:5px 16px">${j.status}</span></div>
@@ -894,7 +902,8 @@ function openJobDetail(id){
       <button class="btn btn-primary btn-full" onclick="advanceStatus('${id}')">${nextActionLabel(j.status)} →</button></div>`:''}
     <div style="font-size:15px;font-weight:700;margin-bottom:10px">${esc(j.workDesc||'(取付内容未設定)')}</div>
     <dl class="dl">
-      <dt>車両</dt><dd>${esc(j.carModel||'—')} ${esc(j.carPlate||'')}${j.endUser?'　／　'+esc(j.endUser)+'様':''}</dd>
+      <dt>取引先</dt><dd>${esc(cl?cl.name:j.clientName||'—')}${j.contact?'（'+esc(j.contact)+'）':''}</dd>
+      <dt>車両</dt><dd>${esc(j.carModel||'—')} ${esc(j.carPlate||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''}</dd>
       <dt>作業場所</dt><dd>${esc(j.workPlace||'—')}</dd>
       <dt>現場担当</dt><dd>${esc(j.siteContact||'—')} ${j.siteTel?`<a href="tel:${esc(j.siteTel)}">${esc(j.siteTel)}</a>`:''}</dd>
       <dt>取引先担当</dt><dd>${esc(j.contact||'—')}</dd>
