@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29l';
+const APP_VERSION = '2026-05-29m';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -498,6 +498,14 @@ function billingDescOf(j){
   if(j.billingDesc && j.billingDesc.trim()) return j.billingDesc.trim();
   const p=[]; if(j.carModel) p.push(j.carModel); if(j.endUser) p.push(j.endUser+'様'); if(j.workDesc) p.push(j.workDesc);
   return p.join('　').trim() || (j.workDesc||'');
+}
+// 請求書の摘要を2段表示で読みやすく: 主=車種＋相手先様 / 副=取付内容(小さくグレー)。手入力billingDescがあれば1行でそのまま尊重
+function invoiceDescHtml(j){
+  if(j.billingDesc && j.billingDesc.trim()) return `<div class="d-main">${esc(j.billingDesc.trim())}</div>`;
+  const head=[]; if(j.carModel) head.push(esc(j.carModel)); if(j.endUser) head.push(esc(j.endUser)+'様');
+  const main=head.join('　');
+  const sub=j.workDesc?`<div class="d-sub">${esc(j.workDesc)}</div>`:'';
+  return (main?`<div class="d-main">${main}</div>`:'')+sub || `<div class="d-main">${esc(j.workDesc||'')}</div>`;
 }
 function workScheduleStr(j){ const s=j.scheduledAt,e=j.scheduledEndAt; if(s&&e&&e!==s) return fmtD(s)+' 〜 '+fmtD(e); if(s) return fmtD(s); return '未定'; }
 function workDoneStr(j){ const s=j.workedAt,e=j.workEndAt; if(s&&e&&e!==s) return fmtD(s)+' 〜 '+fmtD(e); if(s) return fmtD(s); return ''; }
@@ -1301,72 +1309,95 @@ function generateInvoice(key,month,markInvoiced){
 }
 function openInvoiceWindow(client,jobs,month,invNo){
   const st=DATA.settings;
+  jobs=jobs.slice().sort((a,b)=>(a.workedAt||'9999-99-99').localeCompare(b.workedAt||'9999-99-99')); // 取引日順
   const sub=jobs.reduce((s,j)=>s+jobSubtotal(j),0);
   const tax=Math.round(sub*taxRate()/100), total=sub+tax;
   const issueDate=endOfMonth(month), dueDate=endOfNextMonth(month);
   const hasDate=jobs.some(j=>j.workedAt); // 取引日列は作業完了(workedAtあり)がある時のみ表示
-  const dataRows=jobs.map(j=>`<tr>${hasDate?`<td>${esc(j.workedAt||'')}</td>`:''}<td>${esc(billingDescOf(j))}</td><td class="c">${num(j.qty)||1} 台</td><td class="r">${(num(j.unitFee)).toLocaleString('ja-JP')}</td><td class="r">${(jobSubtotal(j)).toLocaleString('ja-JP')}</td></tr>`).join('');
-  const minRows=12; let fillerRows=''; for(let i=jobs.length;i<minRows;i++) fillerRows+=`<tr>${hasDate?'<td>&nbsp;</td>':''}<td>&nbsp;</td><td></td><td></td><td></td></tr>`;
-  const logoImg=st.logo?`<img src="${st.logo}" style="max-height:64px;max-width:160px;margin-top:6px">`:'';
+  const ymd=s=>esc(String(s||'').replace(/-/g,'/'));
+  const dataRows=jobs.map(j=>`<tr>${hasDate?`<td class="c">${ymd(j.workedAt)}</td>`:''}<td>${invoiceDescHtml(j)}</td><td class="c">${num(j.qty)||1} 台</td><td class="r">${(num(j.unitFee)).toLocaleString('ja-JP')}</td><td class="r">${(jobSubtotal(j)).toLocaleString('ja-JP')}</td></tr>`).join('');
+  const minRows=9; let fillerRows=''; for(let i=jobs.length;i<minRows;i++) fillerRows+=`<tr class="empty">${hasDate?'<td>&nbsp;</td>':''}<td>&nbsp;</td><td></td><td></td><td></td></tr>`;
+  const logoImg=st.logo?`<img src="${st.logo}" style="max-height:58px;max-width:150px;margin-top:8px">`:'';
   const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>請求書 ${esc(invNo)}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;color:#1a1a1a;padding:14mm 16mm;font-size:12px;line-height:1.5}
-    .title{text-align:center;font-size:26px;letter-spacing:14px;font-weight:700;margin-bottom:24px}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
-    .to{font-size:20px;font-weight:700;border-bottom:2px solid #222;padding:0 30px 5px 4px;display:inline-block}
-    .from{text-align:left;font-size:11.5px;line-height:1.7;min-width:230px}
-    .from .meta{display:grid;grid-template-columns:auto auto;gap:2px 14px;margin-bottom:12px;font-size:11.5px}
-    .from .meta .l{color:#444}.from .meta .v{text-align:right;font-weight:600}
-    .from .name{font-size:15px;font-weight:700}
-    .lead{font-size:12px;margin:4px 0 10px}
-    .subject{font-size:13px;margin-bottom:8px}.subject b{font-size:15px;margin-left:14px}
+    @page{size:A4 portrait;margin:0}
+    body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;color:#1f2937;padding:16mm 15mm;font-size:11.5px;line-height:1.6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .title{text-align:center;font-size:25px;letter-spacing:11px;font-weight:700;color:#0f172a;padding-left:11px}
+    .title-rule{width:118px;height:2px;background:#334155;margin:7px auto 22px}
+    .head{display:flex;justify-content:space-between;align-items:flex-start;gap:26px;margin-bottom:18px}
+    .to-name{font-size:19px;font-weight:700;color:#0f172a;border-bottom:1.5px solid #334155;padding:0 18px 5px 2px;display:inline-block;min-width:230px}
+    .to-name .ochu{font-size:13px;font-weight:600;margin-left:10px}
+    .to-amount{margin-top:18px}
+    .to-amount .lbl{font-size:10.5px;color:#64748b;margin-bottom:2px}
+    .to-amount .amt{font-size:23px;font-weight:800;color:#0f172a;border-bottom:2px solid #334155;display:inline-block;padding:0 10px 3px 4px;letter-spacing:.5px}
+    .from{font-size:11px;line-height:1.7;min-width:236px}
+    .from .meta{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;margin-bottom:11px}
+    .from .meta .l{color:#64748b}.from .meta .v{text-align:right;font-weight:600}
+    .from .name{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:1px}
+    .lead{font-size:11.5px;margin:14px 0 12px}
+    .subject{font-size:12px;margin-bottom:13px;padding:8px 13px;background:#f1f5f9;border-left:3px solid #334155}
+    .subject .l{color:#64748b}.subject b{font-size:14px;margin-left:11px;color:#0f172a}
     table{width:100%;border-collapse:collapse}
-    .sumtbl td,.sumtbl th{border:1px solid #555;padding:6px 10px;text-align:center}
-    .sumtbl th{background:#f3f3f3;font-weight:600;font-size:11px}
-    .sumtbl .big{font-size:22px;font-weight:700}
-    .bank-l{text-align:left;font-size:11px;line-height:1.5}
-    .detail{margin-top:16px}
-    .detail th,.detail td{border:1px solid #888;padding:6px 8px;font-size:11.5px}
-    .detail th{background:#2b6cb0;color:#fff;font-weight:600;text-align:center}
-    .detail td.r{text-align:right}.detail td.c{text-align:center}
-    .breakdown{width:300px;margin-left:auto;margin-top:10px}
-    .breakdown td{border:1px solid #888;padding:4px 10px;font-size:11px}
-    .breakdown td.r{text-align:right}
-    .breakdown .small{font-size:10px;color:#555}
-    .note{margin-top:16px;border:1px solid #888;padding:10px 12px;font-size:11px}
-    .note .h{color:#555;margin-bottom:4px}
-    @media print{body{padding:14mm}.noprint{display:none}}
+    .detail{margin-bottom:15px}
+    .detail th{background:#334155;color:#fff;font-weight:600;font-size:11px;padding:8px 9px;text-align:center;letter-spacing:.5px}
+    .detail td{border:1px solid #d7dde5;padding:7px 10px;font-size:11.5px;vertical-align:top}
+    .detail tbody tr:nth-child(even){background:#f8fafc}
+    .detail tr.empty td{height:26px}
+    .detail td.r{text-align:right}.detail td.c{text-align:center;white-space:nowrap;color:#475569}
+    .detail .d-main{font-weight:600;color:#1f2937}
+    .detail .d-sub{font-size:10px;color:#64748b;margin-top:3px}
+    .foot{display:flex;justify-content:space-between;gap:22px;align-items:flex-start}
+    .bank{flex:1;font-size:11px;max-width:340px}
+    .bank .h{font-weight:700;margin-bottom:5px;color:#334155;font-size:11.5px}
+    .bank .box{border:1px solid #d7dde5;background:#fafbfc;padding:9px 12px;line-height:1.75}
+    .bank .due{margin-top:9px;font-size:11.5px}.bank .due b{color:#b91c1c;font-size:12.5px}
+    .breakdown{width:252px}
+    .breakdown td{border:1px solid #d7dde5;padding:7px 12px;font-size:11.5px}
+    .breakdown td.lbl{color:#475569}.breakdown td.r{text-align:right;font-weight:600}
+    .breakdown tr.small td{font-size:10.5px;color:#64748b;font-weight:400;padding:5px 12px}
+    .breakdown tr.total td{background:#334155;color:#fff;font-weight:700;font-size:14px;border-color:#334155}
+    .note{margin-top:14px;font-size:10.5px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:9px;line-height:1.6}
+    @media print{.noprint{display:none}}
     .noprint{text-align:center;margin-top:24px}
-    .noprint button{padding:12px 28px;font-size:15px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}
+    .noprint button{padding:12px 28px;font-size:15px;background:#2563EB;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}
   </style></head><body>
-    <div class="noprint" style="position:sticky;top:0;margin:-14mm -16mm 14px;padding:9px 14px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;justify-content:space-between;z-index:30"><button onclick="window.close()" style="padding:10px 16px;border:none;border-radius:9px;background:#e5e7eb;font-weight:700;font-size:14px;cursor:pointer">✕ 閉じる</button><button onclick="window.print()" style="padding:10px 16px;border:none;border-radius:9px;background:#2563EB;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🖨 印刷 / PDF保存</button></div>
-    <div class="title">御請求書</div>
-    <div class="top">
-      <div><div class="to">${esc(client?client.name:jobs[0].clientName||'')}</div></div>
+    <div class="noprint" style="position:sticky;top:0;margin:-16mm -15mm 16px;padding:9px 14px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;justify-content:space-between;z-index:30"><button onclick="window.close()" style="padding:10px 16px;border:none;border-radius:9px;background:#e5e7eb;font-weight:700;font-size:14px;cursor:pointer">✕ 閉じる</button><button onclick="window.print()" style="padding:10px 16px;border:none;border-radius:9px;background:#2563EB;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🖨 印刷 / PDF保存</button></div>
+    <div class="title">御請求書</div><div class="title-rule"></div>
+    <div class="head">
+      <div>
+        <div class="to-name">${esc(client?client.name:jobs[0].clientName||'')}<span class="ochu">御中</span></div>
+        <div class="to-amount"><div class="lbl">ご請求金額（税込）</div><div class="amt">¥${total.toLocaleString('ja-JP')}</div></div>
+        <div class="lead">下記の通りご請求申し上げます。</div>
+      </div>
       <div class="from">
-        <div class="meta"><span class="l">請求日</span><span class="v">${issueDate}</span>
+        <div class="meta"><span class="l">請求日</span><span class="v">${ymd(issueDate)}</span>
           <span class="l">請求書番号</span><span class="v">${esc(invNo)}</span>
           <span class="l">登録番号</span><span class="v">${esc(st.regNo||'')}</span></div>
         <div class="name">${esc(st.company||'')}</div>
         ${st.company2?`<div>${esc(st.company2)}</div>`:''}
-        ${logoImg}
         <div style="margin-top:6px">${st.zip?'〒'+esc(st.zip):''}</div>
         <div>${esc(st.address||'')}</div>
-        <div>TEL :${esc(st.tel||'')}${st.fax?'　FAX:'+esc(st.fax):''}</div>
+        <div>TEL ${esc(st.tel||'')}${st.fax?'　FAX '+esc(st.fax):''}</div>
+        ${logoImg}
       </div>
     </div>
-    <div class="lead">下記の通りご請求申し上げます。</div>
-    <div class="subject">件名<b>${esc((st.subject||'')+'（'+parseInt(month.split('-')[1],10)+'月）')}</b></div>
-    <table class="sumtbl" style="margin-bottom:8px"><tr><th style="width:33%">小計</th><th style="width:33%">消費税</th><th>請求金額</th></tr>
-      <tr><td>${sub.toLocaleString('ja-JP')}円</td><td>${tax.toLocaleString('ja-JP')}円</td><td class="big">${total.toLocaleString('ja-JP')}円</td></tr></table>
-    <table class="sumtbl"><tr><th style="width:33%">入金期日</th><th>振込先</th></tr>
-      <tr><td>${dueDate}</td><td class="bank-l">${esc(st.bank||'').replace(/\n/g,'<br>')}</td></tr></table>
-    <table class="detail"><thead><tr>${hasDate?'<th style="width:90px">取引日</th>':''}<th>摘要</th><th style="width:64px">数量</th><th style="width:80px">単価</th><th style="width:96px">明細金額</th></tr></thead>
+    <div class="subject"><span class="l">件名</span><b>${esc((st.subject||'')+'（'+parseInt(month.split('-')[1],10)+'月分）')}</b></div>
+    <table class="detail"><thead><tr>${hasDate?'<th style="width:78px">取引日</th>':''}<th>摘要</th><th style="width:58px">数量</th><th style="width:78px">単価</th><th style="width:96px">金額</th></tr></thead>
       <tbody>${dataRows}${fillerRows}</tbody></table>
-    <table class="breakdown"><tr><td>内訳　10%対象(税抜)</td><td class="r">${sub.toLocaleString('ja-JP')}円</td></tr>
-      <tr><td class="small">10%消費税</td><td class="r small">${tax.toLocaleString('ja-JP')}円</td></tr></table>
-    ${st.note?`<div class="note"><div class="h">備考</div>${esc(st.note)}</div>`:''}
+    <div class="foot">
+      <div class="bank">
+        <div class="h">お振込先</div>
+        <div class="box">${esc(st.bank||'').replace(/\n/g,'<br>')}</div>
+        <div class="due">お支払期日：<b>${ymd(dueDate)}</b></div>
+      </div>
+      <table class="breakdown">
+        <tr><td class="lbl">小計（税抜）</td><td class="r">¥${sub.toLocaleString('ja-JP')}</td></tr>
+        <tr class="small"><td>消費税（10%）</td><td class="r">¥${tax.toLocaleString('ja-JP')}</td></tr>
+        <tr class="total"><td>合計</td><td class="r">¥${total.toLocaleString('ja-JP')}</td></tr>
+      </table>
+    </div>
+    ${st.note?`<div class="note">${esc(st.note)}</div>`:''}
     <div class="noprint"><button onclick="window.print()">🖨 印刷 / PDF保存</button></div>
   </body></html>`;
   const w=window.open('','_blank');
