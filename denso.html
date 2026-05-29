@@ -311,7 +311,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29a';
+const APP_VERSION = '2026-05-29b';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1656,9 +1656,21 @@ async function dbxRefreshToken(){
     if(!res.ok) return false; const d=await res.json(); DBX_TOKEN=d.access_token; localStorage.setItem(DBX_LS.token,DBX_TOKEN); _lastTokenRefresh=Date.now(); return true;
   }catch(e){ return false; }
 }
-function _startProactiveRefresh(){ if(!localStorage.getItem(DBX_LS.refresh)) return;
-  setInterval(()=>{ dbxRefreshToken(); }, 3*60*60*1000);
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden) return; if(Date.now()-_lastTokenRefresh<2*60*60*1000) return; if(!localStorage.getItem(DBX_LS.refresh)) return; dbxRefreshToken(); });
+function _modalOpen(){ const m=document.getElementById('modal-bg'); return !!(m && m.classList.contains('open')); }
+async function dbxGetRev(){ try{ const res=await dbxApi('https://api.dropboxapi.com/2/files/get_metadata', null, JSON.stringify({path:DBX_DATA_PATH}), 'application/json'); if(!res.ok) return null; const d=await res.json(); return d.rev||null; }catch(e){ return null; } }
+async function _autoPull(){ // 他端末の変更を自動取込(revだけ軽く確認→変化時のみ全取得・編集中/非表示時はスキップ)
+  if(!DBX_TOKEN||_isSyncing||_modalOpen()||document.visibilityState!=='visible') return;
+  const rev=await dbxGetRev();
+  if(rev && _lastDbxRev && rev!==_lastDbxRev){ const ok=await loadFromDropbox(); if(ok) toast('🔄 最新に更新しました','ok'); }
+}
+function _startProactiveRefresh(){
+  if(localStorage.getItem(DBX_LS.refresh)) setInterval(()=>{ dbxRefreshToken(); }, 3*60*60*1000);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden) return;
+    if(localStorage.getItem(DBX_LS.refresh) && Date.now()-_lastTokenRefresh>=2*60*60*1000) dbxRefreshToken();
+    _autoPull(); // アプリに戻った時に最新を取り込む
+  });
+  if(DBX_TOKEN) setInterval(_autoPull, 30000); // 開いている間は30秒ごとに他端末の変更を取り込む
 }
 async function dbxLogout(){ if(!await confirmModal('Dropbox連携を解除しますか？\n(この端末のローカルデータは残ります)',{danger:true,okText:'解除する'})) return;
   DBX_TOKEN=null; DBX_REFRESH=null; ['token','refresh','cachedRev','cachedSnap'].forEach(k=>localStorage.removeItem(DBX_LS[k])); toast('連携を解除しました','ok'); setTimeout(()=>location.reload(),700); }
