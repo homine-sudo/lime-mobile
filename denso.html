@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29k';
+const APP_VERSION = '2026-05-29l';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -407,10 +407,10 @@ function defaultData(){
     clients:[{id:'cl-proceed',name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'}],
     subcontractors:[{id:'sub-moromizato',name:'諸見里 貢',tel:'',memo:''}],
     presets:[
-      {id:uid(),name:'ドラレコ前後取付',price:''},
-      {id:uid(),name:'ナビ取付',price:''},
-      {id:uid(),name:'マット設置',price:''},
-      {id:uid(),name:'CDオーディオ取付',price:''},
+      {id:'preset-drareco',name:'ドラレコ前後取付',price:''},
+      {id:'preset-navi',name:'ナビ取付',price:''},
+      {id:'preset-mat',name:'マット設置',price:''},
+      {id:'preset-cd',name:'CDオーディオ取付',price:''},
     ],
     settings:{
       company:'株式会社Hari Terrace', company2:'ライムレンタカー&コーティング',
@@ -447,7 +447,19 @@ function _migrate(D){
     if(SEED_JOBNO[j.id]) j.jobNo=SEED_JOBNO[j.id]; // 既存データも一貫連番(D-000N)に揃える
   });
   if((Number(D.seq&&D.seq.jobGlobal)||0)<13){ D.seq=D.seq||{}; D.seq.jobGlobal=13; } // 実データ13件分を確保→新規はD-0014から
+  _dedupMasters(D);
   return D;
+}
+// マスタ重複の自己修復(初期の乱数ID時代に複数端末で初期化→同期で蓄積した重複を名前で統合)。
+// 残すIDは「lexicographically最小」=固定ID(cl-/sub-/preset- は乱数のx...より前)を自然に優先。clientは参照(job.clientId)を再マッピング。
+function _dedupMasters(D){
+  const dedup=(arr)=>{ const byName={}; (arr||[]).forEach(it=>{ if(it&&it.name!=null){ (byName[it.name]=byName[it.name]||[]).push(it); } });
+    const keep=[], remap={}; let changed=false;
+    Object.keys(byName).forEach(nm=>{ const list=byName[nm].slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))); const chosen=list[0]; keep.push(chosen); list.forEach(x=>{ if(x.id!==chosen.id){ remap[x.id]=chosen.id; changed=true; } }); });
+    return {keep,remap,changed}; };
+  if(Array.isArray(D.clients)){ const r=dedup(D.clients); if(r.changed){ D.clients=r.keep; (D.jobs||[]).forEach(j=>{ if(j.clientId&&r.remap[j.clientId]) j.clientId=r.remap[j.clientId]; }); } }
+  if(Array.isArray(D.subcontractors)){ const r=dedup(D.subcontractors); if(r.changed) D.subcontractors=r.keep; }
+  if(Array.isArray(D.presets)){ const r=dedup(D.presets); if(r.changed) D.presets=r.keep; }
 }
 function save(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(DATA)); }
@@ -1873,7 +1885,7 @@ async function saveToDropbox(){ if(!DATA||!DBX_TOKEN) return true;
 async function _doSaveCycle(){ updateSyncStatus('syncing','保存中'); let att=0; const MAX=3; let lastErr=null;
   while(att<MAX){ att++; try{ const snapAtStart=_lastSyncSnapshot; let merged=DATA, revToUse=_lastDbxRev;
     try{ const {data:disk,rev:diskRev}=await dbxLoadData(); if(disk){ merged=mergeAll(DATA,disk,_lastSyncSnapshot); revToUse=diskRev; } }catch(e){}
-    const jsonStr=JSON.stringify(merged); const newRev=await dbxSaveDataAtomic(jsonStr,revToUse);
+    _dedupMasters(merged); const jsonStr=JSON.stringify(merged); const newRev=await dbxSaveDataAtomic(jsonStr,revToUse);
     DATA=mergeAll(DATA,merged,snapAtStart); _migrate(DATA); _lastDbxRev=newRev; captureSyncSnapshot(merged); /* 基準=ディスクに実際に書いた内容(=merged)。書込後にされた編集はlocalに残り次回保存で反映 */
     try{ localStorage.setItem(LS_KEY,JSON.stringify(DATA)); localStorage.setItem(DBX_LS.cachedRev,newRev||''); }catch(e){}
     updateSyncStatus('ok','同期OK'); lastErr=null; break;
