@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29g';
+const APP_VERSION = '2026-05-29h';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -582,18 +582,26 @@ function renderHome(){
   const monthProfit=monthJobs.reduce((s,j)=>s+jobProfit(j),0);
   const billable=DATA.jobs.filter(j=>['作業完了','報告済'].includes(j.status) && billMonthOf(j)===m).length;
   const COLS=[{k:'依頼・受注',f:j=>['依頼','受注'].includes(j.status),c:'#64748B'},{k:'部品待ち',f:j=>j.status==='部品手配',c:'#D97706'},{k:'作業待ち',f:j=>j.status==='着荷済',c:'#7C3AED'},{k:'作業中',f:j=>j.status==='作業中',c:'#2563EB'},{k:'完了・報告',f:j=>['作業完了','報告済'].includes(j.status),c:'#16A34A'}];
-  const tile=(l,n,act,tone,ic)=>`<div class="btile ${tone||''}" onclick="${act}"><div class="bt-ic">${ic}</div><div class="l">${l}</div><div class="n">${n}</div></div>`;
+  const inquiryCnt=jobs.filter(j=>j.status==='依頼').length;
+  const todo=(ic,l,n,act,tone)=> n>0?`<div class="todo-row ${tone||''}" onclick="${act}"><div class="todo-ic">${ic}</div><div class="todo-l">${l}</div><div class="todo-n">${n}件</div><div class="todo-arr">›</div></div>`:'';
+  const todoRows=[
+    todo('⏰','期日が近い・超過',dlAlert,"openJobsFiltered('deadline')",'red'),
+    todo('📩','受注する（新規依頼）',inquiryCnt,"openJobsFiltered('依頼')",''),
+    todo('📦','着荷を確認する',awaiting,"openJobsFiltered('awaiting')",'amber'),
+    todo('🔧','今日の作業',todayCnt,"openJobsFiltered('today')",''),
+    todo('📝','作業を報告する',reportPending,"openJobsFiltered('作業完了')",''),
+    isAdmin()?todo('💴','請求する',billable,"switchTab('billing')",'green'):''
+  ].join('');
   let anyBoard=false;
   const board=COLS.map(col=>{ const cs=jobs.filter(col.f).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')); const empty=!cs.length; if(!empty) anyBoard=true; return `<div class="bsec${empty?' empty':''}"><div class="bsec-h"><span class="bsec-dot" style="background:${col.c}"></span><span class="bsec-k">${col.k}</span><span class="bsec-n">${cs.length}</span></div><div class="bcards">${empty?'<div class="bcol-empty">なし</div>':cs.map(boardCard).join('')}</div></div>`; }).join('');
   const boardHtml=anyBoard?board:'<div class="bcol-empty" style="margin:6px 0 4px">進行中の案件はありません</div>';
   const html=`
-  <div class="page-h">📋 作業ボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
-  <div class="btiles">
-    ${tile('本日作業',todayCnt,"openJobsFiltered('today')",todayCnt?'blue':'','🔧')}
-    ${tile('着荷待ち',awaiting,"openJobsFiltered('awaiting')",awaiting?'amber':'','📦')}
-    ${tile('報告待ち',reportPending,"openJobsFiltered('作業完了')",reportPending?'red':'','📝')}
-    ${tile('期日',dlAlert,"openJobsFiltered('deadline')",dlAlert?'red':'','⏰')}
+  <div class="page-h">⚡ ホーム <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">✅ 今やること</div>
+    ${todoRows||`<div style="text-align:center;padding:16px 6px;color:var(--text-dim);font-size:13px">✅ 今すぐ対応が必要な案件はありません<div style="font-size:11.5px;color:var(--muted);margin-top:4px">進行中の状況は下のボードで確認できます</div></div>`}
   </div>
+  <div style="font-size:13px;font-weight:800;color:var(--text-dim);margin:4px 2px 11px;display:flex;align-items:center;gap:7px">📋 作業ボード<span style="font-weight:500;color:var(--muted);font-size:11px">進行中の案件を段階別に</span></div>
   <div class="board">${boardHtml}</div>
   ${isAdmin()?`<div class="card" style="margin-top:13px"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
     <div class="money-box" style="margin:0">
