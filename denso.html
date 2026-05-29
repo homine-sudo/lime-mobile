@@ -122,6 +122,28 @@ a{color:var(--accent-light);text-decoration:none}
 .todo-n{font-size:15px;font-weight:800;color:var(--accent)}
 .todo-row.amber .todo-n{color:var(--orange)}.todo-row.red .todo-n{color:var(--red)}.todo-row.green .todo-n{color:var(--green)}
 .todo-arr{color:var(--muted);font-size:20px;font-weight:700}
+/* 作業ボード */
+.btiles{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:11px;-webkit-overflow-scrolling:touch}
+.btile{flex:0 0 auto;min-width:84px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:10px 14px;box-shadow:var(--shadow-sm);cursor:pointer}
+.btile:active{transform:scale(.96)}
+.btile .l{font-size:10.5px;color:var(--text-dim);font-weight:600;white-space:nowrap}
+.btile .n{font-size:22px;font-weight:800;margin-top:2px;color:var(--text);line-height:1}
+.btile.blue .n{color:var(--accent)}.btile.amber .n{color:var(--orange)}.btile.red .n{color:var(--red)}.btile.green .n{color:var(--green)}
+.board{display:flex;gap:11px;overflow-x:auto;padding:2px 2px 12px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.bcol{flex:0 0 262px;scroll-snap-align:start}
+.bcol-h{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-radius:11px;font-weight:800;font-size:13px;color:#fff;margin-bottom:9px;box-shadow:var(--shadow-sm)}
+.bcol-h .bn{background:rgba(255,255,255,.28);border-radius:11px;padding:1px 10px;font-size:12.5px}
+.bcards{display:flex;flex-direction:column;gap:9px}
+.bcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;box-shadow:var(--shadow-sm);cursor:pointer;transition:transform .1s}
+.bcard:active{transform:scale(.98)}
+.bcard.over{border-color:#F4C9CB;background:#FFF7F7}
+.bc-no{font-size:10.5px;color:var(--text-dim);font-weight:700;letter-spacing:.3px}
+.bc-cl{font-size:14.5px;font-weight:800;margin:2px 0;line-height:1.25}
+.bc-meta{font-size:11.5px;color:var(--text-dim)}
+.bc-desc{font-size:12px;color:var(--text);margin-top:5px;line-height:1.4}
+.bc-foot{font-size:11px;font-weight:700;color:var(--accent-deep);margin-top:7px}
+.bc-foot.over{color:var(--red)}
+.bcol-empty{font-size:11px;color:var(--muted);text-align:center;padding:16px 0;border:1px dashed var(--border);border-radius:10px}
 .kpi-lbl{font-size:11px;color:var(--text-dim);letter-spacing:.2px;font-weight:600}
 .kpi-val{font-size:27px;color:var(--text);margin-top:4px;line-height:1.05;font-weight:800;letter-spacing:-.5px}
 .kpi-val small{font-size:13px;color:var(--text-dim);font-weight:600;margin-left:3px}
@@ -289,7 +311,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28s';
+const APP_VERSION = '2026-05-28t';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -466,10 +488,8 @@ function renderHome(){
     return;
   }
   const today=todayISO();
-  const active=jobs.filter(j=>!['請求済','入金済'].includes(j.status)).length;
-  const inquiry=jobs.filter(j=>['依頼','受注'].includes(j.status)).length;
   const awaiting=jobs.filter(_isAwaitingParts).length;
-  const todayWork=jobs.filter(_isToday);
+  const todayCnt=jobs.filter(_isToday).length;
   const reportPending=jobs.filter(j=>j.status==='作業完了').length;
   const dlAlert=jobs.filter(j=>deadlineState(j)).length;
   const m=curMonth();
@@ -477,31 +497,43 @@ function renderHome(){
   const monthBill=monthJobs.reduce((s,j)=>s+jobSubtotal(j),0);
   const monthProfit=monthJobs.reduce((s,j)=>s+jobProfit(j),0);
   const billable=DATA.jobs.filter(j=>['作業完了','報告済'].includes(j.status) && billMonthOf(j)===m).length;
-  const row=(ic,label,n,act,tone)=> n>0? `<div class="todo-row ${tone||''}" onclick="${act}"><div class="todo-ic">${ic}</div><div class="todo-l">${label}</div><div class="todo-n">${n}件</div><div class="todo-arr">›</div></div>`:'';
-  let todos='';
-  todos+=row('🆕','依頼・受注を進める',inquiry,"openJobsFiltered('inquiry')");
-  todos+=row('📦','部品の着荷を確認する',awaiting,"openJobsFiltered('awaiting')",'amber');
-  todos+=row('🔧','今日の作業をする',todayWork.length,"openJobsFiltered('today')");
-  todos+=row('📝','報告する（作業完了）',reportPending,"openJobsFiltered('作業完了')",'red');
-  todos+=row('⏰','期日が近い・超過',dlAlert,"openJobsFiltered('deadline')",'red');
-  if(isAdmin()) todos+=row('💴','今月の請求をする',billable,"switchTab('billing')",'green');
+  const COLS=[{k:'依頼・受注',f:j=>['依頼','受注'].includes(j.status),c:'#64748B'},{k:'部品待ち',f:j=>j.status==='部品手配',c:'#D97706'},{k:'作業待ち',f:j=>j.status==='着荷済',c:'#7C3AED'},{k:'作業中',f:j=>j.status==='作業中',c:'#2563EB'},{k:'完了・報告',f:j=>['作業完了','報告済'].includes(j.status),c:'#16A34A'}];
+  const tile=(l,n,act,tone)=>`<div class="btile ${tone||''}" onclick="${act}"><div class="l">${l}</div><div class="n">${n}</div></div>`;
+  const board=COLS.map(col=>{ const cs=jobs.filter(col.f).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')); return `<div class="bcol"><div class="bcol-h" style="background:${col.c}"><span>${col.k}</span><span class="bn">${cs.length}</span></div><div class="bcards">${cs.length?cs.map(boardCard).join(''):'<div class="bcol-empty">なし</div>'}</div></div>`; }).join('');
   const html=`
-  <div class="page-h">⚡ ホーム <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
-  <button class="btn btn-primary btn-full" style="padding:16px;font-size:16px;margin-bottom:14px;box-shadow:0 3px 12px rgba(37,99,235,.3)" onclick="openJobModal()">＋ 新規依頼を登録</button>
-  <div class="card"><div class="card-title">✅ やること</div>
-    ${todos || '<div style="text-align:center;color:var(--text-dim);padding:16px 0;line-height:1.7">今すぐやることはありません 👍<br><span style="font-size:12px;color:var(--muted)">新しい依頼が来たら上の「＋ 新規依頼」で登録しましょう</span></div>'}
+  <div class="page-h">📋 作業ボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
+  <button class="btn btn-primary btn-full" style="padding:14px;font-size:16px;margin-bottom:12px;box-shadow:0 3px 12px rgba(37,99,235,.3)" onclick="openJobModal()">＋ 新規依頼を登録</button>
+  <div class="btiles">
+    ${tile('本日作業',todayCnt,"openJobsFiltered('today')",todayCnt?'blue':'')}
+    ${tile('着荷待ち',awaiting,"openJobsFiltered('awaiting')",awaiting?'amber':'')}
+    ${tile('報告待ち',reportPending,"openJobsFiltered('作業完了')",reportPending?'red':'')}
+    ${tile('期日 超過/間近',dlAlert,"openJobsFiltered('deadline')",dlAlert?'red':'')}
   </div>
-  ${todayWork.length?`<div class="card"><div class="card-title">📅 今日の作業 (${todayWork.length})</div>${todayWork.map(jobCardMini).join('')}</div>`:''}
-  ${isAdmin()?`<div class="card"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
+  <div class="board">${board}</div>
+  ${isAdmin()?`<div class="card" style="margin-top:13px"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
     <div class="money-box" style="margin:0">
       <div class="money-row total"><span>請求見込(税抜)</span><b>${yen(monthBill)}</b></div>
       <div class="money-row profit"><span>粗利見込</span><b>${yen(monthProfit)}</b></div>
-      <div class="money-row"><span>対象案件</span><b>${monthJobs.length}件</b></div>
+      <div class="money-row"><span>請求できる案件</span><b>${billable}件</b></div>
     </div>
     <button class="btn btn-secondary btn-full btn-sm" style="margin-top:10px" onclick="switchTab('billing')">月次請求・清算へ →</button></div>`:''}
-  <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0"><div><div style="font-size:13px;font-weight:700">📋 進行中の案件</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px">全 ${active} 件</div></div><button class="btn btn-secondary btn-sm" onclick="openJobsFiltered('active')">一覧を見る →</button></div>
   `;
   document.getElementById('page-home').innerHTML=html;
+}
+function boardCard(j){
+  const cl=clientById(j.clientId); const ds=deadlineState(j);
+  const pAll=(j.parts||[]).length, pIn=(j.parts||[]).filter(p=>p.arrived).length;
+  let foot='';
+  if(j.status==='部品手配'&&pAll) foot='📦 '+pIn+'/'+pAll+'着荷';
+  else if(j.deadline&&!isWorkDone(j)) foot=(ds==='over'?'⚠️ ':ds==='soon'?'⏰ ':'')+'期日 '+fmtD(j.deadline);
+  else if(j.scheduledAt) foot='作業 '+fmtD(j.scheduledAt);
+  return `<div class="bcard${ds==='over'?' over':''}" onclick="openJobDetail('${j.id}')">
+    <div class="bc-no">${esc(j.jobNo||'')}</div>
+    <div class="bc-cl">${esc(cl?cl.name:j.clientName||'')}</div>
+    <div class="bc-meta">${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''}${j.endUser?' / '+esc(j.endUser)+'様':''}</div>
+    ${j.workDesc?`<div class="bc-desc">${esc(j.workDesc)}</div>`:''}
+    ${foot?`<div class="bc-foot${ds==='over'?' over':''}">${foot}</div>`:''}
+  </div>`;
 }
 function jobCardMini(j){
   const cl=clientById(j.clientId);
