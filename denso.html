@@ -123,16 +123,20 @@ a{color:var(--accent-light);text-decoration:none}
 .todo-row.amber .todo-n{color:var(--orange)}.todo-row.red .todo-n{color:var(--red)}.todo-row.green .todo-n{color:var(--green)}
 .todo-arr{color:var(--muted);font-size:20px;font-weight:700}
 /* 作業ボード */
-.btiles{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:11px;-webkit-overflow-scrolling:touch}
-.btile{flex:0 0 auto;min-width:84px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:10px 14px;box-shadow:var(--shadow-sm);cursor:pointer}
+.btiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.btile{min-width:0;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:11px 6px 10px;box-shadow:var(--shadow-sm);cursor:pointer;text-align:center}
 .btile:active{transform:scale(.96)}
-.btile .l{font-size:10.5px;color:var(--text-dim);font-weight:600;white-space:nowrap}
-.btile .n{font-size:22px;font-weight:800;margin-top:2px;color:var(--text);line-height:1}
+.btile .l{font-size:10px;color:var(--text-dim);font-weight:700;white-space:nowrap}
+.btile .n{font-size:23px;font-weight:800;margin-top:3px;color:var(--text);line-height:1}
+.btile.blue{border-color:#BBD0FB}.btile.amber{border-color:#F6DCA8}.btile.red{border-color:#F4C9CB}.btile.green{border-color:#B6E6C6}
 .btile.blue .n{color:var(--accent)}.btile.amber .n{color:var(--orange)}.btile.red .n{color:var(--red)}.btile.green .n{color:var(--green)}
-.board{display:flex;gap:11px;overflow-x:auto;padding:2px 2px 12px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
-.bcol{flex:0 0 262px;scroll-snap-align:start}
-.bcol-h{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-radius:11px;font-weight:800;font-size:13px;color:#fff;margin-bottom:9px;box-shadow:var(--shadow-sm)}
-.bcol-h .bn{background:rgba(255,255,255,.28);border-radius:11px;padding:1px 10px;font-size:12.5px}
+/* 段階セクション(縦積み・片手スクロール) */
+.board{display:block;padding-bottom:8px}
+.bsec{margin-bottom:15px}
+.bsec-h{display:flex;align-items:center;gap:9px;padding:8px 13px;margin-bottom:9px;background:var(--card);border-radius:11px;box-shadow:var(--shadow-sm)}
+.bsec-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.bsec-k{flex:1;font-weight:800;font-size:13.5px;color:var(--text)}
+.bsec-n{background:var(--card2);color:var(--text-dim);border-radius:999px;padding:2px 12px;font-size:12.5px;font-weight:800;border:1px solid var(--border)}
 .bcards{display:flex;flex-direction:column;gap:9px}
 .bcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;box-shadow:var(--shadow-sm);cursor:pointer;transition:transform .1s}
 .bcard:active{transform:scale(.98)}
@@ -311,7 +315,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29b';
+const APP_VERSION = '2026-05-29c';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -502,17 +506,17 @@ function renderHome(){
   const billable=DATA.jobs.filter(j=>['作業完了','報告済'].includes(j.status) && billMonthOf(j)===m).length;
   const COLS=[{k:'依頼・受注',f:j=>['依頼','受注'].includes(j.status),c:'#64748B'},{k:'部品待ち',f:j=>j.status==='部品手配',c:'#D97706'},{k:'作業待ち',f:j=>j.status==='着荷済',c:'#7C3AED'},{k:'作業中',f:j=>j.status==='作業中',c:'#2563EB'},{k:'完了・報告',f:j=>['作業完了','報告済'].includes(j.status),c:'#16A34A'}];
   const tile=(l,n,act,tone)=>`<div class="btile ${tone||''}" onclick="${act}"><div class="l">${l}</div><div class="n">${n}</div></div>`;
-  const board=COLS.map(col=>{ const cs=jobs.filter(col.f).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')); return `<div class="bcol"><div class="bcol-h" style="background:${col.c}"><span>${col.k}</span><span class="bn">${cs.length}</span></div><div class="bcards">${cs.length?cs.map(boardCard).join(''):'<div class="bcol-empty">なし</div>'}</div></div>`; }).join('');
+  const board=COLS.map(col=>{ const cs=jobs.filter(col.f).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')); if(!cs.length) return ''; return `<div class="bsec"><div class="bsec-h"><span class="bsec-dot" style="background:${col.c}"></span><span class="bsec-k">${col.k}</span><span class="bsec-n">${cs.length}</span></div><div class="bcards">${cs.map(boardCard).join('')}</div></div>`; }).join('');
+  const boardHtml=board||'<div class="bcol-empty" style="margin:6px 0 4px">進行中の案件はありません</div>';
   const html=`
   <div class="page-h">📋 作業ボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
-  <button class="btn btn-primary btn-full" style="padding:14px;font-size:16px;margin-bottom:12px;box-shadow:0 3px 12px rgba(37,99,235,.3)" onclick="openJobModal()">＋ 新規依頼を登録</button>
   <div class="btiles">
     ${tile('本日作業',todayCnt,"openJobsFiltered('today')",todayCnt?'blue':'')}
     ${tile('着荷待ち',awaiting,"openJobsFiltered('awaiting')",awaiting?'amber':'')}
     ${tile('報告待ち',reportPending,"openJobsFiltered('作業完了')",reportPending?'red':'')}
-    ${tile('期日 超過/間近',dlAlert,"openJobsFiltered('deadline')",dlAlert?'red':'')}
+    ${tile('期日',dlAlert,"openJobsFiltered('deadline')",dlAlert?'red':'')}
   </div>
-  <div class="board">${board}</div>
+  <div class="board">${boardHtml}</div>
   ${isAdmin()?`<div class="card" style="margin-top:13px"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
     <div class="money-box" style="margin:0">
       <div class="money-row total"><span>請求見込(税抜)</span><b>${yen(monthBill)}</b></div>
