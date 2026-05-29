@@ -270,6 +270,21 @@
   .dual-sep{width:1px;align-self:stretch;background:var(--line);margin:4px 0}
   .unit-sm{font-size:11px;color:var(--ink3);letter-spacing:.18em;text-transform:uppercase;font-weight:400;font-family:var(--sans)}
 
+  /* ===== 稼働メーター (クラス色ドーナツ + 中央に率/台数) ===== */
+  .meter-card{display:flex;align-items:center;gap:18px}
+  .meter-gauge{flex:0 0 130px}
+  .meter-gauge svg{width:130px;height:130px;display:block}
+  .meter-gauge .m-track{fill:none;stroke:var(--line);stroke-width:7}
+  .meter-gauge .m-seg{fill:none;stroke-width:7;stroke-linecap:butt;transition:stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)}
+  .meter-gauge .m-num{font-family:var(--serif);font-size:28px;font-weight:500;fill:var(--ink)}
+  .meter-gauge .m-cnt{font-family:var(--serif);font-size:11px;fill:var(--ink3);letter-spacing:.02em}
+  .meter-side{flex:1;min-width:0}
+  .meter-legend{display:flex;flex-direction:column;gap:5px}
+  .meter-legend .lg{display:grid;grid-template-columns:9px 1fr auto;gap:8px;align-items:center;font-size:11px}
+  .meter-legend .lg .dot{width:9px;height:9px;border-radius:2px}
+  .meter-legend .lg .ln{color:var(--ink2);font-family:var(--serif);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meter-legend .lg .lr{font-family:var(--serif);font-size:13px;color:var(--ink);font-weight:500}
+
   /* ===== Department card (簡素化) ===== */
   .card.dept{padding:20px 18px}
   .card.dept .lbl{margin-bottom:14px;text-align:center;border-bottom:1px solid var(--line);padding-bottom:8px;letter-spacing:.32em}
@@ -525,28 +540,28 @@
       </div>
     </div>
 
-    <!-- ② 数字パルス: 稼働台数 (台+%) + 売上日額 -->
-    <div class="grid2" style="margin:14px 16px">
-      <div class="card tight" style="margin:0">
-        <div class="lbl">稼働台数</div>
-        <div class="dual-stat">
-          <div class="dual-main">
-            <span class="med num" id="now-active">—</span>
-            <span class="unit-sm">台</span>
-          </div>
-          <div class="dual-sep"></div>
-          <div class="dual-main">
-            <span class="med num" id="now-active-pct">—</span>
-            <span class="unit-sm">%</span>
-          </div>
+    <!-- ② 稼働メーター (クラス色ドーナツ + 中央に率/台数) + 売上日額 -->
+    <div class="card" style="padding:16px 18px">
+      <div class="meter-card">
+        <div class="meter-gauge">
+          <svg viewBox="0 0 100 100" id="meter-svg">
+            <circle class="m-track" cx="50" cy="50" r="40"/>
+            <g id="meter-segs"></g>
+            <text class="m-num" id="meter-pct" x="50" y="47" text-anchor="middle">—</text>
+            <text class="m-cnt" id="meter-cnt" x="50" y="62" text-anchor="middle">—/—台</text>
+          </svg>
         </div>
-        <div class="sm" id="now-active-cap">— / — 台</div>
+        <div class="meter-side">
+          <div class="lbl" style="margin-bottom:8px">クラス別 稼働</div>
+          <div class="meter-legend" id="meter-legend"></div>
+        </div>
       </div>
-      <div class="card tight" style="margin:0">
-        <div class="lbl">売上日額 · 当月平均</div>
-        <div class="med num" id="now-daily">—<span class="unit" style="font-size:11px">円</span></div>
-        <div class="sm" id="now-daily-cap">— 日経過</div>
-      </div>
+    </div>
+
+    <div class="card tight">
+      <div class="lbl">売上日額 · 当月平均</div>
+      <div class="med num" id="now-daily">—<span class="unit" style="font-size:11px">円</span></div>
+      <div class="sm" id="now-daily-cap">— 日経過</div>
     </div>
 
     <!-- ③ 現場の忙しさ - 今日と明日 -->
@@ -801,7 +816,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-28e';
+const APP_VERSION = '2026-05-28f';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1353,15 +1368,37 @@ function renderNow(){
   $('det-recmy').innerHTML=fmtCmpInline(rec.detalia.month, rec.detalia.prevMonth);
   $('det-recyy').innerHTML=fmtCmpInline(rec.detalia.year, rec.detalia.prevYearPart);
 
-  // 稼働台数 (稼働タブと同じ計算 — currentlyDispatchedCases)
+  // 稼働 (稼働タブと同じ計算 — vehicleStats)
   const vs=vehicleStats();
-  const utilPctNow = vs.tot?Math.round(vs.inUse*100/vs.tot):0;
-  $('now-active').textContent=vs.inUse;
-  $('now-active-pct').textContent=utilPctNow;
-  $('now-active-cap').textContent=vs.inUse+' / '+vs.tot+' 台 (保有)';
-
-  // ─── サブダイヤル: 左=稼働率 (small seconds風) ───
   const utilPct = vs.tot ? Math.round(vs.inUse*100/vs.tot) : 0;
+
+  // ─── 稼働メーター (クラス色ドーナツ + 中央に率/台数) ───
+  $('meter-pct').textContent=utilPct+'%';
+  $('meter-cnt').textContent=vs.inUse+'/'+vs.tot+'台';
+  const cgTop=classGroupUtil(vs.rows, vs.span);
+  const cgSorted=[...cgTop.groups].sort((a,b)=>b.count-a.count); // 保有台数の多い順にリング配置
+  const R=40, CIRC=2*Math.PI*R, GAP=2; // セグメント間の隙間(px相当)
+  const totCount=cgSorted.reduce((s,g)=>s+g.count,0)||1;
+  let off=0;
+  const segSvg=cgSorted.map(g=>{
+    const frac=g.count/totCount;
+    const segLen=Math.max(0, frac*CIRC - GAP);
+    const dash=`${segLen.toFixed(1)} ${(CIRC-segLen).toFixed(1)}`;
+    const dashoff=(-off).toFixed(1);
+    off += frac*CIRC;
+    return `<circle class="m-seg" cx="50" cy="50" r="${R}" transform="rotate(-90 50 50)" stroke="${utilColor(g.rate)}" stroke-dasharray="${dash}" stroke-dashoffset="${dashoff}"/>`;
+  }).join('');
+  const segsEl=document.getElementById('meter-segs');
+  if(segsEl) segsEl.innerHTML=segSvg;
+  // 凡例 (稼働率の高い順)
+  const legend=[...cgTop.groups].sort((a,b)=>b.rate-a.rate);
+  const legEl=document.getElementById('meter-legend');
+  if(legEl) legEl.innerHTML=legend.map(g=>`
+    <div class="lg">
+      <span class="dot" style="background:${utilColor(g.rate)}"></span>
+      <span class="ln">${esc(g.key)} <span class="ink3" style="font-size:9px">${g.count}台</span></span>
+      <span class="lr">${g.rate.toFixed(0)}%</span>
+    </div>`).join('') || '<div class="ink3 sm">データなし</div>';
   // 0% = -180度 (反時計回り 9時方向), 100% = +90度 (時計回り 3時方向経由で12時)
   // 単純に 0%=down(180°) 50%=top(0°) 100%=down again ではなく、small seconds なら 360°回す
   // Power reserve 風に: 0% = 7時方向(-150°), 100% = 5時方向(+150°), 中央=12時方向(0°)
