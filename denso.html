@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29h';
+const APP_VERSION = '2026-05-29i';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1191,13 +1191,18 @@ function outsourceVendorCard(vendor,jobs){
       <span>${fmtD(j.workedAt)} ${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''} <span style="color:var(--muted)">${esc(j.workDesc||'')}</span></span>
       <span style="white-space:nowrap">${j.outsource.paid?'<span style="color:var(--green)">済 </span>':''}${yen(j.outsource.cost)}</span></div>`).join('')}
     <div class="money-box" style="margin:10px 0 8px"><div class="money-row total"><span>支払合計</span><b>${yen(total)}</b></div></div>
-    ${allPaid?'':`<button class="btn btn-success btn-sm btn-full" onclick="settleOutsource(this.dataset.v,'${billMonth}')" data-v="${esc(vendor)}">この外注先を清算済にする</button>`}
+    ${allPaid?`<button class="btn btn-ghost btn-sm btn-full" onclick="unsettleOutsource(this.dataset.v,'${billMonth}')" data-v="${esc(vendor)}">↩ 清算を取り消す</button>`:`<button class="btn btn-success btn-sm btn-full" onclick="settleOutsource(this.dataset.v,'${billMonth}')" data-v="${esc(vendor)}">この外注先を${fmtMonth(billMonth)}分まとめて清算済にする</button>`}
   </div>`;
 }
 async function settleOutsource(vendor,month){
   if(!await confirmModal(vendor+' の '+fmtMonth(month)+'分 外注費を清算済(支払済)にしますか？',{okText:'清算済にする'})) return;
   DATA.jobs.forEach(j=>{ if(j.outsource&&j.outsource.used&&(j.outsource.vendor||'(未設定)')===vendor&&(j.workedAt||'').slice(0,7)===month){ j.outsource.paid=true; stamp(j); } });
   save(); toast('清算済にしました','ok'); renderBilling();
+}
+async function unsettleOutsource(vendor,month){
+  if(!await confirmModal(vendor+' の '+fmtMonth(month)+'分 外注費の清算を取り消しますか？',{okText:'取り消す'})) return;
+  DATA.jobs.forEach(j=>{ if(j.outsource&&j.outsource.used&&(j.outsource.vendor||'(未設定)')===vendor&&(j.workedAt||'').slice(0,7)===month){ j.outsource.paid=false; stamp(j); } });
+  save(); toast('清算を取り消しました','ok'); renderBilling();
 }
 function billingGroupCard(g){
   const name=g.client?g.client.name:(g.jobs[0].clientName||'(取引先未設定)');
@@ -1233,7 +1238,8 @@ function billingGroupCard(g){
       <button class="btn btn-success btn-sm" onclick="markPaid('${g.key}','${billMonth}')">② 入金を記録 →</button>`;
   }else{
     hint=`<div class="bf-hint done">この取引先の${fmtMonth(billMonth)}分は、発行・入金まで完了しています。</div>`;
-    actions=`<button class="btn btn-secondary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',false)">📄 請求書を表示</button>`;
+    actions=`<button class="btn btn-secondary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',false)">📄 請求書を表示</button>
+      <button class="btn btn-ghost btn-sm" onclick="unmarkPaid('${g.key}','${billMonth}')">↩ 入金を取り消す</button>`;
   }
   return `<div class="card">
     <div class="bf-head"><div class="bf-name">${esc(name)}</div>${badge}</div>
@@ -1350,6 +1356,11 @@ async function markPaid(key,month){
   const ok=await confirmModal(`${nm} の ${fmtMonth(month)}分（税込 ${yen(amt)}）の入金を確認しましたか？\n「はい」で状態を入金済にします。`,{okText:'入金を記録する'}); if(!ok) return;
   js.forEach(j=>{ j.status='入金済'; j.paidAt=todayISO(); stamp(j); });
   save(); toast('入金済にしました','ok'); renderBilling();
+}
+async function unmarkPaid(key,month){
+  if(!await confirmModal('入金を取り消して「請求済（入金待ち）」に戻しますか？\n請求書番号はそのまま残ります。',{okText:'未入金に戻す'})) return;
+  groupJobs(key,month).forEach(j=>{ if(j.status==='入金済'){ j.status='請求済'; j.paidAt=''; stamp(j); } });
+  save(); toast('未入金（請求済）に戻しました','ok'); renderBilling();
 }
 
 /* ───────── 作業指示書 / 受入ラベル(印刷) ───────── */
@@ -1731,9 +1742,9 @@ function realDataJobs(){
     J({id:'j-2605-4',jobNo:'2026-05-0004',status:'請求済',carModel:'デリカD5',endUser:'NEWS',workDesc:'ナビ取付',qty:11,unitFee:'25000',workedAt:'2026-05-28',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31',etc:{used:true,count:11,unit:1800},outsource:{used:true,vendor:'諸見里 貢',cost:88000,paid:false}}),
     J({id:'j-2605-5',jobNo:'2026-05-0005',status:'請求済',carModel:'ヤリスクロス',endUser:'レンタリースラボ',workDesc:'ドラレコ前後',qty:1,unitFee:'7000',workedAt:'2026-05-29',billingMonth:'2026-05',invoiceNo:'INV-0000000213',invoicedAt:'2026-05-31'}),
     // ── 4月 入金済(INV-0000000204 / 税込907,500・摘要=車種+相手先様) ──
-    J({id:'j-2604-1',jobNo:'2026-04-0001',status:'入金済',carModel:'ハスラー',endUser:'NEWS',billingDesc:'ハスラー　NEWS様',qty:10,unitFee:'20000',workedAt:'2026-04-01',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
-    J({id:'j-2604-2',jobNo:'2026-04-0002',status:'入金済',carModel:'ハスラー',endUser:'フジレンタカー',billingDesc:'ハスラー　フジレンタカー様',qty:15,unitFee:'25000',workedAt:'2026-04-02',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
-    J({id:'j-2604-3',jobNo:'2026-04-0003',status:'入金済',carModel:'スペーシア',endUser:'NEWS',billingDesc:'スペーシア　NEWS様',qty:10,unitFee:'25000',workedAt:'2026-04-29',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30',paidAt:'2026-05-31'}),
+    J({id:'j-2604-1',jobNo:'2026-04-0001',status:'請求済',carModel:'ハスラー',endUser:'NEWS',billingDesc:'ハスラー　NEWS様',qty:10,unitFee:'20000',workedAt:'2026-04-01',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30'}),
+    J({id:'j-2604-2',jobNo:'2026-04-0002',status:'請求済',carModel:'ハスラー',endUser:'フジレンタカー',billingDesc:'ハスラー　フジレンタカー様',qty:15,unitFee:'25000',workedAt:'2026-04-02',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30'}),
+    J({id:'j-2604-3',jobNo:'2026-04-0003',status:'請求済',carModel:'スペーシア',endUser:'NEWS',billingDesc:'スペーシア　NEWS様',qty:10,unitFee:'25000',workedAt:'2026-04-29',billingMonth:'2026-04',invoiceNo:'INV-0000000204',invoicedAt:'2026-04-30'}),
   ];
 }
 function _seedRealDataSilent(){
