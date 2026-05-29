@@ -110,6 +110,9 @@ a{color:var(--accent-light);text-decoration:none}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-md);position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
 .kpi.amber::before{background:var(--orange)}.kpi.red::before{background:var(--red)}.kpi.green::before{background:var(--green)}.kpi.purple::before{background:var(--purple)}
+.kpi.tap{cursor:pointer;transition:transform .1s,box-shadow .15s}
+.kpi.tap:active{transform:scale(.97)}
+.kpi.tap::after{content:'›';position:absolute;top:9px;right:12px;color:var(--muted);font-size:17px;font-weight:700;line-height:1}
 .kpi-lbl{font-size:11px;color:var(--text-dim);letter-spacing:.2px;font-weight:600}
 .kpi-val{font-size:27px;color:var(--text);margin-top:4px;line-height:1.05;font-weight:800;letter-spacing:-.5px}
 .kpi-val small{font-size:13px;color:var(--text-dim);font-weight:600;margin-left:3px}
@@ -277,7 +280,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28q';
+const APP_VERSION = '2026-05-28r';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -411,6 +414,8 @@ function switchTab(t){
 }
 function refresh(){ if(curTab==='home')renderHome(); else if(curTab==='jobs')renderJobsList(); else if(curTab==='billing')renderBilling(); else if(curTab==='master')renderMaster(); }
 function stamp(j){ j.updatedAt=Date.now(); j.updatedBy=DATA.settings.person||'—'; }
+function _isAwaitingParts(j){ return j.status==='部品手配' || ((j.parts||[]).some(p=>!p.arrived) && ['受注','部品手配'].includes(j.status)); }
+function openJobsFiltered(f){ jobFilter=f; jobSearch=''; switchTab('jobs'); }
 
 /* ───────── 権限(管理者のみ売上表示) ───────── */
 function isAdmin(){ return localStorage.getItem('denso_admin')==='1'; }
@@ -452,7 +457,7 @@ function renderHome(){
   const active=jobs.filter(j=>!['請求済','入金済'].includes(j.status));
   const cnt=s=>jobs.filter(j=>j.status===s).length;
   const inquiry=cnt('依頼')+cnt('受注');
-  const awaitingParts=jobs.filter(j=>j.status==='部品手配' || ((j.parts||[]).some(p=>!p.arrived) && ['受注','部品手配'].includes(j.status))).length;
+  const awaitingParts=jobs.filter(_isAwaitingParts).length;
   const reportPending=cnt('作業完了');
   const today=todayISO();
   const todayWork=jobs.filter(j=>j.scheduledAt===today && ['着荷済','作業中','部品手配','受注'].includes(j.status));
@@ -465,10 +470,10 @@ function renderHome(){
   const html=`
   <div class="page-h">⚡ ダッシュボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
   <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-lbl">依頼・受注</div><div class="kpi-val">${inquiry}<small>件</small></div><div class="kpi-sub">処理待ち</div></div>
-    <div class="kpi amber"><div class="kpi-lbl">部品着荷待ち</div><div class="kpi-val">${awaitingParts}<small>件</small></div><div class="kpi-sub">手配中</div></div>
-    <div class="kpi red"><div class="kpi-lbl">報告未提出</div><div class="kpi-val">${reportPending}<small>件</small></div><div class="kpi-sub">作業完了</div></div>
-    <div class="kpi green"><div class="kpi-lbl">進行中 合計</div><div class="kpi-val">${active.length}<small>件</small></div><div class="kpi-sub">全アクティブ</div></div>
+    <div class="kpi tap" onclick="openJobsFiltered('inquiry')"><div class="kpi-lbl">依頼・受注</div><div class="kpi-val">${inquiry}<small>件</small></div><div class="kpi-sub">処理待ち</div></div>
+    <div class="kpi amber tap" onclick="openJobsFiltered('awaiting')"><div class="kpi-lbl">部品着荷待ち</div><div class="kpi-val">${awaitingParts}<small>件</small></div><div class="kpi-sub">手配中</div></div>
+    <div class="kpi red tap" onclick="openJobsFiltered('作業完了')"><div class="kpi-lbl">報告未提出</div><div class="kpi-val">${reportPending}<small>件</small></div><div class="kpi-sub">作業完了</div></div>
+    <div class="kpi green tap" onclick="openJobsFiltered('active')"><div class="kpi-lbl">進行中 合計</div><div class="kpi-val">${active.length}<small>件</small></div><div class="kpi-sub">全アクティブ</div></div>
   </div>
   <div class="card"><div class="card-title">📅 本日の作業予定</div>
     ${todayWork.length? todayWork.map(jobCardMini).join('') : '<div style="color:var(--muted);font-size:13px;padding:6px 0">本日予定の作業はありません</div>'}</div>
@@ -499,12 +504,14 @@ let jobFilter='active', jobSearch='';
 function jobsFiltered(){
   let jobs=DATA.jobs.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   if(jobFilter==='active') jobs=jobs.filter(j=>!['請求済','入金済','キャンセル'].includes(j.status));
+  else if(jobFilter==='inquiry') jobs=jobs.filter(j=>['依頼','受注'].includes(j.status));
+  else if(jobFilter==='awaiting') jobs=jobs.filter(j=>j.status!=='キャンセル'&&_isAwaitingParts(j));
   else if(jobFilter==='all'){} else jobs=jobs.filter(j=>j.status===jobFilter);
   if(jobSearch){ const q=jobSearch.toLowerCase(); jobs=jobs.filter(j=>{ const cl=clientById(j.clientId); return [j.jobNo,cl?cl.name:j.clientName,j.carModel,j.carPlate,j.endUser,j.workPlace,j.siteContact,j.workDesc,j.memo].join(' ').toLowerCase().includes(q); }); }
   return jobs;
 }
 function renderJobs(){
-  const filters=[['active','進行中'],['依頼','依頼'],['受注','受注'],['部品手配','部品手配'],['着荷済','着荷済'],['作業中','作業中'],['作業完了','作業完了'],['報告済','報告済'],['請求済','請求済'],['入金済','入金済'],['all','全て'],['キャンセル','ｷｬﾝｾﾙ']];
+  const filters=[['active','進行中'],['inquiry','依頼・受注'],['awaiting','着荷待ち'],['依頼','依頼'],['受注','受注'],['部品手配','部品手配'],['着荷済','着荷済'],['作業中','作業中'],['作業完了','報告待ち'],['報告済','報告済'],['請求済','請求済'],['入金済','入金済'],['all','全て'],['キャンセル','ｷｬﾝｾﾙ']];
   const jobs=jobsFiltered();
   document.getElementById('page-jobs').innerHTML=`
   <div class="page-h">📋 案件一覧 <span style="color:var(--muted);font-weight:500;font-size:11px">${jobs.length}件</span></div>
