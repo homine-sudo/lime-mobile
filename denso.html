@@ -295,6 +295,21 @@ a{color:var(--accent-light);text-decoration:none}
 .jp-seg{height:5px;flex:1;border-radius:3px;background:var(--border);transition:background .25s}
 .jp-seg.fill{background:var(--jpc,var(--accent))}
 .jp-cap{font-size:10px;font-weight:800;white-space:nowrap;letter-spacing:.2px;color:var(--jpc,var(--text-dim))}
+/* 請求→入金の2ステップ・ガイド */
+.bf-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;gap:8px}
+.bf-name{font-size:15.5px;font-weight:800}
+.bflow{display:flex;align-items:center;gap:9px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;margin-bottom:12px}
+.bflow-step{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
+.bflow-step .bf-n{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:var(--border);color:var(--text-dim);font-size:11px;font-weight:800;flex-shrink:0}
+.bflow-step.cur{color:var(--accent-deep)}
+.bflow-step.cur .bf-n{background:var(--accent);color:#fff;box-shadow:0 0 0 3px var(--accent-dim)}
+.bflow-step.done{color:var(--green)}
+.bflow-step.done .bf-n{background:var(--green);color:#fff}
+.bf-arr{color:var(--muted);font-weight:800;font-size:13px}
+.bf-info{font-size:11.5px;color:var(--text-dim);margin:10px 0 2px;line-height:1.7}
+.bf-hint{font-size:11.5px;color:var(--text-dim);margin:10px 0 9px;line-height:1.5;display:flex;gap:5px}
+.bf-hint::before{content:'💡';flex-shrink:0}
+.bf-hint.done::before{content:'✅'}
 
 /* ═══════════ デスクトップ版 (≥980px・同一ファイルをレスポンシブ化) ═══════════ */
 @media (min-width:980px){
@@ -377,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29f';
+const APP_VERSION = '2026-05-29g';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1182,11 +1197,39 @@ function billingGroupCard(g){
   const total=withTax(sub);
   const allInvoiced=g.jobs.every(j=>['請求済','入金済'].includes(j.status));
   const allPaid=g.jobs.every(j=>j.status==='入金済');
+  const state=allPaid?'paid':allInvoiced?'invoiced':'todo';
+  const invNo=(g.jobs.find(j=>j.invoiceNo)||{}).invoiceNo||'';
+  const invAt=(g.jobs.find(j=>j.invoicedAt)||{}).invoicedAt||'';
+  const paidAt=(g.jobs.find(j=>j.paidAt)||{}).paidAt||'';
+  const due=endOfNextMonth(billMonth);
+  // 現在地バッジ
+  const badge=`<span class="badge ${allPaid?'st-入金済':allInvoiced?'st-請求済':'st-作業完了'}">${allPaid?'✓ 入金済':allInvoiced?'請求済・入金待ち':'未請求'}</span>`;
+  // 2ステップ・ガイド (① 発行 → ② 入金)
+  const guide=`<div class="bflow">
+    <div class="bflow-step ${allInvoiced?'done':'cur'}"><span class="bf-n">${allInvoiced?'✓':'①'}</span>請求書を発行</div>
+    <div class="bf-arr">→</div>
+    <div class="bflow-step ${allPaid?'done':(state==='invoiced'?'cur':'')}"><span class="bf-n">${allPaid?'✓':'②'}</span>入金を記録</div>
+  </div>`;
+  // 請求書情報 (発行後のみ)
+  const info=state==='todo'?'':`<div class="bf-info">📄 請求書 <b>${esc(invNo||'(番号未設定)')}</b>${invAt?'　請求日 '+fmtD(invAt):''}`+
+    (allPaid?(paidAt?`　<span style="color:var(--green);font-weight:700">入金日 ${fmtD(paidAt)}</span>`:''):(due?`　<span style="color:var(--orange);font-weight:700">入金期日 ${fmtD(due)}</span>`:''))+`</div>`;
+  // 段階別のヒント＋アクション
+  let hint,actions;
+  if(state==='todo'){
+    hint=`<div class="bf-hint">作業完了分です。「① 請求書を発行」を押すと請求書番号が付き、状態が<b>請求済</b>になります。</div>`;
+    actions=`<button class="btn btn-secondary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',false)">📄 内容を確認</button>
+      <button class="btn btn-primary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',true)">① 請求書を発行 →</button>`;
+  }else if(state==='invoiced'){
+    hint=`<div class="bf-hint">請求書は発行済みです。入金を確認できたら「② 入金を記録」を押してください（${fmtD(due)}が入金期日）。</div>`;
+    actions=`<button class="btn btn-secondary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',false)">📄 請求書を表示</button>
+      <button class="btn btn-success btn-sm" onclick="markPaid('${g.key}','${billMonth}')">② 入金を記録 →</button>`;
+  }else{
+    hint=`<div class="bf-hint done">この取引先の${fmtMonth(billMonth)}分は、発行・入金まで完了しています。</div>`;
+    actions=`<button class="btn btn-secondary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',false)">📄 請求書を表示</button>`;
+  }
   return `<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:15px;font-weight:700">${esc(name)}</div>
-      <span class="badge ${allPaid?'st-入金済':allInvoiced?'st-請求済':'st-作業完了'}">${allPaid?'入金済':allInvoiced?'請求済':'未請求'}</span>
-    </div>
+    <div class="bf-head"><div class="bf-name">${esc(name)}</div>${badge}</div>
+    ${guide}
     ${g.jobs.map(j=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)" onclick="openJobDetail('${j.id}')">
       <span>${fmtD(j.workedAt||j.requestedAt)} ${esc(billingDescOf(j))}${num(j.qty)>1?' '+num(j.qty)+'台':''}</span>
       <span style="white-space:nowrap">${yen(jobSubtotal(j))}</span></div>`).join('')}
@@ -1195,10 +1238,9 @@ function billingGroupCard(g){
       <div class="money-row"><span>消費税(${taxRate()}%)</span><b>${yen(total-sub)}</b></div>
       <div class="money-row"><span>請求書合計(税込)</span><b>${yen(total)}</b></div>
     </div>
-    <div class="btn-row">
-      <button class="btn btn-secondary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',false)">📄 プレビュー</button>
-      ${allInvoiced? (allPaid?'':`<button class="btn btn-success btn-sm" onclick="markPaid('${g.key}','${billMonth}')">入金済にする</button>`) : `<button class="btn btn-primary btn-sm" onclick="generateInvoice('${g.key}','${billMonth}',true)">請求書発行</button>`}
-    </div>
+    ${info}
+    ${hint}
+    <div class="btn-row">${actions}</div>
   </div>`;
 }
 function groupJobs(key,month){
@@ -1294,8 +1336,11 @@ function openInvoiceWindow(client,jobs,month,invNo){
   w.document.write(html); w.document.close();
 }
 async function markPaid(key,month){
-  const ok=await confirmModal('この取引先の'+fmtMonth(month)+'分を入金済にしますか？'); if(!ok) return;
-  groupJobs(key,month).forEach(j=>{ j.status='入金済'; j.paidAt=todayISO(); stamp(j); });
+  const js=groupJobs(key,month);
+  const cl=clientById(js[0]&&js[0].clientId); const nm=cl?cl.name:(js[0]&&js[0].clientName)||'この取引先';
+  const amt=withTax(js.reduce((s,j)=>s+jobSubtotal(j),0));
+  const ok=await confirmModal(`${nm} の ${fmtMonth(month)}分（税込 ${yen(amt)}）の入金を確認しましたか？\n「はい」で状態を入金済にします。`,{okText:'入金を記録する'}); if(!ok) return;
+  js.forEach(j=>{ j.status='入金済'; j.paidAt=todayISO(); stamp(j); });
   save(); toast('入金済にしました','ok'); renderBilling();
 }
 
