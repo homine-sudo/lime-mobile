@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29m';
+const APP_VERSION = '2026-05-29n';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1424,13 +1424,27 @@ function openPrintWindow(title,bodyHtml,extraCss){
   const w=window.open('','_blank'); if(!w){ toast('ポップアップを許可してください','err'); return null; }
   w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;color:#16202E;padding:13mm 14mm;font-size:13px;line-height:1.6}
-    .topbar{position:sticky;top:0;margin:-13mm -14mm 14px;padding:9px 14px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;justify-content:space-between;align-items:center;z-index:30}
+    @page{size:A4 portrait;margin:0}
+    body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;color:#1f2937;padding:15mm 15mm;font-size:12.5px;line-height:1.6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .topbar{position:sticky;top:0;margin:-15mm -15mm 16px;padding:9px 14px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;justify-content:space-between;align-items:center;z-index:30}
     .topbar button{padding:10px 16px;font-size:14px;border:none;border-radius:9px;font-weight:700;cursor:pointer}
     .topbar .close{background:#e5e7eb;color:#16202E}.topbar .pr{background:#2563EB;color:#fff}
     .noprint{text-align:center;margin-top:22px}
     .noprint button{padding:12px 30px;font-size:15px;background:#2563EB;color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer}
-    @media print{body{padding:10mm}.noprint,.topbar{display:none}}
+    /* ── 共通ドキュメント様式(請求書と統一・スレート#334155) ── */
+    .doc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:2px solid #334155;padding-bottom:11px;margin-bottom:16px}
+    .doc-title{font-size:24px;font-weight:800;letter-spacing:7px;color:#0f172a}
+    .doc-sub{font-size:11.5px;color:#64748b;margin-top:5px;letter-spacing:.3px}
+    .doc-meta{text-align:right;font-size:12px;line-height:1.9;color:#475569;white-space:nowrap}
+    .doc-meta b{color:#0f172a;font-weight:700}
+    .doc-tbl{width:100%;border-collapse:collapse;margin-bottom:4px}
+    .doc-tbl th,.doc-tbl td{border:1px solid #d7dde5;padding:8px 11px;font-size:13px;text-align:left;vertical-align:top}
+    .doc-tbl th{background:#f1f5f9;width:84px;font-weight:700;white-space:nowrap;color:#334155}
+    .doc-sec{font-weight:800;font-size:12px;margin:16px 0 7px;color:#334155;letter-spacing:.5px;display:flex;align-items:center;gap:7px}
+    .doc-sec::before{content:'';width:4px;height:14px;background:#334155;border-radius:2px}
+    .doc-box{border:1px solid #d7dde5;border-radius:7px;padding:12px 14px;min-height:42px;white-space:pre-wrap;background:#fafbfc}
+    .doc-box.big{font-size:17px;font-weight:700;min-height:54px;background:#fff}
+    @media print{.noprint,.topbar{display:none}}
     ${extraCss||''}
   </style></head><body><div class="topbar noprint"><button class="close" onclick="window.close()">✕ 閉じる</button><button class="pr" onclick="window.print()">🖨 印刷 / PDF保存</button></div>${bodyHtml}<div class="noprint"><button onclick="window.print()">🖨 印刷 / PDF保存</button></div></body></html>`);
   w.document.close(); return w;
@@ -1441,9 +1455,9 @@ function generateWorkOrder(id){
   const partsRows = parts.length? parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.supplier||'')}</td><td class="c">${p.arrived?'✓ 着荷済':'未着'}</td></tr>`).join('') : `<tr><td colspan="3" class="muted">（部品の登録なし）</td></tr>`;
   const qtyTag=num(j.qty)>1?`　<b style="font-size:17px">×${num(j.qty)}台</b>`:'';
   const body=`
-   <div class="wo-head"><div><div class="wo-title">作業指示書</div><div class="wo-sub">${esc(st.company||'')}${st.tel?'　TEL '+esc(st.tel):''}</div></div>
-     <div class="wo-meta"><div>No. ${esc(j.jobNo||'')}</div><div>発行 ${fmtFullDate(todayISO())}</div></div></div>
-   <table class="wo-tbl">
+   <div class="doc-head"><div><div class="doc-title">作業指示書</div><div class="doc-sub">${esc(st.company||'')}${st.tel?'　TEL '+esc(st.tel):''}</div></div>
+     <div class="doc-meta"><div>No. <b>${esc(j.jobNo||'')}</b></div><div>発行 ${fmtFullDate(todayISO())}</div></div></div>
+   <table class="doc-tbl">
      <tr><th>取引先</th><td>${esc(cl?cl.name:j.clientName||'')}</td><th>エンド</th><td>${esc(j.endUser?j.endUser+' 様':'—')}</td></tr>
      <tr><th>車種</th><td><b style="font-size:17px">${esc(j.carModel||'—')}</b>${qtyTag}</td><th>ナンバー</th><td>${esc(j.carPlate||'—')}</td></tr>
      <tr><th>作業場所</th><td colspan="3">${esc(j.workPlace||'—')}</td></tr>
@@ -1451,26 +1465,17 @@ function generateWorkOrder(id){
      <tr><th>日程</th><td colspan="3">着荷予定: ${esc(j.partsEta||'—')}　／　作業可能: ${esc(j.workableFrom||'—')}　／　作業期日: ${j.deadline?fmtD(j.deadline):'—'}</td></tr>
      <tr><th>自社担当</th><td>${esc(j.worker||'—')}</td><th>外注</th><td>${j.outsource&&j.outsource.used?esc(j.outsource.vendor||'—')+(j.outsource.vendor?' 様':''):'—'}</td></tr>
    </table>
-   <div class="wo-sec">作業内容</div><div class="wo-box big">${esc(j.workDesc||'')}</div>
-   <div class="wo-sec">部品${num(j.qty)>1?'　※各 '+num(j.qty)+'台分':''}　届け先: ${esc(j.partsDest||'当社')}</div>
+   <div class="doc-sec">作業内容</div><div class="doc-box big">${esc(j.workDesc||'')}</div>
+   <div class="doc-sec">部品${num(j.qty)>1?'　※各 '+num(j.qty)+'台分':''}　／　届け先: ${esc(j.partsDest||'当社')}</div>
    <table class="wo-parts"><thead><tr><th>部品名</th><th>仕入先</th><th class="c">着荷</th></tr></thead><tbody>${partsRows}</tbody></table>
-   ${j.outsource&&j.outsource.used&&num(j.outsource.cost)?`<div class="wo-sec">外注費(税抜)</div><div class="wo-box">${yen(j.outsource.cost)}</div>`:''}
-   <div class="wo-sec">備考・注意事項</div><div class="wo-box" style="min-height:64px">${esc(j.memo||'')}</div>
+   ${j.outsource&&j.outsource.used&&num(j.outsource.cost)?`<div class="doc-sec">外注費(税抜)</div><div class="doc-box">${yen(j.outsource.cost)}</div>`:''}
+   <div class="doc-sec">備考・注意事項</div><div class="doc-box" style="min-height:62px">${esc(j.memo||'')}</div>
    <div class="wo-sign"><div>作業完了日　______________</div><div>担当サイン　______________</div></div>`;
   const css=`
-   .wo-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #16202E;padding-bottom:10px;margin-bottom:14px}
-   .wo-title{font-size:26px;font-weight:800;letter-spacing:6px}.wo-sub{font-size:12px;color:#555;margin-top:4px}
-   .wo-meta{text-align:right;font-size:13px;line-height:1.8}
-   .wo-tbl{width:100%;border-collapse:collapse;margin-bottom:6px}
-   .wo-tbl th,.wo-tbl td{border:1px solid #9AA7B8;padding:8px 10px;font-size:13px;text-align:left}
-   .wo-tbl th{background:#EEF2F8;width:78px;font-weight:700;white-space:nowrap}
-   .wo-sec{font-weight:800;font-size:13px;margin:14px 0 6px;color:#1D4ED8}
-   .wo-box{border:1px solid #9AA7B8;border-radius:6px;padding:12px 14px;min-height:40px;white-space:pre-wrap}
-   .wo-box.big{font-size:18px;font-weight:700;min-height:58px}
    .wo-parts{width:100%;border-collapse:collapse}
-   .wo-parts th,.wo-parts td{border:1px solid #9AA7B8;padding:7px 10px;font-size:13px}
-   .wo-parts th{background:#2563EB;color:#fff}.wo-parts .c{text-align:center}.muted{color:#888;text-align:center}
-   .wo-sign{display:flex;justify-content:space-between;margin-top:28px;font-size:14px}`;
+   .wo-parts th,.wo-parts td{border:1px solid #d7dde5;padding:8px 11px;font-size:13px}
+   .wo-parts th{background:#334155;color:#fff;font-weight:600}.wo-parts tbody tr:nth-child(even){background:#f8fafc}.wo-parts .c{text-align:center}.muted{color:#94a3b8;text-align:center}
+   .wo-sign{display:flex;justify-content:space-between;margin-top:30px;font-size:13.5px;color:#334155}`;
   openPrintWindow('作業指示書 '+(j.jobNo||''),body,css);
 }
 /* 作業報告書(印刷) */
@@ -1479,31 +1484,23 @@ function generateWorkReport(id){
   const cl=clientById(j.clientId), st=DATA.settings;
   const photos=(j.photos||[]).map(src=>`<div class="rp-ph"><img src="${src}"></div>`).join('');
   const body=`
-   <div class="rp-head"><div><div class="rp-title">作業報告書</div><div class="rp-sub">${esc(st.company||'')}${st.tel?'　TEL '+esc(st.tel):''}</div></div>
-     <div class="rp-meta"><div>No. ${esc(j.jobNo||'')}</div><div>報告日 ${fmtFullDate(todayISO())}</div></div></div>
-   <table class="rp-tbl">
+   <div class="doc-head"><div><div class="doc-title">作業報告書</div><div class="doc-sub">${esc(st.company||'')}${st.tel?'　TEL '+esc(st.tel):''}</div></div>
+     <div class="doc-meta"><div>No. <b>${esc(j.jobNo||'')}</b></div><div>報告日 ${fmtFullDate(todayISO())}</div></div></div>
+   <table class="doc-tbl">
      <tr><th>取引先</th><td>${esc(cl?cl.name:j.clientName||'')} 御中</td></tr>
      <tr><th>エンド/車両</th><td>${esc(j.endUser?j.endUser+'様　':'')}<b>${esc(j.carModel||'')}</b>${num(j.qty)>1?' ×'+num(j.qty)+'台':''}　${esc(j.carPlate||'')}</td></tr>
      <tr><th>作業日</th><td>${workDoneStr(j)||workScheduleStr(j)}</td></tr>
      <tr><th>担当</th><td>${esc(j.worker||DATA.settings.company||'')}</td></tr>
      <tr><th>作業内容</th><td>${esc(j.workDesc||'')}</td></tr>
    </table>
-   <div class="rp-sec">作業報告</div><div class="rp-box">${esc(j.reportNote||'（記入なし）')}</div>
-   ${photos?`<div class="rp-sec">作業写真</div><div class="rp-photos">${photos}</div>`:''}
+   <div class="doc-sec">作業報告</div><div class="doc-box" style="font-size:13.5px">${esc(j.reportNote||'（記入なし）')}</div>
+   ${photos?`<div class="doc-sec">作業写真</div><div class="rp-photos">${photos}</div>`:''}
    <div class="rp-foot">上記の通り作業が完了致しましたのでご報告申し上げます。</div>`;
   const css=`
-   .rp-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #16202E;padding-bottom:10px;margin-bottom:14px}
-   .rp-title{font-size:26px;font-weight:800;letter-spacing:6px}.rp-sub{font-size:12px;color:#555;margin-top:4px}
-   .rp-meta{text-align:right;font-size:13px;line-height:1.8}
-   .rp-tbl{width:100%;border-collapse:collapse;margin-bottom:6px}
-   .rp-tbl th,.rp-tbl td{border:1px solid #9AA7B8;padding:8px 11px;font-size:13.5px;text-align:left}
-   .rp-tbl th{background:#EEF2F8;width:96px;font-weight:700;white-space:nowrap}
-   .rp-sec{font-weight:800;font-size:13px;margin:14px 0 6px;color:#1D4ED8}
-   .rp-box{border:1px solid #9AA7B8;border-radius:6px;padding:12px 14px;min-height:46px;white-space:pre-wrap;font-size:14px}
    .rp-photos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-   .rp-ph{border:1px solid #ccc;border-radius:6px;overflow:hidden;aspect-ratio:4/3}
+   .rp-ph{border:1px solid #d7dde5;border-radius:7px;overflow:hidden;aspect-ratio:4/3}
    .rp-ph img{width:100%;height:100%;object-fit:cover}
-   .rp-foot{margin-top:20px;font-size:13px;color:#333}
+   .rp-foot{margin-top:22px;font-size:13px;color:#475569;text-align:right}
    @media print{.rp-ph{break-inside:avoid}}`;
   openPrintWindow('作業報告書 '+(j.jobNo||''),body,css);
 }
@@ -1521,17 +1518,17 @@ async function composeReportImage(j){
   ctx.font='13px sans-serif'; ctx.fillStyle='#555'; ctx.textAlign='right';
   ctx.fillText('No. '+(j.jobNo||''),W-pad,y+4); ctx.fillText('報告日 '+fmtFullDate(todayISO()),W-pad,y+24); ctx.textAlign='left';
   y+=54; ctx.font='13px sans-serif'; ctx.fillStyle='#555'; ctx.fillText((st.company||'')+(st.tel?'　TEL '+st.tel:''),pad,y); y+=26;
-  ctx.strokeStyle='#16202E'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=18;
+  ctx.strokeStyle='#334155'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=18;
   function row(label,val){ ctx.font='bold 14px sans-serif'; ctx.fillStyle='#666'; ctx.fillText(label,pad,y); ctx.font='15px sans-serif'; ctx.fillStyle='#16202E'; const ls=_wrapText(ctx,val,W-pad-140); ls.forEach((ln,i)=>ctx.fillText(ln,pad+120,y+i*22)); y+=Math.max(22,ls.length*22)+9; }
   row('取引先',(cl?cl.name:j.clientName||'')+' 御中');
   row('エンド/車両',(j.endUser?j.endUser+'様 ':'')+(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.carPlate?' '+j.carPlate:''));
   row('作業日',workDoneStr(j)||workScheduleStr(j));
   row('担当',(j.worker||DATA.settings.company||''));
   row('作業内容',j.workDesc||'');
-  y+=4; ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('作業報告',pad,y); y+=24;
+  y+=4; ctx.font='bold 15px sans-serif'; ctx.fillStyle='#334155'; ctx.fillText('作業報告',pad,y); y+=24;
   ctx.font='15px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.reportNote||'（記入なし）',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=23; }); y+=12;
   if(photos.length){
-    ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('作業写真',pad,y); y+=26;
+    ctx.font='bold 15px sans-serif'; ctx.fillStyle='#334155'; ctx.fillText('作業写真',pad,y); y+=26;
     const cols=2, cw=(W-pad*2-gap)/cols, ch=cw*0.72;
     for(let i=0;i<photos.length;i++){ const col=i%cols, x=pad+col*(cw+gap); _drawCover(ctx,photos[i],x,y,cw,ch); ctx.strokeStyle='#ddd'; ctx.lineWidth=1; ctx.strokeRect(x,y,cw,ch); if(col===cols-1||i===photos.length-1) y+=ch+gap; }
   }
@@ -1571,7 +1568,7 @@ async function composeWorkOrderImage(j){
   ctx.font='13px sans-serif'; ctx.fillStyle='#555'; ctx.textAlign='right';
   ctx.fillText('No. '+(j.jobNo||''),W-pad,y+4); ctx.fillText('発行 '+fmtFullDate(todayISO()),W-pad,y+24); ctx.textAlign='left';
   y+=54; ctx.fillText((st.company||'')+(st.tel?'　TEL '+st.tel:''),pad,y); y+=26;
-  ctx.strokeStyle='#16202E'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=18;
+  ctx.strokeStyle='#334155'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=18;
   function row(label,val,bold){ ctx.font='bold 14px sans-serif'; ctx.fillStyle='#666'; ctx.fillText(label,pad,y); ctx.font=(bold?'bold ':'')+'15px sans-serif'; ctx.fillStyle='#16202E'; const ls=_wrapText(ctx,val,W-pad-140); ls.forEach((ln,i)=>ctx.fillText(ln,pad+120,y+i*22)); y+=Math.max(22,ls.length*22)+9; }
   row('取引先',(cl?cl.name:j.clientName||''));
   row('エンド/車両',(j.endUser?j.endUser+'様 ':'')+(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.carPlate?' '+j.carPlate:''),true);
@@ -1580,11 +1577,11 @@ async function composeWorkOrderImage(j){
   row('日程','着荷予定 '+(j.partsEta||'—')+' ／ 作業可能 '+(j.workableFrom||'—')+' ／ 期日 '+(j.deadline?fmtD(j.deadline):'—'));
   row('作業予定',workScheduleStr(j),true);
   row('担当','自社 '+(j.worker||'—')+(j.outsource&&j.outsource.used?'　外注 '+(j.outsource.vendor||'')+(j.outsource.vendor?' 様':''):''));
-  y+=4; ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('作業内容',pad,y); y+=24;
+  y+=4; ctx.font='bold 15px sans-serif'; ctx.fillStyle='#334155'; ctx.fillText('作業内容',pad,y); y+=24;
   ctx.font='bold 17px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.workDesc||'',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=25; }); y+=8;
-  if((j.parts||[]).length){ ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('部品'+(num(j.qty)>1?'（各'+num(j.qty)+'台分）':'')+'　届け先: '+(j.partsDest||'当社'),pad,y); y+=24; ctx.font='14px sans-serif'; ctx.fillStyle='#16202E'; (j.parts||[]).forEach(p=>{ ctx.fillText('・'+p.name+(p.arrived?'（着荷済）':'（未着）'),pad,y); y+=21; }); y+=6; }
-  if(j.outsource&&j.outsource.used&&num(j.outsource.cost)){ ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('外注費(税抜)',pad,y); y+=24; ctx.font='16px sans-serif'; ctx.fillStyle='#16202E'; ctx.fillText(yen(j.outsource.cost),pad,y); y+=26; }
-  ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('備考・注意事項',pad,y); y+=24;
+  if((j.parts||[]).length){ ctx.font='bold 15px sans-serif'; ctx.fillStyle='#334155'; ctx.fillText('部品'+(num(j.qty)>1?'（各'+num(j.qty)+'台分）':'')+'　届け先: '+(j.partsDest||'当社'),pad,y); y+=24; ctx.font='14px sans-serif'; ctx.fillStyle='#16202E'; (j.parts||[]).forEach(p=>{ ctx.fillText('・'+p.name+(p.arrived?'（着荷済）':'（未着）'),pad,y); y+=21; }); y+=6; }
+  if(j.outsource&&j.outsource.used&&num(j.outsource.cost)){ ctx.font='bold 15px sans-serif'; ctx.fillStyle='#334155'; ctx.fillText('外注費(税抜)',pad,y); y+=24; ctx.font='16px sans-serif'; ctx.fillStyle='#16202E'; ctx.fillText(yen(j.outsource.cost),pad,y); y+=26; }
+  ctx.font='bold 15px sans-serif'; ctx.fillStyle='#334155'; ctx.fillText('備考・注意事項',pad,y); y+=24;
   ctx.font='15px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.memo||'（なし）',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=23; });
   y+=pad;
   const out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y); out.getContext('2d').drawImage(big,0,0);
@@ -1614,7 +1611,7 @@ function generatePartsLabel(id){
   const cl=clientById(j.clientId);
   const parts=(j.parts||[]).map(p=>esc(p.name)).join('、')||esc(j.workDesc||'—');
   const body=`<div class="lbl">
-     <div class="lbl-no">受入ラベル　No. ${esc(j.jobNo||'')}</div>
+     <div class="lbl-no"><span class="lbl-tag">着荷部品ラベル</span><span class="lbl-jobno">No. ${esc(j.jobNo||'')}</span></div>
      <div class="lbl-client">${esc(cl?cl.name:j.clientName||'')}</div>
      ${j.endUser?`<div class="lbl-end">${esc(j.endUser)} 様</div>`:''}
      <div class="lbl-car">${esc(j.carModel||'')}${num(j.qty)>1?`　×${num(j.qty)}台`:''}</div>
@@ -1624,17 +1621,18 @@ function generatePartsLabel(id){
      <div class="lbl-row"><span>作業場所</span><b>${esc(j.workPlace||'—')}</b></div>
      <div class="lbl-grid"><div><span>着荷予定</span><b>${esc(j.partsEta||'—')}</b></div><div><span>作業予定</span><b>${workScheduleStr(j)}</b></div></div>
    </div>`;
-  const css=`body{padding:10mm}
-   .lbl{border:4px solid #16202E;border-radius:16px;padding:24px 28px}
-   .lbl-no{font-size:15px;color:#2563EB;font-weight:800;letter-spacing:1px}
-   .lbl-client{font-size:30px;font-weight:800;margin-top:8px;line-height:1.2}
-   .lbl-end{font-size:22px;font-weight:700;color:#444;margin-top:2px}
-   .lbl-car{font-size:34px;font-weight:800;margin:14px 0;padding:12px 0;border-top:2px solid #16202E;border-bottom:2px solid #16202E}
+  const css=`
+   .lbl{border:2.5px solid #334155;border-radius:14px;padding:22px 26px;overflow:hidden}
+   .lbl-no{display:flex;justify-content:space-between;align-items:center;margin:-22px -26px 16px;padding:9px 26px;background:#334155;color:#fff}
+   .lbl-tag{font-size:15px;font-weight:800;letter-spacing:2px}.lbl-jobno{font-size:13px;font-weight:700;opacity:.92}
+   .lbl-client{font-size:28px;font-weight:800;line-height:1.2;color:#0f172a}
+   .lbl-end{font-size:21px;font-weight:700;color:#475569;margin-top:3px}
+   .lbl-car{font-size:33px;font-weight:800;color:#0f172a;margin:14px 0;padding:13px 0;border-top:1.5px solid #cbd5e1;border-bottom:1.5px solid #cbd5e1}
    .lbl-row{font-size:17px;margin:11px 0;display:flex;gap:12px}
-   .lbl-row span{color:#666;min-width:80px;font-size:13px;padding-top:3px}.lbl-row b{flex:1}
-   .lbl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
-   .lbl-grid span{display:block;color:#666;font-size:12px}.lbl-grid b{font-size:18px}`;
-  openPrintWindow('受入ラベル '+(j.jobNo||''),body,css);
+   .lbl-row span{color:#64748b;min-width:80px;font-size:13px;padding-top:3px}.lbl-row b{flex:1;color:#1f2937}
+   .lbl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid #e2e8f0}
+   .lbl-grid span{display:block;color:#64748b;font-size:12px;margin-bottom:2px}.lbl-grid b{font-size:18px;color:#0f172a}`;
+  openPrintWindow('着荷部品ラベル '+(j.jobNo||''),body,css);
 }
 
 /* ───────── マスタ ───────── */
