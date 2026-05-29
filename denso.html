@@ -11,6 +11,9 @@
 <meta name="theme-color" content="#0A0E1A">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>電装取付管理 — 現場/事務</title>
+<link rel="apple-touch-icon" sizes="180x180" href="denso-icon.png">
+<link rel="apple-touch-icon" href="denso-icon.png">
+<link rel="icon" type="image/png" sizes="256x256" href="denso-icon.png">
 <style>
 /* ───── 電装(ELECTRO)カラーパレット ───── */
 :root{
@@ -274,7 +277,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28p';
+const APP_VERSION = '2026-05-28q';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -532,7 +535,7 @@ function jobCard(j){
   const partsAll=(j.parts||[]).length, partsIn=(j.parts||[]).filter(p=>p.arrived).length;
   if(partsAll) tags.push(partsIn<partsAll? `<span class="tag alert">部品 ${partsIn}/${partsAll}着荷</span>` : `<span class="tag ok">部品 全着荷</span>`);
   else if(j.partsEta && ['受注','部品手配'].includes(j.status)) tags.push(`<span class="tag alert">${esc(j.partsEta)}</span>`);
-  if(j.outsource&&j.outsource.used) tags.push(`<span class="tag">🤝${esc(j.outsource.vendor||'外注')}</span>`);
+  if(j.outsource&&j.outsource.used) tags.push(`<span class="tag">🤝${esc(j.outsource.vendor||'外注')}${j.outsource.vendor?' 様':''}</span>`);
   if(j.scheduledAt) tags.push(`<span class="tag">作業 ${fmtD(j.scheduledAt)}</span>`);
   const idx=FLOW.indexOf(j.status);
   const next=(idx>=0&&idx<FLOW.length-1&&j.status!=='報告済');
@@ -841,7 +844,7 @@ function openJobDetail(id){
       ${j.workableFrom?`<dt>作業可能</dt><dd>${esc(j.workableFrom)}</dd>`:''}
       ${j.deadline?`<dt>作業期日</dt><dd>${fmtD(j.deadline)}${deadlineState(j)==='over'?' <b style="color:var(--red)">⚠️超過</b>':deadlineState(j)==='soon'?' <b style="color:var(--orange)">⏰間近</b>':''}</dd>`:''}
       <dt>作業予定</dt><dd>${workScheduleStr(j)}</dd>
-      ${j.workedAt?`<dt>作業日</dt><dd>${workDoneStr(j)} ${esc(j.worker||'')}${j.outsource&&j.outsource.used?'＋外注'+esc(j.outsource.vendor||''):''}</dd>`:''}
+      ${j.workedAt?`<dt>作業日</dt><dd>${workDoneStr(j)} ${esc(j.worker||'')}${j.outsource&&j.outsource.used?'＋外注 '+esc(j.outsource.vendor||'')+(j.outsource.vendor?' 様':''):''}</dd>`:''}
       ${j.billingMonth?`<dt>請求月</dt><dd>${fmtMonth(j.billingMonth)}</dd>`:''}
       ${j.invoiceNo?`<dt>請求No</dt><dd>${esc(j.invoiceNo)}</dd>`:''}
     </dl>
@@ -850,7 +853,7 @@ function openJobDetail(id){
       <div class="money-row" style="font-size:11px"><span>税込(${taxRate()}%)</span><b>${yen(withTax(jobSubtotal(j)))}</b></div>
       ${jobPartsCost(j)?`<div class="money-row"><span>部品原価(当社購入)</span><b>−${yen(jobPartsCost(j))}</b></div>`:''}
       ${jobEtcCost(j)?`<div class="money-row"><span>ETCセットアップ ${num(j.etc.count)}台×${yen(j.etc.unit||DATA.settings.etcSetupFee)}</span><b>−${yen(jobEtcCost(j))}</b></div>`:''}
-      ${jobOutsource(j)?`<div class="money-row"><span>外注費 ${j.outsource&&j.outsource.used?'('+esc(j.outsource.vendor||'未定')+(j.outsource.paid?'/支払済':'/未払')+')':''}</span><b>−${yen(jobOutsource(j))}</b></div>`:''}
+      ${jobOutsource(j)?`<div class="money-row"><span>外注費 ${j.outsource&&j.outsource.used?'('+esc(j.outsource.vendor||'未定')+(j.outsource.vendor?' 様':'')+(j.outsource.paid?'/支払済':'/未払')+')':''}</span><b>−${yen(jobOutsource(j))}</b></div>`:''}
       <div class="money-row profit total"><span>粗利</span><b>${yen(jobProfit(j))}</b></div>
     </div>`:''}
     <div class="sec-label">📦 部品 ${j.partsDest==='現場・エンド直送'?'<span class="tag place" style="margin-left:4px">🚚 現場・エンド直送</span>':'<span class="tag" style="margin-left:4px">🏢 当社着荷</span>'} ${(j.parts||[]).length?`<span style="color:var(--text-dim);font-weight:400">(${(j.parts||[]).filter(p=>p.arrived).length}/${(j.parts||[]).length}着荷)</span>`:''}</div>
@@ -921,7 +924,7 @@ function openReportModal(id){
       <div class="field"><label>作業日(開始)</label><input type="date" id="r-worked" value="${esc(j.workedAt||todayISO())}"></div>
       <div class="field"><label>終了日(複数日)</label><input type="date" id="r-workend" value="${esc(j.workEndAt)}"></div>
     </div>
-    <div class="field"><label>作業者(自社)${j.outsource&&j.outsource.used?' ＋ 外注: '+esc(j.outsource.vendor||'')+' と合同':''}</label><input id="r-worker" value="${esc(j.worker||DATA.settings.person||'')}"></div>
+    <div class="field"><label>作業者(自社)${j.outsource&&j.outsource.used?' ＋ 外注: '+esc(j.outsource.vendor||'')+(j.outsource.vendor?' 様':'')+' と合同':''}</label><input id="r-worker" value="${esc(j.worker||DATA.settings.person||'')}"></div>
     <div class="field"><label>報告内容</label><textarea id="r-note" placeholder="取付状況・動作確認・申し送りなど" style="min-height:110px">${esc(j.reportNote)}</textarea></div>
     <div class="sec-label">📷 写真</div>
     <div class="photos" id="r-photos"></div>
@@ -960,7 +963,7 @@ function compressImage(file,maxDim,quality){
   });
 }
 async function removePhoto(id,i){ const j=DATA.jobs.find(x=>x.id===id); j.photos.splice(i,1); save(); renderReportPhotos(id); }
-function viewPhoto(id,i){ const j=DATA.jobs.find(x=>x.id===id); const src=j.photos[i]; const w=window.open(''); if(w) w.document.write(`<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><img src="${src}" style="max-width:100%;max-height:100%"></body>`); }
+function viewPhoto(id,i){ const j=DATA.jobs.find(x=>x.id===id); const src=j.photos[i]; const w=window.open(''); if(w) w.document.write(`<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><div onclick="window.close()" style="position:fixed;top:12px;right:14px;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer">✕</div><img src="${src}" style="max-width:100%;max-height:100%"></body>`); }
 function saveReport(id,complete){
   const j=DATA.jobs.find(x=>x.id===id);
   j.workedAt=document.getElementById('r-worked').value;
@@ -1014,7 +1017,7 @@ function outsourceVendorCard(vendor,jobs){
   const allPaid=jobs.every(j=>j.outsource.paid);
   return `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:15px;font-weight:700">🤝 ${esc(vendor)}</div>
+      <div style="font-size:15px;font-weight:700">🤝 ${esc(vendor)}${vendor&&vendor!=='(未設定)'?' 様':''}</div>
       <span class="badge ${allPaid?'st-入金済':'st-部品手配'}">${allPaid?'清算済':'未清算'}</span>
     </div>
     ${jobs.map(j=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)" onclick="openJobDetail('${j.id}')">
@@ -1113,6 +1116,7 @@ function openInvoiceWindow(client,jobs,month,invNo){
     .noprint{text-align:center;margin-top:24px}
     .noprint button{padding:12px 28px;font-size:15px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}
   </style></head><body>
+    <div class="noprint" style="position:sticky;top:0;margin:-14mm -16mm 14px;padding:9px 14px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;justify-content:space-between;z-index:30"><button onclick="window.close()" style="padding:10px 16px;border:none;border-radius:9px;background:#e5e7eb;font-weight:700;font-size:14px;cursor:pointer">✕ 閉じる</button><button onclick="window.print()" style="padding:10px 16px;border:none;border-radius:9px;background:#2563EB;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🖨 印刷 / PDF保存</button></div>
     <div class="title">御請求書</div>
     <div class="top">
       <div><div class="to">${esc(client?client.name:jobs[0].clientName||'')}</div></div>
@@ -1154,14 +1158,17 @@ async function markPaid(key,month){
 /* ───────── 作業指示書 / 受入ラベル(印刷) ───────── */
 function openPrintWindow(title,bodyHtml,extraCss){
   const w=window.open('','_blank'); if(!w){ toast('ポップアップを許可してください','err'); return null; }
-  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;color:#16202E;padding:13mm 14mm;font-size:13px;line-height:1.6}
+    .topbar{position:sticky;top:0;margin:-13mm -14mm 14px;padding:9px 14px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;justify-content:space-between;align-items:center;z-index:30}
+    .topbar button{padding:10px 16px;font-size:14px;border:none;border-radius:9px;font-weight:700;cursor:pointer}
+    .topbar .close{background:#e5e7eb;color:#16202E}.topbar .pr{background:#2563EB;color:#fff}
     .noprint{text-align:center;margin-top:22px}
     .noprint button{padding:12px 30px;font-size:15px;background:#2563EB;color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer}
-    @media print{body{padding:10mm}.noprint{display:none}}
+    @media print{body{padding:10mm}.noprint,.topbar{display:none}}
     ${extraCss||''}
-  </style></head><body>${bodyHtml}<div class="noprint"><button onclick="window.print()">🖨 印刷 / PDF保存</button></div></body></html>`);
+  </style></head><body><div class="topbar noprint"><button class="close" onclick="window.close()">✕ 閉じる</button><button class="pr" onclick="window.print()">🖨 印刷 / PDF保存</button></div>${bodyHtml}<div class="noprint"><button onclick="window.print()">🖨 印刷 / PDF保存</button></div></body></html>`);
   w.document.close(); return w;
 }
 function generateWorkOrder(id){
@@ -1178,7 +1185,7 @@ function generateWorkOrder(id){
      <tr><th>作業場所</th><td colspan="3">${esc(j.workPlace||'—')}</td></tr>
      <tr><th>現場担当</th><td>${esc(j.siteContact||'—')}　${esc(j.siteTel||'')}</td><th>作業予定</th><td><b>${workScheduleStr(j)}</b></td></tr>
      <tr><th>日程</th><td colspan="3">着荷予定: ${esc(j.partsEta||'—')}　／　作業可能: ${esc(j.workableFrom||'—')}　／　作業期日: ${j.deadline?fmtD(j.deadline):'—'}</td></tr>
-     <tr><th>自社担当</th><td>${esc(j.worker||'—')}</td><th>外注</th><td>${j.outsource&&j.outsource.used?esc(j.outsource.vendor||'—'):'—'}</td></tr>
+     <tr><th>自社担当</th><td>${esc(j.worker||'—')}</td><th>外注</th><td>${j.outsource&&j.outsource.used?esc(j.outsource.vendor||'—')+(j.outsource.vendor?' 様':''):'—'}</td></tr>
    </table>
    <div class="wo-sec">作業内容</div><div class="wo-box big">${esc(j.workDesc||'')}</div>
    <div class="wo-sec">部品${num(j.qty)>1?'　※各 '+num(j.qty)+'台分':''}　届け先: ${esc(j.partsDest||'当社')}</div>
@@ -1308,7 +1315,7 @@ async function composeWorkOrderImage(j){
   row('現場担当',(j.siteContact||'—')+(j.siteTel?'　'+j.siteTel:''));
   row('日程','着荷予定 '+(j.partsEta||'—')+' ／ 作業可能 '+(j.workableFrom||'—')+' ／ 期日 '+(j.deadline?fmtD(j.deadline):'—'));
   row('作業予定',workScheduleStr(j),true);
-  row('担当','自社 '+(j.worker||'—')+(j.outsource&&j.outsource.used?'　外注 '+(j.outsource.vendor||''):''));
+  row('担当','自社 '+(j.worker||'—')+(j.outsource&&j.outsource.used?'　外注 '+(j.outsource.vendor||'')+(j.outsource.vendor?' 様':''):''));
   y+=4; ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('作業内容',pad,y); y+=24;
   ctx.font='bold 17px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.workDesc||'',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=25; }); y+=8;
   if((j.parts||[]).length){ ctx.font='bold 15px sans-serif'; ctx.fillStyle='#1D4ED8'; ctx.fillText('部品'+(num(j.qty)>1?'（各'+num(j.qty)+'台分）':'')+'　届け先: '+(j.partsDest||'当社'),pad,y); y+=24; ctx.font='14px sans-serif'; ctx.fillStyle='#16202E'; (j.parts||[]).forEach(p=>{ ctx.fillText('・'+p.name+(p.arrived?'（着荷済）':'（未着）'),pad,y); y+=21; }); y+=6; }
