@@ -377,7 +377,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29e';
+const APP_VERSION = '2026-05-29f';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -727,29 +727,29 @@ function openJobModal(id){
 
     <div class="sec-label">🔧 取付内容</div>
     <div class="chips" style="margin-bottom:9px">${DATA.presets.map(p=>`<button class="chip" onclick="appendPreset('${p.id}')">＋${esc(p.name)}</button>`).join('')}</div>
-    <div class="field"><textarea id="f-workdesc" placeholder="例: オンダッシュナビ＋カメラ＋ドラレコ前後取付" oninput="editingJob.workDesc=this.value;syncBillingHint()">${esc(j.workDesc)}</textarea></div>
+    <div class="field"><textarea id="f-workdesc" placeholder="（記入例）ナビ＋前後ドラレコ など取付する機器" oninput="editingJob.workDesc=this.value;syncBillingHint()">${esc(j.workDesc)}</textarea></div>
 
     <div class="sec-label">🚗 車両・相手先</div>
-    <div class="field"><label>車種</label><input id="f-carmodel" value="${esc(j.carModel)}" placeholder="例: ハイゼットカーゴ" oninput="syncBillingHint()"></div>
+    <div class="field"><label>車種</label><input id="f-carmodel" value="${esc(j.carModel)}" placeholder="（記入例）車種名" oninput="syncBillingHint()"></div>
     <div class="field-row">
       <div class="field"><label>ナンバー(分かれば)</label><input id="f-carplate" value="${esc(j.carPlate)}" placeholder="後で可"></div>
-      <div class="field"><label>エンド需要者(請求書の摘要用)</label><input id="f-enduser" value="${esc(j.endUser)}" placeholder="例: NEWS / フジレンタカー" oninput="syncBillingHint()"></div>
+      <div class="field"><label>エンド需要者(請求書の摘要用)</label><input id="f-enduser" value="${esc(j.endUser)}" placeholder="（記入例）相手先名" oninput="syncBillingHint()"></div>
     </div>
 
     <div class="sec-label">📍 作業場所・現場担当</div>
-    <div class="field"><label>作業場所</label><input id="f-workplace" value="${esc(j.workPlace)}" placeholder="例: 沖縄ユーポス 豊見城"></div>
+    <div class="field"><label>作業場所</label><input id="f-workplace" value="${esc(j.workPlace)}" placeholder="（記入例）作業する店舗・場所"></div>
     <div class="field-row">
-      <div class="field"><label>現場担当者</label><input id="f-sitecontact" value="${esc(j.siteContact)}" placeholder="例: 堤さん"></div>
+      <div class="field"><label>現場担当者</label><input id="f-sitecontact" value="${esc(j.siteContact)}" placeholder="（記入例）担当者名"></div>
       <div class="field"><label>現場TEL</label><input id="f-sitetel" value="${esc(j.siteTel)}" inputmode="tel" placeholder="080-..."></div>
     </div>
 
     <div class="sec-label">🗓 日程</div>
     <div class="field-row">
       <div class="field"><label>依頼日</label><input type="date" id="f-reqdate" value="${esc(j.requestedAt)}"></div>
-      <div class="field"><label>着荷予定</label><input id="f-partseta" value="${esc(j.partsEta)}" placeholder="例: 30日着荷予定"></div>
+      <div class="field"><label>着荷予定</label><input id="f-partseta" value="${esc(j.partsEta)}" placeholder="（記入例）〇日 着荷予定"></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>作業可能日(以降)</label><input id="f-workablefrom" value="${esc(j.workableFrom)}" placeholder="例: 6/1以降"></div>
+      <div class="field"><label>作業可能日(以降)</label><input id="f-workablefrom" value="${esc(j.workableFrom)}" placeholder="（記入例）〇/〇 以降"></div>
       <div class="field"><label>作業期日(この日まで)</label><input type="date" id="f-deadline" value="${esc(j.deadline)}"></div>
     </div>
     <div class="field-row">
@@ -761,7 +761,7 @@ function openJobModal(id){
     <div class="sec-label">💴 工賃</div>
     <div class="field-row">
       <div class="field" style="flex:0 0 84px"><label>数量(台)</label><input id="f-qty" inputmode="numeric" value="${esc(j.qty||1)}" oninput="recalcMoney()"></div>
-      <div class="field"><label>工賃単価(税別/1台)</label><input id="f-unitfee" inputmode="numeric" value="${esc(j.unitFee)}" placeholder="例: 25000" oninput="recalcMoney()"></div>
+      <div class="field"><label>工賃単価(税別/1台)</label><input id="f-unitfee" inputmode="numeric" value="${esc(j.unitFee)}" placeholder="（記入例）25000" oninput="recalcMoney()"></div>
     </div>
     <div class="field"><label>請求書の摘要 <span style="color:var(--muted);font-weight:400">(空欄なら「車種＋相手先様＋取付内容」)</span></label><input id="f-billingdesc" value="${esc(j.billingDesc)}" placeholder="" oninput="syncBillingHint()"><div class="hint" id="billing-hint"></div></div>
 
@@ -790,7 +790,7 @@ function openJobModal(id){
     </div>
 
     <div class="sec-label">🗒 メモ・依頼条件</div>
-    <div class="field"><textarea id="f-memo" placeholder="例: 車両は店舗にあります。着荷後に堤さんへ連絡し早めに取付。">${esc(j.memo)}</textarea></div>
+    <div class="field"><textarea id="f-memo" placeholder="申し送り・注意点など（自由記入）">${esc(j.memo)}</textarea></div>
 
     <div class="money-box" id="f-money"></div>
   </div>
