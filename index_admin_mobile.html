@@ -292,6 +292,15 @@
   .meter-legend .lg .ln{color:var(--ink2);font-family:var(--serif);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .meter-legend .lg .lr{font-family:var(--serif);font-size:13px;color:var(--ink);font-weight:500}
 
+  /* ===== 部門別 売上 (3部門テーブル) ===== */
+  .dept3-head{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:8.5px;color:var(--ink3);letter-spacing:.24em;text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid var(--line);margin-top:2px}
+  .dept3-head .d3-h{text-align:right}
+  .dept3-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:baseline;padding:11px 0;border-bottom:1px dotted var(--line)}
+  .dept3-row:last-child{border-bottom:0}
+  .dept3-row .d3-nm{font-family:var(--serif);font-size:14px;color:var(--ink);letter-spacing:.02em}
+  .dept3-row .d3-m{font-family:var(--serif);font-size:19px;font-weight:500;color:var(--ink);text-align:right;line-height:1}
+  .dept3-row .d3-y{font-family:var(--serif);font-size:15px;color:var(--ink2);text-align:right;line-height:1}
+
   /* ===== Department card (簡素化) ===== */
   .card.dept{padding:20px 18px}
   .card.dept .lbl{margin-bottom:14px;text-align:center;border-bottom:1px solid var(--line);padding-bottom:8px;letter-spacing:.32em}
@@ -590,29 +599,26 @@
       </div>
     </div>
 
-    <!-- ④ 部門別 × 売上(月/年度) -->
-    <div class="grid2" style="margin:14px 16px">
-      <div class="card dept" style="margin:0">
-        <div class="lbl">レンタカー · 売上</div>
-        <div class="dept-row">
-          <span class="dept-l">当月</span>
-          <span class="dept-v num" id="rent-month">—</span>
-        </div>
-        <div class="dept-row">
-          <span class="dept-l">当年度</span>
-          <span class="dept-v num small" id="rent-year">—</span>
-        </div>
+    <!-- ④ 部門別 売上 (3部門 × 当月/当年度) -->
+    <div class="card">
+      <div class="lbl">部門別 売上 (税込)</div>
+      <div class="dept3-head">
+        <span></span><span class="d3-h">当月</span><span class="d3-h">当年度</span>
       </div>
-      <div class="card dept" style="margin:0">
-        <div class="lbl">DETALIA · 売上</div>
-        <div class="dept-row">
-          <span class="dept-l">当月</span>
-          <span class="dept-v num" id="det-month">—</span>
-        </div>
-        <div class="dept-row">
-          <span class="dept-l">当年度</span>
-          <span class="dept-v num small" id="det-year">—</span>
-        </div>
+      <div class="dept3-row">
+        <span class="d3-nm">レンタカー</span>
+        <span class="d3-m num" id="rent-month">—</span>
+        <span class="d3-y num" id="rent-year">—</span>
+      </div>
+      <div class="dept3-row">
+        <span class="d3-nm">DETALIA</span>
+        <span class="d3-m num" id="det-month">—</span>
+        <span class="d3-y num" id="det-year">—</span>
+      </div>
+      <div class="dept3-row">
+        <span class="d3-nm">電装取付</span>
+        <span class="d3-m num" id="den-month">—</span>
+        <span class="d3-y num" id="den-year">—</span>
       </div>
     </div>
 
@@ -779,6 +785,7 @@
         <tr><td>Dropbox</td><td id="set-dbx-state">—</td></tr>
         <tr><td>レンタカーデータ</td><td id="set-rental-state">—</td></tr>
         <tr><td>DETALIAデータ</td><td id="set-detalia-state">—</td></tr>
+        <tr><td>電装取付データ</td><td id="set-denso-state">—</td></tr>
         <tr><td>最終取得</td><td id="set-loaded-at">—</td></tr>
       </table>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
@@ -833,17 +840,18 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-28g';
+const APP_VERSION = '2026-05-28h';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
 const PATH_RENTAL  = '/ライム共有DB/システムデータ（R）/data.json';
 const PATH_DETALIA = '/ライム共有DB/システムデータ（D)/data.json';
+const PATH_DENSO   = '/ライム共有DB/システムデータ電装/data.json';
 
 const LS = {
   token:'limeAdm_dbxToken', refresh:'limeAdm_dbxRefresh',
   verifier:'limeAdm_dbxVerifier',
-  cachedR:'limeAdm_cachedR', cachedD:'limeAdm_cachedD',
+  cachedR:'limeAdm_cachedR', cachedD:'limeAdm_cachedD', cachedE:'limeAdm_cachedE',
   loadedAt:'limeAdm_loadedAt',
   monthlyTarget:'limeAdm_monthlyTarget'  // 月次売上目標 (経営者がこのアプリ内で設定)
 };
@@ -918,23 +926,25 @@ async function dbxDownload(path){
 }
 
 // ---------- DATA ----------
-let DR=null, DD=null; // rental, detalia
+let DR=null, DD=null, DE=null; // rental, detalia, denso(電装)
 
 async function loadAll(){
-  if(DEMO){ DR=DEMO_R(); DD=DEMO_D(); cacheSet(); return; }
+  if(DEMO){ DR=DEMO_R(); DD=DEMO_D(); DE=DEMO_E(); cacheSet(); return; }
   if(!DBX_TOKEN){
     // try cache
-    const cR=localStorage.getItem(LS.cachedR),cD=localStorage.getItem(LS.cachedD);
-    if(cR&&cD){DR=JSON.parse(cR);DD=JSON.parse(cD);toast('キャッシュから表示');return}
+    const cR=localStorage.getItem(LS.cachedR),cD=localStorage.getItem(LS.cachedD),cE=localStorage.getItem(LS.cachedE);
+    if(cR&&cD){DR=JSON.parse(cR);DD=JSON.parse(cD);if(cE)DE=JSON.parse(cE);toast('キャッシュから表示');return}
     throw new Error('Dropbox 未連携');
   }
   showSpinner();
   try{
-    const [r,d]=await Promise.allSettled([dbxDownload(PATH_RENTAL),dbxDownload(PATH_DETALIA)]);
+    const [r,d,e]=await Promise.allSettled([dbxDownload(PATH_RENTAL),dbxDownload(PATH_DETALIA),dbxDownload(PATH_DENSO)]);
     if(r.status==='fulfilled') DR=r.value;
     else { const cR=localStorage.getItem(LS.cachedR); if(cR) DR=JSON.parse(cR); toast('レンタカー: '+r.reason.message,'err'); }
     if(d.status==='fulfilled') DD=d.value;
     else { const cD=localStorage.getItem(LS.cachedD); if(cD) DD=JSON.parse(cD); toast('DETALIA: '+d.reason.message,'err'); }
+    if(e.status==='fulfilled') DE=e.value;
+    else { const cE=localStorage.getItem(LS.cachedE); if(cE) DE=JSON.parse(cE); /* 電装は新規=未存在でも黙認 */ }
     cacheSet();
     localStorage.setItem(LS.loadedAt,new Date().toISOString());
   } finally { hideSpinner(); }
@@ -942,6 +952,7 @@ async function loadAll(){
 function cacheSet(){
   if(DR) localStorage.setItem(LS.cachedR,JSON.stringify(DR));
   if(DD) localStorage.setItem(LS.cachedD,JSON.stringify(DD));
+  if(DE) localStorage.setItem(LS.cachedE,JSON.stringify(DE));
 }
 
 // ---------- CALCULATIONS ----------
@@ -984,12 +995,29 @@ function billableRental(){
 }
 function activeRental(){return rentalCases().filter(c=>c.status!=='キャンセル')}
 
+// ===== 電装取付 (DENSO) — 電装取付管理.html と同じ集計式 =====
+// 売上(税込) = qty × unitFee × (1+税率) / 月帰属 = billingMonth||workedAt / 計上 = 作業完了以降
+function densoJobs(){return ((DE&&DE.jobs)||[]).filter(j=>j.status!=='キャンセル')}
+function densoTaxRate(){return (DE&&DE.settings&&Number(DE.settings.taxRate))||10}
+function densoAmount(j){
+  const sub=Math.max(0,(Number(j.qty)||1)*(Number(j.unitFee)||0));
+  return Math.round(sub*(1+densoTaxRate()/100));
+}
+// 売上計上対象 (PC: 作業完了/報告済/請求済/入金済)
+function billableDenso(){
+  return densoJobs().filter(j=>['作業完了','報告済','請求済','入金済'].includes(j.status));
+}
+// 売上の月帰属 = billingMonth || workedAt の YYYY-MM
+function densoSalesYM(j){ return ym(j.billingMonth) || ym(j.workedAt) || ym(j.requestedAt) }
+// 受付の月帰属 = requestedAt (依頼日)
+function densoRecvYM(j){ return ym(j.requestedAt) || ym(j.createdAt) }
+
 function monthlyTotals(yearStr){
   // Returns {months:['2026-01',...], rental:[..], detalia:[..]}
   const months=[];
   for(let i=1;i<=12;i++) months.push(yearStr+'-'+pad2(i));
-  const r=new Array(12).fill(0), d=new Array(12).fill(0);
-  const rc=new Array(12).fill(0), dc=new Array(12).fill(0);
+  const r=new Array(12).fill(0), d=new Array(12).fill(0), e=new Array(12).fill(0);
+  const rc=new Array(12).fill(0), dc=new Array(12).fill(0), ec=new Array(12).fill(0);
   const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
   billableRental().forEach(c=>{
     const k=rentalSalesYM(c);if(!k) return;
@@ -1001,23 +1029,29 @@ function monthlyTotals(yearStr){
     const idx=months.indexOf(k);if(idx<0) return;
     const a=detaliaAmount(c,taxR);d[idx]+=a.total;dc[idx]++;
   });
-  return {months, rental:r, detalia:d, rentalCnt:rc, detaliaCnt:dc};
+  billableDenso().forEach(j=>{
+    const k=densoSalesYM(j);if(!k) return;
+    const idx=months.indexOf(k);if(idx<0) return;
+    e[idx]+=densoAmount(j);ec[idx]++;
+  });
+  return {months, rental:r, detalia:d, denso:e, rentalCnt:rc, detaliaCnt:dc, densoCnt:ec};
 }
 
 // 12-month rolling window ending at "today"
 function trailing12(){
   const now=new Date();
-  const labels=[],r=[],d=[];
+  const labels=[],r=[],d=[],e=[];
   const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
   for(let i=11;i>=0;i--){
     const dt=new Date(now.getFullYear(),now.getMonth()-i,1);
     const key=dt.getFullYear()+'-'+pad2(dt.getMonth()+1);
-    labels.push(key);r.push(0);d.push(0);
+    labels.push(key);r.push(0);d.push(0);e.push(0);
   }
   const idxOf=k=>labels.indexOf(k);
   billableRental().forEach(c=>{const k=rentalSalesYM(c);const i=idxOf(k);if(i>=0) r[i]+=rentalAmount(c).total});
   detaliaCases().forEach(c=>{const k=detaliaYM(c);const i=idxOf(k);if(i>=0) d[i]+=detaliaAmount(c,taxR).total});
-  return {labels,rental:r,detalia:d};
+  billableDenso().forEach(j=>{const k=densoSalesYM(j);const i=idxOf(k);if(i>=0) e[i]+=densoAmount(j)});
+  return {labels,rental:r,detalia:d,denso:e};
 }
 
 // ★年度(4月〜翌3月)ヘルパー
@@ -1064,7 +1098,7 @@ function receptionStats(){
   const today = todayISO();
   const curFY = fyOf(today);
   const init=()=>({month:0,year:0,prevMonth:0,prevYearPart:0,prevYearFull:0});
-  const rental=init(), detalia=init();
+  const rental=init(), detalia=init(), denso=init();
   const tally=(c, group, dateStr, ymStr)=>{
     if(ymStr===curYM) group.month++;
     if(ymStr===prevYM) group.prevMonth++;
@@ -1093,7 +1127,14 @@ function receptionStats(){
       if(/次郎/.test(String(c.customer||''))) tally(c, jiro, d, k);
     }
   });
-  return {rental, detalia, general, wholesale, jiro, curFY};
+  // 電装: 受付 = requestedAt (依頼日)
+  densoJobs().forEach(j=>{
+    const d=String(j.requestedAt||j.createdAt||'').slice(0,10);
+    if(!d) return;
+    const k=ymOf(d);if(!k) return;
+    tally(j, denso, d, k);
+  });
+  return {rental, detalia, denso, general, wholesale, jiro, curFY};
 }
 
 function thisYearSummary(){
@@ -1103,7 +1144,7 @@ function thisYearSummary(){
   const curFY=fyOf(today);
   const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
   const init=()=>({cur:0,prevPart:0,prevFull:0,curCnt:0,prevPartCnt:0});
-  const all=init(), rental=init(), detalia=init();
+  const all=init(), rental=init(), detalia=init(), denso=init();
   const tally=(group, dateStr, amount)=>{
     if(inFYToToday(dateStr, curFY, today)){group.cur+=amount;group.curCnt++}
     else if(inPrevFYSamePeriod(dateStr, curFY, today)){group.prevPart+=amount;group.prevPartCnt++}
@@ -1119,7 +1160,12 @@ function thisYearSummary(){
     const a=detaliaAmount(c,taxR).total;
     tally(all,d,a); tally(detalia,d,a);
   });
-  return {fy:curFY, ...all, rental, detalia};
+  billableDenso().forEach(j=>{
+    const d=String(j.billingMonth?j.billingMonth+'-01':(j.workedAt||j.requestedAt||'')).slice(0,10);if(!d) return;
+    const a=densoAmount(j);
+    tally(all,d,a); tally(denso,d,a);
+  });
+  return {fy:curFY, ...all, rental, detalia, denso};
 }
 
 function thisMonthSummary(){
@@ -1130,7 +1176,7 @@ function thisMonthSummary(){
   const py=new Date(now.getFullYear()-1,now.getMonth(),1);
   const yym=py.getFullYear()+'-'+pad2(py.getMonth()+1);
   const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
-  let r=0,d=0,rc=0,dc=0,rPrev=0,dPrev=0,rYoy=0,dYoy=0;
+  let r=0,d=0,e=0,rc=0,dc=0,ec=0,rPrev=0,dPrev=0,ePrev=0,rYoy=0,dYoy=0,eYoy=0;
   billableRental().forEach(c=>{
     const k=rentalSalesYM(c);if(!k) return;
     const a=rentalAmount(c);
@@ -1145,7 +1191,14 @@ function thisMonthSummary(){
     else if(k===pm) dPrev+=a.total;
     else if(k===yym) dYoy+=a.total;
   });
-  return {tm,total:r+d,rental:r,detalia:d,rentalCnt:rc,detaliaCnt:dc,prev:rPrev+dPrev,yoy:rYoy+dYoy};
+  billableDenso().forEach(j=>{
+    const k=densoSalesYM(j);if(!k) return;
+    const a=densoAmount(j);
+    if(k===tm){e+=a;ec++}
+    else if(k===pm) ePrev+=a;
+    else if(k===yym) eYoy+=a;
+  });
+  return {tm,total:r+d+e,rental:r,detalia:d,denso:e,rentalCnt:rc,detaliaCnt:dc,densoCnt:ec,prev:rPrev+dPrev+ePrev,yoy:rYoy+dYoy+eYoy};
 }
 
 function monthlyTarget(){
@@ -1334,9 +1387,10 @@ function renderNow(){
   $('now-mom').textContent='前月比 '+(mom==null?'—':(mom>=0?'+':'')+mom+'%');
   $('now-yoy').className='delta '+(yoy==null?'ink3':(yoy>=0?'up':'dn'));
   $('now-yoy').textContent='前年同月 '+(yoy==null?'—':(yoy>=0?'+':'')+yoy+'%');
-  // 部門別マトリクス (月次/年次)
+  // 部門別 売上 当月
   $('rent-month').textContent=yen(s.rental);
   $('det-month').textContent=yen(s.detalia);
+  $('den-month').textContent=yen(s.denso);
   // 月次目標達成は右サブダイヤル (TARGET) で表示するので progress bar/ラベルは廃止
 
   // 当年度(FY YTD) サマリー
@@ -1351,6 +1405,7 @@ function renderNow(){
   // 部門別 年次 (売上)
   $('rent-year').textContent=yen(yr.rental.cur);
   $('det-year').textContent=yen(yr.detalia.cur);
+  $('den-year').textContent=yen(yr.denso.cur);
 
   // 部門別 受付件数 (月/年度/前年比)
   const rec=receptionStats();
@@ -1483,7 +1538,7 @@ function renderNow(){
 
   // sparkline
   const t12=trailing12();
-  const merged=t12.labels.map((_,i)=>t12.rental[i]+t12.detalia[i]);
+  const merged=t12.labels.map((_,i)=>t12.rental[i]+t12.detalia[i]+(t12.denso[i]||0));
   drawSpark('spark-12',merged,t12.labels);
   $('spark-12-cap').textContent=fmtJaYM(t12.labels[0])+' 〜 '+fmtJaYM(t12.labels[t12.labels.length-1]);
 }
@@ -1538,22 +1593,26 @@ function renderRev(){
   const monthsView=t.months.slice(0,lastIdx+1);
   const rentalView=t.rental.slice(0,lastIdx+1);
   const detaliaView=t.detalia.slice(0,lastIdx+1);
+  const densoView=t.denso.slice(0,lastIdx+1);
   const sumR=rentalView.reduce((a,b)=>a+b,0);
   const sumD=detaliaView.reduce((a,b)=>a+b,0);
-  const sumAll=sumR+sumD;
+  const sumE=densoView.reduce((a,b)=>a+b,0);
+  const sumAll=sumR+sumD+sumE;
   const cntR=t.rentalCnt.slice(0,lastIdx+1).reduce((a,b)=>a+b,0);
   const cntD=t.detaliaCnt.slice(0,lastIdx+1).reduce((a,b)=>a+b,0);
+  const cntE=t.densoCnt.slice(0,lastIdx+1).reduce((a,b)=>a+b,0);
   $('rev-summary').innerHTML=`
     <tr><td>合算 (税込)</td><td class="num">${yen(sumAll)} 円</td></tr>
     <tr><td>レンタカー</td><td class="num">${yen(sumR)} 円</td></tr>
     <tr><td>DETALIA</td><td class="num">${yen(sumD)} 円</td></tr>
-    <tr><td>件数 合計</td><td class="num">${cntR+cntD} 件</td></tr>
+    ${sumE>0?`<tr><td>電装取付</td><td class="num">${yen(sumE)} 円</td></tr>`:''}
+    <tr><td>件数 合計</td><td class="num">${cntR+cntD+cntE} 件</td></tr>
   `;
   // monthly chart of combined (only months in view)
-  const merged=monthsView.map((_,i)=>rentalView[i]+detaliaView[i]);
+  const merged=monthsView.map((_,i)=>rentalView[i]+detaliaView[i]+densoView[i]);
   drawSpark('spark-rev',merged,monthsView);
   $('rev-monthly').innerHTML=monthsView.map((m,i)=>{
-    const tot=rentalView[i]+detaliaView[i];
+    const tot=rentalView[i]+detaliaView[i]+densoView[i];
     return `<tr><td>${Number(m.slice(5))}月</td><td class="num">${yen(tot)} 円</td></tr>`;
   }).join('');
 
@@ -1564,10 +1623,10 @@ function renderRev(){
     const cat=c.category||'損保'; // legacy null = 損保
     catR[cat]=(catR[cat]||0)+rentalAmount(c).total;
   });
-  const catD=sumD;
   const rowsCat=[];
   Object.entries(catR).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>rowsCat.push([`レンタカー · ${k}`,v]));
-  rowsCat.push(['DETALIA',catD]);
+  rowsCat.push(['DETALIA',sumD]);
+  if(sumE>0) rowsCat.push(['電装取付',sumE]);
   $('rev-cat').innerHTML=rowsCat.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${yen(v)} 円</td></tr>`).join('') || '<tr><td colspan=2 class="ink3">データなし</td></tr>';
 }
 
@@ -1678,6 +1737,7 @@ function renderSet(){
   $('set-dbx-state').textContent=DEMO?'デモモード':(DBX_TOKEN?'連携済':'未連携');
   $('set-rental-state').textContent=DR?(DR.cases||[]).length+' 件':'—';
   $('set-detalia-state').textContent=DD?(DD.cases||[]).length+' 件':'—';
+  $('set-denso-state').textContent=DE?((DE.jobs||[]).length+' 件'):(DEMO?'—':'未接続');
   $('set-loaded-at').textContent=localStorage.getItem(LS.loadedAt)||'—';
   $('set-ver').textContent=APP_VERSION;
   const tgtEl=$('tgt-input');
@@ -1748,7 +1808,7 @@ function setupTabs(){
   $('btn-dbx-connect').onclick=dbxAuthorize;
   $('btn-dbx-logout').onclick=()=>{
     localStorage.removeItem(LS.token);localStorage.removeItem(LS.refresh);
-    localStorage.removeItem(LS.cachedR);localStorage.removeItem(LS.cachedD);
+    localStorage.removeItem(LS.cachedR);localStorage.removeItem(LS.cachedD);localStorage.removeItem(LS.cachedE);
     DBX_TOKEN=null;toast('連携解除しました','ok');setTimeout(()=>location.reload(),500);
   };
   $('btn-tgt-save').onclick=()=>{
@@ -1800,6 +1860,19 @@ function DEMO_D(){
     cases.push({id:'D'+i,category:cat,customer:cust,receptionDate:isoDay,arrival:isoDay+'T10:00',delivery:monthsBack===0&&i%3===0?null:isoDay,paidDate:monthsBack>0||i%5===0?isoDay:null,billMonth:(dt.getMonth()+1)+'月',plan:plans[i%4],size:sizes[i%4],optExt:[30000,50000,100000,200000][i%4],optInt:[0,20000,0,0][i%4],optOther:0,discount:0,carModel:'車両'+i,deleted:false});
   }
   return {cases,settings:{taxRate:10,monthlyTarget:500000}};
+}
+function DEMO_E(){
+  // 電装取付 デモ (jobs)。売上=qty×unitFee×1.1
+  const jobs=[];const stat=['作業完了','報告済','請求済','入金済'];
+  const today=new Date();
+  for(let i=0;i<18;i++){
+    const monthsBack=Math.floor(i/3);
+    const dt=new Date(today.getFullYear(),today.getMonth()-monthsBack,1+Math.floor(Math.random()*26));
+    if(dt>today) dt.setDate(today.getDate());
+    const iso=dt.toISOString().slice(0,10);
+    jobs.push({id:'E'+i,jobNo:'D-'+(100+i),status:stat[Math.floor(Math.random()*stat.length)],requestedAt:iso,workedAt:iso,billingMonth:iso.slice(0,7),qty:1+Math.floor(Math.random()*3),unitFee:[15000,28000,42000,60000][i%4],parts:[],clientName:'工場'+i});
+  }
+  return {jobs,settings:{taxRate:10}};
 }
 
 // ---------- BOOTSTRAP ----------
