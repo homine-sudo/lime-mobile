@@ -133,6 +133,7 @@ a{color:var(--accent-light);text-decoration:none}
 /* 段階セクション(縦積み・片手スクロール) */
 .board{display:block;padding-bottom:8px}
 .bsec{margin-bottom:15px}
+.bsec.empty{display:none}
 .bsec-h{display:flex;align-items:center;gap:9px;padding:8px 13px;margin-bottom:9px;background:var(--card);border-radius:11px;box-shadow:var(--shadow-sm)}
 .bsec-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .bsec-k{flex:1;font-weight:800;font-size:13.5px;color:var(--text)}
@@ -286,6 +287,59 @@ a{color:var(--accent-light);text-decoration:none}
 .search-wrap input{padding-left:38px}
 .search-wrap .si{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none}
 .paste-btn{width:100%;padding:12px;border-radius:11px;border:1.5px dashed var(--accent);background:var(--accent-dim);color:var(--accent-deep);font-size:14px;font-weight:700;margin-bottom:6px}
+
+/* ═══════════ デスクトップ版 (≥980px・同一ファイルをレスポンシブ化) ═══════════ */
+@media (min-width:980px){
+  /* シェル: トップバー + 左サイドバー + コンテンツ */
+  #app{display:grid;grid-template-columns:214px 1fr;grid-template-rows:60px 1fr;height:100%;padding:0}
+  .m-header{grid-column:1/3;grid-row:1;height:60px;padding:0 24px;gap:14px}
+  .m-logo{width:34px;height:34px;font-size:18px}
+  .m-title{font-size:18px}
+  .m-title small{display:inline;margin-left:9px;font-size:10px}
+  .m-header-btn{cursor:pointer}
+  .m-header-btn:hover{background:#dbe7fd}
+  /* 下部ナビ → 左サイドバー */
+  .m-bottomnav{grid-column:1;grid-row:2;position:static;display:flex;flex-direction:column;gap:5px;
+    border-top:none;border-right:1px solid var(--border);background:var(--card);
+    padding:18px 12px;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .m-tab{flex-direction:row;justify-content:flex-start;gap:13px;padding:12px 15px;border-radius:11px;min-height:48px;cursor:pointer;transition:background .15s,color .15s}
+  .m-tab:active{transform:none}
+  .m-tab .icon{font-size:20px}
+  .m-tab .label{font-size:14px;letter-spacing:.3px;font-weight:700}
+  .m-tab.active{background:var(--accent-dim)}
+  .m-tab:hover:not(.active){background:var(--card2)}
+  /* コンテンツ領域 */
+  .m-main{grid-column:2;grid-row:2;padding:26px 32px 48px}
+  .page-h{font-size:24px;margin:2px 2px 20px}
+  /* FAB: 右下フローティング(下部ナビが無いので24pxに) */
+  .m-fab{bottom:26px;right:28px;height:50px;cursor:pointer;box-shadow:0 8px 22px rgba(37,99,235,.4)}
+  .m-fab:active{transform:scale(.97)}
+  /* 作業ボード → 横カンバン(全段階を一望) */
+  .btiles{max-width:780px;margin-bottom:22px}
+  .board{display:flex;gap:16px;align-items:flex-start;overflow-x:auto;padding:2px 2px 16px}
+  .bsec{flex:0 0 292px;margin-bottom:0}
+  .bsec.empty{display:flex;flex-direction:column}
+  .bsec-cards{min-height:24px}
+  .bcard{cursor:pointer}
+  .bcard:hover{box-shadow:var(--shadow-md);border-color:var(--accent-border)}
+  /* 案件一覧 → 多列カードグリッド */
+  #job-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:15px;align-items:start}
+  #job-list .job-card{margin-bottom:0;cursor:pointer}
+  #job-list .job-card:hover{box-shadow:var(--shadow-lg)}
+  #job-list .empty{grid-column:1/-1}
+  .search-wrap,#page-jobs .chips,#page-master .chips,#page-billing .chips{max-width:920px}
+  .list-row{cursor:pointer}.list-row:hover{background:var(--card2)}
+  /* 請求・マスタ: 横伸び防止で読みやすく */
+  #page-billing,#page-master{max-width:1000px}
+  #master-body{max-width:780px}
+  .kpi-grid{max-width:780px}
+  /* モーダル: ボトムシート → 画面中央 */
+  .modal-bg{align-items:center}
+  .modal{border-radius:18px;border-top:1px solid var(--border);max-width:660px;max-height:88vh;
+    animation:fadeIn .2s;box-shadow:0 24px 60px rgba(16,24,40,.28)}
+  .modal-foot{padding:14px 20px}
+  .chip{cursor:pointer}.btn{cursor:pointer}
+}
 </style>
 </head>
 <body>
@@ -315,7 +369,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29c';
+const APP_VERSION = '2026-05-29d';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -506,8 +560,9 @@ function renderHome(){
   const billable=DATA.jobs.filter(j=>['作業完了','報告済'].includes(j.status) && billMonthOf(j)===m).length;
   const COLS=[{k:'依頼・受注',f:j=>['依頼','受注'].includes(j.status),c:'#64748B'},{k:'部品待ち',f:j=>j.status==='部品手配',c:'#D97706'},{k:'作業待ち',f:j=>j.status==='着荷済',c:'#7C3AED'},{k:'作業中',f:j=>j.status==='作業中',c:'#2563EB'},{k:'完了・報告',f:j=>['作業完了','報告済'].includes(j.status),c:'#16A34A'}];
   const tile=(l,n,act,tone)=>`<div class="btile ${tone||''}" onclick="${act}"><div class="l">${l}</div><div class="n">${n}</div></div>`;
-  const board=COLS.map(col=>{ const cs=jobs.filter(col.f).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')); if(!cs.length) return ''; return `<div class="bsec"><div class="bsec-h"><span class="bsec-dot" style="background:${col.c}"></span><span class="bsec-k">${col.k}</span><span class="bsec-n">${cs.length}</span></div><div class="bcards">${cs.map(boardCard).join('')}</div></div>`; }).join('');
-  const boardHtml=board||'<div class="bcol-empty" style="margin:6px 0 4px">進行中の案件はありません</div>';
+  let anyBoard=false;
+  const board=COLS.map(col=>{ const cs=jobs.filter(col.f).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')); const empty=!cs.length; if(!empty) anyBoard=true; return `<div class="bsec${empty?' empty':''}"><div class="bsec-h"><span class="bsec-dot" style="background:${col.c}"></span><span class="bsec-k">${col.k}</span><span class="bsec-n">${cs.length}</span></div><div class="bcards">${empty?'<div class="bcol-empty">なし</div>':cs.map(boardCard).join('')}</div></div>`; }).join('');
+  const boardHtml=anyBoard?board:'<div class="bcol-empty" style="margin:6px 0 4px">進行中の案件はありません</div>';
   const html=`
   <div class="page-h">📋 作業ボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
   <div class="btiles">
