@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29j';
+const APP_VERSION = '2026-05-29k';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -509,6 +509,18 @@ function confirmModal(msg,{danger=false,okText='OK',cancelText='キャンセル'
     bg.classList.add('open');
     m.querySelector('#cm-no').onclick=()=>{ closeModal(); res(false); };
     m.querySelector('#cm-yes').onclick=()=>{ closeModal(); res(true); };
+  });
+}
+function dateInputModal(msg,defDate,{okText='OK',dateLabel='日付'}={}){
+  return new Promise(res=>{
+    const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+    m.innerHTML=`<div class="modal-body" style="padding:22px 18px">
+      <div style="font-size:15px;line-height:1.6;white-space:pre-wrap;margin-bottom:14px">${esc(msg)}</div>
+      <div class="field"><label>${esc(dateLabel)}</label><input type="date" id="di-date" value="${esc(defDate||'')}"></div></div>
+      <div class="modal-foot"><button class="btn btn-ghost" id="di-no">キャンセル</button><button class="btn btn-primary" id="di-yes">${esc(okText)}</button></div>`;
+    bg.classList.add('open');
+    m.querySelector('#di-no').onclick=()=>{ closeModal(); res(null); };
+    m.querySelector('#di-yes').onclick=()=>{ const v=(m.querySelector('#di-date').value||'').trim(); closeModal(); res(v||defDate||''); };
   });
 }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }
@@ -1353,9 +1365,10 @@ async function markPaid(key,month){
   const js=groupJobs(key,month);
   const cl=clientById(js[0]&&js[0].clientId); const nm=cl?cl.name:(js[0]&&js[0].clientName)||'この取引先';
   const amt=withTax(js.reduce((s,j)=>s+jobSubtotal(j),0));
-  const ok=await confirmModal(`${nm} の ${fmtMonth(month)}分（税込 ${yen(amt)}）の入金を確認しましたか？\n「はい」で状態を入金済にします。`,{okText:'入金を記録する'}); if(!ok) return;
-  js.forEach(j=>{ j.status='入金済'; j.paidAt=todayISO(); stamp(j); });
-  save(); toast('入金済にしました','ok'); renderBilling();
+  const date=await dateInputModal(`${nm} の ${fmtMonth(month)}分（税込 ${yen(amt)}）の入金を記録します。\n入金日を確認してください（既定は本日）。`,todayISO(),{okText:'入金を記録する',dateLabel:'入金日'});
+  if(!date) return;
+  js.forEach(j=>{ j.status='入金済'; j.paidAt=date; stamp(j); });
+  save(); toast('入金済にしました（'+fmtD(date)+'）','ok'); renderBilling();
 }
 async function unmarkPaid(key,month){
   if(!await confirmModal('入金を取り消して「請求済（入金待ち）」に戻しますか？\n請求書番号はそのまま残ります。',{okText:'未入金に戻す'})) return;
