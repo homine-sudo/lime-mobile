@@ -113,6 +113,15 @@ a{color:var(--accent-light);text-decoration:none}
 .kpi.tap{cursor:pointer;transition:transform .1s,box-shadow .15s}
 .kpi.tap:active{transform:scale(.97)}
 .kpi.tap::after{content:'›';position:absolute;top:9px;right:12px;color:var(--muted);font-size:17px;font-weight:700;line-height:1}
+.todo-row{display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid var(--border);cursor:pointer}
+.todo-row:last-child{border-bottom:none}
+.todo-row:active{background:var(--card2)}
+.todo-ic{width:42px;height:42px;border-radius:12px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.todo-row.amber .todo-ic{background:#FDF0D5}.todo-row.red .todo-ic{background:#FCE2E3}.todo-row.green .todo-ic{background:#DCF5E4}
+.todo-l{flex:1;font-size:15px;font-weight:700;color:var(--text)}
+.todo-n{font-size:15px;font-weight:800;color:var(--accent)}
+.todo-row.amber .todo-n{color:var(--orange)}.todo-row.red .todo-n{color:var(--red)}.todo-row.green .todo-n{color:var(--green)}
+.todo-arr{color:var(--muted);font-size:20px;font-weight:700}
 .kpi-lbl{font-size:11px;color:var(--text-dim);letter-spacing:.2px;font-weight:600}
 .kpi-val{font-size:27px;color:var(--text);margin-top:4px;line-height:1.05;font-weight:800;letter-spacing:-.5px}
 .kpi-val small{font-size:13px;color:var(--text-dim);font-weight:600;margin-left:3px}
@@ -280,7 +289,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-28r';
+const APP_VERSION = '2026-05-28s';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -415,6 +424,8 @@ function switchTab(t){
 function refresh(){ if(curTab==='home')renderHome(); else if(curTab==='jobs')renderJobsList(); else if(curTab==='billing')renderBilling(); else if(curTab==='master')renderMaster(); }
 function stamp(j){ j.updatedAt=Date.now(); j.updatedBy=DATA.settings.person||'—'; }
 function _isAwaitingParts(j){ return j.status==='部品手配' || ((j.parts||[]).some(p=>!p.arrived) && ['受注','部品手配'].includes(j.status)); }
+function _isToday(j){ if(isWorkDone(j)) return false; const t=todayISO(); if(j.scheduledAt===t) return true; if(j.scheduledAt&&j.scheduledEndAt&&j.scheduledAt<=t&&t<=j.scheduledEndAt) return true; return false; }
+function nextActionHint(s){ return {'依頼':'受注として確定し、部品の手配に進みます','受注':'部品を手配して着荷を待ちます','部品手配':'届いた部品をチェックします','着荷済':'作業を開始します','作業中':'作業内容を入力して完了にします','作業完了':'取引先へ報告して完了にします'}[s]||''; }
 function openJobsFiltered(f){ jobFilter=f; jobSearch=''; switchTab('jobs'); }
 
 /* ───────── 権限(管理者のみ売上表示) ───────── */
@@ -454,39 +465,41 @@ function renderHome(){
       </div></div>`;
     return;
   }
-  const active=jobs.filter(j=>!['請求済','入金済'].includes(j.status));
-  const cnt=s=>jobs.filter(j=>j.status===s).length;
-  const inquiry=cnt('依頼')+cnt('受注');
-  const awaitingParts=jobs.filter(_isAwaitingParts).length;
-  const reportPending=cnt('作業完了');
   const today=todayISO();
-  const todayWork=jobs.filter(j=>j.scheduledAt===today && ['着荷済','作業中','部品手配','受注'].includes(j.status));
-  const dlJobs=jobs.filter(j=>j.deadline && !isWorkDone(j)).sort((a,b)=>(a.deadline||'').localeCompare(b.deadline||''));
-  const dlAlert=dlJobs.filter(j=>deadlineState(j)).length;
+  const active=jobs.filter(j=>!['請求済','入金済'].includes(j.status)).length;
+  const inquiry=jobs.filter(j=>['依頼','受注'].includes(j.status)).length;
+  const awaiting=jobs.filter(_isAwaitingParts).length;
+  const todayWork=jobs.filter(_isToday);
+  const reportPending=jobs.filter(j=>j.status==='作業完了').length;
+  const dlAlert=jobs.filter(j=>deadlineState(j)).length;
   const m=curMonth();
   const monthJobs=jobs.filter(j=> billMonthOf(j)===m && ['作業完了','報告済','請求済','入金済'].includes(j.status));
   const monthBill=monthJobs.reduce((s,j)=>s+jobSubtotal(j),0);
   const monthProfit=monthJobs.reduce((s,j)=>s+jobProfit(j),0);
+  const billable=DATA.jobs.filter(j=>['作業完了','報告済'].includes(j.status) && billMonthOf(j)===m).length;
+  const row=(ic,label,n,act,tone)=> n>0? `<div class="todo-row ${tone||''}" onclick="${act}"><div class="todo-ic">${ic}</div><div class="todo-l">${label}</div><div class="todo-n">${n}件</div><div class="todo-arr">›</div></div>`:'';
+  let todos='';
+  todos+=row('🆕','依頼・受注を進める',inquiry,"openJobsFiltered('inquiry')");
+  todos+=row('📦','部品の着荷を確認する',awaiting,"openJobsFiltered('awaiting')",'amber');
+  todos+=row('🔧','今日の作業をする',todayWork.length,"openJobsFiltered('today')");
+  todos+=row('📝','報告する（作業完了）',reportPending,"openJobsFiltered('作業完了')",'red');
+  todos+=row('⏰','期日が近い・超過',dlAlert,"openJobsFiltered('deadline')",'red');
+  if(isAdmin()) todos+=row('💴','今月の請求をする',billable,"switchTab('billing')",'green');
   const html=`
-  <div class="page-h">⚡ ダッシュボード <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
-  <div class="kpi-grid">
-    <div class="kpi tap" onclick="openJobsFiltered('inquiry')"><div class="kpi-lbl">依頼・受注</div><div class="kpi-val">${inquiry}<small>件</small></div><div class="kpi-sub">処理待ち</div></div>
-    <div class="kpi amber tap" onclick="openJobsFiltered('awaiting')"><div class="kpi-lbl">部品着荷待ち</div><div class="kpi-val">${awaitingParts}<small>件</small></div><div class="kpi-sub">手配中</div></div>
-    <div class="kpi red tap" onclick="openJobsFiltered('作業完了')"><div class="kpi-lbl">報告未提出</div><div class="kpi-val">${reportPending}<small>件</small></div><div class="kpi-sub">作業完了</div></div>
-    <div class="kpi green tap" onclick="openJobsFiltered('active')"><div class="kpi-lbl">進行中 合計</div><div class="kpi-val">${active.length}<small>件</small></div><div class="kpi-sub">全アクティブ</div></div>
+  <div class="page-h">⚡ ホーム <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
+  <button class="btn btn-primary btn-full" style="padding:16px;font-size:16px;margin-bottom:14px;box-shadow:0 3px 12px rgba(37,99,235,.3)" onclick="openJobModal()">＋ 新規依頼を登録</button>
+  <div class="card"><div class="card-title">✅ やること</div>
+    ${todos || '<div style="text-align:center;color:var(--text-dim);padding:16px 0;line-height:1.7">今すぐやることはありません 👍<br><span style="font-size:12px;color:var(--muted)">新しい依頼が来たら上の「＋ 新規依頼」で登録しましょう</span></div>'}
   </div>
-  <div class="card"><div class="card-title">📅 本日の作業予定</div>
-    ${todayWork.length? todayWork.map(jobCardMini).join('') : '<div style="color:var(--muted);font-size:13px;padding:6px 0">本日予定の作業はありません</div>'}</div>
-  ${dlJobs.length?`<div class="card"><div class="card-title">⏰ 作業期日 ${dlAlert?`<span style="color:var(--red);font-size:11px">超過/間近 ${dlAlert}件</span>`:''}</div>
-    ${dlJobs.slice(0,6).map(j=>{const ds=deadlineState(j);const cl=clientById(j.clientId);return `<div class="list-row" onclick="openJobDetail('${j.id}')"><div class="ic" style="${ds==='over'?'background:#FCE2E3;color:#C0303A':ds==='soon'?'background:#FDF0D5;color:#B45309':''}">${ds==='over'?'⚠️':ds==='soon'?'⏰':'📅'}</div><div class="tx"><div class="t1">${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''} <span style="color:var(--text-dim);font-weight:500;font-size:12px">${esc(cl?cl.name:j.clientName||'')}</span></div><div class="t2">期日 ${fmtD(j.deadline)} ・ ${j.workDesc?esc(j.workDesc):''}</div></div><span class="badge st-${j.status}">${j.status}</span></div>`;}).join('')}</div>`:''}
+  ${todayWork.length?`<div class="card"><div class="card-title">📅 今日の作業 (${todayWork.length})</div>${todayWork.map(jobCardMini).join('')}</div>`:''}
   ${isAdmin()?`<div class="card"><div class="card-title">💴 当月(${fmtMonth(m)})の見込</div>
     <div class="money-box" style="margin:0">
       <div class="money-row total"><span>請求見込(税抜)</span><b>${yen(monthBill)}</b></div>
       <div class="money-row profit"><span>粗利見込</span><b>${yen(monthProfit)}</b></div>
       <div class="money-row"><span>対象案件</span><b>${monthJobs.length}件</b></div>
     </div>
-    <button class="btn btn-secondary btn-full btn-sm" style="margin-top:10px" onclick="switchTab('billing')">月次請求へ →</button></div>`:''}
-  ${reportPending? `<div class="card"><div class="card-title">⚠️ 報告未提出</div>${jobs.filter(j=>j.status==='作業完了').map(jobCardMini).join('')}</div>`:''}
+    <button class="btn btn-secondary btn-full btn-sm" style="margin-top:10px" onclick="switchTab('billing')">月次請求・清算へ →</button></div>`:''}
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0"><div><div style="font-size:13px;font-weight:700">📋 進行中の案件</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px">全 ${active} 件</div></div><button class="btn btn-secondary btn-sm" onclick="openJobsFiltered('active')">一覧を見る →</button></div>
   `;
   document.getElementById('page-home').innerHTML=html;
 }
@@ -506,12 +519,14 @@ function jobsFiltered(){
   if(jobFilter==='active') jobs=jobs.filter(j=>!['請求済','入金済','キャンセル'].includes(j.status));
   else if(jobFilter==='inquiry') jobs=jobs.filter(j=>['依頼','受注'].includes(j.status));
   else if(jobFilter==='awaiting') jobs=jobs.filter(j=>j.status!=='キャンセル'&&_isAwaitingParts(j));
+  else if(jobFilter==='today') jobs=jobs.filter(_isToday);
+  else if(jobFilter==='deadline') jobs=jobs.filter(j=>deadlineState(j)).sort((a,b)=>(a.deadline||'').localeCompare(b.deadline||''));
   else if(jobFilter==='all'){} else jobs=jobs.filter(j=>j.status===jobFilter);
   if(jobSearch){ const q=jobSearch.toLowerCase(); jobs=jobs.filter(j=>{ const cl=clientById(j.clientId); return [j.jobNo,cl?cl.name:j.clientName,j.carModel,j.carPlate,j.endUser,j.workPlace,j.siteContact,j.workDesc,j.memo].join(' ').toLowerCase().includes(q); }); }
   return jobs;
 }
 function renderJobs(){
-  const filters=[['active','進行中'],['inquiry','依頼・受注'],['awaiting','着荷待ち'],['依頼','依頼'],['受注','受注'],['部品手配','部品手配'],['着荷済','着荷済'],['作業中','作業中'],['作業完了','報告待ち'],['報告済','報告済'],['請求済','請求済'],['入金済','入金済'],['all','全て'],['キャンセル','ｷｬﾝｾﾙ']];
+  const filters=[['active','進行中'],['today','今日'],['inquiry','依頼・受注'],['awaiting','着荷待ち'],['作業完了','報告待ち'],['deadline','期日'],['請求済','請求済'],['入金済','入金済'],['all','全て']];
   const jobs=jobsFiltered();
   document.getElementById('page-jobs').innerHTML=`
   <div class="page-h">📋 案件一覧 <span style="color:var(--muted);font-weight:500;font-size:11px">${jobs.length}件</span></div>
@@ -587,9 +602,10 @@ function openJobModal(id){
   m.innerHTML=`
   <div class="modal-head"><h2>${isNew?'新規依頼':'案件編集'}</h2>${isNew?'':`<span class="sub">${esc(j.jobNo)}</span>`}<button class="modal-x" onclick="closeModal()">✕</button></div>
   <div class="modal-body">
-    ${isNew?`<button class="paste-btn" onclick="pasteRequest()">📋 依頼文を貼り付けて自動入力</button><div class="hint" style="margin-bottom:10px">LINE/メールの依頼文をそのまま貼ると、車種・場所・担当・工賃などを自動で振り分けます</div>`:''}
+    ${isNew?`<button class="paste-btn" onclick="pasteRequest()">📋 依頼文を貼り付けて自動入力</button><div class="hint" style="margin-bottom:10px">LINE/メールの依頼文をそのまま貼ると、車種・場所・担当・工賃などを自動で振り分けます</div>
+    <div style="background:#EAF6EE;border:1px solid #BCE3C9;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;color:#15803D;line-height:1.6">💡 入力は<b>「取引先」だけ必須</b>。あとは分かる範囲でOK（保存後にいつでも追記できます）</div>`:''}
     <div class="sec-label">📇 取引先(請求先)</div>
-    <div class="field"><label>取引先</label><select id="f-client" onchange="onClientPick()">${clientOpts}</select>
+    <div class="field"><label>取引先 <span style="color:var(--red);font-weight:700">＊必須</span></label><select id="f-client" onchange="onClientPick()">${clientOpts}</select>
       <div class="hint">未登録なら<a onclick="quickAddClient()">＋取引先を新規追加</a></div></div>
     <div class="field"><label>取引先の担当者</label><input id="f-contact" value="${esc(j.contact)}" placeholder="請求先の窓口担当"></div>
 
@@ -840,6 +856,10 @@ function openJobDetail(id){
   <div class="modal-body">
     ${flowHtml}
     <div style="text-align:center;margin-bottom:14px"><span class="badge st-${j.status}" style="font-size:13px;padding:5px 16px">${j.status}</span></div>
+    ${next?`<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:12px;padding:13px 15px;margin-bottom:14px">
+      <div style="font-size:11px;color:var(--accent-deep);font-weight:800;letter-spacing:.5px">次にやること</div>
+      <div style="font-size:12.5px;color:var(--text-dim);margin:3px 0 10px">${nextActionHint(j.status)}</div>
+      <button class="btn btn-primary btn-full" onclick="advanceStatus('${id}')">${nextActionLabel(j.status)} →</button></div>`:''}
     <div style="font-size:15px;font-weight:700;margin-bottom:10px">${esc(j.workDesc||'(取付内容未設定)')}</div>
     <dl class="dl">
       <dt>車両</dt><dd>${esc(j.carModel||'—')} ${esc(j.carPlate||'')}${j.endUser?'　／　'+esc(j.endUser)+'様':''}</dd>
@@ -891,7 +911,7 @@ function openJobDetail(id){
   </div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="openJobModal('${id}')">✏️ 編集</button>
-    ${next?`<button class="btn btn-primary" onclick="advanceStatus('${id}')">${nextActionLabel(j.status)} →</button>`:'<button class="btn btn-secondary" onclick="closeModal()">閉じる</button>'}
+    <button class="btn btn-secondary" onclick="closeModal()">閉じる</button>
   </div>`;
   bg.classList.add('open');
 }
