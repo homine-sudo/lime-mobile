@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29i';
+const APP_VERSION = '2026-05-29j';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1847,7 +1847,7 @@ function mergeAll(local,disk,snap){ if(!disk) return local; if(!local) return di
 function updateSyncStatus(state,msg){ const b=document.getElementById('dbx-sync-btn'); if(b){ b.style.display=DBX_TOKEN?'flex':'none'; b.style.color=state==='error'?'var(--red)':state==='syncing'?'var(--orange)':'var(--green)'; } const s=document.getElementById('dbx-status'); if(s) s.textContent=DBX_TOKEN?('連携済み ✓'+(msg?' / '+msg:'')):'未連携'; }
 async function loadFromDropbox(){ if(_isSyncing) return false; _isSyncing=true; updateSyncStatus('syncing','読込中');
   try{ const {data,rev,errorDetail}=await dbxLoadData();
-    if(data){ DATA = DATA? mergeAll(DATA,data,_lastSyncSnapshot) : data; _lastDbxRev=rev; _migrate(DATA); captureSyncSnapshot(DATA);
+    if(data){ DATA = DATA? mergeAll(DATA,data,_lastSyncSnapshot) : data; _lastDbxRev=rev; _migrate(DATA); captureSyncSnapshot(data); /* 基準=ディスク実態(未同期ローカル編集を基準に含めると次回マージで巻き戻るバグの根治) */
       try{ localStorage.setItem(LS_KEY,JSON.stringify(DATA)); localStorage.setItem(DBX_LS.cachedRev,rev||''); }catch(e){} updateSyncStatus('ok','同期OK'); refresh(); return true; }
     if(errorDetail && /not_found/.test(errorDetail)){ updateSyncStatus('syncing','新規作成'); _isSyncing=false; const ok=await saveToDropbox(); updateSyncStatus(ok?'ok':'error',ok?'作成済':'作成失敗'); return ok; }
     updateSyncStatus('error','データ無'); return false;
@@ -1861,7 +1861,7 @@ async function _doSaveCycle(){ updateSyncStatus('syncing','保存中'); let att=
   while(att<MAX){ att++; try{ const snapAtStart=_lastSyncSnapshot; let merged=DATA, revToUse=_lastDbxRev;
     try{ const {data:disk,rev:diskRev}=await dbxLoadData(); if(disk){ merged=mergeAll(DATA,disk,_lastSyncSnapshot); revToUse=diskRev; } }catch(e){}
     const jsonStr=JSON.stringify(merged); const newRev=await dbxSaveDataAtomic(jsonStr,revToUse);
-    DATA=mergeAll(DATA,merged,snapAtStart); _migrate(DATA); _lastDbxRev=newRev; captureSyncSnapshot(DATA);
+    DATA=mergeAll(DATA,merged,snapAtStart); _migrate(DATA); _lastDbxRev=newRev; captureSyncSnapshot(merged); /* 基準=ディスクに実際に書いた内容(=merged)。書込後にされた編集はlocalに残り次回保存で反映 */
     try{ localStorage.setItem(LS_KEY,JSON.stringify(DATA)); localStorage.setItem(DBX_LS.cachedRev,newRev||''); }catch(e){}
     updateSyncStatus('ok','同期OK'); lastErr=null; break;
   }catch(e){ lastErr=e; if(e.code==='rev_conflict'&&att<MAX){ await new Promise(r=>setTimeout(r,200)); continue; } break; } }
