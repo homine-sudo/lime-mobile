@@ -727,6 +727,10 @@
       <div class="lbl">DETALIA 案件</div>
       <div class="pipe" id="pipe-detalia"></div>
     </div>
+    <div class="card">
+      <div class="lbl">電装取付 案件</div>
+      <div class="pipe" id="pipe-denso"></div>
+    </div>
   </section>
 
   <!-- ========== 未入金 ========== -->
@@ -825,7 +829,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-29b';
+const APP_VERSION = '2026-05-29c';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1229,6 +1233,20 @@ function detaliaPipeline(){
     cnt[s]++;
   });
   return order.map(s=>({s,n:cnt[s]}));
+}
+// 電装取付 案件パイプライン (本体 電装取付管理.html の FLOW を4フェーズに集約・レンタカーと同粒度)
+const DENSO_PIPE_GROUPS=[
+  { label:'受付・手配',  statuses:['依頼','受注','部品手配','着荷済'] },
+  { label:'作業中',      statuses:['作業中'] },
+  { label:'完了・報告',  statuses:['作業完了','報告済'] },
+  { label:'請求・入金',  statuses:['請求済','入金済'] },
+];
+function densoPipeline(){
+  const js=densoJobs(); // status!=='キャンセル' 済
+  return DENSO_PIPE_GROUPS.map(g=>({
+    s:g.label,
+    n:js.filter(j=>g.statuses.includes(j.status)).length
+  }));
 }
 
 // ★ クラスグループ別稼働率 — PC LIMEOne.html 2026-05-28c (BI_CLASS_GROUPS) と一致
@@ -1676,6 +1694,15 @@ function renderPipe(){
     <div class="row">
       <div class="nm">${esc(p.s)}</div>
       <div class="bar2"><i style="width:${Math.round(p.n*100/md)}%"></i></div>
+      <div class="ct num">${p.n}</div>
+    </div>
+  `).join('');
+  const pe=densoPipeline();
+  const me=Math.max(1,...pe.map(p=>p.n));
+  $('pipe-denso').innerHTML=pe.map(p=>`
+    <div class="row">
+      <div class="nm">${esc(p.s)}</div>
+      <div class="bar2"><i style="width:${Math.round(p.n*100/me)}%"></i></div>
       <div class="ct num">${p.n}</div>
     </div>
   `).join('');
