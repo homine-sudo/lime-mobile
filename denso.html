@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29n';
+const APP_VERSION = '2026-05-29o';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -753,6 +753,20 @@ async function advanceStatus(id){
   else j.status=FLOW[idx+1];
   stamp(j); save(); toast(j.status+'に更新','ok'); refresh();
 }
+async function revertStatus(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const idx=FLOW.indexOf(j.status); if(idx<=0) return;
+  const prev=FLOW[idx-1];
+  if(!await confirmModal('ステータスを「'+j.status+'」→「'+prev+'」に戻しますか？\n(進めすぎた時の修正用です)',{okText:'戻す'})) return;
+  const from=j.status;
+  j.status=prev;
+  // 戻る段階で付いた記録を整合的にクリア(取り消し漏れ防止)
+  if(from==='入金済'){ j.paidAt=''; }
+  else if(from==='請求済'){ j.invoiceNo=''; j.invoicedAt=''; }
+  else if(from==='作業中'){ j.workedAt=''; }
+  stamp(j); save(); toast(prev+'に戻しました','ok'); refresh();
+  if(document.getElementById('modal-bg').classList.contains('open')) openJobDetail(id);
+}
 
 /* ───────── 案件 新規/編集 ───────── */
 let editingJob=null;
@@ -1031,6 +1045,7 @@ function openJobDetail(id){
       <div style="font-size:11px;color:var(--accent-deep);font-weight:800;letter-spacing:.5px">次にやること</div>
       <div style="font-size:12.5px;color:var(--text-dim);margin:3px 0 10px">${nextActionHint(j.status)}</div>
       <button class="btn btn-primary btn-full" onclick="advanceStatus('${id}')">${nextActionLabel(j.status)} →</button></div>`:''}
+    ${(idx>0 && j.status!=='キャンセル')?`<div style="text-align:center;margin-bottom:14px"><button class="btn btn-ghost btn-sm" onclick="revertStatus('${id}')">↩ ステータスを1つ戻す（${FLOW_SHORT[FLOW[idx-1]]}）</button></div>`:''}
     <div style="font-size:15px;font-weight:700;margin-bottom:10px">${esc(j.workDesc||'(取付内容未設定)')}</div>
     <dl class="dl">
       <dt>取引先</dt><dd>${esc(cl?cl.name:j.clientName||'—')}${j.contact?'（'+esc(j.contact)+'）':''}</dd>
