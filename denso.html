@@ -130,11 +130,11 @@ a{color:var(--accent-light);text-decoration:none}
 .btile .n{font-size:23px;font-weight:800;margin-top:3px;color:var(--text);line-height:1}
 .btile.blue{border-color:#BBD0FB}.btile.amber{border-color:#F6DCA8}.btile.red{border-color:#F4C9CB}.btile.green{border-color:#B6E6C6}
 .btile.blue .n{color:var(--accent)}.btile.amber .n{color:var(--orange)}.btile.red .n{color:var(--red)}.btile.green .n{color:var(--green)}
-/* 段階セクション(縦積み・片手スクロール) */
-.board{display:block;padding-bottom:8px}
-.bsec{margin-bottom:15px}
+/* 段階セクション(横カンバン・右手で横スクロール) */
+.board{display:flex;gap:12px;align-items:flex-start;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scroll-padding-left:2px}
+.bsec{flex:0 0 80%;max-width:340px;margin-bottom:0;scroll-snap-align:start}
 .bsec.empty{display:none}
-.bsec-h{display:flex;align-items:center;gap:9px;padding:8px 13px;margin-bottom:9px;background:var(--card);border-radius:11px;box-shadow:var(--shadow-sm)}
+.bsec-h{display:flex;align-items:center;gap:9px;padding:8px 13px;margin-bottom:9px;background:var(--card);border-radius:11px;box-shadow:var(--shadow-sm);position:sticky;top:0}
 .bsec-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .bsec-k{flex:1;font-weight:800;font-size:13.5px;color:var(--text)}
 .bsec-n{background:var(--card2);color:var(--text-dim);border-radius:999px;padding:2px 12px;font-size:12.5px;font-weight:800;border:1px solid var(--border)}
@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29r';
+const APP_VERSION = '2026-05-29s';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
