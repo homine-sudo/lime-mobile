@@ -73,6 +73,11 @@ a{color:var(--accent-light);text-decoration:none}
 .m-title{font-size:16px;letter-spacing:.2px;color:var(--text);font-weight:800;flex:1;line-height:1.15}
 .m-title small{display:block;font-size:9.5px;letter-spacing:1.5px;color:var(--accent);font-weight:700;margin-top:1px}
 .m-header-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--accent);background:var(--accent-dim);border:1px solid var(--accent-border)}
+.m-reload-btn{display:flex;align-items:center;gap:5px;height:38px;padding:0 14px;border-radius:19px;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--accent-deep),var(--accent));border:none;box-shadow:0 2px 8px rgba(37,99,235,.35);cursor:pointer;white-space:nowrap}
+.m-reload-btn:active{transform:scale(.95)}
+.m-reload-lbl{letter-spacing:.5px}
+.m-reload-btn.spinning #reload-ic{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .m-header-btn:active{background:#dbe7fd}
 
 .m-main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 12px 96px}
@@ -370,6 +375,7 @@ a{color:var(--accent-light);text-decoration:none}
   <header class="m-header">
     <div class="m-logo">⚡</div>
     <div class="m-title">電装取付管理<small id="hdr-ver">v—</small></div>
+    <button class="m-reload-btn" id="reload-btn" onclick="manualReload()" title="最新データに更新"><span id="reload-ic">🔄</span><span class="m-reload-lbl">更新</span></button>
     <button class="m-header-btn" id="dbx-sync-btn" onclick="syncNow()" style="display:none" title="今すぐ同期">☁️</button>
     <button class="m-header-btn" onclick="openSettings()">⚙️</button>
   </header>
@@ -392,7 +398,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29s';
+const APP_VERSION = '2026-05-29t';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1938,6 +1944,17 @@ async function _doSaveCycle(){ updateSyncStatus('syncing','保存中'); let att=
   }catch(e){ lastErr=e; if(e.code==='rev_conflict'&&att<MAX){ await new Promise(r=>setTimeout(r,200)); continue; } break; } }
   if(lastErr){ updateSyncStatus('error','保存失敗'); toast('Dropbox保存エラー: '+lastErr.message,'err'); return false; } return true; }
 async function syncNow(){ if(!DBX_TOKEN){ dbxAuthorize(); return; } await loadFromDropbox(); }
+async function manualReload(){
+  const btn=document.getElementById('reload-btn');
+  if(btn) btn.classList.add('spinning');
+  try{
+    if(!DBX_TOKEN){ toast('Dropbox未連携です。⚙️設定から連携してください','err'); return; }
+    const ok=await loadFromDropbox();
+    refresh();
+    toast(ok?'✅ 最新データに更新しました':'更新できませんでした(通信を確認)', ok?'ok':'err');
+  }catch(e){ toast('更新エラー: '+(e&&e.message||''),'err'); }
+  finally{ if(btn) setTimeout(()=>btn.classList.remove('spinning'),400); }
+}
 
 /* ───────── 起動 ───────── */
 async function init(){
