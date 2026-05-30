@@ -385,7 +385,6 @@ a{color:var(--accent-light);text-decoration:none}
     <section class="page" id="page-billing"></section>
     <section class="page" id="page-master"></section>
   </main>
-  <button class="m-fab" id="fab" onclick="openJobModal()">＋ 新規依頼</button>
   <nav class="m-bottomnav">
     <button class="m-tab active" data-tab="home" onclick="switchTab('home')"><span class="icon">🏠</span><span class="label">ホーム</span></button>
     <button class="m-tab" data-tab="jobs" onclick="switchTab('jobs')"><span class="icon">📋</span><span class="label">案件</span></button>
@@ -398,7 +397,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29t';
+const APP_VERSION = '2026-05-29u';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -561,7 +560,7 @@ function switchTab(t){
   document.querySelectorAll('.m-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+t).classList.add('active');
-  document.getElementById('fab').style.display = (t==='home'||t==='jobs')?'flex':'none';
+  var _fab=document.getElementById('fab'); if(_fab) _fab.style.display = (t==='home'||t==='jobs')?'flex':'none';
   if(t==='home') renderHome(); else if(t==='jobs') renderJobs(); else if(t==='billing') renderBilling(); else if(t==='master') renderMaster();
   document.querySelector('.m-main').scrollTop=0;
   // 開いた瞬間に最新取得(端末間のステータスズレ防止)。データ系タブのみ・rev変化時のみ実取得(_autoPull内で同期中/編集中/非表示はスキップ)
@@ -637,6 +636,7 @@ function renderHome(){
   const boardHtml=anyBoard?board:'<div class="bcol-empty" style="margin:6px 0 4px">進行中の案件はありません</div>';
   const html=`
   <div class="page-h">⚡ ホーム <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
+  <button class="btn btn-primary" style="width:100%;height:52px;font-size:16px;font-weight:800;margin-bottom:14px;box-shadow:0 3px 12px rgba(37,99,235,.3)" onclick="openJobModal()">＋ 新規依頼を登録</button>
   <div class="card" style="margin-bottom:14px">
     <div class="card-title">✅ 今やること</div>
     ${todoRows||`<div style="text-align:center;padding:16px 6px;color:var(--text-dim);font-size:13px">✅ 今すぐ対応が必要な案件はありません<div style="font-size:11.5px;color:var(--muted);margin-top:4px">進行中の状況は下のボードで確認できます</div></div>`}
