@@ -266,14 +266,22 @@ tr.veh-maint-row:hover{background:#FFECD6}
 .modal-footer-3zone .ftz-left:empty,
 .modal-footer-3zone .ftz-left:has(button[style*="display:none"]:only-child){border-right:none;padding-right:0}
 /* 手配報告書兼請求書 (FAX向け・黒潰しなし) */
-.sheet.handover{background:#fff;color:#000;font-family:"Yu Gothic","Hiragino Sans","メイリオ",sans-serif;max-width:820px;margin:0 auto;padding:16px 22px;border:1px solid #000}
+/* 案2: 外枠なし・安全マージン (FAX端クリップ対策で枠を排す)。
+   ※flex/min-height は html2canvas が捕捉できず _genSheetPdfBlob のアスペクト
+     自己検証と衝突し fail-close するため使わない (2026-05-17 確定)。 */
+.sheet.handover{background:#fff;color:#000;font-family:"Yu Gothic","Hiragino Sans","メイリオ",sans-serif;width:820px;max-width:820px;margin:0 auto;padding:20px 26px;border:none;box-sizing:border-box}
 /* v2026.04.29bk/bm: FAX dithering 防止 — 値セルは純白、ラベル(項目名)はグレーを残す */
 .sheet.handover tbody tr,
 .sheet.handover tbody tr:nth-child(even),
 .sheet.handover tbody tr:nth-child(odd){background:#fff !important}
 .sheet.handover tbody tr:hover{background:#fff !important}
 .sheet.handover .ho-title{text-align:center;font-size:22px;font-weight:bold;margin:0 0 14px;padding:0;letter-spacing:0.3em;border:none}
-.sheet.handover .ho-top{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+/* html2pdf 0.10 同梱の旧 html2canvas は CSS Grid を正しく描画せず右列がクリップ
+   される (2026-05-16 FAX見切れ事故の真因)。table レイアウトに統一。 */
+.sheet.handover .ho-top{display:table;width:100%;table-layout:fixed;border-collapse:separate;margin-bottom:10px}
+.sheet.handover .ho-top>.ho-col{display:table-cell;width:50%;vertical-align:top;box-sizing:border-box}
+.sheet.handover .ho-top>.ho-col2{padding-left:10px}
+.sheet.handover .ho-top .ho-hdr{width:100%}
 .sheet.handover .ho-hdr{border-collapse:collapse;width:100%;font-size:12px}
 .sheet.handover .ho-hdr th,.sheet.handover .ho-hdr td{border:1px solid #000;padding:4px 8px;vertical-align:middle;text-align:center}
 .sheet.handover .ho-hdr td{background:#fff}
@@ -295,9 +303,9 @@ tr.veh-maint-row:hover{background:#FFECD6}
 .sheet.handover .ho-amt{font-size:15px}
 .sheet.handover .ho-memo{min-height:30px;text-align:left !important;white-space:pre-wrap}
 .sheet.handover .ho-table td.ho-memo{text-align:left}
-.sheet.handover .ho-footer{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:16px;align-items:end;font-size:12px}
-.sheet.handover .ho-bank{line-height:1.7}
-.sheet.handover .ho-company{text-align:right;font-size:12px}
+.sheet.handover .ho-footer{display:table;width:100%;margin-top:20px;font-size:12px}
+.sheet.handover .ho-bank{display:table-cell;width:66%;vertical-align:bottom;line-height:1.7;box-sizing:border-box}
+.sheet.handover .ho-company{display:table-cell;vertical-align:bottom;text-align:right;font-size:12px;padding-left:12px;word-break:break-word;overflow-wrap:anywhere;box-sizing:border-box}
 @media print{
   .sheet.handover{border:none !important;padding:0 !important;margin:0 !important}
   /* v2026.04.29bk/bl/bm: FAX クリーン化
@@ -403,6 +411,30 @@ tr.veh-maint-row:hover{background:#FFECD6}
 /* 振込期日: 純黒背景+白文字 (FAXで確実に出る、グレーよりはるかに視認性高い) */
 .sheet.faxinv .fi-totals tr.due-date th{background:#000;color:#fff;border:2px solid #000;font-weight:bold;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .sheet.faxinv .fi-totals tr.due-date td{color:#000;font-weight:bold;font-size:13px;background:#fff;border:2px solid #000}
+
+/* ====== NOC請求書 (休業補償料) ====== */
+.sheet.nocinv{background:#fff;color:#000;font-family:"Yu Gothic","Hiragino Sans","メイリオ",sans-serif;max-width:820px;margin:0 auto;padding:34px 44px;border:1px solid #999;box-sizing:border-box}
+.sheet.nocinv .noc-meta{text-align:right;font-size:13px;line-height:1.8;color:#000}
+.sheet.nocinv .noc-title{text-align:center;font-size:34px;font-weight:bold;letter-spacing:0.55em;margin:6px 0 34px;padding-right:0.55em;color:#000}
+.sheet.nocinv .noc-top{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:28px;align-items:flex-start}
+.sheet.nocinv .noc-to-name{font-size:20px;font-weight:bold;border-bottom:1.5px solid #000;padding:0 4px 8px;display:block;margin-top:24px}
+.sheet.nocinv .noc-issuer{font-size:12.5px;line-height:1.85;color:#000}
+.sheet.nocinv .noc-issuer .nm{font-size:14px;font-weight:bold}
+.sheet.nocinv .noc-issuer .tr{font-size:12.5px;margin-bottom:4px}
+.sheet.nocinv .noc-amt-row{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0 30px}
+.sheet.nocinv .noc-amt-lbl{background:#fff;border:2.5px solid #000;padding:11px 26px;font-size:17px;font-weight:bold;letter-spacing:.12em;color:#000}
+.sheet.nocinv .noc-amt-val{font-size:38px;font-weight:bold;letter-spacing:.04em;color:#000;border-bottom:2px solid #000;padding:0 40px 2px}
+.sheet.nocinv .noc-body-msg{font-size:13.5px;line-height:1.9;margin:8px 0 28px;letter-spacing:.02em}
+.sheet.nocinv .noc-tbl{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:20px}
+.sheet.nocinv .noc-tbl th,.sheet.nocinv .noc-tbl td{border:1px solid #000;padding:10px 10px;text-align:center;vertical-align:middle;color:#000;background:#fff}
+.sheet.nocinv .noc-tbl th{font-weight:bold;font-size:12.5px;border-bottom:2px solid #000}
+.sheet.nocinv .noc-tbl .noc-veh-name{font-size:15px;font-weight:bold;display:block;margin-bottom:3px}
+.sheet.nocinv .noc-bank-tbl{border-collapse:collapse;font-size:12.5px;width:62%;margin-top:8px}
+.sheet.nocinv .noc-bank-tbl th,.sheet.nocinv .noc-bank-tbl td{border:1px solid #000;padding:7px 12px;vertical-align:middle;color:#000;background:#fff;text-align:left}
+.sheet.nocinv .noc-bank-tbl th{width:90px;text-align:center;font-weight:bold;border-right:2px solid #000;white-space:nowrap}
+.sheet.nocinv .noc-bank-tbl tr.duedate th{background:#000;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet.nocinv .noc-bank-tbl tr.duedate td{font-weight:bold}
+.sheet.nocinv .noc-foot{font-size:12px;margin-top:12px;color:#000}
 @media print{
   .sheet.faxinv{border:none !important;padding:6px 12px !important;margin:0 !important;max-width:none !important}
   .sheet.faxinv .fi-amt-lbl,.sheet.faxinv .fi-bank th,.sheet.faxinv .fi-tbl th,.sheet.faxinv .fi-totals th,.sheet.faxinv .fi-totals tr.total th{
@@ -722,7 +754,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
   .flow-step .sub{display:none}
   .flow-step .label{font-size:9px}
   .flow-step .bubble{width:22px;height:22px;font-size:10px}
-  .ho-footer{grid-template-columns:1fr!important}
+  /* ★.ho-footer は display:table 固定。grid/grid-template-columns 禁止(CLAUDE.md鉄則1: Grid復活=FAX右列欠落で取引先誤送信) */
 }
 @media(max-width:520px){
   .form-grid.cols3,.form-grid.cols4,.form-grid.cols2,.form-grid{grid-template-columns:1fr}
@@ -744,7 +776,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
   .modal-title{font-size:13px}
   .form-control{font-size:16px}  /* iOS避ける自動ズーム */
   .ho-title{font-size:16px!important;letter-spacing:.15em!important}
-  .ho-top{grid-template-columns:1fr!important}
+  /* ★.ho-top は display:table 固定。grid/grid-template-columns 禁止(CLAUDE.md鉄則1: Grid復活=FAX右列欠落で取引先誤送信) */
   .sheet.handover{padding:10px 8px!important}
   #dashboard-weekly table{display:block;overflow-x:auto;white-space:nowrap}
   #dashboard-weekly th{min-width:100px}
@@ -810,7 +842,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
   /* 手配報告書兼請求書 — 1ページ収納 + 余裕バランス */
   .sheet.handover{padding:0 !important;margin:0 !important;font-size:9.5pt}
   .sheet.handover .ho-title{font-size:16pt!important;letter-spacing:.2em!important;margin:0 0 9pt!important}
-  .sheet.handover .ho-top{gap:8pt!important;margin-bottom:8pt!important}
+  .sheet.handover .ho-top{margin-bottom:8pt!important}  /* ★gap削除: .ho-top は display:table で gap 無効。Gridに戻すな(CLAUDE.md鉄則1) */
   .sheet.handover .ho-hdr{font-size:9pt!important}
   .sheet.handover .ho-hdr th,.sheet.handover .ho-hdr td{padding:3.5pt 5pt!important;line-height:1.3!important}
   .sheet.handover .ho-hdr-title{font-size:9.5pt!important;padding:3pt!important}
@@ -823,7 +855,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
   .sheet.handover .ho-sub{font-size:8pt!important}
   .sheet.handover .ho-amt{font-size:11pt!important}
   .sheet.handover .ho-memo{min-height:18pt!important}
-  .sheet.handover .ho-footer{margin-top:10pt!important;font-size:9pt!important;gap:8pt!important}
+  .sheet.handover .ho-footer{margin-top:10pt!important;font-size:9pt!important}  /* ★gap削除: .ho-footer は display:table で gap 無効。Gridに戻すな(CLAUDE.md鉄則1) */
   .sheet.handover .ho-bank{line-height:1.55!important}
   .sheet.handover .ho-company{font-size:9.5pt!important}
 
@@ -878,7 +910,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
 <body>
 
 <nav class="nav">
-  <div class="nav-brand">🚙 LIME One <span style="font-size:9px;opacity:.6;font-weight:normal">v2026.04.29cx</span></div>
+  <div class="nav-brand">🚙 LIME One <span id="app-version" style="font-size:10px;opacity:.75;font-weight:normal" title="このブラウザが読み込んでいるコードの版。他PCと違う/古い場合は Ctrl+F5 で再読込"></span></div>
   <!-- 業務頻度順: 日々→週次→月次→管理者用 -->
   <div class="nav-tab active" data-page="dashboard" onclick="showPage('dashboard')" title="今日の業務状況・KPI">🏠 ダッシュボード</div>
   <div class="nav-tab" data-page="cases" onclick="showPage('cases')" title="案件の登録・編集・検索 (日々のメイン画面)">📋 案件管理</div>
@@ -993,7 +1025,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
     <!-- メッセージ一覧 -->
     <div id="imsg-list" style="max-height:300px;overflow-y:auto"></div>
   </div>
-  <!-- 2) KPI: 本日の配車 / 本日の回収 / 利用中 / 車両稼働率(月) -->
+  <!-- 2) KPI: 本日の配車 / 本日の回収 / 利用中 / 今月案件数 / 本日稼働中車両 -->
   <div class="kpi-grid" id="kpi-grid"></div>
   <!-- 3) アラート2カラム: 利用期限・回収予定 と 車検・点検 -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px" class="alerts-grid">
@@ -1160,6 +1192,72 @@ tr.veh-maint-row:hover{background:#FFECD6}
   </div>
 </div>
 
+<!-- 担当者ピッカー (保険会社マスタの contacts から選ぶ・2026-05-25c) -->
+<div class="modal-overlay" id="ct-picker-modal" style="z-index:210">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">👤 担当者をマスタから選ぶ</span>
+      <button class="modal-close" title="閉じる" onclick="closeContactPicker()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="cp-insurer-note" class="text-sm text-muted" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <input class="form-control" id="cp-search" placeholder="🔍 担当者名" oninput="renderContactPicker()" style="flex:1;min-width:200px;font-size:14px">
+        <span class="text-muted text-sm" id="cp-count"></span>
+      </div>
+      <div class="tbl-wrap" style="max-height:55vh;overflow:auto">
+        <table>
+          <thead><tr><th style="width:40%">担当者名</th><th>TEL</th><th>FAX</th><th style="width:70px"></th></tr></thead>
+          <tbody id="cp-tbody"></tbody>
+        </table>
+      </div>
+      <div id="cp-empty-note" class="empty-state text-sm" style="margin-top:10px;display:none">この保険会社にはまだ担当者マスタがありません。担当者欄に直接入力して保存すると自動で追加されます。</div>
+    </div>
+    <div class="modal-footer">
+      <div class="spacer"></div>
+      <button class="btn btn-secondary btn-sm" onclick="closeContactPicker()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOC請求書 入力モーダル -->
+<div class="modal-overlay" id="noc-input-modal" style="z-index:260">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <span class="modal-title">🏥 NOC請求書 作成</span>
+      <button class="modal-close" title="閉じる" onclick="closeModal('noc-input-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="noc-case-info" class="text-sm text-muted" style="margin-bottom:12px;padding:8px 10px;background:#F5F3FF;border-radius:6px;border-left:3px solid #7C3AED"></div>
+      <div class="form-group">
+        <label class="form-label">休業補償料</label>
+        <input class="form-control" id="noc-amt-noc" type="number" inputmode="numeric" oninput="_nocRecalcTotal()" style="text-align:right;font-size:15px;font-weight:bold">
+      </div>
+      <div class="form-group">
+        <label class="form-label">清掃費用 <span class="text-muted" style="font-weight:normal;font-size:11px">(0なら明細に出ません)</span></label>
+        <input class="form-control" id="noc-amt-clean" type="number" inputmode="numeric" value="0" oninput="_nocRecalcTotal()" style="text-align:right">
+      </div>
+      <div class="form-group">
+        <label class="form-label">その他項目 <span class="text-muted" style="font-weight:normal;font-size:11px">(任意 — 名称と金額の両方入力で追加)</span></label>
+        <div style="display:flex;gap:8px">
+          <input class="form-control" id="noc-other-label" type="text" placeholder="例: 引取費用" style="flex:1">
+          <input class="form-control" id="noc-amt-other" type="number" inputmode="numeric" value="0" oninput="_nocRecalcTotal()" style="width:120px;text-align:right">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;align-items:baseline;gap:10px;margin-top:14px;padding-top:10px;border-top:2px solid #ddd">
+        <span style="font-size:13px;font-weight:bold;color:var(--navy)">御請求金額</span>
+        <span id="noc-total" style="font-size:24px;font-weight:bold;color:#7C3AED">¥0</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('noc-input-modal')">キャンセル</button>
+      <div class="spacer"></div>
+      <button class="btn btn-outline btn-sm" onclick="execNOCInvoice('print')" title="印刷ダイアログを開きます" style="font-weight:bold">🖨️ 印刷</button>
+      <button class="btn btn-primary btn-sm" onclick="execNOCInvoice('save')" title="共有フォルダに保存 (無ければダウンロード)" style="font-weight:bold;background:#7C3AED;border-color:#6D28D9">💾 PDF保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 車両ピッカー -->
 <div class="modal-overlay" id="veh-picker-modal" style="z-index:200">
   <div class="modal">
@@ -1172,6 +1270,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <input class="form-control" id="vp-search" placeholder="🔍 4桁番号 / 車種 / クラス / メーカー / カラー" oninput="renderVehiclePicker()" style="flex:1;min-width:240px;font-size:15px;padding:8px 12px;border:2px solid var(--green);background:#FAFFFA" autofocus>
         <button type="button" onclick="$('vp-search').value='';renderVehiclePicker();$('vp-search').focus()" title="クリア" style="border:1px solid var(--border);background:#fff;cursor:pointer;border-radius:4px;padding:6px 10px">✕</button>
         <select class="form-control" id="vp-class-filter" onchange="renderVehiclePicker()" style="width:130px"><option value="">クラス(全て)</option></select>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;cursor:pointer" title="他案件で利用中の車両も一覧に含めます(既定は非表示)"><input type="checkbox" id="vp-show-inuse" onchange="renderVehiclePicker()"> 利用中も表示</label>
       </div>
       <div class="tbl-wrap" style="max-height:60vh;overflow:auto">
         <table>
@@ -1179,6 +1278,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
           <tbody id="vp-tbody"></tbody>
         </table>
       </div>
+      <div id="vp-hidden-note" style="font-size:11px;color:#999;margin-top:6px"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary btn-sm" onclick="addVehicleFromPicker()" title="4桁ナンバーで車両を即追加・選択します(詳細はマスター画面で後から編集可)">＋ 新規追加</button>
@@ -1317,7 +1417,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <option value="">案件を選択してください</option>
       </select>
       <button class="btn btn-primary" onclick="printAndRecordFax('instruction')" title="印刷後、手配書のFAX送信履歴を自動記録します">🖨️ 印刷 / PDF保存</button>
-      <button class="btn btn-outline" onclick="sendFaxForCase('instruction')" title="PDF生成 → 添付済みメール (.eml) 自動ダウンロード。ダブルクリックでメーラー起動・送信のみ">📧 FAXメール送信</button>
+      <button class="btn btn-outline" onclick="sendFaxForCase('instruction')" title="GAS経由で1タップFAX送信。送信前に実PDFを目視確認。GAS失敗時は .eml ダウンロード(従来挙動)に自動フォールバック">📠 FAX送信</button>
     </div>
   </div>
   <div id="instruction-body"><div class="empty-state card"><div class="icon">📄</div><div>案件を選択してください</div></div></div>
@@ -1349,7 +1449,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <option value="">対象月</option>
       </select>
       <button class="btn btn-primary" onclick="printAndRecordFax('invoice')" title="印刷後、請求書のFAX送信履歴を自動記録します">🖨️ 印刷 / PDF保存</button>
-      <button class="btn btn-outline" onclick="sendFaxForCase('invoice')" title="PDF生成 → 添付済みメール (.eml) 自動ダウンロード。ダブルクリックでメーラー起動・送信のみ">📧 FAXメール送信</button>
+      <button class="btn btn-outline" onclick="sendFaxForCase('invoice')" title="GAS経由で1タップFAX送信。送信前に実PDFを目視確認。GAS失敗時は .eml ダウンロード(従来挙動)に自動フォールバック">📠 FAX送信</button>
     </div>
   </div>
   <div id="invoice-body"><div class="empty-state card"><div class="icon">🧾</div><div>案件または保険会社+月を選択してください</div></div></div>
@@ -1658,6 +1758,19 @@ tr.veh-maint-row:hover{background:#FFECD6}
           <tbody id="bi-util-tbody"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+  <!-- 🚗 クラスグループ別 稼働率 (軽乗用/商用/コンパクト/SH〜MH/WS〜WAH/P〜PMH) -->
+  <div class="card" style="padding:10px;margin-bottom:8px">
+    <div class="card-title" style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+      🚗 <span>クラスグループ別 稼働率</span>
+      <span style="font-size:11px;color:#666;font-weight:normal">※期間平均(上の期間セレクタに連動)</span>
+    </div>
+    <div class="tbl-wrap" style="overflow:auto">
+      <table style="font-size:12px">
+        <thead><tr><th class="left">グループ</th><th style="width:64px">保有</th><th style="width:84px">稼働率</th><th style="width:72px">延べ稼働</th><th class="money" style="width:104px">売上</th></tr></thead>
+        <tbody id="bi-group-util-tbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -2151,17 +2264,21 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <div id="sec-insurer-block">
         <div class="form-section sec-insurer">🏢 保険会社</div>
         <div class="form-grid cols3">
-          <div class="form-group"><label class="form-label req">保険会社 <span class="text-muted text-sm">クリックで一覧から選ぶ</span></label>
+          <div class="form-group"><label class="form-label req">保険会社 <span class="text-muted text-sm">一覧から選ぶ or 直接入力(未登録は保存時に自動登録)</span></label>
             <input type="hidden" id="f-insurerId">
             <div style="display:flex;gap:6px;align-items:center">
-              <input class="form-control" id="f-insurerDisplay" readonly placeholder="クリックして保険会社を選ぶ" style="background:#fff;cursor:pointer;flex:1" onclick="openInsurerPicker()">
+              <input class="form-control" id="f-insurerDisplay" placeholder="保険会社名を入力 または 📋で一覧から選ぶ" style="background:#fff;flex:1" oninput="onInsurerTextInput()">
+              <button type="button" class="btn btn-outline btn-sm" onclick="openInsurerPicker()" title="マスタ一覧から選ぶ">📋</button>
               <button type="button" class="btn btn-outline btn-sm" onclick="clearInsurer()" title="保険会社をクリア">✕</button>
             </div>
-            <!-- v2026.04.29ce: 最近使った保険会社 クイック選択 -->
-            <div id="f-insurer-recent" style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap"></div>
           </div>
           <div class="form-group"><label class="form-label">担当者</label>
-            <select class="form-control" id="f-insurerContact" onchange="onContactChange()"><option value="">―</option></select>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input class="form-control" id="f-insurerContact" list="f-insurerContact-list" placeholder="担当者名 (直接入力可)" onchange="onContactChange()" onblur="onContactBlurFuzzyCheck()" style="flex:1">
+              <datalist id="f-insurerContact-list"></datalist>
+              <button type="button" class="btn btn-outline btn-sm" onclick="openContactPicker()" title="マスタから選ぶ">📋</button>
+            </div>
+            <div id="f-insurerContact-hint" class="text-sm" style="display:none;margin-top:4px;color:#b85c00"></div>
           </div>
           <div class="form-group"><label class="form-label">担当者TEL</label><input class="form-control" id="f-insurerContactTel"></div>
           <div class="form-group"><label class="form-label">担当者FAX</label><input class="form-control" id="f-insurerContactFax"></div>
@@ -2183,8 +2300,6 @@ tr.veh-maint-row:hover{background:#FFECD6}
             <div style="flex:1;min-width:200px"><label class="form-label">配車先名</label><input class="form-control" id="f-dispatchToName" placeholder="ホンダカーズ○○店"></div>
             <button type="button" class="btn btn-outline btn-sm" onclick="openFactoryPicker()">🏭 工場一覧から選ぶ</button>
           </div>
-          <!-- v2026.04.29ce: 最近使った配車先 クイック選択 -->
-          <div id="f-factory-recent" style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap"></div>
           <div style="margin-top:6px"><label class="form-label">配車先住所</label><input class="form-control" id="f-dispatchToAddress" placeholder="沖縄県○○市..."></div>
         </div>
         <div class="form-group factory-only"><label class="form-label">配車先担当</label><input class="form-control" id="f-dispatchToContact"></div>
@@ -2201,6 +2316,16 @@ tr.veh-maint-row:hover{background:#FFECD6}
             <select class="form-control" id="f-dispatchAt-time" style="width:90px" onchange="onDtSplitChange('dispatchAt')"></select>
           </div>
           <input type="hidden" id="f-dispatchAt">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+            <label style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px;font-size:11.5px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:6px;cursor:pointer;font-weight:600">
+              <input type="checkbox" id="f-dispatchTimePending" style="margin:0;cursor:pointer">
+              📞 工場と時間調整中
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px;font-size:11.5px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:6px;cursor:pointer;font-weight:600">
+              <input type="checkbox" id="f-dispatchTimePendingDriver" style="margin:0;cursor:pointer">
+              📞 運転者と時間調整中
+            </label>
+          </div>
         </div>
         <div class="form-group" style="grid-column:span 3"><label class="form-label">予約備考</label>
           <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
@@ -2305,6 +2430,24 @@ tr.veh-maint-row:hover{background:#FFECD6}
               ※ 予定日を先に入力可。実際に回収したら「回収完了」をON → 状態が「車両回収済」に進みます。
             </div>
           </div>
+          <!-- 走行距離記録 (任意入力・キロ数のみ) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:10px;align-items:end;margin-top:8px;padding-top:8px;border-top:1px dashed #CFDEF7">
+            <div class="form-group" style="margin:0">
+              <label class="form-label" style="color:#6B3F8C;font-weight:bold">📏 貸出メーター (km)</label>
+              <input class="form-control" id="f-meterAtDispatch" type="number" min="0" step="1" placeholder="例: 28450" oninput="onMeterChange()" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB;text-align:right">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label" style="color:#6B3F8C;font-weight:bold">📏 返却メーター (km)</label>
+              <input class="form-control" id="f-meterAtReturn" type="number" min="0" step="1" placeholder="例: 28612" oninput="onMeterChange()" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB;text-align:right">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label">利用走行距離 (km)</label>
+              <input class="form-control" id="f-meterDelta" readonly style="text-align:right;font-weight:bold;background:#F8F8F8" placeholder="自動計算">
+            </div>
+            <div class="form-group" style="margin:0;color:#6B3F8C;font-size:11px;line-height:1.4;align-self:center">
+              ※ 任意入力。記録すると将来の売却判断・代車距離証跡に使えます。
+            </div>
+          </div>
         </div>
 
         <!-- ② 値引・調整 -->
@@ -2336,6 +2479,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
           <button type="button" class="btn btn-orange btn-sm" id="btn-issue-inv-inline" onclick="issueInvoice()" style="height:30px;padding:0 10px;font-weight:bold;font-size:12px" title="請求書を発行 → 印刷画面が開きます">🧾 請求書発行</button>
           <button type="button" class="btn btn-outline btn-sm" id="btn-cancel-inv-inline" onclick="cancelInvoice()" style="height:30px;padding:0 10px;display:none;border-color:#C53030;color:#C53030;font-size:11px" title="請求書発行を取り消し">↩ 取消</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="if(editingCaseId){gotoInvoiceById(editingCaseId)}else{toast('保存後に請求書を確認できます','error')}" title="請求書プレビュー" style="height:30px;padding:0 10px;font-size:11px">📄 プレビュー</button>
+          <button type="button" class="btn btn-sm" onclick="genNOCInvoice()" title="休業補償料(NOC)の御請求書を1タッチでPDF作成" style="height:30px;padding:0 10px;font-size:11px;font-weight:bold;background:#7C3AED;color:#fff;border:1px solid #6D28D9">🏥 NOC請求書</button>
         </div>
       </div>
       <!-- 請求・入金 -->
@@ -2517,13 +2661,14 @@ tr.veh-maint-row:hover{background:#FFECD6}
             <option>その他</option>
           </select>
         </div>
-        <div class="form-group" style="grid-column:span 2"><label class="form-label" id="gr-pickupDetail-label">受取詳細</label><input class="form-control" id="gr-pickupDetail" placeholder="ホテル名・到着便など"></div>
-        <div class="form-group"><label class="form-label">出発便 <span class="text-muted text-sm">空港返却時</span></label><input class="form-control" id="gr-departureFlight" placeholder="例: ANA456"></div>
+        <div class="form-group" style="grid-column:span 2"><label class="form-label" id="gr-pickupDetail-label">受取詳細</label><input class="form-control" id="gr-pickupDetail" placeholder="ホテル名 等"></div>
+        <div class="form-group"><label class="form-label">那覇着便 <span class="text-muted text-sm">到着便</span></label><input class="form-control" id="gr-arrivalFlight" placeholder="例: JAL905 14:30着"></div>
+        <div class="form-group"><label class="form-label">帰り便 <span class="text-muted text-sm">出発便/空港返却時</span></label><input class="form-control" id="gr-departureFlight" placeholder="例: ANA456 18:00発"></div>
         <div class="form-group"><label class="form-label">ご利用人数</label><input class="form-control" id="gr-guestCount" type="number" min="1" placeholder="人"></div>
         <div class="form-group"><label class="form-label">ご使用目的</label>
           <select class="form-control" id="gr-usagePurpose"><option value="">―</option><option>観光</option><option>出張</option><option>帰省</option><option>送迎</option><option>その他</option></select>
         </div>
-        <div class="form-group" style="grid-column:span 3"><label class="form-label">行先・周遊エリア</label><input class="form-control" id="gr-destination" placeholder="例: 本島北部 / 美ら海水族館 / 那覇市内"></div>
+        <div class="form-group" style="grid-column:span 2"><label class="form-label">行先・周遊エリア</label><input class="form-control" id="gr-destination" placeholder="例: 本島北部 / 美ら海水族館 / 那覇市内"></div>
       </div>
 
       <!-- ⑤ 利用期間 -->
@@ -2559,7 +2704,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <div class="form-group"><label class="form-label">分類番号</label><input class="form-control" id="gr-plateNo" placeholder="500"></div>
         <div class="form-group"><label class="form-label">かな</label><input class="form-control" id="gr-plateKana" placeholder="わ"></div>
         <div class="form-group"><label class="form-label">4桁番号</label><input class="form-control" id="gr-plateTail" placeholder="1234"></div>
-        <div class="form-group" style="grid-column:span 2"><label class="form-label">貸渡料金 (1日 税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="円"></div>
+        <div class="form-group" style="grid-column:span 2"><label class="form-label">貸渡料金 (1日 税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="円" oninput="updateGRPeriod()"></div>
       </div>
 
       <!-- ⑦ 補償・希望 -->
@@ -2638,8 +2783,42 @@ tr.veh-maint-row:hover{background:#FFECD6}
    損保代車管理システム (ローカルHTML)
    データは localStorage / JSON ファイル / Excel で保存・連携
 ======================================================================= */
+/* === lz-string v1.5.0 (compressToUTF16/decompressFromUTF16 ベース) — 2026-05-25f 埋込
+   localStorage 容量超過対策: data.json 1.58MB → 約 300KB に圧縮して保存。
+   MITライセンス・公式 https://github.com/pieroxy/lz-string */
+var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();
+
+/* === localStorage 圧縮ヘルパー (2026-05-25f)
+ *  保存: 'lz1:' プレフィックス + LZString.compressToUTF16(json)
+ *  読込: プレフィックスを検出して展開・無ければ素のJSONとして読む (旧形式互換)
+ *  失敗時は素のJSONにフォールバック (圧縮ロジック障害で全データ書き込めなくなるリスクを避ける)
+ */
+function _lsCompress(json){
+  try {
+    if(typeof LZString === 'undefined' || !LZString.compressToUTF16) return json;
+    const compressed = LZString.compressToUTF16(json);
+    return 'lz1:' + compressed;
+  } catch(e){ console.warn('LS compress failed, storing raw:', e); return json; }
+}
+function _lsDecompress(stored){
+  if(!stored) return stored;
+  if(typeof stored !== 'string') return stored;
+  if(stored.indexOf('lz1:') === 0){
+    try {
+      if(typeof LZString === 'undefined' || !LZString.decompressFromUTF16) return null;
+      return LZString.decompressFromUTF16(stored.slice(4));
+    } catch(e){ console.error('LS decompress failed:', e); return null; }
+  }
+  return stored; // 旧形式 (素のJSON)
+}
+
 const LS_KEY = 'loanerCarMgmt_v1';
 // 内部値は互換のため旧名を維持、表示は STATUS_LABEL 経由
+// ★PC版バージョン。ナビ右上に表示され「このブラウザが動かしているコードの版」が分かる。
+//   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
+//   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
+//   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
+const APP_VERSION = '2026-05-29c';
 const STATUSES = ['受付','配車予定','配車済','利用中','回収連絡','手配書FAX済','返却済','仮請求','請求済','入金済','キャンセル'];
 const STATUS_LABEL = {
   '受付':'受付','確認中':'確認連絡','配車予定':'配車予定','配車済':'配車完了','利用中':'利用中',
@@ -2835,6 +3014,17 @@ const CLASS_ALIASES = {
   'PRV':'P'
 };
 
+// 2026-05-25f: 旧 bk2/bk3 キーを起動時に削除して localStorage 空き容量を回復
+//   (バックアップ世代を 3→1 に削減した移行コード。1度実行されれば以後は無害な no-op)
+try {
+  ['_bk2','_bk3'].forEach(suf => {
+    const k = LS_KEY + suf;
+    if(localStorage.getItem(k) != null){
+      localStorage.removeItem(k);
+      console.log('[bk-migrate] removed legacy', k);
+    }
+  });
+} catch(_){}
 let DATA = loadData();
 let editingCaseId = null;
 let fileHandle = null;
@@ -2842,8 +3032,15 @@ let fileHandle = null;
 function loadData(){
   try{
     const raw = localStorage.getItem(LS_KEY);
-    if(raw) return normalizeData(JSON.parse(raw));
-  }catch(e){ console.error(e); }
+    const json = _lsDecompress(raw);  // 'lz1:' なら展開・無ければそのまま返す
+    if(json) return normalizeData(JSON.parse(json));
+  }catch(e){ console.error('loadData failed:', e); }
+  // フォールバック: bk1 から復旧 (lz1 / 素 両対応)
+  try{
+    const bk1 = localStorage.getItem(LS_KEY+'_bk1');
+    const j2 = _lsDecompress(bk1);
+    if(j2){ console.warn('loadData fell back to bk1'); return normalizeData(JSON.parse(j2)); }
+  }catch(_){}
   return defaultData();
 }
 function normalizeData(d){
@@ -2982,9 +3179,11 @@ function save(){
   invalidateIndexes(); // マスタ索引を無効化(次回参照時に再構築)
   clearSearchBlobCache(); // 検索ブロブのキャッシュをクリア(データ変更で陳腐化)
   const json = JSON.stringify(DATA);
+  // 2026-05-25f: 圧縮保存 (1.58MB → 約300KB)。データ容量が将来5倍まで増えても 5MB制限に余裕で収まる。
+  const compressed = _lsCompress(json);
   // ① 主保存: localStorage (容量オーバー時は強い警告 + バックアップ誘導)
   try{
-    localStorage.setItem(LS_KEY, json);
+    localStorage.setItem(LS_KEY, compressed);
     // 成功 → 警告フラグをクリア
     if(window._lsQuotaWarned){ window._lsQuotaWarned = false; }
   }catch(e){
@@ -3005,20 +3204,17 @@ function save(){
       }, 100);
     }
   }
-  // ② 多重バックアップ: ローテーション3世代 (LS_KEY_bk1, _bk2, _bk3) を10分以上空けて保存
+  // ② バックアップ: 1世代のみ (bk1, 10分以上空けて) — 2026-05-25f に 3世代→1世代に削減
+  //   (Dropbox/IndexedDBミラー/Excel完全バックアップが代替として機能)
   try{
     const now = Date.now();
     const lastBk = Number(localStorage.getItem(LS_KEY+'_bkLastTs')||0);
-    if(now - lastBk > 10*60*1000){ // 10分経ったら世代ローテ
-      const bk1 = localStorage.getItem(LS_KEY+'_bk1');
-      const bk2 = localStorage.getItem(LS_KEY+'_bk2');
-      if(bk2) localStorage.setItem(LS_KEY+'_bk3', bk2);
-      if(bk1) localStorage.setItem(LS_KEY+'_bk2', bk1);
-      localStorage.setItem(LS_KEY+'_bk1', json);
+    if(now - lastBk > 10*60*1000){
+      localStorage.setItem(LS_KEY+'_bk1', compressed);
       localStorage.setItem(LS_KEY+'_bkLastTs', String(now));
     }
   }catch(e){ console.warn('BK write skipped:', e); }
-  // ③ IndexedDB ミラー (非同期、軽量)
+  // ③ IndexedDB ミラー (非同期、軽量) — IndexedDBは100MB+使えるので非圧縮で保持
   try{ idbSet('dataMirror', { json, ts: Date.now() }); }catch(e){}
   // ④ Dropboxフォルダがあれば自動同期
   updateNavStatus();
@@ -3202,24 +3398,30 @@ function armAutoGrantBanner(folderName){
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(20,30,50,.55);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .3s';
   overlay.innerHTML = `
     <style>
-      @keyframes smileBob { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-8px) scale(1.03)} }
-      @keyframes smilePop { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+      @keyframes smilePop { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+      @keyframes smileBreathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+      @keyframes smileRing {
+        0%{box-shadow:0 0 0 0 rgba(160,212,104,.55),0 12px 36px rgba(0,0,0,.4),inset 0 2px 10px rgba(255,255,255,.25)}
+        70%{box-shadow:0 0 0 32px rgba(160,212,104,0),0 12px 36px rgba(0,0,0,.4),inset 0 2px 10px rgba(255,255,255,.25)}
+        100%{box-shadow:0 0 0 0 rgba(160,212,104,0),0 12px 36px rgba(0,0,0,.4),inset 0 2px 10px rgba(255,255,255,.25)}
+      }
       #smile-grant-btn{
-        font-size:200px;line-height:1;cursor:pointer;
-        background:radial-gradient(circle at 35% 30%, #FFE981 0%, #FFC93C 60%, #E69E50 100%);
-        width:280px;height:280px;border-radius:50%;
+        font-size:120px;line-height:1;cursor:pointer;color:#fff;
+        background:radial-gradient(circle at 35% 28%, #BFF06E 0%, #5FA04D 55%, #2D5F1F 100%);
+        width:260px;height:260px;border-radius:50%;
         display:flex;align-items:center;justify-content:center;
-        box-shadow:0 12px 36px rgba(0,0,0,.35), inset -8px -10px 28px rgba(0,0,0,.12);
-        border:none;animation:smilePop .4s ease-out, smileBob 2.4s ease-in-out infinite .4s;
+        text-shadow:0 3px 10px rgba(0,0,0,.35);
+        border:3px solid rgba(255,255,255,.5);
+        animation:smilePop .4s ease-out, smileBreathe 2.6s ease-in-out infinite .4s, smileRing 2.2s ease-out infinite .4s;
         user-select:none;-webkit-user-select:none;transition:transform .15s
       }
       #smile-grant-btn:hover{ transform:scale(1.06) }
-      #smile-grant-btn:active{ transform:scale(0.96) }
+      #smile-grant-btn:active{ transform:scale(0.95) }
     </style>
     <div style="text-align:center;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5)">
-      <div style="font-size:18px;margin-bottom:14px;font-weight:bold;letter-spacing:1px">共有フォルダ「${esc(folderName||'')}」と連携します</div>
-      <button id="smile-grant-btn" type="button" aria-label="連携を開始">😊</button>
-      <div style="font-size:15px;margin-top:18px;font-weight:bold">↑ クリックして連携開始 ↑</div>
+      <div style="font-size:18px;margin-bottom:18px;font-weight:bold;letter-spacing:1px">共有フォルダ「${esc(folderName||'')}」と連携します</div>
+      <button id="smile-grant-btn" type="button" aria-label="連携を開始">⚡</button>
+      <div style="font-size:15px;margin-top:18px;font-weight:bold;letter-spacing:.5px">▲ タップして連携開始 ▲</div>
       <div id="smile-grant-status" style="font-size:12px;margin-top:10px;min-height:18px;opacity:.85"></div>
     </div>
   `;
@@ -3232,13 +3434,13 @@ function armAutoGrantBanner(folderName){
     if(firing) return;
     firing = true;
     btn.style.animation = 'none';
-    btn.textContent = '🤝';
+    btn.textContent = '🔗';
     if(status) status.textContent = '🔓 連携中...';
     try {
       // ユーザージェスチャー直後の同期パスでrequestPermissionを発火
       await reconnectShareFolder();
-      btn.textContent = '🎉';
-      btn.style.background = 'radial-gradient(circle at 35% 30%, #B5F0B0 0%, #4F8A3E 70%, #2D5F1F 100%)';
+      btn.textContent = '✓';
+      btn.style.background = 'radial-gradient(circle at 35% 28%, #BFF06E 0%, #4F8A3E 60%, #2D5F1F 100%)';
       if(status) status.textContent = '✅ 連携を再開しました';
       setTimeout(()=>{
         overlay.style.transition = 'opacity .35s';
@@ -3247,8 +3449,8 @@ function armAutoGrantBanner(folderName){
       }, 900);
     } catch(e){
       console.error(e);
-      btn.textContent = '😣';
-      btn.style.background = 'radial-gradient(circle at 35% 30%, #FFB5B5 0%, #C53030 70%, #791F1F 100%)';
+      btn.textContent = '⚠';
+      btn.style.background = 'radial-gradient(circle at 35% 28%, #FFB5B5 0%, #C53030 60%, #791F1F 100%)';
       if(status) status.innerHTML = `❌ ${esc(e.message||'unknown')}<br><span style="font-size:11px">画面外をクリックで閉じる</span>`;
       // クリックで閉じる(再試行可能に)
       setTimeout(()=>{
@@ -5229,6 +5431,7 @@ function renderBI(){
   renderBIChartsBreakdown(cases);
   renderBIRankings(cases);
   renderBIUtilTable(util);
+  renderBIGroupUtil(util);
   renderBIForecast();
   renderBIMatrix();
   renderBIPareto(cases);
@@ -6099,14 +6302,43 @@ function renderBIYearOverYear(range, cases, kpi, kpiPrev){
   const yB = Number(_biState.yoyYearB) || (nendo - 1);
   const fmtIso = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
   const isCurrentYearA = yA === nendo;
-  // 年度Aの集計範囲: yA=今年度なら 4/1〜本日, それ以外なら 4/1〜3/31 (経過期間=年度全体)
-  const aFrom = `${yA}-04-01`;
-  const aTo = isCurrentYearA ? todayISO() : `${yA+1}-03-31`;
-  const elapsedDays = Math.floor((parseDate(aTo) - parseDate(aFrom)) / 86400000);
-  // 年度Bは年度Aと同じ経過日数で集計
-  const bFrom = `${yB}-04-01`;
-  const bToD = parseDate(bFrom); bToD.setDate(bToD.getDate() + elapsedDays);
-  const bTo = fmtIso(bToD);
+  // ▼ グラフ単位ボタン (day/month/year) で **比較期間そのもの** を切替 (2026-05-25d)
+  //   ・年 = 年度全体 (4/1〜本日 or 3/31) vs 同期間
+  //   ・月 = 今月 (今月1日〜本日) vs 昨年同月の同期間
+  //   ・日 = 本日1日 vs 昨年同日1日
+  //   テーブル(kpi集計)とグラフ(時系列)の両方が連動する。
+  const gran0 = _biState.yoyGranularity || 'month';
+  const now = parseDate(todayISO());
+  let aFrom, aTo, bFrom, bTo, periodSuffix, periodLabelKind;
+  if(gran0 === 'day'){
+    // 「今日 vs 昨年同日」
+    const aD = isCurrentYearA ? now : parseDate(`${yA+1}-03-31`);
+    aFrom = fmtIso(aD); aTo = fmtIso(aD);
+    const bD = new Date(aD); bD.setFullYear(aD.getFullYear() - (yA - yB));
+    bFrom = fmtIso(bD); bTo = fmtIso(bD);
+    periodSuffix = `(${aTo.slice(5)} 1日)`;
+    periodLabelKind = '日次';
+  } else if(gran0 === 'month'){
+    // 「今月1日〜本日 vs 昨年同月同期間」(今年度以外なら 該当月の月末まで)
+    const refD = isCurrentYearA ? now : parseDate(`${yA+1}-03-31`);
+    const mFrom = new Date(refD.getFullYear(), refD.getMonth(), 1);
+    aFrom = fmtIso(mFrom); aTo = fmtIso(refD);
+    const bFromD = new Date(mFrom); bFromD.setFullYear(mFrom.getFullYear() - (yA - yB));
+    const bToD2  = new Date(refD);  bToD2.setFullYear(refD.getFullYear() - (yA - yB));
+    bFrom = fmtIso(bFromD); bTo = fmtIso(bToD2);
+    periodSuffix = `(${aFrom.slice(5)}〜${aTo.slice(5)})`;
+    periodLabelKind = '月次';
+  } else {
+    // 年: 従来通り 年度全体 (or 4/1〜本日)
+    aFrom = `${yA}-04-01`;
+    aTo = isCurrentYearA ? todayISO() : `${yA+1}-03-31`;
+    const elapsedDays = Math.floor((parseDate(aTo) - parseDate(aFrom)) / 86400000);
+    bFrom = `${yB}-04-01`;
+    const bToD = parseDate(bFrom); bToD.setDate(bToD.getDate() + elapsedDays);
+    bTo = fmtIso(bToD);
+    periodSuffix = isCurrentYearA ? `(${aTo.slice(5)}まで)` : '(年度全体)';
+    periodLabelKind = '年度';
+  }
   const aRange = { from: aFrom, to: aTo };
   const bRange = { from: bFrom, to: bTo };
   const casesA = biFilterCases(aRange.from, aRange.to);
@@ -6117,9 +6349,8 @@ function renderBIYearOverYear(range, cases, kpi, kpiPrev){
   cases = casesA;
   kpi = kpiA;
   range = { from: aRange.from, to: aRange.to, compare: bRange };
-  const periodSuffix = isCurrentYearA ? `(${aTo.slice(5)}まで)` : '(年度全体)';
   const curLabel = `${yA}年度 ${periodSuffix}`;
-  const prevLabel = `${yB}年度 同期間 (${bTo.slice(5)}まで)`;
+  const prevLabel = `${yB}年度 ${gran0==='day'?`同日 (${bTo.slice(5)})`: gran0==='month'?`同期間 (${bFrom.slice(5)}〜${bTo.slice(5)})`:`同期間 (${bTo.slice(5)}まで)`}`;
   const curEl = $('bi-yoy-cur-label'); if(curEl) curEl.textContent = curLabel;
   const prevEl = $('bi-yoy-prev-label'); if(prevEl) prevEl.textContent = prevLabel;
 
@@ -6166,15 +6397,15 @@ function renderBIYearOverYear(range, cases, kpi, kpiPrev){
     b.classList.toggle('active', b.dataset.yoygran === gran);
   });
   let labels = [], curData = [], prevData = [];
-  if(gran === 'year'){
-    // 年別: 2年度の合計を1本ずつ表示
-    labels = ['年度合計'];
+  if(gran === 'day'){
+    // 日: 1日分・2バー (A本日 vs B昨年同日)
+    labels = [aRange.to.slice(5)];
     curData = [cases.reduce((s,c)=>s+(calcAmounts(c).total||0), 0)];
     prevData = [casesPrev.reduce((s,c)=>s+(calcAmounts(c).total||0), 0)];
-  } else if(gran === 'day'){
-    // 日別: 経過日数分の日次バー
+  } else if(gran === 'month'){
+    // 月: aRange内の日次バー (今月1日〜本日 / N日分)
     const aFromD = parseDate(aRange.from), aToD = parseDate(aRange.to);
-    const days = Math.floor((aToD - aFromD)/86400000) + 1;
+    const days = Math.max(1, Math.floor((aToD - aFromD)/86400000) + 1);
     const curByDay = new Array(days).fill(0);
     const prevByDay = new Array(days).fill(0);
     const aFromMs = aFromD.getTime();
@@ -6191,7 +6422,6 @@ function renderBIYearOverYear(range, cases, kpi, kpiPrev){
       const idx = Math.floor((d - bFromMs)/86400000);
       if(idx>=0 && idx<days) prevByDay[idx] += calcAmounts(c).total||0;
     });
-    // ラベルは MM/DD 形式
     labels = [];
     for(let i=0; i<days; i++){
       const d = new Date(aFromMs + i*86400000);
@@ -6200,7 +6430,7 @@ function renderBIYearOverYear(range, cases, kpi, kpiPrev){
     curData = curByDay;
     prevData = prevByDay;
   } else {
-    // 月別 (既定): 12ヶ月並べて2年分の棒
+    // 年 (既定): 12ヶ月並べて2年分の棒
     const months = ['04','05','06','07','08','09','10','11','12','01','02','03'];
     labels = months.map(m => m+'月');
     const curByMonth = {}, prevByMonth = {};
@@ -6219,20 +6449,21 @@ function renderBIYearOverYear(range, cases, kpi, kpiPrev){
   const ctx = document.getElementById('bi-chart-yoy');
   if(ctx){
     if(window._c_bi_chart_yoy) window._c_bi_chart_yoy.destroy();
-    // 日別の場合は線グラフ、それ以外は棒グラフが見やすい
-    const chartType = gran === 'day' ? 'line' : 'bar';
+    // 月モードで日次バーが30本前後の時のみ折れ線が見やすい
+    const chartType = (gran === 'month' && labels.length >= 7) ? 'line' : 'bar';
+    const isLine = (chartType === 'line');
     window._c_bi_chart_yoy = new Chart(ctx, {
       type: chartType,
       data: { labels, datasets: [
-        Object.assign({ label: curLabel,  data: curData,  backgroundColor: '#2E75B6', borderColor:'#2E75B6' }, gran==='day' ? { fill:false, tension:0.2, pointRadius:0 } : {}),
-        Object.assign({ label: prevLabel, data: prevData, backgroundColor: '#FB8C00', borderColor:'#FB8C00' }, gran==='day' ? { fill:false, tension:0.2, pointRadius:0 } : {})
+        Object.assign({ label: curLabel,  data: curData,  backgroundColor: '#2E75B6', borderColor:'#2E75B6' }, isLine ? { fill:false, tension:0.2, pointRadius:0 } : {}),
+        Object.assign({ label: prevLabel, data: prevData, backgroundColor: '#FB8C00', borderColor:'#FB8C00' }, isLine ? { fill:false, tension:0.2, pointRadius:0 } : {})
       ]},
       options: { responsive:true, maintainAspectRatio:false,
         plugins: { legend: { position:'bottom', labels:{font:{size:11}} },
           tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ¥${Number(c.parsed.y).toLocaleString()}` } }
         },
         scales: {
-          x: { ticks:{ font:{size:10}, maxTicksLimit: gran==='day' ? 12 : undefined } },
+          x: { ticks:{ font:{size:10}, maxTicksLimit: (gran==='month' && labels.length>15) ? 15 : undefined } },
           y: { beginAtZero:true, ticks:{ callback: v => '¥'+Number(v).toLocaleString(), font:{size:10} } }
         }
       }
@@ -6336,6 +6567,49 @@ function renderBIUtilTable(util){
   }).join('') || '<tr><td colspan="6" class="empty-state">データなし</td></tr>';
 }
 
+// 🚗 クラスグループ別 稼働率 (経営分析タブ)
+//   ユーザー定義の6グループにクラスコードを束ね、biCalcUtilization の期間平均で集計する。
+//   グループ稼働率 = グループ内車両の延べ稼働日数 ÷ (期間日数 × グループ保有台数)。
+//   = 車両単位の期間平均稼働率を保有台数で加重平均したものと一致 (物差しは隣の車両稼働率と同じ)。
+const BI_CLASS_GROUPS = [
+  { key:'K',          codes:['K','KEV'] },
+  { key:'商用',       codes:['VK','TK'] },
+  { key:'S',          codes:['S'] },
+  { key:'SH〜MH',     codes:['SH','SV','SVH','BVH','MV','MVH','MH'] },
+  { key:'WS〜WAH',    codes:['WS','WSH','WA','WAH'] },
+  { key:'P〜PMH',     codes:['P','PM','PMH'] },
+];
+function _biGroupOfClass(code){
+  let c = (code||'').toUpperCase().trim();
+  c = (typeof CLASS_ALIASES==='object' && CLASS_ALIASES[c]) ? CLASS_ALIASES[c] : c;  // 旧コード→新コード正規化
+  for(const g of BI_CLASS_GROUPS){ if(g.codes.includes(c)) return g.key; }
+  return 'その他';  // マスタ外/未入力のコードは取りこぼさず「その他」へ
+}
+function renderBIGroupUtil(util){
+  const tbody = $('bi-group-util-tbody');
+  if(!tbody) return;
+  const order = [...BI_CLASS_GROUPS.map(g=>g.key), 'その他'];
+  const agg = {}; order.forEach(k=> agg[k] = { count:0, days:0, sales:0 });
+  (util.perVeh||[]).forEach(r=>{
+    const k = _biGroupOfClass(r.v && r.v.vehicleClass);
+    agg[k].count++; agg[k].days += r.days; agg[k].sales += r.sales;
+  });
+  const pd = util.periodDays || 1;
+  let totC=0, totD=0, totS=0;
+  const rows = order.map(k=>{
+    const a = agg[k];
+    if(a.count === 0) return '';  // 保有0グループは非表示
+    totC+=a.count; totD+=a.days; totS+=a.sales;
+    const rate = Math.min(100, a.days / (pd * a.count) * 100);
+    const cls = rate>=90?'badge-red':rate>=50?'badge-orange':'badge-green';
+    return `<tr><td class="left"><b>${esc(k)}</b></td><td>${a.count}台</td><td><span class="badge ${cls}">${rate.toFixed(1)}%</span></td><td>${a.days}日</td><td class="money">¥${Math.round(a.sales).toLocaleString()}</td></tr>`;
+  }).join('');
+  if(!totC){ tbody.innerHTML = '<tr><td colspan="5" class="empty-state">データなし</td></tr>'; return; }
+  const totRate = Math.min(100, totD / (pd * totC) * 100);
+  const totalRow = `<tr style="border-top:2px solid #ccc;font-weight:bold"><td class="left">合計</td><td>${totC}台</td><td>${totRate.toFixed(1)}%</td><td>${totD}日</td><td class="money">¥${Math.round(totS).toLocaleString()}</td></tr>`;
+  tbody.innerHTML = rows + totalRow;
+}
+
 // 週間スケジュールの前週/今週/次週切替
 function shiftWeek(direction){
   if(direction === 0) window._weekOffset = 0;
@@ -6379,39 +6653,43 @@ function renderDashboard(){
   // 本日の配車予約
   const todaysDispatch = cases.filter(c=> (c.dispatchAt||'').startsWith(today) && c.status!=='キャンセル');
   const todaysReturn = cases.filter(c=> c.recoveryCompleted && (c.recoveryCalledAt||'').startsWith(today));
+  // 利用中 / 本日稼働中 を **同一述語** で算出して数字を一致させる (2026-05-28b)
+  //   「本日 車が出ている」= status が稼働系 ∧ useStart<=today (未来開始は除外)
+  //     ∧ (useEnd空=返却日未定でまだ稼働 / useEndありなら today<=useEnd)。
+  //   旧バグ: ①利用中KPIは status だけ見て未来開始(useStart>today)も数えていた
+  //          ②本日稼働中は useEnd空を「+30日で返却」とみなし長期案件を30日でカットしていた
+  //   返却済は車庫に戻っているので「出ている」には含めない (手配書FAX済までは回収中=まだ出ている)。
+  const _isOutToday = (c)=>{
+    if(!c || c.status==='キャンセル') return false;
+    if(!['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)) return false;
+    if(!c.useStart || c.useStart > today) return false;   // 未開始(未来)
+    if(c.useEnd && c.useEnd < today) return false;          // 返却予定日を過ぎた
+    return true;
+  };
   // 利用中
-  const inUse = cases.filter(c=> c.status==='利用中' || c.status==='回収連絡' || (c.status==='配車済' && c.useStart && c.useStart<=today && (!c.useEnd||c.useEnd>=today)));
+  const inUse = cases.filter(_isOutToday);
   const inUseDailySum = inUse.reduce((s,c)=> s + Number(c.unitPrice||0), 0);
   const now = new Date();
   // 今月の案件数 (受付日が当月)
   const ym = `${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
   const monthCases = cases.filter(c=> (c.receivedAt||'').startsWith(ym) && c.status!=='キャンセル').length;
 
-  // 月次稼働率: 今月の有効稼働日 / (車両数 × 当月日数)
-  const mStart = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-01`;
-  const mEnd = todayISO();
-  const monthDays = Math.max(1, daysBetween(mStart, mEnd) || 1);
-  const vehAll = DATA.vehicles.filter(v=>v.status!=='廃車');
-  // 旧: 車両×案件 の二重ループ O(N*M)。 新: 車両ID Set + 案件1パス O(N+M)
+  // 🚗 本日 瞬間稼働率 (2026-05-25e: 期間平均→瞬間値・2026-05-28b: 利用中と同一述語に統一)
+  //   保有 = 廃車/売却済を除外。点検入庫中は分母には入れる(=潜在稼働可能の母数)
+  //   月平均稼働率は経営分析タブに残存 (別の経営指標として有用)
+  const vehAll = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='売却済');
   const _vehIdSet = new Set(vehAll.map(v=>v.id));
-  let mUsedDays = 0;
-  DATA.cases.forEach(c=>{
-    if(!_vehIdSet.has(c.vehicleId) || c.status==='キャンセル' || !c.useStart) return;
-    const s = c.useStart < mStart ? mStart : c.useStart;
-    const e = c.useEnd || addDays(c.useStart, 30);
-    const e2 = e > mEnd ? mEnd : e;
-    const d2 = daysBetween(s, e2);
-    if(d2>0) mUsedDays += d2;
-  });
-  const monthAvailable = vehAll.length * monthDays;
-  const mUtilRate = monthAvailable? Math.round(mUsedDays*100/monthAvailable) : 0;
+  const _activeVehIds = new Set();
+  inUse.forEach(c=>{ if(_vehIdSet.has(c.vehicleId)) _activeVehIds.add(c.vehicleId); });
+  const todayActiveCount = _activeVehIds.size;
+  const todayUtilRate = vehAll.length ? Math.round(todayActiveCount * 100 / vehAll.length) : 0;
 
   $('kpi-grid').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">本日の配車</div><div class="kpi-value">${todaysDispatch.length}件</div><div class="kpi-sub">${today}</div></div>
     <div class="kpi-card orange"><div class="kpi-label">本日の回収</div><div class="kpi-value">${todaysReturn.length}件</div><div class="kpi-sub">車両回収日が本日</div></div>
     <div class="kpi-card green"><div class="kpi-label">利用中</div><div class="kpi-value">${inUse.length}件 / ${yen(inUseDailySum)}</div><div class="kpi-sub">日額合計(税込)</div></div>
     <div class="kpi-card lime"><div class="kpi-label">今月の案件数</div><div class="kpi-value">${monthCases}件</div><div class="kpi-sub">${now.getFullYear()}年${now.getMonth()+1}月 受付</div></div>
-    <div class="kpi-card"><div class="kpi-label">車両稼働率(月)</div><div class="kpi-value">${mUtilRate}%</div><div class="kpi-sub">${vehAll.length}台 / ${now.getMonth()+1}月</div></div>
+    <div class="kpi-card"><div class="kpi-label">本日 稼働中</div><div class="kpi-value">${todayActiveCount}<span style="font-size:14px;color:#666">/${vehAll.length}台</span></div><div class="kpi-sub">瞬間稼働率 ${todayUtilRate}%</div></div>
   `;
 
   // 📊 グラフ類はダッシュボードから廃止 (データ分析・売上集計タブを参照)
@@ -6939,7 +7217,7 @@ function renderCases(){
       <td class="left">${esc(c.driverName||c.contractorName||'')}</td>
       <td class="left">${esc(c.dispatchToName||'')}</td>
       <td class="left">${renderVehicleCell(c)}</td>
-      <td class="text-sm">${dt(c.dispatchAt)}</td>
+      <td class="text-sm">${dt(c.dispatchAt)}${(c.dispatchTimePending||c.dispatchTimePendingDriver)?` <span style="display:inline-block;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:8px;padding:1px 5px;font-size:9.5px;font-weight:700;margin-left:2px" title="${[c.dispatchTimePending?'工場':'',c.dispatchTimePendingDriver?'運転者':''].filter(Boolean).join('/')}と時間調整中">📞${[c.dispatchTimePending?'工場':'',c.dispatchTimePendingDriver?'運転者':''].filter(Boolean).join('/')}</span>`:''}</td>
       <td class="text-sm" style="white-space:nowrap">${period}</td>
       <td>${amt.days||''}${renderCaseWarningFlags(c, amt)}</td>
       <td class="money admin-only">${amt.total?yen(amt.total):''}</td>
@@ -7267,11 +7545,21 @@ function _syncAndRender(c){ fillForm(c); renderFlowStepper(c); recalcAmounts(); 
  */
 function runFlowAction(applyFn, defaultToast){
   const c = _getCurCase(); if(!c) return;
+  // ★2026-05-22: 通知発火用に変更前スナップショットを保持。
+  //   旧: runFlowAction は save() するが _fireCaseNotifications を呼ばないため、
+  //   フローボタン(回収連絡/利用終了/車両回収完了 等)経由の状態変更は LINE通知/
+  //   カレンダー連携が一切発火しないバグがあった。
+  const _oldSnapshot = JSON.parse(JSON.stringify(c));
+  if(typeof _resolveManualInsurer === 'function') _resolveManualInsurer();
   Object.assign(c, collectForm());
   const msg = applyFn(c);
   save();
   _syncAndRender(c);
   if(typeof markCaseSaved === 'function') markCaseSaved();  // 業務フロー操作後も保存済状態に
+  // ★2026-05-22: フロー操作由来の変更でも通知を発火(saveCase と同じ規律)
+  if(typeof _fireCaseNotifications === 'function'){
+    try { _fireCaseNotifications(c, false, _oldSnapshot); } catch(e){ console.warn('flow notify failed:', e); }
+  }
   const finalMsg = typeof msg === 'string' ? msg : defaultToast;
   if(finalMsg) toast(finalMsg);
 }
@@ -7365,6 +7653,8 @@ function defaultCase(){
     contractorName:'', driverName:'', driverTel:'',
     dispatchToName:'', dispatchToAddress:'', dispatchToTel:'', dispatchToContact:'', dispatchToContactTel:'',
     dispatchAt:'', dispatchNote:'', dispatchDoneAt:'', dispatchDoneNote:'',
+    dispatchTimePending:false,        // 工場と時間調整中
+    dispatchTimePendingDriver:false,  // 運転者と時間調整中
     vehicleClass:'', vehicleName:'', unitPrice:0, plateArea:'', plateNo:'', plateKana:'', plateTail:'',
     isBorrowed:false, borrowedFrom:'', borrowedVehicleInfo:'', borrowedDailyRate:'',
     useStart:'', useEnd:'', returnStatus:'',
@@ -7374,6 +7664,8 @@ function defaultCase(){
     confirmCalledAt:'', faxSentAtDispatch:'', faxSentAtReturn:'',
     departedAt:'',  // モバイル現場版「出発」操作のタイムスタンプ
     recoveryCalledAt:'', recoveryCompleted:false,
+    // 走行距離記録 (キロ数のみ・未記録なら null)
+    meterAtDispatch:null, meterAtReturn:null,
     checks: defaultChecks()
   };
 }
@@ -7426,7 +7718,7 @@ function toggleCheck(i){
   if(typeof scheduleAutoSave === 'function') scheduleAutoSave();  // dirty 立てる: ✓ON/OFF で離脱警告対象に
   renderChecklist();
 }
-const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedDailyRate','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','faxSentAtDispatch','faxSentAtReturn','departedAt',
+const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedDailyRate','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
   // 一般貸渡用 (自旅138号 貸渡証/貸渡簿の必須項目)
   'borrowerAddress','driverAddress','driverLicenseType','driverLicenseNo',
   // 一般貸渡 業務情報 (受取場所・補償・特記事項)
@@ -7434,7 +7726,7 @@ const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target
   // 一般貸渡 利用時刻 (HH:MM形式・30分刻み)
   'useStartTime','useEndTime',
   // 一般貸渡 付加情報 (レンタカー侍参考)
-  'departureFlight','guestCount','usagePurpose','destination','preferSmoke','preferAT',
+  'arrivalFlight','departureFlight','guestCount','usagePurpose','destination','preferSmoke','preferAT',
   // 一般貸渡 免許証拡張
   'driverBirthDate','driverLicenseExpiry','driverLicenseAcquired'];
 
@@ -7467,7 +7759,7 @@ const GR_FIELDS = [
   'contractorName','borrowerAddress','driverTel',
   'driverName','driverAddress',
   'driverBirthDate','driverLicenseType','driverLicenseNo','driverLicenseExpiry','driverLicenseAcquired',
-  'pickupLocation','pickupDetail','departureFlight','guestCount','usagePurpose','destination',
+  'pickupLocation','pickupDetail','arrivalFlight','departureFlight','guestCount','usagePurpose','destination',
   'useStart','useStartTime','useEnd','useEndTime',
   'vehicleId','vehicleClass','vehicleName','plateArea','plateNo','plateKana','plateTail','unitPrice',
   'hasCDW','hasWide','preferSmoke','preferAT','rentalNote',
@@ -7487,6 +7779,7 @@ function openVehiclePickerForGR(){
     if(chosenClass && cls.includes(chosenClass)) $('vp-class-filter').value = chosenClass;
   }
   if($('vp-search')) $('vp-search').value = '';
+  if($('vp-show-inuse')) $('vp-show-inuse').checked = false;
   if(typeof renderVehiclePicker==='function') renderVehiclePicker();
   if(typeof openModalAndFocus==='function') openModalAndFocus('veh-picker-modal','vp-search');
 }
@@ -7563,18 +7856,19 @@ function grMaybeAdvanceStatus(){
   }
 }
 
-// 受取場所 が 那覇空港送迎 / ホテル のとき、詳細欄ラベルを切替
+// 受取場所 が ホテル のとき、詳細欄ラベルを切替
+// (那覇空港 送迎の到着便は専用フィールド gr-arrivalFlight で受けるためここでは扱わない)
 function onGRPickupChange(){
   const loc = ($('gr-pickupLocation')||{}).value || '';
   const lab = $('gr-pickupDetail-label');
   const det = $('gr-pickupDetail');
   if(!lab) return;
-  if(loc === '那覇空港 送迎'){
-    lab.textContent = '到着便名 / 到着時刻';
-    if(det) det.placeholder = '例: ANA123 / 14:30到着';
-  } else if(loc === 'ホテル'){
+  if(loc === 'ホテル'){
     lab.textContent = 'ホテル名';
     if(det) det.placeholder = '例: ANAクラウンプラザホテル沖縄ハーバービュー';
+  } else if(loc === '那覇空港 送迎'){
+    lab.textContent = '受取詳細 (補足)';
+    if(det) det.placeholder = '例: 到着ロビー●番出口 等 (到着便は右の欄に)';
   } else {
     lab.textContent = '受取詳細';
     if(det) det.placeholder = '受取場所の詳細';
@@ -7597,10 +7891,13 @@ function updateGRPeriod(){
   if(ed <= sd){ disp.textContent='⚠️ 返却日時が貸出日時より前か同じです'; disp.style.color='#C53030'; return; }
   const ms = ed - sd;
   const hours = Math.floor(ms / 3600000);
-  const days = Math.ceil(ms / 86400000);  // 24時間=1日繰上げ
   // 泊数 = 日付差
   const sdDate = new Date(us); const edDate = new Date(ee);
   const nights = Math.round((edDate - sdDate) / 86400000);
+  // 貸渡日数 (Japanese レンタカー慣行): 24h以内=1日、翌日以降は X泊X+1日 を基本。
+  //   旧式 `Math.ceil(ms/86400000)` だと 2泊3日(48h丁度) が 2日になり、表示「2泊3日」と料金計算が食い違っていた。
+  //   返却が翌日の予定時刻を大幅超過する場合は超過分を上乗せ (1日相当=24h単位)。
+  const days = (hours <= 24) ? 1 : Math.max(nights + 1, Math.ceil(hours / 24));
   let txt = `📅 ${nights}泊${nights+1}日 / ${hours}時間`;
   if(hours <= 24) txt = `📅 ${hours}時間 (1日)`;
   // 概算金額
@@ -7783,14 +8080,21 @@ function grDeleteCase(){
   if(!_grEditingId) return;
   const c = findCaseById(_grEditingId);
   if(!c) return;
-  if(!confirm(`案件 ${c.caseNo||''} を完全に削除します。よろしいですか?`)) return;
-  if(!confirm('この操作は取り消せません。本当に削除しますか?')) return;
-  // 削除前にディープコピーを保持 (通知用)
+  // ★2026-05-21 ソフト削除化: 旧 splice ハード削除は 3-wayマージで他端末から
+  //   復活する欠陥があった (削除tombstone無し: mergeCollection で「localにのみ存在」を
+  //   採用するため、削除済 disk に対し stale local の同案件が次保存で再追加される)。
+  //   status='キャンセル' + isDeleted=true のフィールド更新にして field-level merge で
+  //   削除が updatedAt 比較で正しく伝播するようにする (mobile _isActive / PC freeeExportTargets
+  //   どちらも status==='キャンセル' or isDeleted で除外。表示UXは同等)。データは保持され復元可能。
+  if(!confirm(`案件 ${c.caseNo||''} をキャンセル状態にして非表示にします。\n(データは履歴として残り、後で復元可能)\n\nよろしいですか?`)) return;
   const cSnapshot = JSON.parse(JSON.stringify(c));
-  const idx = DATA.cases.findIndex(x=>x.id===_grEditingId);
-  if(idx >= 0) DATA.cases.splice(idx, 1);
+  c.status = 'キャンセル';
+  c.isDeleted = true;
+  c.isCancelled = true;
+  c.updatedAt = Date.now();
+  c.updatedBy = 'PC削除';
   save();
-  toast('🗑️ 案件を削除しました');
+  toast('🗑️ 案件をキャンセル/非表示にしました');
   // 外部通知: 削除 → カレンダーイベント削除 + LINE通知
   if(typeof _fireCancelDeleteNotify === 'function') _fireCancelDeleteNotify(cSnapshot, 'delete');
   closeGeneralRentalModal();
@@ -7858,6 +8162,21 @@ function fillForm(c){
   if(typeof updateFreeeStatusUI === 'function') updateFreeeStatusUI(c);
   // v2026.04.29ce: 最近使った保険会社・配車先のチップを表示
   if(typeof renderRecentChips === 'function') renderRecentChips();
+  // 走行距離: フォーム反映後に利用走行距離を再計算
+  if(typeof onMeterChange === 'function') onMeterChange();
+}
+
+// 走行距離: 貸出/返却メーターから利用走行距離を自動計算 (派生値・保存しない)
+function onMeterChange(){
+  const elA = $('f-meterAtDispatch'); const elB = $('f-meterAtReturn'); const out = $('f-meterDelta');
+  if(!elA || !elB || !out) return;
+  const a = parseInt(elA.value||'', 10);
+  const b = parseInt(elB.value||'', 10);
+  if(!isFinite(a) || !isFinite(b)){ out.value = ''; out.style.color = ''; return; }
+  const d = b - a;
+  out.value = d.toLocaleString('ja-JP');
+  out.style.color = d < 0 ? '#C53030' : '';
+  out.title = d < 0 ? '⚠️ 返却メーターが貸出メーターを下回っています。入力ミスかメーター巻戻しの可能性があります。' : '';
 }
 
 // v2026.05: モバイル現場版で撮影されたチェックシート写真を表示
@@ -8060,27 +8379,31 @@ function onBorrowedToggle(){
 }
 
 function populateContactDropdown(insId, currentName){
-  const sel = $('f-insurerContact'); if(!sel) return;
+  const inp = $('f-insurerContact'); if(!inp) return;
+  const dl = $('f-insurerContact-list');
   const ins = findInsurer(insId);
   const contacts = ins ? (ins.contacts||[]) : [];
-  const opts = ['<option value="">―</option>', ...contacts.map(c => `<option value="${esc(c.name||'')}">${esc(c.name||'')}${c.dept?` (${esc(c.dept)})`:''}${c.role?` / ${esc(c.role)}`:''}</option>`)];
-  if(currentName && !contacts.find(c=>c.name===currentName)){
-    opts.push(`<option value="${esc(currentName)}" selected>${esc(currentName)} (手入力)</option>`);
+  if(dl){
+    dl.innerHTML = contacts.map(c => `<option value="${esc(c.name||'')}">${c.dept?esc(c.dept):''}${c.role?` / ${esc(c.role)}`:''}</option>`).join('');
   }
-  sel.innerHTML = opts.join('');
-  sel.value = currentName || '';
+  inp.value = currentName || '';
 }
 function onInsurerChange(){
   const insId = $('f-insurerId').value;
   populateContactDropdown(insId, '');
   const ins = findInsurer(insId);
   if(!ins){ $('f-insurerContactTel').value=''; $('f-insurerContactFax').value=''; return; }
-  const ctx = (ins.contacts||[]).find(x=>x.isDefault) || (ins.contacts||[])[0];
+  // 担当者の自動入力は isDefault が **明示的に立っている** 場合のみ。
+  // contacts[0] フォールバックは廃止 (JA共済等で17名中先頭の「比嘉」が
+  // 勝手に入る誤入力の温床になっていた・2026-05-25b ユーザー指示)。
+  // 担当FAXは会社デフォルト ins.fax のみ自動入力 (取引先誤送信防止の保険補完)。
+  const ctx = (ins.contacts||[]).find(x=>x.isDefault);
   if(ctx){
     $('f-insurerContact').value = ctx.name||'';
     $('f-insurerContactTel').value = ctx.tel||'';
     $('f-insurerContactFax').value = ctx.fax||ins.fax||'';
   } else {
+    $('f-insurerContact').value = '';
     $('f-insurerContactTel').value = '';
     $('f-insurerContactFax').value = ins.fax||'';
   }
@@ -8094,6 +8417,106 @@ function onContactChange(){
     if(ctx.tel) $('f-insurerContactTel').value = ctx.tel;
     if(ctx.fax || ins.fax) $('f-insurerContactFax').value = ctx.fax || ins.fax;
   }
+}
+
+/* === 担当者ピッカー (保険会社の contacts から選択・2026-05-25c) === */
+function openContactPicker(){
+  const insId = $('f-insurerId').value;
+  const ins = findInsurer(insId);
+  const note = $('cp-insurer-note');
+  if(!insId || !ins){
+    toast('先に保険会社を選んでください');
+    return;
+  }
+  if(note) note.innerHTML = `🏢 <b>${esc(ins.name||'')}</b>${ins.branch?` (${esc(ins.branch)})`:''} の担当者一覧`;
+  $('cp-search').value = '';
+  renderContactPicker();
+  openModalAndFocus('ct-picker-modal', 'cp-search');
+}
+function closeContactPicker(){ closeModal('ct-picker-modal'); }
+function renderContactPicker(){
+  const insId = $('f-insurerId').value;
+  const ins = findInsurer(insId);
+  const contacts = ins ? (ins.contacts||[]) : [];
+  const q = ($('cp-search').value||'').trim().toLowerCase();
+  const filtered = q
+    ? contacts.filter(c => ((c.name||'')+' '+(c.tel||'')+' '+(c.dept||'')+' '+(c.role||'')).toLowerCase().includes(q))
+    : contacts.slice();
+  $('cp-count').textContent = filtered.length + '件 / 全' + contacts.length + '件';
+  const empty = $('cp-empty-note');
+  if(empty) empty.style.display = contacts.length===0 ? 'block' : 'none';
+  const tb = $('cp-tbody');
+  if(!tb) return;
+  tb.innerHTML = filtered.map(c => `
+    <tr style="cursor:pointer" onclick="pickContactFromPicker(${JSON.stringify(c.name||'').replace(/"/g,'&quot;')})">
+      <td><b>${esc(c.name||'')}</b>${c.isDefault?' <span class="badge" style="background:#d0e7ff;color:#0b5cad;font-size:11px">既定</span>':''}${c.dept?`<br><span class="text-sm text-muted">${esc(c.dept)}</span>`:''}</td>
+      <td class="text-sm">${esc(c.tel||'-')}</td>
+      <td class="text-sm">${esc(c.fax||'-')}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pickContactFromPicker(${JSON.stringify(c.name||'').replace(/"/g,'&quot;')})">選ぶ</button></td>
+    </tr>`).join('');
+}
+function pickContactFromPicker(name){
+  $('f-insurerContact').value = name || '';
+  onContactChange();
+  closeContactPicker();
+  // fuzzy警告は選択直後に消す
+  const hint = $('f-insurerContact-hint'); if(hint) hint.style.display='none';
+  toast(`👤 担当者「${name}」を設定`, 'success');
+}
+
+/* === fuzzy一致警告 (blur時・2026-05-25c)
+ * 入力された担当者名が マスタに無いが、よく似た名前がマスタにあれば
+ * 「もしかして◯◯ですか?」とインライン警告。誤入力の即時検出+統一を促進。
+ */
+function _contactFuzzyMatch(name, contacts){
+  const n = (name||'').trim();
+  if(n.length < 2) return [];
+  const nlc = n.toLowerCase().replace(/[\s　]+/g,'');
+  return (contacts||[])
+    .map(c => {
+      const cn = (c.name||'').trim();
+      const clc = cn.toLowerCase().replace(/[\s　]+/g,'');
+      if(!clc || clc === nlc) return null;
+      // 含む or 含まれる or 編集距離≤1 (2文字以上で1文字違い)
+      if(clc.includes(nlc) || nlc.includes(clc)) return { name: cn, kind:'部分一致' };
+      if(Math.abs(clc.length - nlc.length) <= 1 && _editDistanceLE1(clc, nlc)) return { name: cn, kind:'1文字違い' };
+      return null;
+    })
+    .filter(Boolean)
+    .slice(0, 3);
+}
+function _editDistanceLE1(a, b){
+  // 編集距離≤1 の高速判定 (Levenshtein 1)
+  if(a === b) return true;
+  if(Math.abs(a.length - b.length) > 1) return false;
+  const [s, l] = a.length <= b.length ? [a, b] : [b, a];
+  let i=0, j=0, diff=0;
+  while(i < s.length && j < l.length){
+    if(s[i] !== l[j]){
+      diff++;
+      if(diff > 1) return false;
+      if(s.length === l.length){ i++; j++; } else { j++; }
+    } else { i++; j++; }
+  }
+  if(j < l.length) diff++;
+  return diff <= 1;
+}
+function onContactBlurFuzzyCheck(){
+  const hint = $('f-insurerContact-hint'); if(!hint) return;
+  hint.style.display = 'none'; hint.innerHTML = '';
+  const insId = $('f-insurerId').value;
+  const ins = findInsurer(insId); if(!ins) return;
+  const name = ($('f-insurerContact').value||'').trim();
+  if(!name) return;
+  const contacts = ins.contacts||[];
+  // 完全一致なら警告不要
+  if(contacts.some(c => (c.name||'').trim() === name)) return;
+  const matches = _contactFuzzyMatch(name, contacts);
+  if(matches.length === 0) return;
+  hint.innerHTML = '⚠️ 似た担当者がマスタにあります → ' + matches.map(m =>
+    `<a href="javascript:pickContactFromPicker(${JSON.stringify(m.name).replace(/"/g,'&quot;')})" style="color:#0b5cad;text-decoration:underline;margin-right:8px">${esc(m.name)}に統一</a>`
+  ).join(' / ') + ` <span class="text-muted">(新規担当者ならこのまま保存=マスタに自動追加)</span>`;
+  hint.style.display = 'block';
 }
 /* 車両ピッカー */
 /* 工場ピッカー */
@@ -8216,32 +8639,83 @@ function rememberRecent(kind, id){
   r[kind] = [id, ...r[kind].filter(x => x !== id)].slice(0, 5);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(r)); } catch(e){}
 }
+// 「最近使った」チップは廃止 (ユーザー要望 2026-05) — 後方互換でno-op
 function renderRecentChips(){
-  const r = loadRecent();
-  // 保険会社
   const insBox = document.getElementById('f-insurer-recent');
-  if(insBox){
-    const recent = (r.insurer||[]).map(id => DATA.insurers.find(x=>x.id===id)).filter(Boolean).slice(0,5);
-    insBox.innerHTML = recent.length
-      ? `<span style="font-size:10px;color:#888;align-self:center">最近:</span>` + recent.map(i =>
-          `<button type="button" class="btn btn-outline btn-xs" style="font-size:10px;padding:2px 8px" onclick="pickInsurer('${i.id}')">${esc(i.name||'')}</button>`
-        ).join('')
-      : '';
-  }
-  // 配車先
+  if(insBox) insBox.innerHTML = '';
   const facBox = document.getElementById('f-factory-recent');
-  if(facBox){
-    const recent = (r.factory||[]).map(id => (DATA.factories||[]).find(x=>x.id===id)).filter(Boolean).slice(0,5);
-    facBox.innerHTML = recent.length
-      ? `<span style="font-size:10px;color:#888;align-self:center">最近:</span>` + recent.map(f =>
-          `<button type="button" class="btn btn-outline btn-xs" style="font-size:10px;padding:2px 8px" onclick="pickFactory('${f.id}')">${esc(f.name||'')}</button>`
-        ).join('')
-      : '';
+  if(facBox) facBox.innerHTML = '';
+}
+// 保険会社・担当者をマスタに自動追加するヘルパー (2026-05-25c拡張)。
+// 役割1: 保険会社が手入力でマスタ未リンクなら find-or-create でマスタ登録 (旧仕様)
+// 役割2: **既存マスタにリンク済みでも、入力された担当者名がそのマスタの contacts に
+//        無ければ自動追加** (新仕様。「呉屋」とフリー入力した瞬間に次回から候補に出る・
+//        表記揺れ再発防止の根幹)。
+function _resolveManualInsurer(){
+  const hid = $('f-insurerId');
+  const disp = $('f-insurerDisplay');
+  if(!hid || !disp) return;
+  const txt = (disp.value || '').trim();
+  const cName = ($('f-insurerContact')||{}).value.trim();
+  const cTel  = ($('f-insurerContactTel')||{}).value.trim();
+  const cFax  = ($('f-insurerContactFax')||{}).value.trim();
+
+  // 保険会社の解決 (既存リンク or 同名検索 or 新規作成)
+  let ins = null;
+  if(hid.value){
+    ins = (DATA.insurers||[]).find(x => x.id === hid.value) || null;
+  }
+  if(!ins && txt){
+    ins = (DATA.insurers||[]).find(x =>
+      (x.name||'').trim() === txt || insurerLabel(x) === txt
+    );
+    if(!ins){
+      ins = { id: uid('ins-'), name: txt, branch:'', fax:'', contacts:[] };
+      DATA.insurers.push(ins);
+      toast(`🏢 保険会社「${txt}」をマスタに新規登録しました`);
+    }
+    hid.value = ins.id;
+  }
+  if(!ins) return;  // 保険会社未入力 → 担当者追加もしない
+
+  // 担当者を contacts に自動追加 (重複は名前で除外)
+  if(cName){
+    ins.contacts = ins.contacts || [];
+    const exists = ins.contacts.some(x => (x.name||'').trim() === cName);
+    if(!exists){
+      ins.contacts.push({
+        name: cName,
+        tel: cTel || '',
+        fax: cFax || ins.fax || '',
+        dept: '', role: '',
+        isDefault: ins.contacts.length === 0,
+        note: '案件保存時に自動追加'
+      });
+      toast(`👤 担当者「${cName}」を ${ins.name||''}${ins.branch?` (${ins.branch})`:''} のマスタに追加しました`);
+    }
+  }
+  if(cFax && !ins.fax) ins.fax = cFax;
+}
+function onInsurerTextInput(){
+  const txt = ($('f-insurerDisplay')||{}).value.trim();
+  const hid = $('f-insurerId');
+  if(!txt){ if(hid) hid.value=''; return; }
+  // 完全一致 (名称 or 名称+支店) する既存マスタがあればリンク
+  const match = (DATA.insurers||[]).find(x =>
+    (x.name||'').trim() === txt || insurerLabel(x) === txt
+  );
+  if(match){
+    if(hid) hid.value = match.id;
+    populateContactDropdown(match.id, ($('f-insurerContact')||{}).value || '');
+  } else {
+    // マスタ未登録 → id を空に (保存時に自動作成してリンク)
+    if(hid) hid.value = '';
   }
 }
 function clearInsurer(){
   $('f-insurerId').value = '';
   $('f-insurerDisplay').value = '';
+  const ct = $('f-insurerContact'); if(ct) ct.value = '';
   if(typeof onInsurerChange === 'function') onInsurerChange();
   $('f-insurerId').dispatchEvent(new Event('change', {bubbles:true}));
 }
@@ -8273,6 +8747,7 @@ function openVehiclePicker(){
   const chosenClass = $('f-vehicleClass') ? $('f-vehicleClass').value : '';
   if(chosenClass && cls.includes(chosenClass)) $('vp-class-filter').value = chosenClass;
   $('vp-search').value = '';
+  if($('vp-show-inuse')) $('vp-show-inuse').checked = false;
   renderVehiclePicker();
   openModalAndFocus('veh-picker-modal', 'vp-search');
 }
@@ -8290,7 +8765,20 @@ function renderVehiclePicker(){
   }
   const inUseMap = {};
   DATA.cases.forEach(c=>{ if(c.vehicleId && c.status==='利用中') inUseMap[c.vehicleId] = c.contractorName||'利用中'; });
+  // 🚗 配車車両選択では「利用中」の車両を既定で省く (チェックで表示可)。
+  //   編集中案件に既に割り当て済みの車両は常に残す (自分の案件の車が消えないように)。
+  const showInUse = !!($('vp-show-inuse') && $('vp-show-inuse').checked);
+  const keepIds = new Set([ (($('f-vehicleId')||{}).value||''), (($('gr-vehicleId')||{}).value||'') ].filter(Boolean));
+  let hiddenInUse = 0;
+  if(!showInUse){
+    vehicles = vehicles.filter(v=>{
+      if(inUseMap[v.id] && !keepIds.has(v.id)){ hiddenInUse++; return false; }
+      return true;
+    });
+  }
   vehicles.sort((a,b)=> (a.vehicleClass||'').localeCompare(b.vehicleClass||'') || (a.plateDisplay||'').localeCompare(b.plateDisplay||''));
+  const _hnote = $('vp-hidden-note');
+  if(_hnote) _hnote.textContent = (!showInUse && hiddenInUse) ? `利用中 ${hiddenInUse}台を非表示中(右上「利用中も表示」で全件表示)` : '';
   $('vp-tbody').innerHTML = vehicles.map(v=>{
     const inUse = inUseMap[v.id];
     const isMaint = v.status==='点検入庫中'||v.status==='整備中';
@@ -8743,6 +9231,8 @@ function saveCase(){
     toast('🔒 他PCがこの案件を編集中のため保存できません。相手の編集が終わるか強制解除してください', 'error');
     return;
   }
+  // 保険会社が手入力 (マスタ未リンク) の場合、保存前にマスタへ自動登録してリンク
+  _resolveManualInsurer();
   const c = collectForm();
   const errors = [];
   if(!c.contractorName && !c.driverName) errors.push('契約者または運転者');
@@ -8820,26 +9310,8 @@ function _fireCancelDeleteNotify(c, action){
   if(!s.gasWebAppUrl) return;
   // 通知 OFF 設定なら何もしない (キャンセル/削除は重要なので新規案件通知の設定に紐付け)
   if(!s.notifyOnNewCase && !s.notifyOnRecoveryDate) return;
-  const ins = c.insurerId ? (findInsurer(c.insurerId)||{}) : {};
-  const payload = {
-    caseNo: c.caseNo || '',
-    contractorName: c.contractorName || '',
-    driverName: c.driverName || c.contractorName || '',
-    driverTel: c.driverTel || '',
-    insurerName: ins.name || '',
-    insurerContact: c.insurerContact || '',
-    dispatchAt: c.dispatchAt || '',
-    dispatchToName: c.dispatchToName || '',
-    dispatchToAddress: c.dispatchToAddress || '',
-    recoveryDate: c.recoveryCalledAt || '',
-    vehicleClass: c.vehicleClass || '',
-    vehicleName: c.vehicleName || '',
-    plate: [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' '),
-    staff: c.staff || '',
-    reason: action
-  };
   const eventType = action === 'cancel' ? 'cancelCase' : 'deleteCase';
-  sendExternalNotify(eventType, payload)
+  sendExternalNotify(eventType, _buildNotifyPayload(c, eventType))
     .then(r => r.ok ? console.log('[notify] '+eventType+' sent') : console.warn('[notify] '+eventType+' failed', r))
     .catch(()=>{});
 }
@@ -8850,27 +9322,40 @@ function _fireCancelDeleteNotify(c, action){
 function _fireCaseNotifications(c, isNew, oldCase){
   const s = DATA.settings || {};
   if(!s.gasWebAppUrl) return;  // 連携未設定なら何もしない
+  const _send = (t) => sendExternalNotify(t, _buildNotifyPayload(c, t))
+    .then(r => r.ok ? console.log('[notify] '+t+' sent') : console.warn('[notify] '+t+' failed', r))
+    .catch(()=>{});
   const newRecovery = c.recoveryCalledAt || '';
   const oldRecovery = (oldCase && oldCase.recoveryCalledAt) || '';
   const newDispatch = c.dispatchAt || '';
   const oldDispatch = (oldCase && oldCase.dispatchAt) || '';
+  // マイルストーン遷移: このsaveで新たに確定したか (旧→新で初めて値が入った)
+  const tDispatchDone = !isNew && !((oldCase && oldCase.dispatchDoneAt) || '') && !!c.dispatchDoneAt;
+  const tDeparted     = !isNew && !((oldCase && oldCase.departedAt) || '')     && !!c.departedAt;
+  const tRecoveryDone = !isNew && !(oldCase && oldCase.recoveryCompleted)       && !!c.recoveryCompleted;
   // ① 新規案件通知 (新規登録時)
   if(isNew && s.notifyOnNewCase){
-    sendExternalNotify('newCase', _buildNewCasePayload(c))
-      .then(r => r.ok ? console.log('[notify] newCase sent') : console.warn('[notify] newCase failed', r))
-      .catch(()=>{});
+    _send('newCase');
   }
-  // ② 配車日時変更 (既存案件のみ、新規時は ① で通知済みなのでスキップ)
-  else if(!isNew && oldDispatch !== newDispatch && s.notifyOnNewCase){
-    sendExternalNotify('updateCase', _buildNewCasePayload(c))
-      .then(r => r.ok ? console.log('[notify] updateCase sent') : console.warn('[notify] updateCase failed', r))
-      .catch(()=>{});
+  // ② 配車日時変更 (既存案件のみ。マイルストーン遷移と同時保存の時は二重通知になるのでスキップ)
+  else if(!isNew && oldDispatch !== newDispatch && !tDispatchDone && !tDeparted && !tRecoveryDone && s.notifyOnNewCase){
+    _send('updateCase');
   }
-  // ③ 回収予定日 設定・変更 (oldと違う かつ 新しい値あり)
+  // ③ 配車完了 (dispatchDoneAt が新たにセットされた)
+  if(tDispatchDone && s.notifyOnNewCase){
+    _send('dispatchDone');
+  }
+  // ④ 出発 (departedAt が新たにセットされた)
+  if(tDeparted && s.notifyOnNewCase){
+    _send('departed');
+  }
+  // ⑤ 回収予定日 設定・変更 (oldと違う かつ 新しい値あり)
   if(oldRecovery !== newRecovery && newRecovery && s.notifyOnRecoveryDate){
-    sendExternalNotify('recoveryDateSet', _buildRecoveryPayload(c))
-      .then(r => r.ok ? console.log('[notify] recoveryDateSet sent') : console.warn('[notify] recoveryDateSet failed', r))
-      .catch(()=>{});
+    _send('recoveryDateSet');
+  }
+  // ⑥ 回収完了 (recoveryCompleted が false→true)
+  if(tRecoveryDone && s.notifyOnRecoveryDate){
+    _send('recoveryDone');
   }
 }
 // FORM_FIELDSに含まれないフィールドを既存caseから引き継ぐ + 社内メモ変更時に完了フラグをリセット
@@ -8946,25 +9431,35 @@ function deleteCase(){
     return;
   }
   const c = findCaseById(editingCaseId);
-  if(c && (c.invoiceNo || c.invoiceIssuedAt || c.paidAt)){
+  if(!c) return;
+  // ★2026-05-21 ソフト削除化: 旧 hard-filter は 3-wayマージで他端末から
+  //   復活する欠陥があった (削除tombstone無し: mergeCollection で「localにのみ存在」を
+  //   採用するため、削除済 disk に対し stale local の同案件が次保存で再追加される)。
+  //   status='キャンセル' + isDeleted=true のフィールド更新にして field-level merge で
+  //   削除が updatedAt 比較で正しく伝播するようにする。請求書発行済/入金済の警告は維持。
+  if(c.invoiceNo || c.invoiceIssuedAt || c.paidAt){
     const msg = `⚠️ この案件は請求書発行済み・または入金記録ありです。\n\n` +
       `・受付No: ${c.caseNo||'未採番'}\n` +
       `・請求書No: ${c.invoiceNo||'(なし)'}\n` +
       `・発行日: ${c.invoiceIssuedAt||'(なし)'}\n` +
       `・入金日: ${c.paidAt||'(なし)'}\n\n` +
-      `削除すると会計記録が失われます。\n` +
-      `「キャンセル状態化」を強く推奨 (データは残ります)。\n\n` +
-      `それでも完全削除しますか?`;
+      `キャンセル状態にすると会計集計から除外されます。\n` +
+      `(データは履歴として残り、後で復元可能)\n\n` +
+      `本当にキャンセル/非表示にしますか?`;
     if(!confirm(msg)) return;
   } else {
-    if(!confirm('この案件を削除します。よろしいですか？\n\n※「キャンセル」での状態化を推奨 (削除はデータが完全に失われます)')) return;
+    if(!confirm('この案件をキャンセル状態にして非表示にします。\n(データは履歴として残り、後で復元可能)\n\nよろしいですか？')) return;
   }
-  // 削除前にディープコピーを保持 (通知用 — DATA から消える前に snapshot)
-  const cSnapshot = c ? JSON.parse(JSON.stringify(c)) : null;
-  DATA.cases = DATA.cases.filter(x=>x.id!==editingCaseId);
-  save(); toast('削除しました');
+  const cSnapshot = JSON.parse(JSON.stringify(c));
+  c.status = 'キャンセル';
+  c.isDeleted = true;
+  c.isCancelled = true;
+  c.updatedAt = Date.now();
+  c.updatedBy = 'PC削除';
+  save();
+  toast('🗑️ 案件をキャンセル/非表示にしました');
   // 外部通知: 削除 → カレンダーイベント削除 + LINE通知
-  if(cSnapshot && typeof _fireCancelDeleteNotify === 'function') _fireCancelDeleteNotify(cSnapshot, 'delete');
+  if(typeof _fireCancelDeleteNotify === 'function') _fireCancelDeleteNotify(cSnapshot, 'delete');
   closeCaseModal(); renderCases();
 }
 // v2026.04.29cd: 案件複製を改善 (2モード: 継続 or 別事故)
@@ -9149,6 +9644,60 @@ function toEfaxNumber(fax){
   return '81' + digits;
 }
 // Blobをダウンロードさせる汎用ヘルパー
+// ============================================================
+// PDF配置 整合性チェック (再発防止)
+//   2026-05-15: html2canvas に windowWidth/width を渡したことで
+//   キャンバスがページ幅を超え、PDF右端が大幅に見切れて取引先に不完全な
+//   FAXが届く事態になった。今後は PDF を生成した瞬間に画像配置を検証し、
+//   ページ境界をはみ出していたら例外を投げて送信そのものを阻止する。
+// ============================================================
+function _validatePdfPlacement(label, p){
+  const { canvas, sheetEl, pageW, pageH, x, y, w, h } = p;
+  const issues = [];
+  const sheetW = (sheetEl && sheetEl.offsetWidth) || 820;
+  // キャンバス幅が要素実寸の 2.5 倍以上 = 異常 (html2canvas の誤動作の兆候)
+  if(canvas && canvas.width > sheetW * 2.5){
+    issues.push(`キャンバス幅異常 (${canvas.width}px, 元要素 ${sheetW}px, scale=2 想定では ${sheetW*2}px 程度のはず)`);
+  }
+  // ★フェイルクローズ: 捕捉canvasのアスペクト比が要素実寸と乖離 = 右端クリップ等の
+  //   不完全捕捉。スケール非依存で検出し、不完全FAXの送信を物理的に阻止する。
+  //   (旧コードは過大のみ検知。過小=クリップを素通りさせ取引先誤送信に至った)
+  if(canvas && sheetEl){
+    const elW = sheetEl.scrollWidth || sheetEl.offsetWidth || 0;
+    const elH = sheetEl.scrollHeight || sheetEl.offsetHeight || 0;
+    if(elW > 0 && elH > 0 && canvas.width > 0 && canvas.height > 0){
+      const elAspect = elW / elH;
+      const cvAspect = canvas.width / canvas.height;
+      const ratio = cvAspect / elAspect;
+      if(ratio < 0.92){
+        issues.push(`捕捉幅不足(右端クリップの疑い): canvas比 ${cvAspect.toFixed(3)} < 要素比 ${elAspect.toFixed(3)} (${(ratio*100).toFixed(0)}%) / canvas ${canvas.width}x${canvas.height}, 要素 ${elW}x${elH}`);
+      } else if(ratio > 1.08){
+        issues.push(`捕捉幅過大(レイアウト崩れの疑い): canvas比 ${cvAspect.toFixed(3)} > 要素比 ${elAspect.toFixed(3)} (${(ratio*100).toFixed(0)}%)`);
+      }
+    }
+  }
+  // 画像の右端がページ右端を 0.5mm 以上はみ出していたら NG
+  if((x + w) > (pageW + 0.5)){
+    issues.push(`PDF右端はみ出し: 配置位置 ${x.toFixed(1)}mm + 幅 ${w.toFixed(1)}mm = ${(x+w).toFixed(1)}mm > ページ幅 ${pageW}mm`);
+  }
+  // 下端も同様
+  if((y + h) > (pageH + 0.5)){
+    issues.push(`PDF下端はみ出し: ${(y+h).toFixed(1)}mm > ページ高 ${pageH}mm`);
+  }
+  // 左端マイナス側
+  if(x < -0.5){
+    issues.push(`PDF左端マイナス: x=${x.toFixed(1)}mm`);
+  }
+  if(issues.length){
+    const msg = `❌ PDF整合性エラー (${label}):\n  ・` + issues.join('\n  ・') +
+      `\n\n取引先への誤送信を防ぐため PDF生成を中止しました。\n` +
+      `開発者: html2canvas に windowWidth/width を渡していないか確認してください。`;
+    console.error(msg);
+    try { toast('❌ PDF生成エラー (整合性チェック失敗) - コンソール参照', 'error'); } catch(_){}
+    throw new Error(msg);
+  }
+}
+
 function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -9158,6 +9707,56 @@ function downloadBlob(blob, filename){
   a.click();
   document.body.removeChild(a);
   setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
+
+// ============================================================
+// 送信前 実PDF確認 (FAX誤送信防止の最重要チェックポイント)
+//   送信に使う本物のPDF Blobをそのまま画面表示 → 人間が取引先と同じ物を見て確定
+//   HTMLプレビューと実PDFの乖離 (見切れバグの根本原因) をここで人間が必ず捕まえる
+//   resolve(true)=送信実行 / resolve(false)=中止
+// ============================================================
+function confirmPdfBeforeSend(pdfBlob, filename, meta){
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(pdfBlob);
+    const sizeKB = Math.round((pdfBlob.size||0)/1024);
+    const existing = document.getElementById('pdf-confirm-dialog');
+    if(existing) existing.remove();
+    const dialog = document.createElement('div');
+    dialog.id = 'pdf-confirm-dialog';
+    dialog.className = 'modal-overlay open';
+    dialog.style.zIndex = '500';
+    dialog.innerHTML = `
+      <div class="modal" style="max-width:880px;width:96vw">
+        <div class="modal-header" style="background:#FFF4E0">
+          <span class="modal-title">🔍 送信前確認 — この内容で送信されます</span>
+        </div>
+        <div class="modal-body" style="padding:12px">
+          <div style="background:#FFF7E6;border-left:4px solid var(--orange);padding:10px 12px;border-radius:4px;margin-bottom:10px;font-size:13px;line-height:1.7">
+            <b>⚠️ 取引先 (${esc((meta&&meta.to)||'')}) に届くのは下のPDFそのものです。</b><br>
+            右端の見切れ・項目の欠け・ページ数を必ず確認してから送信してください。
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#444;margin-bottom:8px">
+            <span>📄 <b>${esc(filename)}</b></span>
+            <span>容量: ${sizeKB} KB</span>
+            ${meta&&meta.docLabel?`<span>種別: ${esc(meta.docLabel)}</span>`:''}
+          </div>
+          <iframe src="${url}#toolbar=1&view=FitH" style="width:100%;height:62vh;border:1px solid #999;border-radius:6px;background:#fff"></iframe>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="pdf-confirm-cancel">✕ 中止 (送信しない)</button>
+          <div class="spacer"></div>
+          <button class="btn btn-primary" id="pdf-confirm-ok" style="background:#2D5F1F;border-color:#2D5F1F;font-weight:bold">✅ この内容でFAX送信する</button>
+        </div>
+      </div>`;
+    document.body.appendChild(dialog);
+    const cleanup = (result) => {
+      try { dialog.remove(); } catch(_){}
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      resolve(result);
+    };
+    dialog.querySelector('#pdf-confirm-cancel').onclick = () => cleanup(false);
+    dialog.querySelector('#pdf-confirm-ok').onclick = () => cleanup(true);
+  });
 }
 // Blob → Base64 (FileReader経由、末尾の data:...;base64, プレフィックスを除去)
 function blobToBase64(blob){
@@ -9227,6 +9826,133 @@ async function sendFaxViaEml(caseId, kind, to, filename){
   // ※ 生成後のガイドポップアップは廃止(ユーザー要望)
 }
 
+// FAXシート(手配書/請求書)を A4 1ページの検証済みPDF Blob にする共通生成。
+// eFax送信(sendFaxForCase) と 印刷/PDF(printSheetPdf) が同一実装を共有する
+// (重複実装はデグレの温床。単一の真実をここに集約)。
+// ⚠️ 改修時は CLAUDE.md 🚨「PDF生成パイプラインの鉄則」を厳守:
+//   Grid不可・windowWidthはscrollWidth(動的)・_validatePdfPlacement維持・1ページ合成。
+async function _genSheetPdfBlob(sheetEl, opt){
+  if(typeof html2pdf === 'undefined'){
+    throw new Error('PDFライブラリ未読込のため生成中止 (FAX誤送信防止)');
+  }
+  const pageW = 210, pageH = 297;  // A4 mm
+  const m = opt.margin || [10,12,10,12];
+  const availW = pageW - m[1] - m[3];
+  const availH = pageH - m[0] - m[2];
+  // ★2026-05-17 確定 (実機忠実再現で検証): windowWidth/width/windowHeight/height を
+  //   html2canvas に渡すとシート全体が左1/3に潰れ左クリップされ取引先に壊れたFAXが届く。
+  //   windowWidth 単独でも発生。4つとも渡さない場合のみ全面正常描画 (自社名フッター含む)。
+  //   2026-05-16 改修がこれらを再混入させたのが回帰の真因。サイズ系は絶対に追加するな。
+  const h2cBase = { scale: 2, useCORS: true, letterRendering: true };
+  // ★2026-05-17 確定: html2pdf 同梱 html2canvas は「ページ読込直後の初回呼び出し」が
+  //   不安定で、シート実寸より狭い canvas(右端クリップ)を返すことがある。2回目以降は安定。
+  //   対策: 捕捉アスペクトを要素実寸と照合し、乖離(=不完全捕捉)なら捨てて再捕捉(最大4回)。
+  //   良好な捕捉が得られなければ throw し fail-close (壊れFAX送信阻止)。
+  async function _captureOnce(){
+    const winH2C = window.html2canvas;
+    if(typeof winH2C === 'function'){
+      return await winH2C(sheetEl, h2cBase);
+    }
+    // toCanvas には html2canvas オプションのみ渡す。opt 全体(margin/jsPDF/
+    // pagebreak)を渡すと html2pdf がページ幾何でcanvasを歪め、アスペクトが
+    // 要素実寸とズレてアスペクト自己検証が4回とも棄却→生成不可になる
+    // (2026-05-17 確定)。ページ化は後段の自前合成+最終html2pdfで行う。
+    const w0 = html2pdf().set({ html2canvas: h2cBase }).from(sheetEl);
+    await w0.toCanvas();
+    return w0.prop && w0.prop.canvas;
+  }
+  let rawCanvas = null;
+  {
+    const elW = sheetEl.scrollWidth || sheetEl.offsetWidth || 0;
+    const elH = sheetEl.scrollHeight || sheetEl.offsetHeight || 0;
+    const elAspect = (elW > 0 && elH > 0) ? (elW / elH) : 0;
+    for(let attempt = 0; attempt < 4; attempt++){
+      let cv = null;
+      try { cv = await _captureOnce(); } catch(_){ cv = null; }
+      if(cv && cv.width && cv.height){
+        if(!elAspect){ rawCanvas = cv; break; }
+        const ratio = (cv.width / cv.height) / elAspect;
+        if(ratio >= 0.92 && ratio <= 1.08){ rawCanvas = cv; break; }
+        console.warn(`[FAX] 不完全捕捉を検出 (試行${attempt+1}/4): canvas ${cv.width}x${cv.height} 比${(cv.width/cv.height).toFixed(3)} vs 要素比${elAspect.toFixed(3)} → 再捕捉`);
+      }
+      await new Promise(r => setTimeout(r, 150));  // ★rAF不可(背面タブで停止)。setTimeoutで待つ
+    }
+  }
+  if(!rawCanvas || !rawCanvas.width || !rawCanvas.height){
+    throw new Error('PDF用canvas取得失敗のため生成中止 (FAX誤送信防止)');
+  }
+  const cw = rawCanvas.width, ch = rawCanvas.height;
+  const fit = Math.min(availW / cw, availH / ch);
+  const wMm = cw * fit, hMm = ch * fit;
+  const xMm = m[3] + (availW - wMm) / 2, yMm = m[0];
+  _validatePdfPlacement('PC手配書/請求書', { canvas: rawCanvas, sheetEl, pageW, pageH, x: xMm, y: yMm, w: wMm, h: hMm });
+  const PXMM = 300 / 25.4;
+  const pageCv = document.createElement('canvas');
+  pageCv.width = Math.round(pageW * PXMM);
+  pageCv.height = Math.round(pageH * PXMM) - 6;  // 丸め溢れの空白2ページ目防止
+  const g = pageCv.getContext('2d');
+  g.fillStyle = '#FFFFFF';
+  g.fillRect(0, 0, pageCv.width, pageCv.height);
+  g.drawImage(rawCanvas,
+    Math.round(xMm * PXMM), Math.round(yMm * PXMM),
+    Math.round(wMm * PXMM), Math.round(hMm * PXMM));
+  return await html2pdf().set({
+    margin: 0,
+    image: { type: 'jpeg', quality: 0.95 },
+    jsPDF: opt.jsPDF || { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all'] }
+  }).from(pageCv, 'canvas').outputPdf('blob');
+}
+
+// 印刷 / PDF保存: eFax と完全に同一の生成 (_genSheetPdfBlob) で
+// ページ充填の1枚PDFを作り、新規タブで開いて印刷/保存させる。
+// 旧 window.print() (@media print・上半分に圧縮されFAXと別様式) を廃止。
+window.printSheetPdf = async function(kind){
+  const sel = $(kind === 'instruction' ? 'is-select-case' : 'inv-select-case');
+  const caseId = sel ? sel.value : '';
+  if(!caseId){ toast('案件を選択してください','error'); return; }
+  const sheetEl = kind==='instruction'
+    ? document.querySelector('#instruction-body .sheet.handover')
+    : document.querySelector('#invoice-body .sheet.faxinv');
+  if(!sheetEl){ toast('プレビューが表示されていません','error'); return; }
+  toast('📄 PDFを生成しています...');
+  try {
+    const opt = {
+      margin: [10,12,10,12],
+      html2canvas: { scale: 2, useCORS:true, letterRendering:true },
+      jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+      pagebreak: { mode: ['avoid-all'] }
+    };
+    const blob = await _genSheetPdfBlob(sheetEl, opt);
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if(!w){ // ポップアップブロック時はダウンロードに退避
+      const c0 = findCaseById(caseId);
+      const fn = ((c0 && c0.caseNo) || 'document').replace(/[^A-Za-z0-9_\-]/g,'_') + '.pdf';
+      downloadBlob(blob, fn);
+    }
+    setTimeout(()=> URL.revokeObjectURL(url), 60000);
+    // 印刷/保存したかをユーザーに確認して履歴記録 (キャンセル時は記録しない)
+    const c = findCaseById(caseId);
+    if(c){
+      const ins = (typeof findInsurer==='function'? findInsurer(c.insurerId): null)||{};
+      const docName = kind==='instruction' ? '手配書' : '請求書';
+      const today = todayISO();
+      const dupe = (c.faxHistory||[]).some(h => h.ts && h.ts.startsWith(today) && h.kind === docName);
+      setTimeout(()=>{
+        if(dupe){ toast(`ℹ️ 本日すでに${docName}の送信履歴が登録済みです`); return; }
+        if(confirm(`📠 ${docName}を印刷/FAX送信しましたか?\n\nOK: 送信履歴に記録\nキャンセル: 記録しない`)){
+          recordFaxHistory(caseId, kind, ins.name||'保険会社', ins.fax||'(未登録)', '(印刷/PDF保存)');
+          if(typeof renderFaxHistoryList === 'function') renderFaxHistoryList(c);
+        }
+      }, 600);
+    }
+  } catch(e){
+    console.error(e);
+    toast('PDF生成失敗: '+e.message,'error');
+  }
+};
+
 // 📠 FAX送信(eFax経由)
 // 1) PDF を自動生成してダウンロード
 // 2) メーラーを空白件名・本文で起動(宛先のみ自動)
@@ -9278,59 +10004,26 @@ async function sendFaxForCase(kind){
     const isInstr = kind === 'instruction';
     const opt = {
       filename: filename,
-      margin: isInstr ? [5,5,5,5] : [10,10,10,10],
+      // FAX送信時の右端見切れ対策: eFaxは送信先FAX機で左右5-10mm程度クリップされる
+      // ことがあるため、PDFマージンを12mmに広げて安全領域を確保
+      margin: isInstr ? [10,12,10,12] : [10,12,10,12],
       html2canvas: { scale: 2, useCORS:true, letterRendering:true },
       jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
       pagebreak: { mode: ['avoid-all'] }
     };
     // 単ページ PDF 生成 (手配書・請求書共通)
-    //   ★ 2026-05-14 根本対策:
-    //     - 手配書はもちろん、請求書も基本は1ページ完結 (FAX相手の迷惑回避)
-    //     - 例外: 大量行 (合算請求書 30行超) で著しく縮小されてしまう場合のみ
-    //       html2pdf のマルチページに自動フォールバック
-    //     - 要素実寸を毎回測ることで右端見切れバグも防止
-    const genSinglePagePDF = async () => {
-      const html2canvasFn = window.html2canvas;
-      const jsPDFCls = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-      if(!html2canvasFn || !jsPDFCls){
-        // フォールバック: 通常のhtml2pdf
-        return await html2pdf().from(sheetEl).set(opt).output('blob');
-      }
-      // 実要素サイズを取得 (padding+border込み)。固定値ハードコード禁止
-      const elementWidth = Math.max(sheetEl.offsetWidth || 0, sheetEl.scrollWidth || 0) || 820;
-      const elementHeight = Math.max(sheetEl.offsetHeight || 0, sheetEl.scrollHeight || 0) || 0;
-      const canvas = await html2canvasFn(sheetEl, {
-        scale: 2,
-        useCORS: true,
-        letterRendering: true,
-        windowWidth: elementWidth,
-        width: elementWidth,
-        height: elementHeight || undefined
-      });
-      const pageW = 210, pageH = 297;  // A4 mm
-      const m = opt.margin;
-      const availW = pageW - m[1] - m[3];
-      const availH = pageH - m[0] - m[2];
-      const cw = canvas.width, ch = canvas.height;
-      const scale = Math.min(availW / cw, availH / ch);
-      // 縮小率が著しく低い (=元の幅の40%以下になる) なら、1ページに無理やり押し込むと読めない
-      // → マルチページに切り替えて適切に分割
-      const finalWidthMm = cw * scale;
-      const widthRatio = finalWidthMm / availW;   // 1.0=幅いっぱい使えてる, 小さいほど縦長で押し込まれている
-      if(widthRatio < 0.4){
-        console.warn('[genSinglePagePDF] 内容が縦長すぎるためマルチページにフォールバック', {widthRatio});
-        return await html2pdf().from(sheetEl).set(opt).output('blob');
-      }
-      const pdf = new jsPDFCls(opt.jsPDF);
-      const w = cw * scale;
-      const h = ch * scale;
-      const x = m[3] + (availW - w) / 2;
-      const y = m[0];
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, y, w, h);
-      return pdf.output('blob');
-    };
-    // 手配書・請求書とも基本は単ページ強制 (FAX相手への配慮で2ページ分割を回避)
-    const generatePdf = async () => await genSinglePagePDF();
+    //   - A4一枚に収まるよう自動で縮小
+    //   - 内容が縦長すぎる場合のみマルチページにフォールバック
+    //
+    // ⚠️ ⚠️ ⚠️ 絶対に追加してはいけないオプション ⚠️ ⚠️ ⚠️
+    //   html2canvas() の引数に windowWidth / width / height を明示指定するな!!
+    //   ブラウザの内部レイアウト計算がずれてキャンバスがページ幅を超えるサイズで
+    //   生成され、PDF右端が大幅に見切れて FAX 送信先に多大な迷惑がかかる。
+    //   2026-05-15 に同じバグを2度発生させ、取引先に不完全なFAXを送る事態になった。
+    //   この箇所を修正する人は: 検証関数 _validatePdfPlacement() を必ず維持すること
+    //   (PDF生成後に画像配置を自動チェックし、はみ出しなら例外を投げて送信を阻止)
+    // PDF生成は共通ヘルパーに集約 (印刷/PDFと同一実装・単一の真実)
+    const generatePdf = async () => await _genSheetPdfBlob(sheetEl, opt);
     // 共有フォルダが有効なら空き枝番を検出して filename を確定
     if(typeof dirHandle !== 'undefined' && dirHandle){
       const yr = new Date().getFullYear();
@@ -9363,7 +10056,9 @@ async function sendFaxForCase(kind){
         downloadBlob(pdfBlob, filename);
       }
     } else {
-      pdfBlob = await html2pdf().from(sheetEl).set(opt).output('blob');
+      // 共有フォルダ未設定時も検証済みパイプラインで生成 (旧 raw html2pdf は
+      // Grid右列クリップ経路。絶対に使わない)
+      pdfBlob = await generatePdf();
       downloadBlob(pdfBlob, filename);
     }
   } catch(e) {
@@ -9374,6 +10069,39 @@ async function sendFaxForCase(kind){
   // PDF blob をダイアログから参照できるようグローバルに保持
   window._lastFaxPdfBlob = pdfBlob;
   window._lastFaxPdfFilename = filename;
+
+  // ★ 送信前に実PDFを人間が確認 (見切れ・欠け・ページ数を最終チェック)
+  const okToSend = await confirmPdfBeforeSend(pdfBlob, filename, { to, docLabel });
+  if(!okToSend){
+    toast('FAX送信を中止しました (PDFは保存済み)', 'error');
+    return;
+  }
+
+  // ★2026-05-21 GAS-FAX (手配書・請求書とも対象。手配書で実機FAX綺麗着信を確認後に請求書解放):
+  //   confirmPdfBeforeSend で人間最終確認済の pdfBlob を GAS sendFax で直送=1タップ完結。
+  //   モバイル sendFaxSmart と同形ペイロード。GAS未設定/失敗時は下の .eml にフォールバック。
+  //   no-cors のため r.ok は「POST投出成功」のみ=実配信は別途確認要 (CLAUDE.md §4.9・既存制約)。
+  //   PDF生成3層防御/confirmPdfBeforeSend/recordFaxHistory は不変 (誤送信防止フローを壊さない)。
+  const _gasUrl = ((DATA.settings && DATA.settings.gasWebAppUrl) || '').trim();
+  if(_gasUrl){
+    try {
+      toast('📠 GAS経由で送信中...');
+      const _base64 = await blobToBase64(pdfBlob);
+      const _fromName = (DATA.settings && DATA.settings.tradeName) || 'ライムレンタカー';
+      const _r = await sendExternalNotify('sendFax', {
+        toFax: targetFax, subject: '', body: '{nocoverpage}',
+        filename, pdfBase64: _base64, caseNo: c.caseNo, fromName: _fromName
+      });
+      if(_r && _r.ok){
+        recordFaxHistory(caseId, kind, to, targetFax, filename);
+        toast(`📠 ${kind==='instruction'?'手配書':'請求書'} FAX送信完了 (GAS自動): ${filename} → ${to}`, true);
+        return;
+      }
+      console.warn('GAS sendFax 失敗 — .emlにフォールバック:', _r);
+    } catch(_eGas){
+      console.warn('GAS sendFax 例外 — .emlにフォールバック:', _eGas);
+    }
+  }
 
   try {
     await generateAndDownloadEml(to, '', '{nocoverpage}', pdfBlob, filename);
@@ -9486,9 +10214,10 @@ window.printAndRecordFax = function(kind){
       if(typeof renderFaxHistoryList === 'function') renderFaxHistoryList(c);
     }, 200);
   };
-  window.addEventListener('afterprint', onAfterPrint);
-  // 印刷を実行 (afterprint は印刷完了 / キャンセルの両方で発火)
-  if(kind === 'invoice') printInvoice(); else window.print();
+  // 印刷/PDFは eFax と同一生成 (printSheetPdf) に統一しページ充填の1枚PDFを開く。
+  // 旧 window.print()(@media print・上半分圧縮でFAXと別様式) は廃止。履歴記録は printSheetPdf 内で確認。
+  window.removeEventListener('afterprint', onAfterPrint);
+  printSheetPdf(kind);
   // afterprint をサポートしない古いブラウザ対策: 念のため2秒後にもタイムアウトでフックを外す
   setTimeout(() => { window.removeEventListener('afterprint', onAfterPrint); }, 30000);
 };
@@ -9542,6 +10271,226 @@ function gotoInvoiceById(id){
     const bb = $('inv-back-btn'); if(bb) bb.style.display = '';
   }, 60);
 }
+// ============================================================
+// NOC請求書 (休業補償料) — 案件から1タッチ生成
+// ============================================================
+const NOC_LAST_AMOUNT_KEY = 'limeOne_nocLastAmount';
+const NOC_DUE_DAYS = 10;  // NOC請求書の振込期日は発行日+10日
+
+// items: [{label, amount}] の配列。合計は自動計算
+function buildNOCInvoiceHTML(c, items){
+  const s = DATA.settings || {};
+  const today = todayISO();
+  const issueDateJP = fmtDateJP(today);
+  const dueJP = fmtDateJP(addDays(today, NOC_DUE_DAYS));
+  const name = c.driverName || c.contractorName || '';
+  const plate = [c.plateArea || '沖縄', c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join('　');
+  const vehName = c.vehicleName || c.vehicleClass || '';
+  const period = `${esc(fmtDateJP(c.useStart) || '―')} 〜 ${c.useEnd ? esc(fmtDateJP(c.useEnd)) : '<span style="color:#555">利用中</span>'}`;
+  const list = (items || []).filter(it => it && Number(it.amount) > 0);
+  const total = list.reduce((s2, it) => s2 + Number(it.amount || 0), 0);
+  // 明細行 (休業補償料には利用期間を併記)
+  const detailRows = list.map(it => {
+    const isNoc = it.label === '休業補償料';
+    const memo = isNoc ? `<span style="font-size:11px;color:#333">（利用期間: ${period}）</span>` : '';
+    return `<tr><td style="text-align:left;padding-left:14px">${esc(it.label)} ${memo}</td><td style="text-align:right;padding-right:14px;font-variant-numeric:tabular-nums">¥${fmtNum(Number(it.amount))}</td></tr>`;
+  }).join('');
+  return `<div class="sheet nocinv">
+    <div class="noc-meta">${esc(issueDateJP)}<br>${esc(c.caseNo || '')}</div>
+    <div class="noc-title">御 請 求 書</div>
+    <div class="noc-top">
+      <div>
+        <span class="noc-to-name">${esc(name)}　　様</span>
+      </div>
+      <div class="noc-issuer">
+        <div class="nm">${esc(s.companyName || '株式会社Hari Terrace')}</div>
+        <div class="tr">${esc(s.tradeName || 'ライムレンタカーOKINAWA')}</div>
+        <div>${esc(s.address || '沖縄県豊見城市与根326-6')}</div>
+        <div>TEL:${esc(s.tel || '098-901-3817')}　FAX:${esc(s.fax || '098-901-7116')}</div>
+        <div>登録番号：${esc(s.invoiceReg || 'T5360001022886')}</div>
+      </div>
+    </div>
+    <div class="noc-amt-row">
+      <span class="noc-amt-lbl">御請求金額</span>
+      <span class="noc-amt-val">¥${fmtNum(total)}</span>
+      <span style="font-size:24px">－</span>
+    </div>
+    <div class="noc-body-msg">　修理期間中は当該車両を貸し出すことができないため、誠に恐れ入りますが、休業補償料として上記金額のご負担をお願い申し上げます。</div>
+    <table class="noc-tbl">
+      <tr><th style="width:24%">受付番号</th><th style="width:30%">ご利用者</th><th>貸出車両</th></tr>
+      <tr>
+        <td>${esc(c.caseNo || '')}</td>
+        <td>${esc(name)}　様</td>
+        <td><span class="noc-veh-name">${esc(vehName)}</span>${esc(plate)}</td>
+      </tr>
+    </table>
+    <table class="noc-tbl">
+      <tr><th style="width:75%">摘要</th><th>金額</th></tr>
+      ${detailRows}
+      <tr style="border-top:2px solid #000"><td style="text-align:right;padding-right:14px;font-weight:bold">合計</td><td style="text-align:right;padding-right:14px;font-weight:bold;font-size:15px;font-variant-numeric:tabular-nums">¥${fmtNum(total)}</td></tr>
+    </table>
+    <table class="noc-bank-tbl">
+      <tr class="duedate"><th>振込期日</th><td>${esc(dueJP)}</td></tr>
+      <tr><th>振込先</th><td>${esc(s.bankName || '沖縄海邦銀行')}（0596）　${esc(s.bankBranch || '八重瀬支店')}（058）<br>${esc(s.bankType || '普通')}預金　${esc(s.bankNumber || '0003911')}　　${esc(s.bankHolder || 'カ）ハリテラス')}</td></tr>
+    </table>
+    <div class="noc-foot">恐れ入りますが、振込手数料につきましてはご負担いただきますようお願い申し上げます。</div>
+  </div>`;
+}
+
+// モーダル内の合計をライブ更新
+function _nocRecalcTotal(){
+  const n = id => Number(String(($(id)||{}).value || '0').replace(/[^0-9]/g,'')) || 0;
+  const total = n('noc-amt-noc') + n('noc-amt-clean') + n('noc-amt-other');
+  const el = $('noc-total');
+  if(el) el.textContent = '¥' + fmtNum(total);
+}
+// モーダル入力から items 配列を組み立て
+function _nocCollectItems(){
+  const n = id => Number(String(($(id)||{}).value || '0').replace(/[^0-9]/g,'')) || 0;
+  const items = [];
+  const noc = n('noc-amt-noc');
+  if(noc > 0) items.push({ label:'休業補償料', amount:noc });
+  const clean = n('noc-amt-clean');
+  if(clean > 0) items.push({ label:'清掃費用', amount:clean });
+  const otherLabel = (($('noc-other-label')||{}).value || '').trim();
+  const other = n('noc-amt-other');
+  if(otherLabel && other > 0) items.push({ label:otherLabel, amount:other });
+  return items;
+}
+
+// NOC請求書PDF生成 (genSinglePagePDF と同一ロジック・検証付き)
+async function _genNOCPdfBlob(sheetEl){
+  const opt = { margin: [10,12,10,12], jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } };
+  const html2canvasFn = window.html2canvas;
+  const jsPDFCls = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if(!html2canvasFn || !jsPDFCls){
+    return await html2pdf().from(sheetEl).set(opt).output('blob');
+  }
+  // ⚠️ html2canvas に windowWidth/width/height を渡すな (FAX右端見切れの原因)
+  const canvas = await html2canvasFn(sheetEl, { scale: 2, useCORS: true, letterRendering: true });
+  const pageW = 210, pageH = 297;
+  const m = opt.margin;
+  const availW = pageW - m[1] - m[3];
+  const availH = pageH - m[0] - m[2];
+  const cw = canvas.width, ch = canvas.height;
+  const scale = Math.min(availW / cw, availH / ch);
+  const pdf = new jsPDFCls(opt.jsPDF);
+  const w = cw * scale, h = ch * scale;
+  const x = m[3] + (availW - w) / 2;
+  const y = m[0];
+  _validatePdfPlacement('NOC請求書', { canvas, sheetEl, pageW, pageH, x, y, w, h });
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, y, w, h);
+  return pdf.output('blob');
+}
+
+// 案件モーダルから起動 → 入力モーダルを開く
+function genNOCInvoice(){
+  const id = editingCaseId;
+  if(!id){ toast('案件を保存してから実行してください', 'error'); return; }
+  const c = findCaseById(id);
+  if(!c){ toast('案件が見つかりません', 'error'); return; }
+  const name = c.driverName || c.contractorName || '';
+  const info = $('noc-case-info');
+  if(info) info.innerHTML = `<b>${esc(c.caseNo||'')}</b> ／ ${esc(name)} 様 ／ ${esc(c.vehicleName||c.vehicleClass||'')}`;
+  // 休業補償料の初期値: 前回値 or 20000
+  const last = localStorage.getItem(NOC_LAST_AMOUNT_KEY) || '20000';
+  if($('noc-amt-noc')) $('noc-amt-noc').value = last;
+  if($('noc-amt-clean')) $('noc-amt-clean').value = '0';
+  if($('noc-other-label')) $('noc-other-label').value = '';
+  if($('noc-amt-other')) $('noc-amt-other').value = '0';
+  _nocRecalcTotal();
+  openModalAndFocus('noc-input-modal', 'noc-amt-noc');
+}
+
+// PDF生成 (save: 共有フォルダ保存/DL, print: 印刷ダイアログ)
+async function execNOCInvoice(mode){
+  const id = editingCaseId;
+  if(!id){ toast('案件が特定できません', 'error'); return; }
+  const c = findCaseById(id);
+  if(!c){ toast('案件が見つかりません', 'error'); return; }
+  const items = _nocCollectItems();
+  if(items.length === 0){ toast('金額を入力してください', 'error'); return; }
+  // 休業補償料を前回値として記憶
+  const nocItem = items.find(it => it.label === '休業補償料');
+  if(nocItem) localStorage.setItem(NOC_LAST_AMOUNT_KEY, String(nocItem.amount));
+
+  // ★ NOC請求を案件に記録 (freee へ「雑収入」として出力するため)
+  //   再発行時は上書き。既にfreee出力済で金額が変わった場合は出力済フラグをリセットして再出力対象に。
+  const nocTotal = items.reduce((s2, it) => s2 + Number(it.amount || 0), 0);
+  const prevNoc = c.nocCharge || {};
+  const amountChanged = prevNoc.freeeExportedAt && Number(prevNoc.total||0) !== nocTotal;
+  c.nocCharge = {
+    total: nocTotal,
+    items: items.map(it => ({ label: it.label, amount: Number(it.amount) })),
+    issuedAt: todayISO(),
+    freeeExportedAt: amountChanged ? '' : (prevNoc.freeeExportedAt || ''),
+    freeeExportedAmount: amountChanged ? 0 : (prevNoc.freeeExportedAmount || 0)
+  };
+  c.updatedAt = Date.now();
+  if(typeof save === 'function') save();
+
+  // 画面外コンテナにレンダリング
+  let host = $('noc-render-host');
+  if(!host){
+    host = document.createElement('div');
+    host.id = 'noc-render-host';
+    host.style.cssText = 'position:fixed;left:-9999px;top:0;width:900px;background:#fff';
+    document.body.appendChild(host);
+  }
+  host.innerHTML = buildNOCInvoiceHTML(c, items);
+  const sheetEl = host.querySelector('.sheet.nocinv');
+  const safeNo = (c.caseNo || 'nocase').replace(/[^A-Za-z0-9_\-]/g, '_');
+
+  try {
+    // save/print 共通: まず確実なロジックで PDF Blob を生成 (アプリの@media print汚染を回避)
+    const blob = await _genNOCPdfBlob(sheetEl);
+    host.innerHTML = '';
+    if(mode === 'print'){
+      // 生成済みPDFを新規タブで開く → ブラウザのPDFビューアから印刷/保存
+      closeModal('noc-input-modal');
+      const url = URL.createObjectURL(blob);
+      const w = window.open(url, '_blank');
+      if(!w){
+        toast('ポップアップがブロックされました。ダウンロードします', 'error');
+        downloadBlob(blob, `NOC請求書_${safeNo}.pdf`);
+      } else {
+        toast('🖨️ PDFを開きました。ビューアの印刷ボタンから印刷できます');
+      }
+      setTimeout(()=>URL.revokeObjectURL(url), 60000);
+      return;
+    }
+    // mode === 'save'
+    const filename = `NOC請求書_${safeNo}.pdf`;
+    let savedTo = 'ダウンロード';
+    if(typeof dirHandle !== 'undefined' && dirHandle){
+      try {
+        const yr = new Date().getFullYear();
+        const subDir = await dirHandle.getDirectoryHandle('請求書' + yr, { create:true });
+        let fname = filename, idx = 1;
+        for(let g=0; g<1000; g++){
+          try { await subDir.getFileHandle(fname, {create:false}); idx++; fname = `NOC請求書_${safeNo}_${String(idx).padStart(2,'0')}.pdf`; }
+          catch(e){ if(e && e.name === 'NotFoundError') break; throw e; }
+        }
+        const fh = await subDir.getFileHandle(fname, { create:true });
+        const wr = await fh.createWritable();
+        await wr.write(blob); await wr.close();
+        savedTo = `📁 ${dirHandle.name}/請求書${yr}/${fname}`;
+      } catch(eDir){
+        console.warn('NOC共有フォルダ保存失敗 → ダウンロードにフォールバック:', eDir);
+        downloadBlob(blob, filename);
+      }
+    } else {
+      downloadBlob(blob, filename);
+    }
+    closeModal('noc-input-modal');
+    toast('✅ NOC請求書を作成しました (' + savedTo + ')');
+  } catch(e){
+    host.innerHTML = '';
+    console.error('NOC請求書生成エラー:', e);
+    toast('❌ NOC請求書生成エラー: ' + (e.message || e), 'error');
+  }
+}
+
 function gotoChecklist(){ const id = editingCaseId; if(!id) return; _returnToCaseId = id; closeCaseModal(); gotoChecklistById(id); }
 function gotoChecklistById(id){
   _returnToCaseId = id;
@@ -9699,6 +10648,7 @@ function renderInstruction(){
     <div class="sheet handover">
       <h1 class="ho-title">ライムレンタカー　手配報告書兼請求書</h1>
       <div class="ho-top">
+        <div class="ho-col">
         <table class="ho-hdr">
           <tr><th colspan="2" class="ho-hdr-title">保険会社</th></tr>
           <tr><td colspan="2" class="ho-bigname">${esc(ins.name||'')}</td></tr>
@@ -9707,6 +10657,8 @@ function renderInstruction(){
           <tr><th>FAX</th><td>${esc(c.insurerContactFax||ins.fax||'')}</td></tr>
           <tr><th>担当者</th><td>${esc(c.insurerContact||'')}　　様</td></tr>
         </table>
+        </div>
+        <div class="ho-col ho-col2">
         <table class="ho-hdr ho-hdr2">
           <tr><th>受付No</th><td class="ho-strong">${esc(c.caseNo||'')}</td></tr>
           <tr><th>受付日</th><td class="ho-strong">${fmtD(c.receivedAt)}</td></tr>
@@ -9715,6 +10667,7 @@ function renderInstruction(){
           <tr><th>住所</th><td class="ho-sm">${esc(s.address||'')}</td></tr>
           <tr><th>担当</th><td class="ho-strong">${esc(c.staff||'')}</td></tr>
         </table>
+        </div>
       </div>
       <div class="ho-section">■受付</div>
       <table class="ho-table">
@@ -10650,9 +11603,9 @@ function getRentalContractFrontHtml(c){
       <tr><th>登録番号</th><td colspan="3"><b>${f(plateStr.trim())}</b></td></tr>
       <tr><th>車種</th><td>${f((v&&v.name)||c.vehicleName||'')}</td><th>クラス</th><td>${f(c.vehicleClass||'')}</td></tr>
       <tr><th>貸渡開始日時</th><td>${f((c.useStart||'') + (c.useStartTime?(' '+c.useStartTime):'') || fmtDt(c.dispatchAt))}</td><th>返還予定日時</th><td>${f((c.useEnd||'') + (c.useEndTime?(' '+c.useEndTime):'') || fmtDt(c.useDeadline))}</td></tr>
-      <tr><th>受取場所</th><td colspan="3"><b>${f(c.pickupLocation||'-')}</b>${c.pickupDetail?'　'+f(c.pickupDetail):''}${c.departureFlight?'　／　出発便: '+f(c.departureFlight):''}</td></tr>
+      <tr><th>受取場所</th><td colspan="3"><b>${f(c.pickupLocation||'-')}</b>${c.pickupDetail?'　'+f(c.pickupDetail):''}${c.arrivalFlight?'　／　那覇着: '+f(c.arrivalFlight):''}${c.departureFlight?'　／　帰り便: '+f(c.departureFlight):''}</td></tr>
       <tr>
-        <th>単価 (1日税込)</th><td>${unitPrice? yen(unitPrice):'-'}</td>
+        <th>単価 (1日税込)</th><td><b>${Number(c.unitPrice||0)? yen(Number(c.unitPrice)):'-'}</b></td>
         <th>日数</th><td>${days? days+'日':'-'}</td>
       </tr>
       <tr>
@@ -10811,7 +11764,9 @@ function getRentalContractCss(){
     .rc-form .rc-total-th { background:#000; color:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact }
     .rc-form .rc-total-td { font-size:13pt; font-weight:bold; text-align:right; padding:4px 8px; background:#f0f0f0; -webkit-print-color-adjust:exact; print-color-adjust:exact }
     .rc-footer { text-align:center; font-size:8.5pt; color:#000; margin-top:4px; padding-top:3px; border-top:1px dashed #000 }
-    @media print { html, body { height:auto } }
+    /* 印刷時 見切れ対策: 貸渡証(表)を88%に縮小 (チェックシートと同方式の zoom)。
+       この印刷ウィンドウ専用CSS。損保(手配報告書兼請求書/.sheet.handover)には一切影響しない。 */
+    @media print { html, body { height:auto } .rental-contract { zoom: 0.88 } }
   `;
 }
 
@@ -11249,11 +12204,12 @@ function _issuerBlock(s){
 function _bankBlock(s, dueDate){
   // 振込期日は合計サマリ側(_totalsBlock / 単票版のtotalsRows)に移動済 (A案レイアウト改訂)
   // dueDate引数は後方互換のため残すが本関数では使用しない
+  // rowspan は html2canvas で潰れて見切れるため使わず、1セルに改行でまとめる
   return `<table class="fi-bank">
-      <tr><th rowspan="4">振込先</th><td>${esc(s.bankName||'')}</td><td style="text-align:center;width:70px">(${esc(s.bankCode||'0596')})</td></tr>
-      <tr><td>${esc(s.bankBranch||'')}</td><td style="text-align:center">(${esc(s.branchCode||'058')})</td></tr>
-      <tr><td colspan="2">${esc(s.bankType||'普通')}預金　${esc(s.bankNumber||'')}</td></tr>
-      <tr><td colspan="2"><b>${esc(s.bankHolder||'')}</b></td></tr>
+      <tr>
+        <th style="white-space:nowrap">振込先</th>
+        <td>${esc(s.bankName||'')}（${esc(s.bankCode||'0596')}）　${esc(s.bankBranch||'')}（${esc(s.branchCode||'058')}）<br>${esc(s.bankType||'普通')}預金　${esc(s.bankNumber||'')}　　<b>${esc(s.bankHolder||'')}</b></td>
+      </tr>
     </table>`;
 }
 function _totalsBlock(s, v){
@@ -12314,16 +13270,22 @@ function renderMasters(){
 function _renderMastersInner(){
   // insurers
   $('mst-insurer-tbody').innerHTML = DATA.insurers.map((i, idx)=>{
-    const cts = (i.contacts||[]).map((c,ci)=>`<div style="display:grid;grid-template-columns:24px 1.2fr 0.9fr 0.9fr 1fr 1fr 1.2fr 24px;gap:4px;margin-bottom:3px;align-items:center">
+    const cts = (i.contacts||[]).map((c,ci)=>{
+      // 自動追加された担当者で TEL未入力 = 「要確認」マーク (2026-05-25c)
+      const needsCheck = !!c.note && (/自動追加|要確認/.test(c.note)) && !((c.tel||'').trim());
+      const telEmpty = !((c.tel||'').trim());
+      const faxEmpty = !((c.fax||'').trim());
+      const emptyStyle = ';background:#fff8d6;border-color:#e0b400'; // 薄黄色+橙縁
+      return `<div style="display:grid;grid-template-columns:24px 1.2fr 0.9fr 0.9fr 1fr 1fr 1.2fr 24px;gap:4px;margin-bottom:3px;align-items:center" title="${needsCheck?'⚠️ 案件履歴から自動追加・電話番号要確認':''}">
       <input type="radio" name="def-${idx}" ${c.isDefault?'checked':''} title="既定にする" onchange="setDefaultContact(${idx},${ci})">
-      <input value="${esc(c.name||'')}" placeholder="氏名" oninput="DATA.insurers[${idx}].contacts[${ci}].name=this.value;saveDebounced()">
+      <input value="${esc(c.name||'')}" placeholder="氏名" oninput="DATA.insurers[${idx}].contacts[${ci}].name=this.value;saveDebounced()" style="${needsCheck?'border-left:3px solid #e0b400;padding-left:6px':''}">
       <input value="${esc(c.dept||'')}" placeholder="部署" oninput="DATA.insurers[${idx}].contacts[${ci}].dept=this.value;saveDebounced()">
       <input value="${esc(c.role||'')}" placeholder="役職" oninput="DATA.insurers[${idx}].contacts[${ci}].role=this.value;saveDebounced()">
-      <input value="${esc(c.tel||'')}" placeholder="TEL" oninput="DATA.insurers[${idx}].contacts[${ci}].tel=this.value;saveDebounced()">
-      <input value="${esc(c.fax||'')}" placeholder="FAX" oninput="DATA.insurers[${idx}].contacts[${ci}].fax=this.value;saveDebounced()">
+      <input value="${esc(c.tel||'')}" placeholder="${needsCheck?'⚠️TEL要確認':'TEL'}" oninput="DATA.insurers[${idx}].contacts[${ci}].tel=this.value;saveDebounced()" style="${telEmpty?emptyStyle:''}">
+      <input value="${esc(c.fax||'')}" placeholder="FAX" oninput="DATA.insurers[${idx}].contacts[${ci}].fax=this.value;saveDebounced()" style="${faxEmpty?emptyStyle:''}">
       <input value="${esc(c.email||'')}" placeholder="メール" oninput="DATA.insurers[${idx}].contacts[${ci}].email=this.value;saveDebounced()">
       <button class="icon-btn" title="この担当者を保険会社から削除" onclick="DATA.insurers[${idx}].contacts.splice(${ci},1);save();renderMasters()">✕</button>
-    </div>`).join('');
+    </div>`;}).join('');
     return `<tr>
       <td><input value="${esc(i.name||'')}" oninput="DATA.insurers[${idx}].name=this.value;saveDebounced()"></td>
       <td><input value="${esc(i.branch||'')}" oninput="DATA.insurers[${idx}].branch=this.value;saveDebounced()"></td>
@@ -13062,10 +14024,11 @@ async function sendExternalNotify(eventType, payload){
   try {
     const res = await fetch(url, {
       method: 'POST',
+      mode: 'no-cors',  // GAS Web App は CORS ヘッダを返さない。これが無いと POST は届くのに fetch が例外→「送信失敗」誤表示
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // preflight 回避
       body: JSON.stringify({ eventType, payload, ts: new Date().toISOString() })
     });
-    // GAS Web App は 200/302 を返す。レスポンス本文は取得できなくても POST は通る
+    // no-cors のため res は opaque (status 0)。POST 自体は GAS に届いて実行される
     return { ok: true, status: res.status };
   } catch(e){
     console.warn('[notify] failed:', e);
@@ -13073,51 +14036,213 @@ async function sendExternalNotify(eventType, payload){
   }
 }
 // 新規案件用ペイロード
-function _buildNewCasePayload(c){
-  const ins = c.insurerId ? (findInsurer(c.insurerId)||{}) : {};
+// ============================================================
+// 新方式: PC側で LINE 文面と Calendar 操作 を完成させ、GAS には実行だけを依頼
+//   payload: { line: { text }, calendar: { caseNoTag, delete, create } }
+//   文章を変えるたびに GAS 再デプロイする必要が無くなる
+// ============================================================
+function _buildNotifyPayload(c, eventType){
   return {
-    caseNo: c.caseNo || '',
-    category: c.category || '',                  // GAS側で表示有無は制御
-    contractorName: c.contractorName || '',       // 契約者 (LINE では非表示、参考保持)
-    driverName: c.driverName || c.contractorName || '', // 運転者 (常時表示)
-    driverTel: c.driverTel || '',
-    insurerName: ins.name || '',
-    insurerContact: c.insurerContact || '',       // 保険会社担当者
-    insurerContactTel: c.insurerContactTel || '',
-    dispatchAt: c.dispatchAt || '',
-    dispatchNote: c.dispatchNote || '',
-    dispatchToName: c.dispatchToName || '',
-    dispatchToAddress: c.dispatchToAddress || '',
-    dispatchToTel: c.dispatchToTel || '',
-    vehicleClass: c.vehicleClass || '',
-    vehicleName: c.vehicleName || '',
-    useStart: c.useStart || '',
-    useEnd: c.useEnd || '',
-    staff: c.staff || '',
-    status: c.status || '',
-    internalMemo: c.internalMemo || ''
+    line: { text: _buildLineMessage(c, eventType) },
+    calendar: _buildCalendarOp(c, eventType)
   };
 }
-// 回収予定日 payload
-function _buildRecoveryPayload(c){
-  const ins = c.insurerId ? (findInsurer(c.insurerId)||{}) : {};
-  return {
-    caseNo: c.caseNo || '',
-    contractorName: c.contractorName || '',       // 契約者 (LINE 非表示、参考保持)
-    driverName: c.driverName || c.contractorName || '', // 運転者 (常時表示)
-    driverTel: c.driverTel || '',
-    insurerName: ins.name || '',
-    insurerContact: c.insurerContact || '',       // 保険会社担当者
-    insurerContactTel: c.insurerContactTel || '',
-    recoveryDate: c.recoveryCalledAt || '',
-    vehicleClass: c.vehicleClass || '',
-    vehicleName: c.vehicleName || '',             // 車種
-    plate: [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' '),
-    dispatchToName: c.dispatchToName || '',       // 配車先 (回収元として参考)
-    dispatchToAddress: c.dispatchToAddress || '',
-    staff: c.staff || '',
-    internalMemo: c.internalMemo || ''            // 社内メモ
+
+function _buildLineMessage(c, eventType){
+  const ins = c.insurerId ? (findInsurer(c.insurerId) || {}) : {};
+  const driver = c.driverName || c.contractorName || '';
+  const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  // ★2026-05-22: 車両割当済(vehicleId あり)なら車両マスタの実車種名を優先 (モバイル版と同仕様)。
+  //   c.vehicleName は受付時のクラス表記(例「N-BOX 同等」)のまま更新されないことがあるため。
+  let _vehName = c.vehicleName || '';
+  if(c.vehicleId){
+    const _vm = ((DATA && DATA.vehicles) || []).find(v => v && v.id === c.vehicleId);
+    if(_vm && _vm.name) _vehName = _vm.name;
+  }
+  const vehicleStr = [_vehName, plate].filter(Boolean).join(' ') || c.vehicleClass || '';
+
+  // 配車予定の修飾: 「📞工場/運転者と時間調整中」「・予約備考」を付加
+  const pendingParts = [];
+  if(c.dispatchTimePending) pendingParts.push('工場');
+  if(c.dispatchTimePendingDriver) pendingParts.push('運転者');
+  const pendingSuffix = pendingParts.length ? ` (📞${pendingParts.join('・')}と時間調整中)` : '';
+  const noteSuffix = c.dispatchNote ? ' ・' + c.dispatchNote : '';
+  // ★2026-05-22: dispatchAt(YYYY-MM-DDTHH:MM) を「M/D(曜) HH:MM」に整形 (LINE可読性・モバイル版と同仕様)
+  const _fmtDispatchAt = (s) => {
+    if(!s) return s;
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if(!m) return s;
+    const d = (typeof parseDate === 'function') ? parseDate(s.slice(0,10)) : new Date(s.slice(0,10) + 'T00:00:00');
+    const wd = (d && !isNaN(d)) ? '日月火水木金土'[d.getDay()] : '';
+    return `${Number(m[2])}/${Number(m[3])}${wd?`(${wd})`:''} ${m[4]}:${m[5]}`;
   };
+  const dispatchLine = c.dispatchAt
+    ? '配車予定: ' + _fmtDispatchAt(c.dispatchAt) + pendingSuffix + noteSuffix
+    : (pendingParts.length ? '配車予定: ' + pendingParts.join('・') + 'と時間調整中' + noteSuffix : '');
+  if(eventType === 'newCase'){
+    return [
+      '🆕 新規案件登録',
+      '受付No: ' + (c.caseNo||''),
+      '区分: ' + (c.category||''),
+      dispatchLine,
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      c.insurerContact ? '保険会社担当: ' + c.insurerContact : '',
+      c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'updateCase'){
+    const st = c.status || '';
+    let head = '🔄 配車日時変更';
+    if(st === '配車済') head = '🚗 配車完了';
+    else if(st === '返却済') head = '🚛 回収完了';
+    else if(st === '手配書FAX済') head = '📠 手配書FAX送付済';
+    else if(st === 'キャンセル') head = '❌ 案件キャンセル';
+    return [
+      head,
+      '受付No: ' + (c.caseNo||''),
+      dispatchLine || '配車予定: (未設定)',
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.useStart ? '利用開始: ' + c.useStart : '',
+      c.useEnd ? '利用終了: ' + c.useEnd : '',
+      c.staff ? '担当: ' + c.staff : '',
+      '状態: ' + st
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'recoveryDateSet'){
+    return [
+      '🚛 回収予定日 登録',
+      '受付No: ' + (c.caseNo||''),
+      c.recoveryCalledAt ? '回収予定: ' + c.recoveryCalledAt : '',
+      driver ? '運転者: ' + driver : '',
+      c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'departed'){
+    return [
+      '🚀 配車先へ出発',
+      '受付No: ' + (c.caseNo||''),
+      driver ? '運転者: ' + driver : '',
+      c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
+      c.dispatchToTel ? 'TEL: ' + c.dispatchToTel : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'dispatchDone'){
+    return [
+      '🚗 配車完了',
+      '受付No: ' + (c.caseNo||''),
+      c.useStart ? '利用開始: ' + c.useStart : '',
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'recoveryDone'){
+    return [
+      '🚛 回収完了',
+      '受付No: ' + (c.caseNo||''),
+      c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      c.dispatchToName ? '回収元: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  if(eventType === 'cancelCase' || eventType === 'deleteCase'){
+    const head = eventType === 'cancelCase' ? '❌ 案件キャンセル' : '🗑️ 案件削除';
+    return [
+      head,
+      '受付No: ' + (c.caseNo||''),
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      c.staff ? '担当: ' + c.staff : ''
+    ].filter(Boolean).join('\n');
+  }
+  return '';
+}
+
+function _buildCalendarOp(c, eventType){
+  const caseNoTag = '案件No: ' + (c.caseNo||'');
+  if(eventType === 'newCase' || eventType === 'updateCase'){
+    // 削除対象: 🟦付き新形式 + 旧形式 (配車/前日配車/前々日配車) どちらもヒット
+    const op = { caseNoTag, delete: { kindPrefixes: ['🟦','配車','前日配車','前々日配車'] } };
+    if(c.dispatchAt){
+      const start = new Date(c.dispatchAt);
+      if(!isNaN(start.getTime())){
+        const end = new Date(start.getTime() + 60*60*1000);
+        const ins = c.insurerId ? (findInsurer(c.insurerId) || {}) : {};
+        const note = c.dispatchNote || '';
+        let prefix = '配車';
+        if(note.indexOf('前々日配車') !== -1) prefix = '前々日配車';
+        else if(note.indexOf('前日配車') !== -1) prefix = '前日配車';
+        op.create = {
+          title: '🟦 ' + [prefix, c.vehicleClass||'', c.dispatchToName||''].filter(Boolean).join(' '),
+          start: start.toISOString(),
+          end: end.toISOString(),
+          location: c.dispatchToAddress || '',
+          description: [
+            '案件No: ' + (c.caseNo||''),
+            '区分: ' + (c.category||''),
+            '保険会社: ' + (ins.name||''),
+            '運転者: ' + (c.driverName||c.contractorName||''),
+            '配車先: ' + (c.dispatchToName||''),
+            '配車先住所: ' + (c.dispatchToAddress||''),
+            '車両クラス: ' + (c.vehicleClass||''),
+            '担当: ' + (c.staff||'')
+          ].join('\n'),
+          color: 'BLUE'
+        };
+      }
+    }
+    return op;
+  }
+  if(eventType === 'recoveryDateSet'){
+    // 削除対象: 🟥付き新形式 + 旧形式 (回収) どちらもヒット
+    const op = { caseNoTag, delete: { kindPrefixes: ['🟥','回収'] } };
+    if(c.recoveryCalledAt){
+      const ymd = String(c.recoveryCalledAt).slice(0,10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(ymd)){
+        const start = new Date(ymd + 'T09:00:00');
+        const end = new Date(ymd + 'T10:00:00');
+        const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+        op.create = {
+          title: '🟥 ' + ['回収', c.vehicleClass||'', c.dispatchToName||''].filter(Boolean).join(' '),
+          start: start.toISOString(),
+          end: end.toISOString(),
+          location: c.dispatchToAddress || '',
+          description: [
+            '案件No: ' + (c.caseNo||''),
+            '契約者: ' + (c.contractorName||''),
+            '運転者: ' + (c.driverName||''),
+            '連絡先: ' + (c.driverTel||''),
+            '車両: ' + plate,
+            '配車先: ' + (c.dispatchToName||''),
+            '配車先住所: ' + (c.dispatchToAddress||''),
+            '担当: ' + (c.staff||'')
+          ].join('\n'),
+          color: 'RED'
+        };
+      }
+    }
+    return op;
+  }
+  if(eventType === 'cancelCase' || eventType === 'deleteCase'){
+    return { caseNoTag, delete: { kindPrefixes: [] } };  // 全イベント削除
+  }
+  return null;
 }
 // テスト送信
 async function testExternalNotify(){
@@ -13190,7 +14315,20 @@ function _handleLineWebhook(body){
   return _ok('webhook ok');
 }
 
-// ============ システムからの通知 ============
+// ============ システムからの通知 (薄いプロキシ・2026-05-15リファクタ) ============
+// 設計方針: PC/モバイル側で LINE 文面と カレンダー操作 を完全に組み立てて送る。
+//          GAS は LINE push と カレンダー操作の実行 だけを担当する。
+//          → 文章を変えるたびに GAS 再デプロイする必要が無くなる。
+//
+// 受け取る payload 形式:
+//   {
+//     line: { text: '完成済みの LINE 本文' },   // 任意
+//     calendar: {
+//       caseNoTag: '案件No: xxx',                // description で検索するタグ
+//       delete: { kindPrefixes: ['配車','前日配車','前々日配車'] },  // タイトル先頭マッチで削除
+//       create: { title, start(ISO), end(ISO), description, color('BLUE'|'RED'|...) }
+//     }
+//   }
 function _handleSystemEvent(data){
   const cfg = PropertiesService.getScriptProperties();
   const CAL = cfg.getProperty('CALENDAR_ID');
@@ -13199,28 +14337,20 @@ function _handleSystemEvent(data){
   const eventType = data.eventType || 'unknown';
   const p = data.payload || {};
   try {
-    if(eventType === 'newCase'){
-      _handleNewCase(p, CAL, LINE_TOKEN, LINE_GROUP_ID);
-    } else if(eventType === 'recoveryDateSet'){
-      _handleRecoveryDate(p, CAL, LINE_TOKEN, LINE_GROUP_ID);
-    } else if(eventType === 'updateCase'){
-      _handleUpdateCase(p, LINE_TOKEN, LINE_GROUP_ID);
-    } else if(eventType === 'departed'){
-      _handleDeparted(p, LINE_TOKEN, LINE_GROUP_ID);  // モバイル現場版: 出発通知
-    } else if(eventType === 'dispatchDone'){
-      _handleDispatchDone(p, LINE_TOKEN, LINE_GROUP_ID);  // モバイル現場版: 配車完了通知
-    } else if(eventType === 'recoveryDone'){
-      _handleRecoveryDone(p, LINE_TOKEN, LINE_GROUP_ID);  // モバイル現場版: 回収完了通知
-    } else if(eventType === 'cancelCase' || eventType === 'deleteCase'){
-      _handleCaseRemoval(eventType, p, LINE_TOKEN, LINE_GROUP_ID);
-    } else if(eventType === 'sendFax'){
-      return _handleSendFax(p);  // モバイル現場版: 手配書PDF添付メール → eFax
-    } else if(eventType === 'vehicleMaintenance'){
-      _handleVehicleMaintenance(p, LINE_TOKEN, LINE_GROUP_ID);  // 点検入庫通知
-    } else if(eventType === 'vehicleRestore'){
-      _handleVehicleRestore(p, LINE_TOKEN, LINE_GROUP_ID);      // 稼働可復帰通知
-    } else if(eventType === 'test'){
-      _handleTest(p, CAL, LINE_TOKEN, LINE_GROUP_ID);
+    // 専用ハンドラ: FAX送信 (添付PDFを扱うため汎用化困難)
+    if(eventType === 'sendFax'){
+      return _handleSendFax(p);
+    }
+    // テスト通知 (専用ハンドラ・GAS単独で動作確認できるよう保持)
+    if(eventType === 'test'){
+      return _handleTest(p, CAL, LINE_TOKEN, LINE_GROUP_ID);
+    }
+    // 汎用: LINE push と カレンダー操作
+    if(p.line && p.line.text){
+      _pushLine(LINE_TOKEN, LINE_GROUP_ID, p.line.text);
+    }
+    if(p.calendar && CAL){
+      _syncCalendar(p.calendar, CAL);
     }
   } catch(err){
     console.error(err);
@@ -13229,118 +14359,57 @@ function _handleSystemEvent(data){
   return _ok('done');
 }
 
-// ============ 案件更新通知 (モバイル現場版からの配車完了/回収完了等) ============
-function _handleUpdateCase(p, lineToken, lineGroup){
-  // status から通知タイトルを決定
-  const st = p.status || '';
-  let head = '🔄 案件更新';
-  if(st === '配車済') head = '🚗 配車完了';
-  else if(st === '返却済') head = '🚛 回収完了';
-  else if(st === '手配書FAX済') head = '📠 手配書FAX送付済';
-  else if(st === 'キャンセル') head = '❌ 案件キャンセル';
-  const lines = [
-    head,
-    '受付No: ' + (p.caseNo||''),
-    p.contractorName ? '契約者: ' + p.contractorName : '',
-    p.driverName && p.driverName !== p.contractorName ? '運転者: ' + p.driverName : '',
-    p.insurerName ? '保険会社: ' + p.insurerName : '',
-    p.dispatchToName ? '配車先: ' + p.dispatchToName : '',
-    p.vehicleClass ? 'クラス: ' + p.vehicleClass : '',
-    p.useStart ? '利用開始: ' + p.useStart : '',
-    p.useEnd ? '利用終了: ' + p.useEnd : '',
-    p.staff ? '担当: ' + p.staff : '',
-    '状態: ' + st
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
+// ============ カレンダー同期 (汎用) ============
+// c: { caseNoTag, delete:{kindPrefixes}, create:{title,start,end,description,color} }
+function _syncCalendar(c, calId){
+  if(!calId || !c) return;
+  const cal = CalendarApp.getCalendarById(calId);
+  if(!cal) return;
+  // 1. 該当案件の既存イベントを削除 (delete.kindPrefixes でタイトル先頭マッチ・空配列なら全件)
+  if(c.delete && c.caseNoTag){
+    _calendarDeleteByTag(cal, c.caseNoTag, c.delete.kindPrefixes || []);
+  }
+  // 2. 新規イベント作成
+  if(c.create && c.create.title && c.create.start && c.create.end){
+    try {
+      const ev = cal.createEvent(
+        c.create.title,
+        new Date(c.create.start),
+        new Date(c.create.end),
+        { description: c.create.description || '', location: c.create.location || '' }
+      );
+      if(c.create.color){
+        try { ev.setColor(CalendarApp.EventColor[c.create.color]); } catch(_){}
+      }
+    } catch(err){ console.error('createEvent failed:', err); }
+  }
 }
 
-// ============ モバイル現場版: 出発通知 ============
-function _handleDeparted(p, lineToken, lineGroup){
-  const lines = [
-    '🚀 配車先へ出発',
-    '受付No: ' + (p.caseNo||''),
-    p.contractorName ? '契約者: ' + p.contractorName : '',
-    p.dispatchToName ? '配車先: ' + p.dispatchToName : '',
-    p.dispatchToAddress ? '住所: ' + p.dispatchToAddress : '',
-    p.dispatchToTel ? 'TEL: ' + p.dispatchToTel : '',
-    p.vehicleName ? '車両: ' + p.vehicleName : '',
-    p.staff ? '担当: ' + p.staff : ''
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
+// 案件Noタグを description に持つイベントを、タイトル先頭プレフィックスでマッチしたものだけ削除
+// kindPrefixes が空配列 → 案件Noにマッチする全イベントを削除
+// 検索範囲: 1年前〜1年先
+function _calendarDeleteByTag(cal, caseNoTag, kindPrefixes){
+  if(!cal || !caseNoTag) return 0;
+  const now = new Date();
+  const from = new Date(now.getTime() - 365 * 24 * 3600 * 1000);
+  const to   = new Date(now.getTime() + 365 * 24 * 3600 * 1000);
+  let deleted = 0;
+  cal.getEvents(from, to).forEach(function(ev){
+    try {
+      if((ev.getDescription() || '').indexOf(caseNoTag) === -1) return;
+      const title = ev.getTitle() || '';
+      const match = !kindPrefixes || kindPrefixes.length === 0
+        || kindPrefixes.some(function(pre){ return title.indexOf(pre) === 0; });
+      if(match){ ev.deleteEvent(); deleted++; }
+    } catch(_){}
+  });
+  return deleted;
 }
 
-// ============ モバイル現場版: 配車完了通知 ============
-function _handleDispatchDone(p, lineToken, lineGroup){
-  const lines = [
-    '🚗 配車完了',
-    '受付No: ' + (p.caseNo||''),
-    p.contractorName ? '契約者: ' + p.contractorName : '',
-    p.driverName && p.driverName !== p.contractorName ? '運転者: ' + p.driverName : '',
-    p.insurerName ? '保険会社: ' + p.insurerName : '',
-    p.dispatchToName ? '配車先: ' + p.dispatchToName : '',
-    p.vehicleName ? '車両: ' + p.vehicleName : '',
-    p.useStart ? '利用開始: ' + p.useStart : '',
-    p.staff ? '担当: ' + p.staff : ''
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
-}
-
-// ============ モバイル現場版: 回収完了通知 ============
-function _handleRecoveryDone(p, lineToken, lineGroup){
-  const lines = [
-    '🚛 回収完了',
-    '受付No: ' + (p.caseNo||''),
-    p.contractorName ? '契約者: ' + p.contractorName : '',
-    p.insurerName ? '保険会社: ' + p.insurerName : '',
-    p.recoveryDate ? '回収日: ' + p.recoveryDate : '',
-    p.vehicleName ? '車両: ' + p.vehicleName : '',
-    p.plate ? 'ナンバー: ' + p.plate : '',
-    p.dispatchToName ? '回収元: ' + p.dispatchToName : '',
-    p.staff ? '担当: ' + p.staff : ''
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
-}
-
-// ============ 🔧 車両 点検入庫 通知 (モバイル現場版) ============
-function _handleVehicleMaintenance(p, lineToken, lineGroup){
-  const lines = [
-    '🔧 車両 点検入庫',
-    p.plate ? 'ナンバー: ' + p.plate : '',
-    p.name ? '車種: ' + p.name : '',
-    p.class ? 'クラス: ' + p.class : '',
-    p.by ? '操作者: ' + p.by : '',
-    '',
-    '※ 復帰までの間、配車割当はできません'
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
-}
-
-// ============ ✅ 車両 稼働可復帰 通知 (モバイル現場版) ============
-function _handleVehicleRestore(p, lineToken, lineGroup){
-  const lines = [
-    '✅ 車両 稼働可に復帰',
-    p.plate ? 'ナンバー: ' + p.plate : '',
-    p.name ? '車種: ' + p.name : '',
-    p.nextInspection ? '📅 次回点検: ' + p.nextInspection : '',
-    p.nextShaken ? '🚨 車検満了: ' + p.nextShaken : '',
-    p.note ? '点検内容: ' + p.note : '',
-    p.by ? '操作者: ' + p.by : ''
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
-}
-
-// ============ キャンセル/削除通知 ============
-function _handleCaseRemoval(eventType, p, lineToken, lineGroup){
-  const head = eventType === 'cancelCase' ? '❌ 案件キャンセル' : '🗑️ 案件削除';
-  const lines = [
-    head,
-    '受付No: ' + (p.caseNo||''),
-    p.contractorName ? '契約者: ' + p.contractorName : '',
-    p.insurerName ? '保険会社: ' + p.insurerName : '',
-    p.staff ? '担当: ' + p.staff : ''
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
-}
+// === 旧式ハンドラはすべて削除 === (PC/モバイル側で line.text と calendar を組み立てる新方式に統一)
+// 削除した関数: _handleNewCase, _handleUpdateCase, _handleRecoveryDate, _handleDeparted,
+//   _handleDispatchDone, _handleRecoveryDone, _handleVehicleMaintenance, _handleVehicleRestore,
+//   _handleCaseRemoval, _deleteCaseEventsByKind, _createDispatchEvent, _createRecoveryEvent
 
 // ============ モバイル現場版 FAX送信 (手配書PDF添付メール → eFax) ============
 //
@@ -13371,82 +14440,6 @@ function _handleSendFax(p){
     console.error('sendFax failed:', err);
     return _ok('error: ' + err);
   }
-}
-
-function _handleNewCase(p, calId, lineToken, lineGroup){
-  // 配車予定日が入っていればカレンダーに登録
-  if(p.dispatchAt && calId){
-    const cal = CalendarApp.getCalendarById(calId);
-    if(cal){
-      const start = new Date(p.dispatchAt);
-      const end = new Date(start.getTime() + 60*60*1000);  // 1時間
-      // タイトル: dispatchNote に「前々日配車 / 前日配車」タグがあればプレフィックスを切替
-      const note = p.dispatchNote || '';
-      let prefix = '配車';
-      if(note.indexOf('前々日配車') !== -1) prefix = '前々日配車';
-      else if(note.indexOf('前日配車') !== -1) prefix = '前日配車';
-      const title = [prefix, p.vehicleClass||'', p.dispatchToName||''].filter(Boolean).join(' ');
-      const desc = [
-        '案件No: ' + (p.caseNo||''),
-        '区分: ' + (p.category||''),
-        '保険会社: ' + (p.insurerName||''),
-        '運転者: ' + (p.driverName||''),
-        '配車先: ' + (p.dispatchToName||''),
-        '車両クラス: ' + (p.vehicleClass||''),
-        '担当: ' + (p.staff||'')
-      ].join('\\n');
-      const ev = cal.createEvent(title, start, end, { description: desc });
-      try { ev.setColor(CalendarApp.EventColor.BLUE); } catch(_){ }   // 🟦 配車=青
-    }
-  }
-  // LINE 通知
-  const lines = [
-    '🆕 新規案件登録',
-    '受付No: ' + (p.caseNo||''),
-    '区分: ' + (p.category||''),
-    '契約者: ' + (p.contractorName||''),
-    p.driverName && p.driverName !== p.contractorName ? '運転者: ' + p.driverName : '',
-    p.insurerName ? '保険会社: ' + p.insurerName : '',
-    p.dispatchAt ? '配車予定: ' + p.dispatchAt : '',
-    p.dispatchToName ? '配車先: ' + p.dispatchToName : '',
-    p.vehicleClass ? 'クラス: ' + p.vehicleClass : '',
-    p.staff ? '担当: ' + p.staff : ''
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
-}
-
-function _handleRecoveryDate(p, calId, lineToken, lineGroup){
-  // 回収予定日をカレンダー登録 (9:00-10:00)
-  if(p.recoveryDate && calId){
-    const cal = CalendarApp.getCalendarById(calId);
-    if(cal){
-      const start = new Date(p.recoveryDate + 'T09:00:00');
-      const end = new Date(p.recoveryDate + 'T10:00:00');
-      const title = ['回収', p.vehicleClass||'', p.dispatchToName||''].filter(Boolean).join(' ');
-      const desc = [
-        '案件No: ' + (p.caseNo||''),
-        '契約者: ' + (p.contractorName||''),
-        '運転者: ' + (p.driverName||''),
-        '連絡先: ' + (p.driverTel||''),
-        '車両: ' + (p.plate||''),
-        '担当: ' + (p.staff||'')
-      ].join('\\n');
-      const ev = cal.createEvent(title, start, end, { description: desc });
-      try { ev.setColor(CalendarApp.EventColor.RED); } catch(_){ }   // 🟥 回収=赤
-    }
-  }
-  // LINE 通知: 受付No / 回収予定 / 運転者 / 車両 / 配車先工場 / 担当者
-  const vehicleStr = [p.plate||'', (p.vehicleClass||p.vehicleName||'')].filter(Boolean).join(' ');
-  const lines = [
-    '🚛 回収予定日 登録',
-    '受付No: ' + (p.caseNo||''),
-    p.recoveryDate ? '回収予定: ' + p.recoveryDate : '',
-    p.driverName ? '運転者: ' + p.driverName : '',
-    vehicleStr ? '車両: ' + vehicleStr : '',
-    p.dispatchToName ? '配車先工場: ' + p.dispatchToName : '',
-    p.staff ? '担当者: ' + p.staff : ''
-  ].filter(Boolean);
-  _pushLine(lineToken, lineGroup, lines.join('\\n'));
 }
 
 function _handleTest(p, calId, lineToken, lineGroup){
@@ -13573,35 +14566,39 @@ function _tsToHuman(ts){
 }
 function _countCases(json){
   if(!json) return '―';
-  try{ const d = JSON.parse(json); return (d.cases||[]).length+'件'; }catch(e){ return '?'; }
+  // 圧縮形式('lz1:')なら展開してからカウント (2026-05-25f)
+  try{
+    const expanded = (typeof _lsDecompress === 'function') ? _lsDecompress(json) : json;
+    const d = JSON.parse(expanded);
+    return (d.cases||[]).length+'件';
+  } catch(e){ return '?'; }
 }
 async function getBackupStatus(){
   const status = [];
   // 1. 主データ (localStorage)
   try{
     const main = localStorage.getItem(LS_KEY);
+    const isLZ = !!(main && main.indexOf('lz1:')===0);
     status.push({
-      name:'💾 主データ', source:'localStorage',
+      name:'💾 主データ' + (isLZ?' (圧縮)':''), source:'localStorage',
       exists: !!main, size: main? main.length : 0,
       cases: main? _countCases(main) : '―',
       ts: DATA.lastModified ? Date.parse(DATA.lastModified) : null,
-      detail: main ? '正常' : '⚠️ 主データなし'
+      detail: main ? (isLZ?'正常 (lz-string圧縮)':'正常') : '⚠️ 主データなし'
     });
   }catch(e){ status.push({name:'💾 主データ', source:'localStorage', exists:false, size:0, detail:'❌ '+e.message}); }
-  // 2. 3世代バックアップ
-  for(const k of ['bk1','bk2','bk3']){
-    try{
-      const v = localStorage.getItem(LS_KEY+'_'+k);
-      const ts = Number(localStorage.getItem(LS_KEY+'_bkLastTs')||0);
-      status.push({
-        name:'🗂 '+k.toUpperCase()+' (10分以上前)', source:'localStorage',
-        exists: !!v, size: v? v.length : 0,
-        cases: _countCases(v),
-        ts: (k==='bk1'&&ts) ? ts : null,
-        detail: v ? '保持中' : '未生成'
-      });
-    }catch(e){ status.push({name:'🗂 '+k.toUpperCase(), exists:false, size:0, detail:'❌'}); }
-  }
+  // 2. バックアップ (2026-05-25f: 3世代→1世代に削減・bk2/bk3は廃止)
+  try{
+    const v = localStorage.getItem(LS_KEY+'_bk1');
+    const ts = Number(localStorage.getItem(LS_KEY+'_bkLastTs')||0);
+    status.push({
+      name:'🗂 BK1 (10分以上前)', source:'localStorage',
+      exists: !!v, size: v? v.length : 0,
+      cases: _countCases(v),
+      ts: ts || null,
+      detail: v ? '保持中' : '未生成'
+    });
+  }catch(e){ status.push({name:'🗂 BK1', exists:false, size:0, detail:'❌'}); }
   // 3. IndexedDB ミラー
   try{
     const mirror = await idbGet('dataMirror');
@@ -14277,6 +15274,8 @@ function applyAdminMode(){
   if(el) el.textContent = isAdmin()? '👑 管理者モード' : '👤 スタッフ';
 }
 async function initApp(){
+  // ★ナビにPC版バージョンを表示 (このブラウザが動かしているコードの版)
+  try { const _av = document.getElementById('app-version'); if(_av) _av.textContent = 'v' + APP_VERSION; } catch(_){}
   // Try auto-load data.json from same folder (works if served via http, not file://)
   const emptyAll = !DATA.cases.length && !DATA.vehicles.length && !DATA.insurers.length;
   if(emptyAll){
@@ -14478,6 +15477,11 @@ function freeeExportTargets(){
     if(c.isHistorical) continue;
     if(!c.useEnd) continue;
     if(c.useEnd.slice(0,10) < startDate) continue;
+    // ★一般貸渡(category='一般')は予約時にGRモーダルで返却予定日(useEnd)が入るため、
+    //   useEnd有無ゲートだと売上未計上の予約が freee 売上に混入する (2026-05 ユーザー報告)。
+    //   一般貸渡は「請求済」以降(請求確定後)のみ出力対象とする。
+    //   損保/Mon/工場/その他は従来通り useEnd ゲート(回収完了で初めてuseEndが入る)で不変。
+    if(c.category === '一般' && !['請求済','入金済'].includes(c.status)) continue;
     const amounts = (typeof calcAmounts === 'function') ? calcAmounts(c) : null;
     const currentAmount = amounts ? Math.round(amounts.total || 0) : Number(c.invoiceAmount || 0);
     if(c.freeeExportedAt){
@@ -14490,6 +15494,18 @@ function freeeExportTargets(){
     }
     if(currentAmount <= 0) continue; // 金額0は出さない
     targets.push({ c, amount: currentAmount });
+  }
+  // ★ NOC休業補償料 (雑収入) を別取引として追加
+  //   issuedAt >= startDate / キャンセル除外 / NOC未エクスポート のもの
+  for(const c of DATA.cases){
+    if(c.status === 'キャンセル') continue;
+    if(c.isHistorical) continue;
+    const noc = c.nocCharge;
+    if(!noc || !(Number(noc.total) > 0)) continue;
+    const nocDate = (noc.issuedAt || '').slice(0,10);
+    if(!nocDate || nocDate < startDate) continue;
+    if(noc.freeeExportedAt) continue;  // NOC出力済はスキップ
+    targets.push({ c, amount: Math.round(Number(noc.total)), isNoc: true });
   }
   return { startDate, targets, adjustWarnings };
 }
@@ -14610,17 +15626,54 @@ function freeeFormatRow(t){
   const amount = t.amount;
   const ins = (typeof findInsurer === 'function' ? findInsurer(c.insurerId) : null) || {};
   const partnerName = ins.name || '';
-  const driver = c.driverName || c.contractorName || '';
   const insContact = c.insurerContact || '';
+  const fmtJp = d => d ? d.replace(/-/g,'/') : '';
+  // v25w/x: 部門は freee設定値を使用 (デフォルト「代車レンタカー」)
+  // ★一般貸渡(category='一般')は部門「一般レンタカー」固定。損保等は従来の設定値のまま
+  //   (2026-05 ユーザー指定)。freee側で部門名を変える場合はこのリテラルを更新。
+  const dept = (c.category === '一般')
+    ? '一般レンタカー'
+    : ((DATA.settings && DATA.settings.freeeDepartment) || '代車レンタカー');
+
+  // ★ NOC休業補償料は「雑収入」として出力 (発生日=NOC発行日, 管理番号に -NOC を付与)
+  if(t.isNoc){
+    const noc = c.nocCharge || {};
+    const issued = (noc.issuedAt || todayISO()).slice(0,10);
+    const due = addDays(issued, NOC_DUE_DAYS);
+    const itemNames = (noc.items || []).map(it => it.label).join('・') || '休業補償料';
+    const nocDriver = c.driverName || c.contractorName || '';
+    // 取引先は一律「休業補償」、備考に運転手名を含める
+    const nocMemo = ['NOC', c.caseNo || '', nocDriver, itemNames].filter(Boolean).join(' / ');
+    return [
+      '収入',                          // 収支区分
+      (c.caseNo || '') + '-NOC',       // 管理番号 (本体売上と区別)
+      fmtJp(issued),                   // 発生日 = NOC発行日
+      fmtJp(due),                      // 決済期日 = 発行日+10日
+      '',                              // 取引先コード
+      '休業補償',                      // 取引先 ← NOCは一律「休業補償」
+      '雑収入',                        // 勘定科目 ← 売上高ではなく雑収入
+      '課税売上10%',                   // 税区分
+      String(amount),                  // 金額
+      '内税',                          // 税計算区分
+      '',                              // 税額
+      nocMemo,                         // 備考
+      '',                              // 品目
+      dept,                            // 部門
+      '', '', '', '',                  // メモタグ, セグメント1-3
+      '', '', ''                       // 決済日, 決済口座, 決済金額
+    ];
+  }
+
+  // 通常の売上 (売上高)
   // 摘要: 受付No / 保険会社名 / 担当者名
   const memoParts = [c.caseNo || '', partnerName, insContact].filter(Boolean);
   const memo = memoParts.join(' / ');
-  // freee 取引(収入)CSV: シンプル形式
   // 収支区分,管理番号,発生日,決済期日,取引先コード,取引先,勘定科目,税区分,金額,税計算区分,税額,備考,品目,部門,メモタグ,セグメント1,セグメント2,セグメント3,決済日,決済口座,決済金額
-  const dueDate = c.paymentDueAt || (c.invoiceIssuedAt ? addDays(c.invoiceIssuedAt, DATA.settings.payDueDays||14) : '');
-  const fmtJp = d => d ? d.replace(/-/g,'/') : '';
-  // v25w/x: 部門は freee設定値を使用 (デフォルト「代車レンタカー」)
-  const dept = (DATA.settings && DATA.settings.freeeDepartment) || '代車レンタカー';
+  // 決済期日(振込期日): paymentDueAt → 請求発行日+N日 → 利用終了日+N日 → 今日+N日 の順でフォールバック
+  //   (請求未発行でfreee出力する運用があるため、空欄にせず必ず値を入れる)
+  const _payN = DATA.settings.payDueDays || 14;
+  const dueDate = c.paymentDueAt
+    || addDays(c.invoiceIssuedAt || (c.useEnd ? c.useEnd.slice(0,10) : '') || todayISO(), _payN);
   return [
     '収入',                          // 収支区分
     c.caseNo || '',                  // 管理番号
@@ -14700,16 +15753,19 @@ function openFreeeExportDialog(){
         <tbody>
           ${targets.map(t => {
             const ins = findInsurer(t.c.insurerId) || {};
-            return `<tr style="border-top:1px solid #eee">
-              <td style="padding:5px 4px;text-align:center"><input type="checkbox" class="freee-row-check" data-id="${esc(t.c.id)}" data-amount="${t.amount}" onchange="updateFreeeCheckSummary()"></td>
-              <td style="padding:5px 8px"><b>${esc(t.c.caseNo||'')}</b></td>
-              <td style="padding:5px 8px">${fmtDate(t.c.useEnd)}</td>
+            const isNoc = !!t.isNoc;
+            const dateStr = isNoc ? fmtDate((t.c.nocCharge||{}).issuedAt) : fmtDate(t.c.useEnd);
+            const nocBadge = isNoc ? ` <span style="background:#7C3AED;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;font-weight:bold">NOC雑収入</span>` : '';
+            return `<tr style="border-top:1px solid #eee${isNoc?';background:#F5F3FF':''}">
+              <td style="padding:5px 4px;text-align:center"><input type="checkbox" class="freee-row-check" data-id="${esc(t.c.id)}" data-amount="${t.amount}" data-kind="${isNoc?'noc':'sales'}" onchange="updateFreeeCheckSummary()"></td>
+              <td style="padding:5px 8px"><b>${esc(t.c.caseNo||'')}</b>${nocBadge}</td>
+              <td style="padding:5px 8px">${dateStr}</td>
               <td style="padding:5px 8px">${esc(ins.name||'')}</td>
               <td style="padding:5px 8px">${esc(t.c.insurerContact||'')}</td>
               <td style="padding:5px 8px;text-align:right;font-weight:bold">${yen(t.amount)}</td>
               <td style="padding:5px 8px;text-align:center;white-space:nowrap">
                 <button class="btn btn-xs btn-outline" style="background:#FFF7E6;border-color:#E69E50;color:#7A4500;font-size:10px;padding:3px 6px;margin-right:3px" onclick="openFreeeDealSearch('${escJs(t.c.caseNo||'')}')" title="freeeで取引を確認">🔗</button>
-                <button class="btn btn-xs btn-orange" style="font-size:10px;padding:3px 8px;background:#E67E22;color:#fff;border:none" onclick="markSingleFreeeExported('${t.c.id}', ${t.amount})" title="この案件はすでにfreeeに登録済みとして記録し、この一覧から除外します">📌 登録済にする</button>
+                <button class="btn btn-xs btn-orange" style="font-size:10px;padding:3px 8px;background:#E67E22;color:#fff;border:none" onclick="markSingleFreeeExported('${t.c.id}', ${t.amount}, '${isNoc?'noc':'sales'}')" title="この取引はすでにfreeeに登録済みとして記録し、この一覧から除外します">📌 登録済にする</button>
               </td>
             </tr>`;
           }).join('')}
@@ -14778,7 +15834,7 @@ function downloadFreeeCsv(){
     setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
   }
   // 対象IDを保持し、ダイアログをマーク待ち画面に切り替える
-  window._freeePendingMark = targets.map(t => ({ id: t.c.id, amount: t.amount }));
+  window._freeePendingMark = targets.map(t => ({ id: t.c.id, amount: t.amount, kind: t.isNoc ? 'noc' : 'sales' }));
   showFreeeMarkPendingDialog(targets.length, filename);
   toast(`📥 CSV出力: ${targets.length}件 (まだマーク未実施)`, true);
   setTimeout(() => {
@@ -14844,18 +15900,28 @@ function markFreeeExported(){
   pending.forEach(p => {
     const c = findCaseById(p.id);
     if(!c) return;
-    c.freeeExportedAt = today;
-    c.freeeExportedAmount = p.amount;
+    if(p.kind === 'noc'){
+      // NOC休業補償料(雑収入)の出力済マーク
+      if(!c.nocCharge) c.nocCharge = {};
+      c.nocCharge.freeeExportedAt = today;
+      c.nocCharge.freeeExportedAmount = p.amount;
+    } else {
+      c.freeeExportedAt = today;
+      c.freeeExportedAmount = p.amount;
+    }
     c.updatedAt = now;  // 共有モードのマージで他PCの古い版に負けないように
-    targetIds.push(p.id);
+    targetIds.push({ id: p.id, kind: p.kind });
     marked++;
   });
   save();
-  // 検証: マーク後、実際に freeeExportedAt が設定されているか確認
+  // 検証: マーク後、実際に出力済フラグが設定されているか確認 (NOCは nocCharge側を見る)
   const notMarked = [];
-  targetIds.forEach(id => {
-    const v = findCaseById(id);
-    if(!v || !v.freeeExportedAt) notMarked.push((v && v.caseNo) || id);
+  targetIds.forEach(tg => {
+    const v = findCaseById(tg.id);
+    const ok = tg.kind === 'noc'
+      ? !!(v && v.nocCharge && v.nocCharge.freeeExportedAt)
+      : !!(v && v.freeeExportedAt);
+    if(!ok) notMarked.push((v && v.caseNo) || tg.id);
   });
   if(notMarked.length > 0){
     toast(`⚠️ ${marked}件マークしましたが、${notMarked.length}件 がデータに反映されていません: ${notMarked.slice(0,3).join(',')}`, 'error');
@@ -14869,21 +15935,32 @@ function markFreeeExported(){
 }
 
 // v2026.04.29br: 単一案件を「freee登録済」として記録 (ID重複バグの後遺症対策)
-function markSingleFreeeExported(caseId, amount){
+//   kind='noc' の場合は NOC休業補償料(雑収入)側をマーク
+function markSingleFreeeExported(caseId, amount, kind){
   const c = findCaseById(caseId);
   if(!c){ toast('案件が見つかりません', 'error'); return; }
-  if(!confirm(`📌 案件 ${c.caseNo} を「freee登録済」としてマークします。\n金額: ¥${(Number(amount)||0).toLocaleString()}\n\n以降の「freee用CSV出力」対象から除外されます。\n\nOKでマーク / キャンセルでやめる`)) return;
-  c.freeeExportedAt = todayISO();
-  c.freeeExportedAmount = Number(amount) || 0;
+  const isNoc = kind === 'noc';
+  const label = isNoc ? `案件 ${c.caseNo} の NOC(雑収入)` : `案件 ${c.caseNo}`;
+  if(!confirm(`📌 ${label} を「freee登録済」としてマークします。\n金額: ¥${(Number(amount)||0).toLocaleString()}\n\n以降の「freee用CSV出力」対象から除外されます。\n\nOKでマーク / キャンセルでやめる`)) return;
+  if(isNoc){
+    if(!c.nocCharge) c.nocCharge = {};
+    c.nocCharge.freeeExportedAt = todayISO();
+    c.nocCharge.freeeExportedAmount = Number(amount) || 0;
+  } else {
+    c.freeeExportedAt = todayISO();
+    c.freeeExportedAmount = Number(amount) || 0;
+  }
   c.updatedAt = Date.now();  // 共有モードのマージで他PCの古い版に負けないように
   save();
   // 検証: マークが本当に効いたか直後に確認
   const verify = findCaseById(caseId);
-  if(!verify || !verify.freeeExportedAt){
+  const ok = isNoc ? !!(verify && verify.nocCharge && verify.nocCharge.freeeExportedAt)
+                    : !!(verify && verify.freeeExportedAt);
+  if(!ok){
     toast(`⚠️ ${c.caseNo} のマークに失敗 (データ保存に問題あり、サポートに連絡を)`, 'error');
     return;
   }
-  toast(`✅ ${c.caseNo} を「登録済」にマークしました (${verify.freeeExportedAt})`, true);
+  toast(`✅ ${label} を「登録済」にマークしました`, true);
   // ダイアログを再描画
   const d = document.getElementById('freee-export-dialog');
   if(d){ d.remove(); openFreeeExportDialog(); }
@@ -14927,18 +16004,28 @@ function bulkMarkFreeeExported(){
   checks.forEach(cb => {
     const c = findCaseById(cb.dataset.id);
     if(!c){ failed.push(cb.dataset.id+' (案件不在)'); return; }
-    c.freeeExportedAt = today;
-    c.freeeExportedAmount = Number(cb.dataset.amount)||0;
+    const isNoc = cb.dataset.kind === 'noc';
+    if(isNoc){
+      if(!c.nocCharge) c.nocCharge = {};
+      c.nocCharge.freeeExportedAt = today;
+      c.nocCharge.freeeExportedAmount = Number(cb.dataset.amount)||0;
+    } else {
+      c.freeeExportedAt = today;
+      c.freeeExportedAmount = Number(cb.dataset.amount)||0;
+    }
     c.updatedAt = now;  // 共有モードのマージで他PCの古い版に負けないように
-    targetIds.push(cb.dataset.id);
+    targetIds.push({ id: cb.dataset.id, kind: cb.dataset.kind });
     marked++;
   });
   save();
-  // 検証: マーク後、実際に freeeExportedAt が設定されているか確認
+  // 検証: マーク後、実際に出力済フラグが設定されているか確認 (NOCは nocCharge側)
   const notMarked = [];
-  targetIds.forEach(id => {
-    const v = findCaseById(id);
-    if(!v || !v.freeeExportedAt) notMarked.push((v && v.caseNo) || id);
+  targetIds.forEach(tg => {
+    const v = findCaseById(tg.id);
+    const ok = tg.kind === 'noc'
+      ? !!(v && v.nocCharge && v.nocCharge.freeeExportedAt)
+      : !!(v && v.freeeExportedAt);
+    if(!ok) notMarked.push((v && v.caseNo) || tg.id);
   });
   if(notMarked.length > 0){
     toast(`⚠️ ${marked}件マークしましたが、保存後に ${notMarked.length}件 が消失: ${notMarked.slice(0,3).join(',')}${notMarked.length>3?'...':''}`, 'error');
@@ -15682,10 +16769,11 @@ defTest('回収完了 → 状態自動進行', () => {
 
 defTest('バージョン情報', () => {
   const navBrand = document.querySelector('.nav-brand');
-  if(!navBrand || !navBrand.textContent.match(/v\d{4}\.\d{2}\.\d{2}/)) {
+  // ★2026-05-22: APP_VERSION をダッシュ形式(2026-05-22b)に統一したため regex も両対応に
+  if(!navBrand || !navBrand.textContent.match(/v\d{4}[-.]\d{2}[-.]\d{2}/)) {
     return { status: 'fail', detail: 'nav-brand のバージョン表記が見つからない', fix: '🛠 開発者連絡', category: 'code' };
   }
-  return { status: 'pass', detail: navBrand.textContent.match(/v\d{4}\.\d{2}\.\d{2}\w*/)[0] };
+  return { status: 'pass', detail: navBrand.textContent.match(/v\d{4}[-.]\d{2}[-.]\d{2}\w*/)[0] };
 });
 
 // --- Test: データラウンドトリップ完全性 (v2026.04.29bg)
@@ -16170,7 +17258,7 @@ function copySelfTestReport(){
   const results = window._lastSelfTestResults || [];
   if(!results.length){ toast('テスト結果がありません','error'); return; }
   const verEl = document.querySelector('.nav-brand');
-  const ver = (verEl && verEl.textContent.match(/v\d{4}\.\d{2}\.\d{2}\w*/) || ['unknown'])[0];
+  const ver = (verEl && verEl.textContent.match(/v\d{4}[-.]\d{2}[-.]\d{2}\w*/) || ['unknown'])[0];
   const lines = [
     '【動作テストレポート】',
     `バージョン: ${ver}`,
