@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="レンタカー管理">
+<meta name="apple-mobile-web-app-title" content="LIME One">
+<link rel="manifest" href="lime-manifest.json">
+<meta name="theme-color" content="#16a34a">
+<link rel="apple-touch-icon" href="lime-512.png">
+<meta name="application-name" content="LIME One">
 <title>LIME One</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="window._cdnFailed=window._cdnFailed||[];window._cdnFailed.push('XLSX(Excel)')"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" onerror="window._cdnFailed=window._cdnFailed||[];window._cdnFailed.push('Chart.js(グラフ)')"></script>
@@ -2818,7 +2822,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-05-29d';
+const APP_VERSION = '2026-05-29e';
 const STATUSES = ['受付','配車予定','配車済','利用中','回収連絡','手配書FAX済','返却済','仮請求','請求済','入金済','キャンセル'];
 const STATUS_LABEL = {
   '受付':'受付','確認中':'確認連絡','配車予定':'配車予定','配車済':'配車完了','利用中':'利用中',
