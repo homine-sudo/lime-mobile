@@ -392,7 +392,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29q';
+const APP_VERSION = '2026-05-29r';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -558,6 +558,8 @@ function switchTab(t){
   document.getElementById('fab').style.display = (t==='home'||t==='jobs')?'flex':'none';
   if(t==='home') renderHome(); else if(t==='jobs') renderJobs(); else if(t==='billing') renderBilling(); else if(t==='master') renderMaster();
   document.querySelector('.m-main').scrollTop=0;
+  // 開いた瞬間に最新取得(端末間のステータスズレ防止)。データ系タブのみ・rev変化時のみ実取得(_autoPull内で同期中/編集中/非表示はスキップ)
+  if(typeof DBX_TOKEN!=='undefined' && DBX_TOKEN && (t==='home'||t==='jobs'||t==='billing')){ try{ _autoPull(); }catch(e){} }
 }
 function refresh(){ if(curTab==='home')renderHome(); else if(curTab==='jobs')renderJobsList(); else if(curTab==='billing')renderBilling(); else if(curTab==='master')renderMaster(); }
 function stamp(j){ j.updatedAt=Date.now(); j.updatedBy=DATA.settings.person||'—'; }
