@@ -79,6 +79,13 @@ a{color:var(--accent-light);text-decoration:none}
 .m-reload-btn.spinning #reload-ic{display:inline-block;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .m-header-btn:active{background:#dbe7fd}
+.m-update-banner{display:none;align-items:center;gap:8px;flex-shrink:0;background:linear-gradient(135deg,#FBBF24,#F39F18);color:#3A2400;padding:9px 13px;font-size:12.5px;font-weight:700;border-bottom:1px solid rgba(0,0,0,.1);box-shadow:0 2px 6px rgba(243,159,24,.22)}
+.m-update-banner.active{display:flex}
+.m-update-banner .m-ub-ico{font-size:18px;line-height:1}
+.m-update-banner .m-ub-msg{flex:1;letter-spacing:.02em}
+.m-update-banner .m-ub-btn{background:rgba(255,255,255,.6);color:#3A2400;border:none;padding:6px 13px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer}
+.m-update-banner .m-ub-btn:active{transform:scale(.94)}
+.m-update-banner .m-ub-btn.primary{background:var(--accent-deep);color:#fff}
 
 .m-main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 12px 96px}
 .page{display:none;animation:fadeIn .22s}
@@ -372,6 +379,12 @@ a{color:var(--accent-light);text-decoration:none}
 </head>
 <body>
 <div id="app">
+  <div class="m-update-banner" id="m-update-banner">
+    <span class="m-ub-ico">🆕</span>
+    <span class="m-ub-msg">新しいバージョンがあります</span>
+    <button class="m-ub-btn primary" onclick="forceAppUpdate()">更新</button>
+    <button class="m-ub-btn" onclick="dismissUpdateBanner()" aria-label="閉じる">✕</button>
+  </div>
   <header class="m-header">
     <div class="m-logo">⚡</div>
     <div class="m-title">電装取付管理<small id="hdr-ver">v—</small></div>
@@ -397,7 +410,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29u';
+const APP_VERSION = '2026-05-29v';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1880,14 +1893,46 @@ async function _autoPull(){ // 他端末の変更を自動取込(revだけ軽く
   const rev=await dbxGetRev();
   if(rev && _lastDbxRev && rev!==_lastDbxRev){ const ok=await loadFromDropbox(); if(ok) toast('🔄 最新に更新しました','ok'); }
 }
+// アップデートチェック (GitHub Pages から自分のHTMLを取得→APP_VERSION比較→バナー表示)
+let _updateCheckInFlight=false;
+async function checkForUpdate(silent){
+  const dismissed=localStorage.getItem('denso_updateDismissed')||'';
+  if(_updateCheckInFlight) return; _updateCheckInFlight=true;
+  try{
+    const url=location.pathname+'?_ucheck='+Date.now();
+    const res=await fetch(url,{cache:'no-store'}); if(!res.ok) return;
+    const html=await res.text();
+    const m=html.match(/const\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/); if(!m) return;
+    const remoteVer=m[1];
+    if(remoteVer && remoteVer!==APP_VERSION && remoteVer!==dismissed){
+      const b=document.getElementById('m-update-banner');
+      if(b){ b.classList.add('active'); const msg=b.querySelector('.m-ub-msg'); if(msg) msg.textContent='新しいバージョンがあります ('+remoteVer+')'; }
+    }
+  }catch(e){ if(!silent) console.warn('checkForUpdate failed:',e); }
+  finally{ _updateCheckInFlight=false; }
+}
+function dismissUpdateBanner(){
+  const b=document.getElementById('m-update-banner'); if(!b) return;
+  const mm=(b.querySelector('.m-ub-msg')&&b.querySelector('.m-ub-msg').textContent||'').match(/\(([^)]+)\)/);
+  if(mm) localStorage.setItem('denso_updateDismissed',mm[1]);
+  b.classList.remove('active');
+}
+async function forceAppUpdate(){
+  try{ if(window.caches&&caches.keys){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+  const u=location.pathname+'?_v='+Date.now();
+  location.replace(u);
+}
 function _startProactiveRefresh(){
   if(localStorage.getItem(DBX_LS.refresh)) setInterval(()=>{ dbxRefreshToken(); }, 3*60*60*1000);
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden) return;
     if(localStorage.getItem(DBX_LS.refresh) && Date.now()-_lastTokenRefresh>=2*60*60*1000) dbxRefreshToken();
     _autoPull(); // アプリに戻った時に最新を取り込む
+    checkForUpdate(true); // 復帰時に新バージョン確認
   });
   if(DBX_TOKEN) setInterval(_autoPull, 30000); // 開いている間は30秒ごとに他端末の変更を取り込む
+  setTimeout(()=>checkForUpdate(true), 5000); // 起動5秒後
+  setInterval(()=>checkForUpdate(true), 30*60*1000); // 30分ごと
 }
 async function dbxLogout(){ if(!await confirmModal('Dropbox連携を解除しますか？\n(この端末のローカルデータは残ります)',{danger:true,okText:'解除する'})) return;
   DBX_TOKEN=null; DBX_REFRESH=null; ['token','refresh','cachedRev','cachedSnap'].forEach(k=>localStorage.removeItem(DBX_LS[k])); toast('連携を解除しました','ok'); setTimeout(()=>location.reload(),700); }
