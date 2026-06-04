@@ -1791,6 +1791,21 @@ a{color:var(--info);text-decoration:none}
   </div>
 </div>
 
+<!-- 社内メモ 編集モーダル -->
+<div class="m-modal" id="m-memo-edit-modal">
+  <div class="m-modal-body">
+    <h2>📝 社内メモを編集</h2>
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px">スタッフ間共有用の注意事項です（手配書には表示されません）</div>
+    <div class="m-form-grp">
+      <textarea id="m-memo-edit-text" rows="5" placeholder="特記事項・申し送りなど"></textarea>
+    </div>
+    <div class="m-modal-actions" style="margin-top:14px;flex-direction:column;gap:8px">
+      <button class="m-btn m-btn-success m-btn-full" onclick="saveMemoEdit()">💾 保存</button>
+      <button class="m-btn m-btn-outline m-btn-full" onclick="closeMemoEdit()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <!-- 手配書プレビュー モーダル (配車予約情報まで) -->
 <div class="m-modal" id="m-handover-modal">
   <div class="m-modal-body" style="max-height:92%;padding:14px 10px 18px">
@@ -1825,7 +1840,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-05-25c';
+const APP_VERSION = '2026-06-04a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3286,7 +3301,7 @@ function renderInfoBox(c, hostId, kind){
     <div class="m-info-row"><span class="lbl">運転者</span><span class="val">${driver?`<b>${esc(driver)}</b>`:'<span class="empty">―</span>'} ${c.driverTel?tel(c.driverTel):''}</span></div>
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収先':'配車先'}</span><span class="val">${c.dispatchToName?`<b>${esc(c.dispatchToName)}</b>`:'<span class="empty">―</span>'}${c.dispatchToContact?`<br>担当: ${esc(c.dispatchToContact)} 様`:''}${(c.dispatchToContactTel||c.dispatchToTel)?` ${tel(c.dispatchToContactTel||c.dispatchToTel)}`:''}</span></div>
     ${c.dispatchToAddress?`<div class="m-info-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsBtn}</span></div>`:''}
-    ${c.internalMemo?`<div class="m-info-row"><span class="lbl">社内メモ</span><span class="val" style="color:#5A3F00;background:#FFF9E6;padding:6px 8px;border-radius:6px">${esc(c.internalMemo)}</span></div>`:''}
+    <div class="m-info-row m-memo-edit-row" onclick="openMemoEdit('${c.id}')" style="cursor:pointer" title="タップで社内メモを編集"><span class="lbl">社内メモ</span><span class="val" style="color:#5A3F00;background:#FFF9E6;padding:6px 8px;border-radius:6px">${c.internalMemo?esc(c.internalMemo):'<span style="color:var(--muted);font-style:italic">＋ タップで追加</span>'} <span style="float:right;color:var(--muted);font-size:12px">✏️</span></span></div>
     ${c.negotiationLog?`<div class="m-info-row"><span class="lbl">交渉記録</span><span class="val" style="color:#3D2459;background:#FAF5FE;padding:6px 8px;border-radius:6px;white-space:pre-wrap;line-height:1.6">${esc(c.negotiationLog)}</span></div>`:''}
   `;
 }
@@ -4855,6 +4870,67 @@ async function saveQuickRecovery(){
 }
 
 // ============================================================
+// 社内メモ 編集 (現場でスタッフ間共有メモを更新)
+//   renderInfoBox の「社内メモ」行タップから呼ばれる (配車/回収フロー・案件詳細 共通)
+// ============================================================
+let _memoEditCaseId = null;
+function openMemoEdit(caseId){
+  const c = findCaseById(caseId);
+  if(!c){ toast('案件が見つかりません','error'); return; }
+  _memoEditCaseId = caseId;
+  $('m-memo-edit-text').value = c.internalMemo || '';
+  $('m-memo-edit-modal').classList.add('active');
+  setTimeout(()=> $('m-memo-edit-text')?.focus(), 50);
+}
+function closeMemoEdit(){ $('m-memo-edit-modal').classList.remove('active'); }
+
+// 保存後、社内メモを表示中の画面 (現在アクティブな info box) を再描画する
+function _refreshMemoHost(c){
+  switch(_currentScreen){
+    case 'case-detail':  renderCaseDetail(c); break;
+    case 'flow-prep':    renderInfoBox(c, 'm-prep-info', _flow?.kind); break;
+    case 'flow-photo':   renderInfoBox(c, 'm-photo-info', _flow?.kind); break;
+    case 'flow-confirm': renderInfoBox(c, 'm-confirm-info', _flow?.kind); break;
+    case 'flow-fax':     renderInfoBox(c, 'm-fax-info', _flow?.kind); break;
+  }
+}
+
+async function saveMemoEdit(){
+  const c = findCaseById(_memoEditCaseId);
+  if(!c){ toast('案件が見つかりません','error'); return; }
+  const next = $('m-memo-edit-text').value.trim();
+  const prev = (c.internalMemo || '').trim();
+  if(next === prev){ closeMemoEdit(); return; }  // 変更なし
+
+  c.internalMemo = next;
+  // PC版と挙動を揃える: メモが変わったら「対応済み」フラグをリセットし
+  //   PCダッシュボードの未対応メモ一覧に再度出るようにする (空にした時は対応済み扱い)
+  if(next !== ''){
+    c.internalMemoDone = false;
+    c.internalMemoDoneAt = '';
+  }
+  _stampUpdated(c);
+
+  showSpinner('社内メモを保存中...');
+  try {
+    const _ok = await saveToDropbox();
+    if(!_ok){
+      hideSpinner();
+      toast('❌ 保存できませんでした。「🔄同期」してから再度お試しください', 'error');
+      return;
+    }
+    hideSpinner();
+    closeMemoEdit();
+    haptic('success');
+    toast('✅ 社内メモを保存しました', 'success');
+    _refreshMemoHost(c);  // 表示中の info box を再描画
+  } catch(e){
+    hideSpinner();
+    toast('保存エラー: '+e.message, 'error');
+  }
+}
+
+// ============================================================
 // 手配書プレビュー (配車予約情報まで表示するモーダル)
 // ============================================================
 function openHandoverPreview(){
@@ -5571,7 +5647,7 @@ async function openCaseDetail(caseId){
 }
 
 async function renderCaseDetail(c){
-  // 1. 案件情報 (renderInfoBox を流用)
+  // 1. 案件情報 (renderInfoBox を流用 / 社内メモ行はタップで編集できる)
   renderInfoBox(c, 'm-cd-info', 'dispatch');
 
   // 2. 車両情報
