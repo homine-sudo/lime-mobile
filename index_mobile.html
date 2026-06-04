@@ -638,6 +638,10 @@ a{color:var(--info);text-decoration:none}
 .m-stat-card .num{font-size:27px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-.02em}
 .m-stat-card .lbl{font-size:10.5px;color:var(--muted);margin-top:6px;font-weight:600;letter-spacing:.02em}
 .m-stat-card .sub{font-size:10px;margin-top:4px;font-weight:700;color:var(--green)}
+.m-stat-duo{display:flex;justify-content:center;gap:12px;align-items:flex-end;min-height:30px}
+.m-stat-duo .dcol{display:flex;flex-direction:column;align-items:center}
+.m-stat-duo .dnum{font-size:24px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.m-stat-duo .dlbl{font-size:9.5px;color:var(--muted);margin-top:3px;font-weight:700}
 .m-home-quick{
   background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;
   box-shadow:var(--shadow-card);
@@ -1187,10 +1191,12 @@ a{color:var(--info);text-decoration:none}
           <div class="lbl">🛻 今日の回収</div>
           <div class="sub" id="m-stat-recovery-done">完了 0</div>
         </div>
-        <div class="m-stat-card orange" onclick="showScreen('dispatch')">
-          <div class="num" id="m-stat-pending">0</div>
-          <div class="lbl">📋 未対応案件</div>
-          <div class="sub" style="color:var(--orange)">予定+遅れ</div>
+        <div class="m-stat-card orange">
+          <div class="m-stat-duo">
+            <div class="dcol" onclick="showScreen('dispatch')"><div class="dnum" id="m-stat-disp-plan" style="color:var(--navy)">0</div><div class="dlbl">🚙 配車</div></div>
+            <div class="dcol" onclick="showScreen('recovery')"><div class="dnum" id="m-stat-rec-plan" style="color:var(--green)">0</div><div class="dlbl">🛻 回収</div></div>
+          </div>
+          <div class="lbl">📅 予定</div>
         </div>
       </div>
 
@@ -1840,7 +1846,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-04c';
+const APP_VERSION = '2026-06-04d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2863,7 +2869,8 @@ function renderHome(){
   if(!DATA){
     $('m-stat-dispatch').textContent = '-';
     $('m-stat-recovery').textContent = '-';
-    $('m-stat-pending').textContent = '-';
+    $('m-stat-disp-plan').textContent = '-';
+    $('m-stat-rec-plan').textContent = '-';
     return;
   }
   const cases = (DATA.cases || []).filter(_isActive);
@@ -2873,19 +2880,16 @@ function renderHome(){
   // 今日の回収: 本日予定の総数 と 完了数
   const recToday  = cases.filter(c => (c.recoveryCalledAt||'').startsWith(today));
   const recDone   = recToday.filter(c => c.recoveryCompleted).length;
-  // 未対応 = 予定日が入っている未完了の配車・回収をすべて (今日以降の予定 + 過去の遅れ)。
+  // 予定 = 予定日が入っている未完了の配車・回収 (今日以降の予定 + 過去の遅れ) を配車/回収で分けて表示。
   //   日程未定の受付 (事務がこれから組む) は除外。一般貸渡 (PC専用) も除外。
-  const pending = cases.filter(c =>
-    c.category !== '一般' && (
-      (c.dispatchAt && !c.dispatchDoneAt) ||
-      (c.recoveryCalledAt && !c.recoveryCompleted)
-    )
-  ).length;
+  const dispPlan = cases.filter(c => c.category !== '一般' && c.dispatchAt && !c.dispatchDoneAt).length;
+  const recPlan  = cases.filter(c => c.category !== '一般' && c.recoveryCalledAt && !c.recoveryCompleted).length;
   $('m-stat-dispatch').textContent = dispToday.length;
   $('m-stat-dispatch-done').textContent = '完了 ' + dispDone;
   $('m-stat-recovery').textContent = recToday.length;
   $('m-stat-recovery-done').textContent = '完了 ' + recDone;
-  $('m-stat-pending').textContent = pending;
+  $('m-stat-disp-plan').textContent = dispPlan;
+  $('m-stat-rec-plan').textContent = recPlan;
 }
 
 // ============================================================
