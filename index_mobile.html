@@ -615,9 +615,9 @@ a{color:var(--info);text-decoration:none}
 }
 .m-home-greet .date{font-size:13px;opacity:.85;letter-spacing:.04em;position:relative}
 .m-home-greet .name{font-size:18px;font-weight:700;margin-top:6px;position:relative;letter-spacing:.02em}
-.m-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:14px}
+.m-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .m-stat-card{
-  background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 14px;
+  background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px 7px;
   text-align:center;box-shadow:var(--shadow-card);
   position:relative;overflow:hidden;
   transition:transform .12s,box-shadow .15s;
@@ -635,8 +635,9 @@ a{color:var(--info);text-decoration:none}
 .m-stat-card.orange::before{background:linear-gradient(90deg,transparent,var(--orange),transparent)}
 .m-stat-card.purple{border-left-color:var(--purple)}
 .m-stat-card.purple::before{background:linear-gradient(90deg,transparent,var(--purple),transparent)}
-.m-stat-card .num{font-size:32px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-.02em}
-.m-stat-card .lbl{font-size:11px;color:var(--muted);margin-top:6px;font-weight:600;letter-spacing:.04em}
+.m-stat-card .num{font-size:27px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-.02em}
+.m-stat-card .lbl{font-size:10.5px;color:var(--muted);margin-top:6px;font-weight:600;letter-spacing:.02em}
+.m-stat-card .sub{font-size:10px;margin-top:4px;font-weight:700;color:var(--green)}
 .m-home-quick{
   background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;
   box-shadow:var(--shadow-card);
@@ -1179,18 +1180,17 @@ a{color:var(--info);text-decoration:none}
         <div class="m-stat-card" onclick="showScreen('dispatch')">
           <div class="num" id="m-stat-dispatch">0</div>
           <div class="lbl">🚙 今日の配車</div>
+          <div class="sub" id="m-stat-dispatch-done">完了 0</div>
         </div>
         <div class="m-stat-card green" onclick="showScreen('recovery')">
           <div class="num" id="m-stat-recovery">0</div>
           <div class="lbl">🛻 今日の回収</div>
+          <div class="sub" id="m-stat-recovery-done">完了 0</div>
         </div>
         <div class="m-stat-card orange" onclick="showScreen('dispatch')">
           <div class="num" id="m-stat-pending">0</div>
           <div class="lbl">📋 未対応案件</div>
-        </div>
-        <div class="m-stat-card purple" onclick="showScreen('history')">
-          <div class="num" id="m-stat-today-done">0</div>
-          <div class="lbl">✓ 本日の完了</div>
+          <div class="sub" style="color:var(--orange)">予定+遅れ</div>
         </div>
       </div>
 
@@ -1840,7 +1840,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-04b';
+const APP_VERSION = '2026-06-04c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2864,32 +2864,28 @@ function renderHome(){
     $('m-stat-dispatch').textContent = '-';
     $('m-stat-recovery').textContent = '-';
     $('m-stat-pending').textContent = '-';
-    $('m-stat-today-done').textContent = '-';
     return;
   }
   const cases = (DATA.cases || []).filter(_isActive);
-  const todayDisp = cases.filter(c => (c.dispatchAt||'').startsWith(today) && !c.dispatchDoneAt).length;
-  const todayRec  = cases.filter(c => (c.recoveryCalledAt||'').startsWith(today) && !c.recoveryCompleted).length;
-  // 未対応 = 本日中に対応が必要な案件のみ:
-  //   - 今日 or 明日の配車予定で未完了
-  //   - 今日 or 過去の回収予定で未完了 (回収遅延)
-  //   - 状態が「回収連絡」(手配書FAX未送付)
-  const tomorrow = tomorrowISO();
-  const pending = cases.filter(c => {
-    const dispatchDue = c.dispatchAt && (c.dispatchAt.startsWith(today) || c.dispatchAt.startsWith(tomorrow)) && !c.dispatchDoneAt;
-    const recoveryDue = c.recoveryCalledAt && c.recoveryCalledAt <= today && !c.recoveryCompleted;
-    const faxNeeded = c.status === '回収連絡';
-    return dispatchDue || recoveryDue || faxNeeded;
-  }).length;
-  // 本日完了 = 配車完了 or 回収完了が本日
-  const todayDone = cases.filter(c =>
-    (c.dispatchDoneAt && c.dispatchDoneAt.startsWith(today)) ||
-    (c.recoveryCompleted && (c.recoveryCalledAt||'').startsWith(today))
+  // 今日の配車: 本日予定の総数 と 完了数 (KPIに完了も併記)
+  const dispToday = cases.filter(c => (c.dispatchAt||'').startsWith(today));
+  const dispDone  = dispToday.filter(c => c.dispatchDoneAt).length;
+  // 今日の回収: 本日予定の総数 と 完了数
+  const recToday  = cases.filter(c => (c.recoveryCalledAt||'').startsWith(today));
+  const recDone   = recToday.filter(c => c.recoveryCompleted).length;
+  // 未対応 = 予定日が入っている未完了の配車・回収をすべて (今日以降の予定 + 過去の遅れ)。
+  //   日程未定の受付 (事務がこれから組む) は除外。一般貸渡 (PC専用) も除外。
+  const pending = cases.filter(c =>
+    c.category !== '一般' && (
+      (c.dispatchAt && !c.dispatchDoneAt) ||
+      (c.recoveryCalledAt && !c.recoveryCompleted)
+    )
   ).length;
-  $('m-stat-dispatch').textContent = todayDisp;
-  $('m-stat-recovery').textContent = todayRec;
+  $('m-stat-dispatch').textContent = dispToday.length;
+  $('m-stat-dispatch-done').textContent = '完了 ' + dispDone;
+  $('m-stat-recovery').textContent = recToday.length;
+  $('m-stat-recovery-done').textContent = '完了 ' + recDone;
   $('m-stat-pending').textContent = pending;
-  $('m-stat-today-done').textContent = todayDone;
 }
 
 // ============================================================
