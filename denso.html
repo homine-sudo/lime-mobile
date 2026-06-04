@@ -410,7 +410,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-05-29v';
+const APP_VERSION = '2026-06-04a';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1255,10 +1255,11 @@ function outsourceVendorCard(vendor,jobs){
       <div style="font-size:15px;font-weight:700">🤝 ${esc(vendor)}${vendor&&vendor!=='(未設定)'?' 様':''}</div>
       <span class="badge ${allPaid?'st-入金済':'st-部品手配'}">${allPaid?'清算済':'未清算'}</span>
     </div>
-    ${jobs.map(j=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)" onclick="openJobDetail('${j.id}')">
-      <span>${fmtD(j.workedAt)} ${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''} <span style="color:var(--muted)">${esc(j.workDesc||'')}</span></span>
+    ${jobs.map(j=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border)" onclick="openJobDetail('${j.id}')">
+      <span style="min-width:0">${fmtD(j.workedAt)} ${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''} <span style="color:var(--muted)">${esc(j.workDesc||'')}</span>${j.workPlace?`<br><span class="tag place" style="margin-top:4px;display:inline-block">📍 ${esc(j.workPlace)}</span>`:''}</span>
       <span style="white-space:nowrap">${j.outsource.paid?'<span style="color:var(--green)">済 </span>':''}${yen(j.outsource.cost)}</span></div>`).join('')}
     <div class="money-box" style="margin:10px 0 8px"><div class="money-row total"><span>支払合計</span><b>${yen(total)}</b></div></div>
+    <button class="btn btn-secondary btn-sm btn-full" style="margin-bottom:8px" onclick="shareOutsourceSettlement(this.dataset.v,'${billMonth}')" data-v="${esc(vendor)}">📤 この支払明細を外注先へ送信</button>
     ${allPaid?`<button class="btn btn-ghost btn-sm btn-full" onclick="unsettleOutsource(this.dataset.v,'${billMonth}')" data-v="${esc(vendor)}">↩ 清算を取り消す</button>`:`<button class="btn btn-success btn-sm btn-full" onclick="settleOutsource(this.dataset.v,'${billMonth}')" data-v="${esc(vendor)}">この外注先を${fmtMonth(billMonth)}分まとめて清算済にする</button>`}
   </div>`;
 }
@@ -1641,6 +1642,81 @@ async function shareWorkOrder(id){
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:'作業指示書 '+(j.jobNo||''),text:workOrderCaption(j)}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
   toast('指示書画像を保存しました。LINEで添付してください');
+}
+/* 外注費 お支払明細書を画像に合成して外注先へ送信 (LINE等・元請け金額=工賃は出さない・外注費のみ) */
+async function composeSettlementImage(vendor,jobs,month){
+  const st=DATA.settings;
+  const total=jobs.reduce((s,j)=>s+num(j.outsource.cost),0);
+  const W=860, pad=40, big=document.createElement('canvas'); big.width=W; big.height=9000;
+  const ctx=big.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,9000); ctx.textBaseline='top';
+  let y=pad;
+  // ── タイトル
+  ctx.fillStyle='#16202E'; ctx.font='bold 30px sans-serif'; ctx.fillText('外注費 お支払明細書',pad,y);
+  ctx.font='13px sans-serif'; ctx.fillStyle='#555'; ctx.textAlign='right';
+  ctx.fillText('発行 '+fmtFullDate(todayISO()),W-pad,y+8); ctx.textAlign='left';
+  y+=48;
+  // ── 宛先
+  const vlabel=(vendor&&vendor!=='(未設定)')?vendor+' 様':'外注先 御中';
+  ctx.font='bold 22px sans-serif'; ctx.fillStyle='#16202E'; ctx.fillText(vlabel,pad,y);
+  const vw=Math.min(ctx.measureText(vlabel).width,360); ctx.strokeStyle='#16202E'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad,y+30); ctx.lineTo(pad+vw,y+30); ctx.stroke();
+  y+=44;
+  ctx.font='14px sans-serif'; ctx.fillStyle='#555';
+  ctx.fillText('対象月　'+fmtMonth(month)+'（作業実施分）',pad,y); y+=22;
+  ctx.fillText('発行元　'+(st.company||'')+(st.tel?'　TEL '+st.tel:''),pad,y); y+=26;
+  ctx.font='14px sans-serif'; ctx.fillStyle='#16202E'; ctx.fillText('下記の通り外注費をお支払いいたします。',pad,y); y+=30;
+  // ── 明細テーブル ヘッダ
+  const amtX=W-pad, contentX=pad+90, contentW=(W-pad-150)-(pad+90);
+  ctx.fillStyle='#334155'; ctx.fillRect(pad,y,W-pad*2,32);
+  ctx.fillStyle='#fff'; ctx.font='bold 13px sans-serif';
+  ctx.fillText('作業日',pad+10,y+9); ctx.fillText('内容・作業場所',contentX,y+9);
+  ctx.textAlign='right'; ctx.fillText('金額(税抜)',amtX-10,y+9); ctx.textAlign='left';
+  y+=32;
+  // ── 明細行
+  jobs.forEach(j=>{
+    const top=y, lines=[];
+    ctx.font='bold 15px sans-serif';
+    const head=(j.carModel||'(車種未設定)')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'');
+    _wrapText(ctx,head,contentW).forEach(t=>lines.push({t,f:'bold 15px sans-serif',c:'#16202E',h:21}));
+    if(j.workDesc){ ctx.font='14px sans-serif'; _wrapText(ctx,j.workDesc,contentW).forEach(t=>lines.push({t,f:'14px sans-serif',c:'#475569',h:20})); }
+    if(j.workPlace){ ctx.font='13px sans-serif'; _wrapText(ctx,'作業場所  '+j.workPlace,contentW).forEach(t=>lines.push({t,f:'13px sans-serif',c:'#7C3AED',h:19})); }
+    const ch=lines.reduce((s,l)=>s+l.h,0), rowH=Math.max(ch,22)+18;
+    ctx.font='13px sans-serif'; ctx.fillStyle='#16202E'; ctx.fillText(fmtD(j.workedAt),pad+10,top+9);
+    let ly=top+9; lines.forEach(l=>{ ctx.font=l.f; ctx.fillStyle=l.c; ctx.fillText(l.t,contentX,ly); ly+=l.h; });
+    ctx.font='bold 15px sans-serif'; ctx.fillStyle='#16202E'; ctx.textAlign='right'; ctx.fillText(yen(j.outsource.cost),amtX-10,top+9);
+    if(j.outsource.paid){ ctx.font='11px sans-serif'; ctx.fillStyle='#16A34A'; ctx.fillText('支払済',amtX-10,top+30); }
+    ctx.textAlign='left';
+    y=top+rowH; ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  });
+  // ── 合計
+  y+=12; ctx.fillStyle='#F1F4FA'; ctx.fillRect(pad,y,W-pad*2,50);
+  ctx.fillStyle='#16202E'; ctx.font='bold 16px sans-serif'; ctx.fillText('お支払合計（税抜）',pad+14,y+16);
+  ctx.font='bold 25px sans-serif'; ctx.textAlign='right'; ctx.fillText(yen(total),W-pad-14,y+12); ctx.textAlign='left';
+  y+=50+12;
+  ctx.font='12px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.fillText(jobs.length+'件　/　'+fmtMonth(month)+' 作業実施分',pad,y); y+=pad;
+  const out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y); out.getContext('2d').drawImage(big,0,0);
+  return await new Promise(res=>out.toBlob(b=>res(b),'image/jpeg',0.92));
+}
+function settlementCaption(vendor,jobs,month){
+  const total=jobs.reduce((s,j)=>s+num(j.outsource.cost),0);
+  const L=['【外注費 お支払明細】 '+fmtMonth(month)];
+  L.push((vendor&&vendor!=='(未設定)')?vendor+' 様':'外注先');
+  jobs.forEach(j=>{ L.push('・'+fmtD(j.workedAt)+' '+(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.workPlace?'＠'+j.workPlace:'')+'　'+yen(j.outsource.cost)); });
+  L.push('お支払合計(税抜) '+yen(total));
+  return L.join('\n');
+}
+async function shareOutsourceSettlement(vendor,month){
+  const jobs=DATA.jobs.filter(j=> j.status!=='キャンセル' && j.outsource&&j.outsource.used && num(j.outsource.cost)>0 && (j.outsource.vendor||'(未設定)')===vendor && (j.workedAt||'').slice(0,7)===month);
+  if(!jobs.length){ toast('対象の外注費がありません','err'); return; }
+  toast('支払明細を作成中…');
+  let blob; try{ blob=await composeSettlementImage(vendor,jobs,month); }catch(e){ console.error(e); toast('作成に失敗しました','err'); return; }
+  const fname='外注費明細_'+((vendor&&vendor!=='(未設定)')?vendor:'外注先')+'_'+month+'.jpg';
+  const file=new File([blob],fname,{type:'image/jpeg'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:'外注費お支払明細 '+fmtMonth(month),text:settlementCaption(vendor,jobs,month)}); return; }
+    catch(e){ if(e&&e.name==='AbortError') return; }
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast('明細画像を保存しました。LINEで添付してください');
 }
 function generatePartsLabel(id){
   const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
