@@ -410,7 +410,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-04a';
+const APP_VERSION = '2026-06-04b';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1340,7 +1340,7 @@ function generateInvoice(key,month,markInvoiced){
     const issueDate=endOfMonth(month);
     jobs.forEach(j=>{ if(j.status!=='入金済') j.status='請求済'; j.invoiceNo=invNo; j.invoicedAt=issueDate; if(!j.billingMonth) j.billingMonth=month; stamp(j); });
     save();
-  } else { invNo=jobs[0].invoiceNo || '(プレビュー)'; }
+  } else { invNo=jobs[0].invoiceNo || ('INV-'+String(num(st.nextInvoiceNo)||1).padStart(10,'0')); }
   openInvoiceWindow(client,jobs,month,invNo);
   if(markInvoiced){ closeModal(); toast('請求書 '+invNo+' を発行しました','ok'); renderBilling(); }
 }
