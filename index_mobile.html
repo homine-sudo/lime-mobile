@@ -1244,7 +1244,7 @@ a{color:var(--info);text-decoration:none}
     <section id="m-screen-flow-prep" class="m-screen">
       <div class="m-flow-prog" id="m-flow-prog-prep"></div>
       <div class="m-info-box" id="m-prep-info"></div>
-      <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openHandoverPreview()">📄 手配書（配車予約情報まで）を見る</button>
+      <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openHandoverPreview()">📄 手配書（全体）を見る</button>
       <div class="m-detail-section">
         <h3>🚙 配車する車両</h3>
         <div id="m-prep-vehicle"></div>
@@ -1812,11 +1812,11 @@ a{color:var(--info);text-decoration:none}
   </div>
 </div>
 
-<!-- 手配書プレビュー モーダル (配車予約情報まで) -->
+<!-- 手配書プレビュー モーダル (全体) -->
 <div class="m-modal" id="m-handover-modal">
   <div class="m-modal-body" style="max-height:92%;padding:14px 10px 18px">
-    <h2 style="margin-bottom:8px">📄 手配書（配車予約情報まで）</h2>
-    <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px">※ 配車完了報告・回収完了報告は省略</div>
+    <h2 style="margin-bottom:8px">📄 手配書（全体）</h2>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px">受付〜配車完了報告・回収完了報告・ご利用金額まで（未確定の項目は空欄で表示）</div>
     <div id="m-handover-preview" style="background:#F2F2F2;border-radius:8px;padding:10px;max-height:65vh;overflow:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="m-modal-actions" style="margin-top:14px">
       <button class="m-btn m-btn-primary" style="flex:1" onclick="closeHandoverModal()">閉じる</button>
@@ -1846,7 +1846,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-04d';
+const APP_VERSION = '2026-06-04e';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5083,15 +5083,20 @@ function openHandoverPreview(){
   const modalUsable = Math.min(window.innerWidth - 60, 380); // モーダルpaddingを差し引いた表示幅
   const scale = Math.max(0.30, Math.min(0.5, modalUsable / 820));
   const visualW = Math.round(820 * scale);
-  const visualH = Math.round(1160 * scale);
+  // ★全体表示 (upperOnly を外す)。高さは内容量で変わるので、描画後に実コンテンツ高へ合わせる。
   $('m-handover-preview').innerHTML = `
-    <div style="width:${visualW}px;height:${visualH}px;position:relative;overflow:hidden;margin:0 auto">
-      <div style="transform:scale(${scale});transform-origin:top left;width:820px;height:1160px;position:absolute;top:0;left:0">
-        ${buildHandoverHTML(c, ins, settings, true)}
+    <div id="m-ho-scalebox" style="width:${visualW}px;height:${Math.round(1160*scale)}px;position:relative;overflow:hidden;margin:0 auto">
+      <div id="m-ho-sheet" style="transform:scale(${scale});transform-origin:top left;width:820px;position:absolute;top:0;left:0">
+        ${buildHandoverHTML(c, ins, settings)}
       </div>
     </div>
   `;
   $('m-handover-modal').classList.add('active');
+  // 実コンテンツ高に合わせてボックス高を確定 (full手配書は内容量で高さが変わる・見切れ防止)
+  setTimeout(() => {
+    const sheet = $('m-ho-sheet'), box = $('m-ho-scalebox');
+    if(sheet && box){ box.style.height = Math.ceil(sheet.offsetHeight * scale) + 'px'; }
+  }, 30);
 }
 function closeHandoverModal(){ $('m-handover-modal').classList.remove('active'); }
 
