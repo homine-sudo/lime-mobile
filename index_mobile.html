@@ -1503,8 +1503,8 @@ a{color:var(--info);text-decoration:none}
 <!-- 簡易版 新規案件登録 モーダル -->
 <div class="m-modal" id="m-newcase-modal">
   <div class="m-modal-body" style="max-height:92%">
-    <h2>📝 新規案件登録</h2>
-    <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px">必須項目なし — 入力した項目だけが登録されます</div>
+    <h2 id="m-nc-modal-title">📝 新規案件登録</h2>
+    <div id="m-nc-modal-sub" style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px">必須項目なし — 入力した項目だけが登録されます</div>
     <div class="m-form-row2">
       <div class="m-form-grp">
         <label>受付日</label>
@@ -1678,9 +1678,9 @@ a{color:var(--info);text-decoration:none}
     <div class="m-modal-actions m-actions-2row">
       <div class="m-actions-row-top">
         <button class="m-btn m-btn-outline" onclick="closeNewCaseModal()">キャンセル</button>
-        <button class="m-btn m-btn-primary" onclick="saveNewCase(false)">💾 保存のみ</button>
+        <button class="m-btn m-btn-primary" id="m-nc-save-btn" onclick="saveNewCase(false)">💾 保存のみ</button>
       </div>
-      <button class="m-btn m-btn-success m-btn-full" onclick="saveNewCase(true)">💾 保存して配車フローへ</button>
+      <button class="m-btn m-btn-success m-btn-full" id="m-nc-save-flow-btn" onclick="saveNewCase(true)">💾 保存して配車フローへ</button>
     </div>
   </div>
 </div>
@@ -1840,7 +1840,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-04a';
+const APP_VERSION = '2026-06-04b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3424,7 +3424,8 @@ function closeVehicleModal(){
 function filterVehicleList(){
   const q = ($('m-vehicle-search').value || '').toLowerCase().trim();
   const vehicles = DATA?.vehicles || [];
-  const c = findCaseById(_flow?.caseId || _activeCaseId);
+  // 案件詳細から開いた場合は _activeCaseId を優先 (前のフローの _flow が残っていても誤爆しない)
+  const c = findCaseById(_currentScreen === 'case-detail' ? _activeCaseId : (_flow?.caseId || _activeCaseId));
   // 割当済みのvehicleIdを使っている他案件 (利用中) はチェック
   const inUseIds = new Set();
   (DATA?.cases || []).forEach(o => {
@@ -3465,8 +3466,10 @@ function filterVehicleList(){
 
 async function selectVehicle(vehicleId){
   const v = (DATA?.vehicles || []).find(x => x.id === vehicleId);
-  const c = findCaseById(_flow?.caseId || _activeCaseId);
+  const fromDetail = (_currentScreen === 'case-detail');
+  const c = findCaseById(fromDetail ? _activeCaseId : (_flow?.caseId || _activeCaseId));
   if(!v || !c){ toast('車両または案件が見つかりません','error'); return; }
+  const _prevVehicleId = c.vehicleId || '';
   // 案件に車両情報を反映
   c.vehicleId = v.id;
   c.vehicleName = v.name || c.vehicleName || '';
@@ -3481,11 +3484,20 @@ async function selectVehicle(vehicleId){
   closeVehicleModal();
   showSpinner('車両を登録中...');
   try {
-    await saveToDropbox();
+    const _ok = await saveToDropbox();
     hideSpinner();
+    if(!_ok){ toast('❌ 保存できませんでした。「🔄同期」してから再度お試しください','error'); return; }
     toast(`🚙 車両「${v.name||v.maker||''}」を登録しました`, 'success');
     // 画面再描画
-    if(_currentScreen === 'flow-prep') await renderFlowPrepScreen();
+    if(fromDetail){
+      // 案件詳細から車両変更 = 意味のある変更 → PC同等の updateCase 通知 (実保存成功後のみ)
+      if(_prevVehicleId !== v.id){
+        try { await sendExternalNotify('updateCase', _buildNotifyPayload(c, 'updateCase')); } catch(e){}
+      }
+      renderCaseDetail(c);
+    } else if(_currentScreen === 'flow-prep'){
+      await renderFlowPrepScreen();
+    }
   } catch(e){
     hideSpinner();
     toast('保存エラー: '+e.message,'error');
@@ -4216,7 +4228,14 @@ function _finishFaxFlow(c){
 // ============================================================
 // 簡易版 新規案件登録
 // ============================================================
-function openNewCaseModal(){
+// editCaseId を渡すと「編集モード」: 既存案件の値をプリフィルし、保存で intake項目だけ上書きする。
+//   省略すると従来どおり新規登録モード。
+let _editingCaseId = null;
+function openNewCaseModal(editCaseId){
+  _editingCaseId = editCaseId || null;
+  const editC = _editingCaseId ? findCaseById(_editingCaseId) : null;
+  if(_editingCaseId && !editC){ toast('案件が見つかりません','error'); _editingCaseId = null; return; }
+
   // 保険会社 候補(datalist): 利用頻度順・支社支店も表示。直接入力も可
   const useCount = {};
   (DATA?.cases || []).forEach(c => {
@@ -4230,30 +4249,78 @@ function openNewCaseModal(){
   const insLabel = i => (i.name||'') + (i.branch ? ` ${i.branch}` : '');
   const dl = $('m-nc-insurer-list');
   if(dl) dl.innerHTML = insurers.map(i => `<option value="${esc(insLabel(i))}"></option>`).join('');
-  if($('m-nc-insurer')) $('m-nc-insurer').value = '';
-  if($('m-nc-insurerId')) $('m-nc-insurerId').value = '';
-  // 初期値
-  $('m-nc-receivedAt').value = todayISO();
-  ['m-nc-contractor','m-nc-driver','m-nc-driverTel','m-nc-insurerContact','m-nc-insurerContactTel',
-   'm-nc-insurerContactFax','m-nc-accidentNo','m-nc-accidentDate',
-   'm-nc-dispatchTo','m-nc-dispatchToAddr','m-nc-dispatchToTel','m-nc-dispatchContact','m-nc-dispatchContactTel',
-   'm-nc-dispatchNote','m-nc-useStart','m-nc-useEnd','m-nc-unitPrice','m-nc-memo','m-nc-negotiationLog'
-  ].forEach(id => { const el=$(id); if(el) el.value = ''; });
-  // 自社担当者は編集者名を初期値に
-  if($('m-nc-staff')) $('m-nc-staff').value = localStorage.getItem(LS_KEYS.editor) || '';
-  if($('m-nc-category')) $('m-nc-category').value = '損保';
-  if($('m-nc-target')) $('m-nc-target').value = '対物';
-  $('m-nc-dispatchAt').value = nowDateTimeLocal();
-  buildMncClassOptions();
-  $('m-nc-vehicleClass').value = '';
-  $('m-nc-useDeadline').value = '';
+
+  const setV = (id, val) => { const el = $(id); if(el) el.value = (val==null ? '' : val); };
+  buildMncClassOptions();  // vehicleClass の option を先に生成してから値を入れる
+
+  if(editC){
+    // ===== 編集モード: 既存案件をプリフィル =====
+    const ins = editC.insurerId ? (findInsurer(editC.insurerId) || null) : null;
+    setV('m-nc-insurer', ins ? insLabel(ins) : '');
+    setV('m-nc-insurerId', editC.insurerId || '');
+    setV('m-nc-receivedAt', editC.receivedAt || todayISO());
+    setV('m-nc-staff', editC.staff || '');
+    if($('m-nc-category')) $('m-nc-category').value = editC.category || '損保';
+    if($('m-nc-target')) $('m-nc-target').value = (editC.target != null ? editC.target : '対物');
+    setV('m-nc-insurerContact', editC.insurerContact);
+    setV('m-nc-insurerContactTel', editC.insurerContactTel);
+    setV('m-nc-insurerContactFax', editC.insurerContactFax);
+    setV('m-nc-accidentNo', editC.accidentNo);
+    setV('m-nc-accidentDate', editC.accidentDate);
+    setV('m-nc-contractor', editC.contractorName);
+    setV('m-nc-driver', editC.driverName);
+    setV('m-nc-driverTel', editC.driverTel);
+    setV('m-nc-dispatchTo', editC.dispatchToName);
+    setV('m-nc-dispatchToAddr', editC.dispatchToAddress);
+    setV('m-nc-dispatchToTel', editC.dispatchToTel);
+    setV('m-nc-dispatchContact', editC.dispatchToContact);
+    setV('m-nc-dispatchContactTel', editC.dispatchToContactTel);
+    setV('m-nc-dispatchAt', editC.dispatchAt);
+    setV('m-nc-dispatchNote', editC.dispatchNote);
+    setV('m-nc-vehicleClass', editC.vehicleClass || '');
+    setV('m-nc-unitPrice', editC.unitPrice ? String(editC.unitPrice) : '');
+    setV('m-nc-useStart', editC.useStart);
+    setV('m-nc-useEnd', editC.useEnd);
+    setV('m-nc-useDeadline', editC.useDeadline);
+    setV('m-nc-memo', editC.internalMemo);
+    setV('m-nc-negotiationLog', editC.negotiationLog);
+    if($('m-nc-dispatchTimePending')) $('m-nc-dispatchTimePending').checked = !!editC.dispatchTimePending;
+    if($('m-nc-dispatchTimePendingDriver')) $('m-nc-dispatchTimePendingDriver').checked = !!editC.dispatchTimePendingDriver;
+    // タイトル/ボタンを編集モードに
+    if($('m-nc-modal-title')) $('m-nc-modal-title').textContent = '✏️ 案件を編集';
+    if($('m-nc-modal-sub')) $('m-nc-modal-sub').textContent = '変更した項目だけ更新します（車両割当・請求項目は対象外）';
+    if($('m-nc-save-btn')) $('m-nc-save-btn').textContent = '💾 保存';
+    if($('m-nc-save-flow-btn')) $('m-nc-save-flow-btn').style.display = 'none';
+  } else {
+    // ===== 新規モード: 初期値 =====
+    setV('m-nc-insurer', '');
+    setV('m-nc-insurerId', '');
+    $('m-nc-receivedAt').value = todayISO();
+    ['m-nc-contractor','m-nc-driver','m-nc-driverTel','m-nc-insurerContact','m-nc-insurerContactTel',
+     'm-nc-insurerContactFax','m-nc-accidentNo','m-nc-accidentDate',
+     'm-nc-dispatchTo','m-nc-dispatchToAddr','m-nc-dispatchToTel','m-nc-dispatchContact','m-nc-dispatchContactTel',
+     'm-nc-dispatchNote','m-nc-useStart','m-nc-useEnd','m-nc-unitPrice','m-nc-memo','m-nc-negotiationLog'
+    ].forEach(id => { const el=$(id); if(el) el.value = ''; });
+    // 自社担当者は編集者名を初期値に
+    if($('m-nc-staff')) $('m-nc-staff').value = localStorage.getItem(LS_KEYS.editor) || '';
+    if($('m-nc-category')) $('m-nc-category').value = '損保';
+    if($('m-nc-target')) $('m-nc-target').value = '対物';
+    $('m-nc-dispatchAt').value = nowDateTimeLocal();
+    $('m-nc-vehicleClass').value = '';
+    $('m-nc-useDeadline').value = '';
+    if($('m-nc-dispatchTimePending')) $('m-nc-dispatchTimePending').checked = false;
+    if($('m-nc-dispatchTimePendingDriver')) $('m-nc-dispatchTimePendingDriver').checked = false;
+    // タイトル/ボタンを新規モードに戻す
+    if($('m-nc-modal-title')) $('m-nc-modal-title').textContent = '📝 新規案件登録';
+    if($('m-nc-modal-sub')) $('m-nc-modal-sub').textContent = '必須項目なし — 入力した項目だけが登録されます';
+    if($('m-nc-save-btn')) $('m-nc-save-btn').textContent = '💾 保存のみ';
+    if($('m-nc-save-flow-btn')) $('m-nc-save-flow-btn').style.display = '';
+  }
   if(typeof refreshMncNoteChips === 'function') refreshMncNoteChips();
-  if($('m-nc-dispatchTimePending')) $('m-nc-dispatchTimePending').checked = false;
-  if($('m-nc-dispatchTimePendingDriver')) $('m-nc-dispatchTimePendingDriver').checked = false;
   if(typeof _mncSyncAllDateBtns === 'function') _mncSyncAllDateBtns();
   $('m-newcase-modal').classList.add('active');
 }
-function closeNewCaseModal(){ $('m-newcase-modal').classList.remove('active'); }
+function closeNewCaseModal(){ $('m-newcase-modal').classList.remove('active'); _editingCaseId = null; }
 
 // ===== 保険会社/工場 ピッカー (PC版と同等にマスタから選択可能に) =====
 function _mncInsLabel(i){ return (i.name||'') + (i.branch ? ` ${i.branch}` : ''); }
@@ -4690,6 +4757,81 @@ async function saveNewCase(enterFlow){
     }
   }
   const ins = insurerId ? (findInsurer(insurerId) || {}) : {};
+
+  // ===== 編集モード: 既存案件を intake項目だけ上書き (status/フロー進捗/車両割当/FAX履歴は不変) =====
+  if(_editingCaseId){
+    const editId = _editingCaseId;
+    const ec = findCaseById(editId);
+    if(!ec){ toast('案件が見つかりません','error'); return; }
+    const _v = id => ($(id)?.value || '').trim();
+    // 意味のある変更の検出用に旧値を退避 (updateCase 通知の発火判定)
+    const _keys = ['dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver',
+      'driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact',
+      'dispatchToContactTel','insurerId','insurerContact','useStart','useEnd','useDeadline','unitPrice',
+      'vehicleClass','contractorName','accidentNo','accidentDate'];
+    const _before = {}; _keys.forEach(k => _before[k] = ec[k]);
+
+    ec.receivedAt = $('m-nc-receivedAt').value || ec.receivedAt || todayISO();
+    ec.staff = _v('m-nc-staff') || ec.staff || '';
+    ec.category = _v('m-nc-category') || ec.category || '損保';
+    ec.target = ($('m-nc-target')?.value ?? ec.target ?? '対物');
+    ec.insurerId = insurerId || '';
+    ec.insurerContact = _v('m-nc-insurerContact');
+    ec.insurerContactTel = _v('m-nc-insurerContactTel');
+    ec.insurerContactFax = _v('m-nc-insurerContactFax') || ins.fax || '';
+    ec.accidentNo = _v('m-nc-accidentNo');
+    ec.accidentDate = _v('m-nc-accidentDate');
+    ec.contractorName = contractor;
+    ec.driverName = _v('m-nc-driver') || contractor;
+    ec.driverTel = _v('m-nc-driverTel');
+    ec.dispatchToName = dispatchTo;
+    ec.dispatchToAddress = _v('m-nc-dispatchToAddr');
+    ec.dispatchToTel = _v('m-nc-dispatchToTel');
+    ec.dispatchToContact = _v('m-nc-dispatchContact');
+    ec.dispatchToContactTel = _v('m-nc-dispatchContactTel');
+    ec.dispatchAt = dispatchAt || '';
+    ec.dispatchNote = _v('m-nc-dispatchNote');
+    ec.dispatchTimePending = !!($('m-nc-dispatchTimePending')?.checked);
+    ec.dispatchTimePendingDriver = !!($('m-nc-dispatchTimePendingDriver')?.checked);
+    ec.vehicleClass = $('m-nc-vehicleClass').value || '';
+    ec.unitPrice = Number($('m-nc-unitPrice').value || 0);
+    ec.useStart = _v('m-nc-useStart');
+    ec.useEnd = _v('m-nc-useEnd');
+    ec.useDeadline = _v('m-nc-useDeadline');
+    ec.internalMemo = _v('m-nc-memo');
+    ec.negotiationLog = _v('m-nc-negotiationLog');
+    // ★status / dispatchDoneAt / departedAt / vehicleId / plate* / faxHistory / recoveryCompleted は触らない
+    _stampUpdated(ec);
+
+    const _changed = _keys.some(k => String(ec[k]==null?'':ec[k]) !== String(_before[k]==null?'':_before[k]));
+
+    showSpinner('案件を更新中...');
+    try {
+      const _ok = await saveToDropbox();
+      if(!_ok){
+        hideSpinner();
+        toast('❌ 保存できませんでした。変更は未保存です。「🔄同期」してから再度お試しください', 'error');
+        return;
+      }
+      // 意味のある変更があれば PC同等の updateCase 通知 (LINE＋カレンダー再作成)・実保存成功後のみ
+      if(_changed){
+        try { await sendExternalNotify('updateCase', _buildNotifyPayload(ec, 'updateCase')); } catch(e){}
+      }
+      hideSpinner();
+      closeNewCaseModal();
+      haptic('success');
+      toast(`✅ ${ec.caseNo} を更新しました`, 'success');
+      if(_currentScreen === 'case-detail') renderCaseDetail(ec);
+      else if(_currentScreen === 'dispatch') renderDispatchList();
+      else if(_currentScreen === 'recovery') renderRecoveryList();
+      else if(_currentScreen === 'home') renderHome();
+    } catch(e){
+      hideSpinner();
+      toast('保存エラー: '+e.message, 'error');
+    }
+    return;
+  }
+
   // 配車予定日時が入っていれば '配車予定'、入っていなければ '受付' (PC版で後から進める)
   const initialStatus = dispatchAt ? '配車予定' : '受付';
   const receivedAt = $('m-nc-receivedAt').value || todayISO();
@@ -5145,6 +5287,29 @@ function _buildLineMessage(c, eventType){
       staffLine
     ].filter(Boolean).join('\n');
   }
+  if(eventType === 'updateCase'){
+    // ★PC LIMEOne.html の updateCase と文面一致 (担当のみ mobile は staffLine=updatedBy優先)。
+    //   pc-mobile-drift-check.bat で照合すること。
+    const st = c.status || '';
+    let head = '🔄 配車日時変更';
+    if(st === '配車済') head = '🚗 配車完了';
+    else if(st === '返却済') head = '🚛 回収完了';
+    else if(st === '手配書FAX済') head = '📠 手配書FAX送付済';
+    else if(st === 'キャンセル') head = '❌ 案件キャンセル';
+    return [
+      head,
+      '受付No: ' + (c.caseNo||''),
+      dispatchLine || '配車予定: (未設定)',
+      driver ? '運転者: ' + driver : '',
+      ins.name ? '保険会社: ' + ins.name : '',
+      c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      vehicleStr ? '車両: ' + vehicleStr : '',
+      c.useStart ? '利用開始: ' + c.useStart : '',
+      c.useEnd ? '利用終了: ' + c.useEnd : '',
+      staffLine,
+      '状態: ' + st
+    ].filter(Boolean).join('\n');
+  }
   if(eventType === 'recoveryDateSet'){
     return [
       '🚛 回収予定日 登録',
@@ -5197,7 +5362,8 @@ function _buildLineMessage(c, eventType){
 
 function _buildCalendarOp(c, eventType){
   const caseNoTag = '案件No: ' + (c.caseNo||'');
-  if(eventType === 'newCase'){
+  // updateCase は newCase と同じ「🟦配車予定を削除→現在値で再作成」(PC LIMEOne.html と一致)
+  if(eventType === 'newCase' || eventType === 'updateCase'){
     const op = { caseNoTag, delete: { kindPrefixes: ['🟦','配車','前日配車','前々日配車'] } };
     if(c.dispatchAt){
       const start = new Date(c.dispatchAt);
@@ -5696,9 +5862,16 @@ async function renderCaseDetail(c){
   // 4. アクションボタン (状態に応じて)
   const canDispatch = ['受付','確認中','配車予定'].includes(c.status) && !c.dispatchDoneAt;
   const canRecovery = ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted;
+  // 編集は「稼働中(返却前)」案件のみ。返却済/請求済/入金済/キャンセル・一般貸渡(PC専用)は不可。
+  const canEdit = ['受付','確認中','配車予定','配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)
+    && !c.recoveryCompleted && c.category !== '一般';
   const acts = [];
   if(canDispatch) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterDispatchFlow('${c.id}')">🚙 配車フローへ進む</button>`);
   if(canRecovery) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterRecoveryFlow('${c.id}')">🛻 回収フローへ進む</button>`);
+  if(canEdit){
+    acts.push(`<button class="m-btn m-btn-primary m-btn-block" onclick="openNewCaseModal('${c.id}')">✏️ 案件を編集</button>`);
+    acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="openVehiclePicker()">🔄 車両を変更</button>`);
+  }
   if(c.dispatchToTel || c.driverTel){
     const tel = c.dispatchToContactTel || c.dispatchToTel || c.driverTel;
     acts.push(`<a class="m-btn m-btn-outline m-btn-block" href="tel:${esc(String(tel).replace(/[^0-9+]/g,''))}">☎ 電話する (${esc(tel)})</a>`);
