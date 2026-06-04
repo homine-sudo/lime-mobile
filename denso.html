@@ -410,7 +410,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-04b';
+const APP_VERSION = '2026-06-04c';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1102,19 +1102,32 @@ function openJobDetail(id){
       ${(j.status==='部品手配'||(j.parts||[]).some(p=>!p.arrived))?`<button class="btn btn-secondary btn-sm" onclick="openPartsCheck('${id}')">📦 着荷チェック</button>`:''}
       <button class="btn btn-secondary btn-sm" onclick="openReportModal('${id}')">📝 報告/写真</button>
     </div>
-    <div class="sec-label">📄 書類</div>
-    <div style="font-size:11px;color:var(--text-dim);font-weight:700;margin-bottom:6px">外注向け（諸見里さん等・元請け金額は非表示）</div>
-    <div class="btn-row">
-      <button class="btn btn-secondary btn-sm" onclick="generateWorkOrder('${id}')">🖨 作業指示書</button>
-      <button class="btn btn-primary btn-sm" onclick="shareWorkOrder('${id}')">📤 指示書をLINE</button>
+    <div class="sec-label">📄 書類・送信</div>
+    <div style="border:1px solid var(--accent-border);background:var(--accent-dim);border-radius:12px;padding:12px 13px;margin-bottom:11px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+        <span style="font-size:13px;font-weight:800;color:var(--accent-deep)">🤝 外注先へ送信</span>
+        <span class="tag ok" style="margin-left:auto">🔒 元請け金額なし</span>
+      </div>
+      <div style="font-size:10.5px;color:var(--text-dim);line-height:1.5;margin-bottom:9px">元請け金額・粗利・他の取引先/他案件の情報は含まれません。安心して外注先へ送れます。</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary btn-sm" onclick="generateWorkOrder('${id}')">🖨 作業指示書</button>
+        <button class="btn btn-primary btn-sm" onclick="shareWorkOrder('${id}')">📤 指示書を送信</button>
+      </div>
+      ${j.outsource&&j.outsource.used&&num(j.outsource.cost)>0?`<div class="btn-row" style="margin-top:8px"><button class="btn btn-secondary btn-sm btn-full" onclick="shareSettlementFromJob('${id}')">📤 この外注先の月次 外注費明細を送る</button></div>`:''}
     </div>
-    <div style="font-size:11px;color:var(--text-dim);font-weight:700;margin:11px 0 6px">取引先向け（プロシード・外注は非表示）</div>
-    <div class="btn-row">
-      <button class="btn btn-secondary btn-sm" onclick="generateWorkReport('${id}')">🖨 作業報告書</button>
-      <button class="btn btn-primary btn-sm" onclick="shareWorkReport('${id}')">📤 報告書をLINE</button>
+    <div style="border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:11px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+        <span style="font-size:13px;font-weight:800;color:var(--text)">📇 取引先へ送信</span>
+        <span class="tag" style="margin-left:auto">外注先・原価は非表示</span>
+      </div>
+      <div style="font-size:10.5px;color:var(--text-dim);line-height:1.5;margin-bottom:9px">作業報告書。外注先名・部品原価・粗利は含まれません。</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary btn-sm" onclick="generateWorkReport('${id}')">🖨 作業報告書</button>
+        <button class="btn btn-primary btn-sm" onclick="shareWorkReport('${id}')">📤 報告書を送信</button>
+      </div>
     </div>
-    <div class="btn-row" style="margin-top:11px">
-      <button class="btn btn-secondary btn-sm" onclick="generatePartsLabel('${id}')">🏷 受入ラベル</button>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="generatePartsLabel('${id}')">🏷 受入ラベル（社内）</button>
     </div>
   </div>
   <div class="modal-foot">
@@ -1620,7 +1633,9 @@ async function composeWorkOrderImage(j){
   if(j.outsource&&j.outsource.used&&num(j.outsource.cost)){ ctx.font='bold 15px sans-serif'; ctx.fillStyle='#334155'; ctx.fillText('外注費(税抜)',pad,y); y+=24; ctx.font='16px sans-serif'; ctx.fillStyle='#16202E'; ctx.fillText(yen(j.outsource.cost),pad,y); y+=26; }
   ctx.font='bold 15px sans-serif'; ctx.fillStyle='#334155'; ctx.fillText('備考・注意事項',pad,y); y+=24;
   ctx.font='15px sans-serif'; ctx.fillStyle='#16202E'; _wrapText(ctx,j.memo||'（なし）',W-pad*2).forEach(ln=>{ ctx.fillText(ln,pad,y); y+=23; });
-  y+=pad;
+  y+=14; ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=12;
+  ctx.font='11px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.fillText('※ 本書に元請け金額・粗利・他取引先/他案件の情報は含まれません。',pad,y); y+=18;
+  y+=pad-14;
   const out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y); out.getContext('2d').drawImage(big,0,0);
   return await new Promise(res=>out.toBlob(b=>res(b),'image/jpeg',0.9));
 }
@@ -1692,7 +1707,8 @@ async function composeSettlementImage(vendor,jobs,month){
   ctx.fillStyle='#16202E'; ctx.font='bold 16px sans-serif'; ctx.fillText('お支払合計（税抜）',pad+14,y+16);
   ctx.font='bold 25px sans-serif'; ctx.textAlign='right'; ctx.fillText(yen(total),W-pad-14,y+12); ctx.textAlign='left';
   y+=50+12;
-  ctx.font='12px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.fillText(jobs.length+'件　/　'+fmtMonth(month)+' 作業実施分',pad,y); y+=pad;
+  ctx.font='12px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.fillText(jobs.length+'件　/　'+fmtMonth(month)+' 作業実施分',pad,y); y+=20;
+  ctx.font='11px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.fillText('※ 本書は外注費(お支払額)のみを記載しています。元請け金額・粗利は含まれません。',pad,y); y+=pad;
   const out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y); out.getContext('2d').drawImage(big,0,0);
   return await new Promise(res=>out.toBlob(b=>res(b),'image/jpeg',0.92));
 }
@@ -1717,6 +1733,14 @@ async function shareOutsourceSettlement(vendor,month){
   }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
   toast('明細画像を保存しました。LINEで添付してください');
+}
+/* 案件詳細から、その外注先の「作業実施月」分の支払明細をまとめて送信 */
+function shareSettlementFromJob(id){
+  const j=DATA.jobs.find(x=>x.id===id);
+  if(!j||!(j.outsource&&j.outsource.used)){ toast('外注の案件ではありません','err'); return; }
+  const vendor=j.outsource.vendor||'(未設定)';
+  const month=(j.workedAt||j.requestedAt||todayISO()).slice(0,7);
+  shareOutsourceSettlement(vendor,month);
 }
 function generatePartsLabel(id){
   const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
