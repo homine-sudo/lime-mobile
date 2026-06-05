@@ -1200,6 +1200,8 @@ a{color:var(--info);text-decoration:none}
         </div>
       </div>
 
+      <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openStockSearch()"><span class="ico">🚗</span> 稼働可能な車両を探す</button>
+
       <div class="m-home-quick">
         <h3>⚡ クイック登録</h3>
         <div class="m-quick-row">
@@ -1835,6 +1837,18 @@ a{color:var(--info);text-decoration:none}
     </div>
   </div>
 </div>
+<!-- 🚗 稼働可能在庫 検索モーダル (読み取り専用) -->
+<div class="m-modal" id="m-stock-modal">
+  <div class="m-modal-body" style="max-height:85%">
+    <h2>🚗 稼働可能な車両</h2>
+    <div id="m-stock-count" style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px"></div>
+    <input type="text" id="m-stock-search" placeholder="🔍 車種・ナンバー・クラスで検索" oninput="renderStockList()" autocomplete="off" style="margin-bottom:10px">
+    <div id="m-stock-list" style="max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="m-modal-actions" style="margin-top:14px">
+      <button class="m-btn m-btn-outline" style="flex:1" onclick="closeStockModal()">閉じる</button>
+    </div>
+  </div>
+</div>
 <div id="m-fax-host" aria-hidden="true"></div>
 
 <script>
@@ -1846,7 +1860,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-04f';
+const APP_VERSION = '2026-06-04g';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3422,6 +3436,62 @@ function openVehiclePicker(){
 }
 function closeVehicleModal(){
   $('m-vehicle-modal').classList.remove('active');
+}
+
+// ============================================================
+// 🚗 稼働可能在庫 検索 (TOP画面・読み取り専用)
+//   稼働可能 = status「稼働可」(または未設定) かつ 現在出払っていない
+//   (配車済/利用中/回収連絡/手配書FAX済 の案件に割当中でない)。
+//   点検入庫中・整備中・売却済・廃車 は除外。
+// ============================================================
+function _availableVehicles(){
+  const vehicles = DATA?.vehicles || [];
+  const inUse = new Set();
+  (DATA?.cases || []).forEach(o => {
+    if(!_isActive(o)) return;
+    if(!o.recoveryCompleted && ['配車済','利用中','回収連絡','手配書FAX済'].includes(o.status) && o.vehicleId){
+      inUse.add(o.vehicleId);
+    }
+  });
+  return vehicles.filter(v => (v.status === '稼働可' || !v.status) && !inUse.has(v.id));
+}
+function openStockSearch(){
+  if($('m-stock-search')) $('m-stock-search').value = '';
+  renderStockList();
+  $('m-stock-modal').classList.add('active');
+}
+function closeStockModal(){ $('m-stock-modal').classList.remove('active'); }
+function renderStockList(){
+  if(!DATA){ $('m-stock-count').textContent = ''; $('m-stock-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
+  const q = ($('m-stock-search')?.value || '').toLowerCase().trim();
+  const all = _availableVehicles();
+  let list = all;
+  if(q){
+    list = all.filter(v => {
+      const pl = v.plate || {};
+      const t = [v.name, v.maker, v.grade, v.class, pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ').toLowerCase();
+      return q.split(/\s+/).every(term => !term || t.includes(term));
+    });
+  }
+  $('m-stock-count').textContent = `稼働可能 ${all.length} 台${q ? ` ／ 該当 ${list.length} 台` : ''}`;
+  if(list.length === 0){
+    $('m-stock-list').innerHTML = `<div class="m-empty" style="padding:24px 10px"><div class="ico">🔍</div><div class="ttl">${q ? '該当する空き車両がありません' : '稼働可能な車両がありません'}</div></div>`;
+    return;
+  }
+  list = list.slice().sort((a,b) => (a.class||'').localeCompare(b.class||'') || (a.name||'').localeCompare(b.name||''));
+  $('m-stock-list').innerHTML = list.map(v => {
+    const pl = v.plate || {};
+    const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
+    const meta = [plate, v.class, v.dailyRate ? `¥${fmtNum(v.dailyRate)}/日` : ''].filter(Boolean).join(' ・ ');
+    return `
+      <div class="m-vehicle-item">
+        <div class="v-ico">🚙</div>
+        <div class="v-body">
+          <div class="v-name">${esc(v.name || v.maker || '(車種名なし)')}</div>
+          <div class="v-meta">${esc(meta)}</div>
+        </div>
+      </div>`;
+  }).join('');
 }
 function filterVehicleList(){
   const q = ($('m-vehicle-search').value || '').toLowerCase().trim();
