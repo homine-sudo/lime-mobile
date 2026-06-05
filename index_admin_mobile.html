@@ -721,6 +721,13 @@
       <div class="lbl">クラス別 稼働率 (直近30日)</div>
       <div class="cls-util" id="ops-class"></div>
     </div>
+
+    <!-- ③ 車両別 採算 (freee固定資産台帳の減価償却 × 稼働売上) -->
+    <div class="card">
+      <div class="lbl">車両別 採算 <span class="sm ink3" style="font-weight:normal">直近12ヶ月 売上 − 年間費用</span></div>
+      <table class="kv" id="ops-vehicle-roi"></table>
+      <div class="sm ink3" style="margin-top:4px">費用＝freee固定資産台帳の年間減価償却（保有車）／リース料×12（リース車）。償却済の古い車は費用ゼロ＝採算良。</div>
+    </div>
   </section>
 
   <!-- ========== パイプライン ========== -->
@@ -835,7 +842,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-05a';
+const APP_VERSION = '2026-06-05b';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1662,6 +1669,37 @@ function utilColor(rate){
 // メーター角度: 0%→-135°(左下) 〜 100%→+135°(右下) の 270°スイープ
 function gaugeAngle(pct){ return -135 + Math.max(0,Math.min(100,pct))/100*270; }
 function polar(cx,cy,r,deg){ const a=(deg-90)*Math.PI/180; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; }
+// ===== ③ 車両別 採算 (freee固定資産台帳の年間減価償却 × 直近12ヶ月売上) 2026-06-05 =====
+// ナンバー→年間減価償却(本年分の償却費合計)。freee固定資産台帳CSV(FY2026)由来・年1回CSVで更新。0=償却済の古い車。
+const FREEE_VEHICLE_DEP = {"沖縄480わ4285":0,"沖縄480わ4317":0,"沖縄506れ3844":0,"沖縄582わ5563":0,"沖縄582わ5564":0,"沖縄582わ5565":0,"沖縄506れ4826":424999,"沖縄582わ5893":181249,"沖縄582わ5894":181249,"沖縄506れ6611":380479,"沖縄582わ6765":228520,"沖縄582わ7503":0,"沖縄303わ6857":0,"沖縄303わ7659":0,"沖縄303わ7874":0,"沖縄507れ8153":381361,"沖縄507れ8794":0,"沖縄507れ8811":0,"沖縄303わ9565":714394,"沖縄508れ1881":715023,"沖縄304わ2141":780010,"沖縄58Aわ5141":322325,"沖縄58Aわ5140":346781,"沖縄58Aわ5139":352839,"沖縄304わ502":720303,"沖縄58Aわ4210":89829,"沖縄58Aわ4057":492382,"沖縄58Aわ4503":449479,"沖縄508れ3632":301363,"沖縄58Aわ":650435,"沖縄507れ4411":707799,"沖縄58Aわ6699":849726,"沖縄58Aわ6700":835277,"沖縄508れ6171":1004914,"沖縄508れ6167":1004914,"沖縄508れ6974":1226514};
+function _vplate(v){ const p=v&&v.plate; if(!p) return ''; return (p.area||'沖縄')+(p.no||'')+(p.kana||'')+(p.tail||''); }
+function renderVehicleROI(){
+  const host=document.getElementById('ops-vehicle-roi'); if(!host) return;
+  const vehs=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済');
+  const sinceStr=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+  const rev={};
+  billableRental().forEach(c=>{ if(!c.vehicleId) return; const ue=(c.useEnd||'').slice(0,10); if(!ue||ue<sinceStr) return; rev[c.vehicleId]=(rev[c.vehicleId]||0)+rentalAmount(c).total; });
+  let rows=vehs.map(v=>{
+    const plate=_vplate(v); const r=rev[v.id]||0;
+    const dep=FREEE_VEHICLE_DEP[plate]; const lease=(Number(v.leaseFee)||0)*12;
+    let cost, kind;
+    if(dep!=null){ cost=dep; kind=dep>0?'保有':'償却済'; }
+    else if(lease>0){ cost=lease; kind='リース'; }
+    else { cost=0; kind='—'; }
+    return { nm:v.plateDisplay||v.name||plate||'(無名)', r, cost, kind, roi:r-cost };
+  }).filter(x=>x.r>0||x.cost>0);
+  if(!rows.length){ host.innerHTML='<tr><td class="ink3 sm">データなし</td></tr>'; return; }
+  rows.sort((a,b)=>b.roi-a.roi);
+  const f=n=>yen(Math.round(n));
+  const rh=x=>`<tr><td><b>${esc(x.nm)}</b> <span class="ink3" style="font-size:10px">${esc(x.kind)}</span><div class="ink3" style="font-size:10px">売上 ${f(x.r)} − 費用 ${f(x.cost)}</div></td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.roi>=0?'var(--acc)':'#C0392B'}">${x.roi>=0?'+':''}${f(x.roi)} 円</td></tr>`;
+  const top=rows.slice(0,6);
+  const bot=rows.slice(-5).reverse().filter(x=>top.indexOf(x)<0);
+  host.innerHTML =
+    '<tr><td colspan=2 style="background:#EEF5E8;color:#2D5F1F;font-size:11px;font-weight:700">▲ 黒字頭</td></tr>' +
+    top.map(rh).join('') +
+    (bot.length?'<tr><td colspan=2 style="background:#FBEEE6;color:#9A3B00;font-size:11px;font-weight:700">▼ 低採算・赤字</td></tr>'+bot.map(rh).join(''):'');
+}
+
 function renderOps(){
   const s=vehicleStats();
   const pct = s.tot ? Math.round(s.inUse*100/s.tot) : 0;
@@ -1714,6 +1752,7 @@ function renderOps(){
       <div class="cls-bar"></div>
       <div class="cls-rate num">${cg.total.rate.toFixed(0)}<span class="ink3" style="font-size:11px">%</span></div>
     </div>`:'') || '<div class="ink3 sm">データなし</div>';
+  try{ renderVehicleROI(); }catch(e){}
 }
 
 function renderPipe(){
