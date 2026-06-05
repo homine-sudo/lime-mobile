@@ -1846,7 +1846,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-04e';
+const APP_VERSION = '2026-06-04f';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2874,20 +2874,22 @@ function renderHome(){
     return;
   }
   const cases = (DATA.cases || []).filter(_isActive);
-  // 今日の配車: 本日予定の総数 と 完了数 (KPIに完了も併記)
+  // 今日の配車: 大きい数字=残り(未完了)件数 → 全部終わると0。サブに「完了N / 全M」。
   const dispToday = cases.filter(c => (c.dispatchAt||'').startsWith(today));
   const dispDone  = dispToday.filter(c => c.dispatchDoneAt).length;
-  // 今日の回収: 本日予定の総数 と 完了数
+  const dispLeft  = Math.max(0, dispToday.length - dispDone);
+  // 今日の回収: 同上 (残り件数 → 完了で0)
   const recToday  = cases.filter(c => (c.recoveryCalledAt||'').startsWith(today));
   const recDone   = recToday.filter(c => c.recoveryCompleted).length;
+  const recLeft   = Math.max(0, recToday.length - recDone);
   // 予定 = 予定日が入っている未完了の配車・回収 (今日以降の予定 + 過去の遅れ) を配車/回収で分けて表示。
   //   日程未定の受付 (事務がこれから組む) は除外。一般貸渡 (PC専用) も除外。
   const dispPlan = cases.filter(c => c.category !== '一般' && c.dispatchAt && !c.dispatchDoneAt).length;
   const recPlan  = cases.filter(c => c.category !== '一般' && c.recoveryCalledAt && !c.recoveryCompleted).length;
-  $('m-stat-dispatch').textContent = dispToday.length;
-  $('m-stat-dispatch-done').textContent = '完了 ' + dispDone;
-  $('m-stat-recovery').textContent = recToday.length;
-  $('m-stat-recovery-done').textContent = '完了 ' + recDone;
+  $('m-stat-dispatch').textContent = dispLeft;
+  $('m-stat-dispatch-done').textContent = '完了 ' + dispDone + ' / 全' + dispToday.length;
+  $('m-stat-recovery').textContent = recLeft;
+  $('m-stat-recovery-done').textContent = '完了 ' + recDone + ' / 全' + recToday.length;
   $('m-stat-disp-plan').textContent = dispPlan;
   $('m-stat-rec-plan').textContent = recPlan;
 }
