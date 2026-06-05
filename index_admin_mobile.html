@@ -666,6 +666,12 @@
       <table class="kv" id="rev-summary"></table>
     </div>
 
+    <div class="card">
+      <div class="lbl">freee 実損益 <span id="rev-freee-fy" class="sm ink3" style="font-weight:normal"></span></div>
+      <table class="kv" id="rev-freee-pl"><tr><td colspan=2 class="ink3">—</td></tr></table>
+      <div class="sm ink3" style="margin-top:4px">会計士の締めを待たない・freeeの確定値ベース</div>
+    </div>
+
     <div class="card tight">
       <div class="lbl">売上日額 · 当月平均</div>
       <div class="med num" id="now-daily">—<span class="unit" style="font-size:11px">円</span></div>
@@ -829,7 +835,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-05-29c';
+const APP_VERSION = '2026-06-05a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1557,6 +1563,37 @@ function drawSpark(id,values,labels){
   `;
 }
 
+// ===== ② freee 実損益(PL) = 会計士の締めを待たないリアルタイム損益 (2026-06-05) =====
+const FREEE_API_TOKEN = 'lime-freee-2026-k9Xz7Qp3Rm';
+function _currentFY(){ const d=new Date(); return (d.getMonth()+1)>=4 ? d.getFullYear() : d.getFullYear()-1; }
+function _plTotal(bal, cat){ for(const b of (bal||[])){ if(b.total_line && b.account_category_name===cat) return Number(b.closing_balance||0); } return null; }
+let _freePLfetched=null;
+function freeeFetchPL(force){
+  const host=document.getElementById('rev-freee-pl'); if(!host) return;
+  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim();
+  if(!url){ host.innerHTML='<tr><td colspan=2 class="ink3">freee API URL 未設定（PCの設定で登録）</td></tr>'; return; }
+  const fy=_currentFY();
+  const fyEl=document.getElementById('rev-freee-fy'); if(fyEl) fyEl.textContent=`第${fy-2016}期 ${fy}年度・進行中`;
+  if(_freePLfetched===fy && !force) return;
+  _freePLfetched=fy;
+  host.innerHTML='<tr><td colspan=2 class="ink3">freeeから取得中…</td></tr>';
+  const cb='freeePL_'+Date.now(); const s=document.createElement('script'); let done=false;
+  const clean=()=>{ try{delete window[cb]}catch(_){window[cb]=undefined} if(s.parentNode)s.parentNode.removeChild(s); };
+  const tmr=setTimeout(()=>{ if(done)return; done=true; clean(); host.innerHTML='<tr><td colspan=2 class="ink3">freee応答タイムアウト</td></tr>'; },30000);
+  window[cb]=function(res){ if(done)return; done=true; clearTimeout(tmr); clean();
+    const pl=res&&res.ok&&res.report&&res.report.trial_pl;
+    if(!pl){ host.innerHTML='<tr><td colspan=2 class="ink3">freee取得失敗</td></tr>'; return; }
+    const bal=pl.balances||[];
+    const uri=_plTotal(bal,'売上高'), gp=_plTotal(bal,'売上総損益金額'), op=_plTotal(bal,'営業損益金額'), ord=_plTotal(bal,'経常損益金額'), net=_plTotal(bal,'当期純損益金額');
+    const mg=(uri&&gp!=null)?(Math.round(gp/uri*1000)/10):null;
+    const r=(k,v,b)=> v==null?'':`<tr><td>${k}</td><td class="num"${b?' style="font-weight:700;color:var(--acc)"':''}>${yen(v)} 円</td></tr>`;
+    host.innerHTML = r('売上高',uri)+r('売上総利益(粗利)',gp)+(mg!=null?`<tr><td>粗利率</td><td class="num">${mg}%</td></tr>`:'')+r('営業利益',op)+r('経常利益',ord)+r('当期純利益',net,true);
+  };
+  s.onerror=()=>{ if(done)return; done=true; clearTimeout(tmr); clean(); host.innerHTML='<tr><td colspan=2 class="ink3">freee通信エラー</td></tr>'; };
+  s.src=url+'?action=report&type=pl&fiscal_year='+fy+'&token='+encodeURIComponent(FREEE_API_TOKEN)+'&callback='+cb;
+  document.head.appendChild(s);
+}
+
 function renderRev(){
   const years=new Set();
   billableRental().forEach(c=>{const k=rentalSalesYM(c);if(k) years.add(k.slice(0,4))});
@@ -1611,6 +1648,7 @@ function renderRev(){
   rowsCat.push(['DETALIA',sumD]);
   if(sumE>0) rowsCat.push(['電装取付',sumE]);
   $('rev-cat').innerHTML=rowsCat.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${yen(v)} 円</td></tr>`).join('') || '<tr><td colspan=2 class="ink3">データなし</td></tr>';
+  try{ freeeFetchPL(); }catch(e){}
 }
 
 // 稼働度に応じた焼入れブルーの濃淡 (高稼働=濃 / 遊休=淡)
