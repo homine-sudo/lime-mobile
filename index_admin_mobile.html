@@ -138,6 +138,12 @@
   .pipe .row .ct{font-family:var(--serif);font-size:22px;width:54px;text-align:right;color:var(--ink);font-weight:500}
   .pipe .row .bar2{flex:0 0 80px;height:1.5px;background:var(--line);overflow:hidden}
   .pipe .row .bar2 > i{display:block;height:100%;background:var(--acc)}
+  .pipe-head{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 7px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .pipe-head b{font-family:var(--serif);font-size:19px;font-weight:500;color:var(--ink)}
+  .pipe-head .ink3{font-size:12px}
+  .pipe .row.alert .nm{color:#9A3B00;font-weight:600}
+  .pipe .row.alert .bar2 > i{background:#E69E50}
+  .pipe .yousotai{font-size:9px;padding:1px 5px;border-radius:8px;background:#FBEEE6;color:#9A3B00;font-weight:700;margin-left:5px;font-family:var(--sans,inherit)}
   /* list */
   .list .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
   .list .item:last-child{border-bottom:0}
@@ -842,7 +848,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-05b';
+const APP_VERSION = '2026-06-05c';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1755,34 +1761,45 @@ function renderOps(){
   try{ renderVehicleROI(); }catch(e){}
 }
 
+// 案件パイプライン: 3事業を同じ4ステージに統一(横比較可) + 入金済(完了)を別集計。
+// ④請求・入金待ち = 売掛(請求済だが未入金) ＝ 経営者が一番見たい「詰まり」→ 要対応強調。
+const UNIFIED_STAGES=['受付・準備','作業・貸出','完了・返却','請求・入金待ち'];
+function _uni(stages, paid){ return { stages, paid, total: stages.reduce((a,b)=>a+b,0) }; }
+function rentalUnified(){
+  const cs=rentalCases().filter(c=>c.status!=='キャンセル' && !c.isHistorical);
+  const n=arr=>cs.filter(c=>arr.includes(c.status)).length;
+  return _uni([ n(['受付','確認中','配車予定']), n(['配車済','利用中']), n(['回収連絡','手配書FAX済','返却済']), n(['仮請求','請求済']) ], n(['入金済']));
+}
+function detaliaUnified(){
+  const st=c=>{ if(c.paidDate)return'入金済'; if(c.delivery)return'納車済'; if(c.workChecks&&Object.keys(c.workChecks).length)return'作業完了'; if(c.arrival&&parseD(c.arrival)<=new Date())return'作業中'; if(c.arrival)return'入庫済'; return'予約'; };
+  const ss=detaliaCases().map(st);
+  const n=arr=>ss.filter(s=>arr.includes(s)).length;
+  return _uni([ n(['予約']), n(['入庫済','作業中']), n(['作業完了']), n(['納車済']) ], n(['入金済']));
+}
+function densoUnified(){
+  const js=densoJobs();
+  const n=arr=>js.filter(j=>arr.includes(j.status)).length;
+  return _uni([ n(['依頼','受注','部品手配','着荷済']), n(['作業中']), n(['作業完了','報告済']), n(['請求済']) ], n(['入金済']));
+}
+function _renderUniPipe(elId, u){
+  const tot=u.total||1;
+  const rows=UNIFIED_STAGES.map((label,i)=>{
+    const cnt=u.stages[i];
+    const alert=(i===3 && cnt>0);            // 請求・入金待ち(売掛)あり=要対応
+    const w=Math.round(cnt*100/tot);
+    return `<div class="row${alert?' alert':''}">
+      <div class="nm">${label}${alert?'<span class="yousotai">要対応</span>':''}</div>
+      <div class="bar2"><i style="width:${w}%"></i></div>
+      <div class="ct num">${cnt}</div>
+    </div>`;
+  }).join('');
+  const el=document.getElementById(elId); if(!el) return;
+  el.innerHTML = `<div class="pipe-head"><b>進行中 ${u.total}件</b><span class="ink3">入金済 ${u.paid}件 完了</span></div>` + rows;
+}
 function renderPipe(){
-  const pr=rentalPipeline();
-  const mx=Math.max(1,...pr.map(p=>p.n));
-  $('pipe-rental').innerHTML=pr.map(p=>`
-    <div class="row">
-      <div class="nm">${esc(p.s)}</div>
-      <div class="bar2"><i style="width:${Math.round(p.n*100/mx)}%"></i></div>
-      <div class="ct num">${p.n}</div>
-    </div>
-  `).join('');
-  const pd=detaliaPipeline();
-  const md=Math.max(1,...pd.map(p=>p.n));
-  $('pipe-detalia').innerHTML=pd.map(p=>`
-    <div class="row">
-      <div class="nm">${esc(p.s)}</div>
-      <div class="bar2"><i style="width:${Math.round(p.n*100/md)}%"></i></div>
-      <div class="ct num">${p.n}</div>
-    </div>
-  `).join('');
-  const pe=densoPipeline();
-  const me=Math.max(1,...pe.map(p=>p.n));
-  $('pipe-denso').innerHTML=pe.map(p=>`
-    <div class="row">
-      <div class="nm">${esc(p.s)}</div>
-      <div class="bar2"><i style="width:${Math.round(p.n*100/me)}%"></i></div>
-      <div class="ct num">${p.n}</div>
-    </div>
-  `).join('');
+  _renderUniPipe('pipe-rental', rentalUnified());
+  _renderUniPipe('pipe-detalia', detaliaUnified());
+  _renderUniPipe('pipe-denso', densoUnified());
 }
 
 function renderAr(){
