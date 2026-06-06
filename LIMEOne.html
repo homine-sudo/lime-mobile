@@ -9,6 +9,7 @@
 <link rel="manifest" href="lime-manifest.json">
 <meta name="theme-color" content="#16a34a">
 <link rel="apple-touch-icon" href="lime-512.png">
+<link rel="icon" type="image/png" href="logo.png">
 <meta name="application-name" content="LIME One">
 <title>LIME One</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="window._cdnFailed=window._cdnFailed||[];window._cdnFailed.push('XLSX(Excel)')"></script>
@@ -56,8 +57,8 @@ body{font-family:'Meiryo','メイリオ',sans-serif;font-size:13px;color:var(--t
 .page-context-bar .pc-hint kbd{background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #CFDEF7;color:var(--navy);font-family:'Yu Gothic UI',sans-serif;font-size:10px;font-weight:bold}
 @media(max-width:760px){.page-context-bar .pc-desc{display:none}.page-context-bar .pc-hint{display:none}}
 @media print{.page-context-bar{display:none!important}}
-.nav-status{font-size:11px;color:#D0E4F5;margin-right:8px}
-.admin-badge{background:rgba(255,255,255,.18);color:#fff;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:bold;margin-right:8px;cursor:pointer;border:1px solid rgba(255,255,255,.15);transition:all .15s}
+.nav-status{font-size:11px;color:#D0E4F5;margin-right:8px;flex-shrink:0;white-space:nowrap}
+.admin-badge{background:rgba(255,255,255,.18);color:#fff;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:bold;margin-right:8px;cursor:pointer;border:1px solid rgba(255,255,255,.15);transition:all .15s;flex-shrink:0;white-space:nowrap}
 .admin-badge:hover{background:rgba(255,255,255,.32);border-color:rgba(255,255,255,.3)}
 body.staff-mode .admin-only{display:none !important}
 /* 案件モーダル 読み取り専用モード (他PCがロック中) */
@@ -928,8 +929,8 @@ tr.veh-maint-row:hover{background:#FFECD6}
   <div class="nav-tab admin-only" data-page="bi" onclick="showPage('bi')" title="売上・件数・稼働率のグラフ">📈 経営分析</div>
   <div class="nav-tab admin-only" data-page="settings" onclick="showPage('settings')" title="会社情報・税率・バックアップ・共有モード">⚙ 設定</div>
   <div class="nav-spacer"></div>
-  <button onclick="showBackupStatus()" title="バックアップ状況の確認 (現在の保存場所一覧 + 完全バックアップ)" style="background:var(--lime);color:var(--deep);border:none;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:bold;cursor:pointer;margin-right:8px;box-shadow:0 1px 3px rgba(0,0,0,.2)">🛡 バックアップ確認</button>
-  <div class="sync-indicator" title="共有モード状態" onclick="showSyncPanel()" style="cursor:pointer;font-size:11px;margin-right:10px;padding:4px 10px;border:1px solid rgba(255,255,255,.2);border-radius:12px">
+  <button onclick="showBackupStatus()" title="バックアップ状況の確認 (現在の保存場所一覧 + 完全バックアップ)" style="background:var(--lime);color:var(--deep);border:none;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:bold;cursor:pointer;margin-right:8px;box-shadow:0 1px 3px rgba(0,0,0,.2);flex-shrink:0;white-space:nowrap">🛡 バックアップ確認</button>
+  <div class="sync-indicator" title="共有モード状態" onclick="showSyncPanel()" style="cursor:pointer;font-size:11px;margin-right:10px;padding:4px 10px;border:1px solid rgba(255,255,255,.2);border-radius:12px;flex-shrink:0;white-space:nowrap">
     🔗 <span id="sync-status"><span style="color:#aaa">未設定</span></span>
   </div>
   <span class="admin-badge" id="admin-badge" onclick="toggleAdminMode()" title="クリックで切替"></span>
@@ -1494,6 +1495,14 @@ tr.veh-maint-row:hover{background:#FFECD6}
 <!-- 売上入金管理 (旧:入金管理) -->
 <div class="page" id="page-payments">
   <div class="kpi-grid" id="pay-kpi"></div>
+  <!-- 🤖 freee自動処理ログ (管理者のみ) 2026-06-05c -->
+  <div id="pay-freee-autolog-card" class="card admin-only" style="border-left:5px solid #2D5F1F;background:#F4FBF6;margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 0 6px;flex-wrap:wrap">
+      <span class="card-title" style="margin:0;color:#2D5F1F">🤖 freee自動処理ログ</span>
+      <span style="font-size:11px;color:#666">1日1回 自動（①売上登録 / ②入金照合）・管理者のみ表示</span>
+    </div>
+    <div id="pay-freee-autolog-body" style="font-size:13px"></div>
+  </div>
   <!-- v2026.04.29ba: 💸 freee修正待ちリスト (CSVエクスポート後に金額調整された案件) -->
   <div id="pay-freee-fix-card" class="card admin-only" style="display:none;border-left:5px solid #E69E50;background:linear-gradient(90deg,#FFF7E6 0%,#FFFDF7 80%);margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:10px;padding:4px 0 6px;flex-wrap:wrap">
@@ -1513,9 +1522,12 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <div class="admin-only" style="position:relative">
         <button type="button" onclick="(function(e){const m=document.getElementById('pay-freee-menu');m.style.display=(m.style.display==='block'?'none':'block');})()" class="btn btn-outline btn-sm" style="font-size:12px;padding:5px 10px">📊 freee連携 ▾</button>
         <div id="pay-freee-menu" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:50;min-width:200px;overflow:hidden">
-          <button type="button" onclick="document.getElementById('pay-freee-menu').style.display='none';openFreeeExportDialog()" style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;cursor:pointer;font-size:13px;border-bottom:1px solid #eee" onmouseover="this.style.background='#FFF7E6'" onmouseout="this.style.background='transparent'">📊 freee用CSV出力<div style="font-size:11px;color:#888">売上をfreeeに登録</div></button>
-          <button type="button" onclick="document.getElementById('pay-freee-menu').style.display='none';openFreeeImportDialog()" style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;cursor:pointer;font-size:13px;border-bottom:1px solid #eee" onmouseover="this.style.background='#E8F5E9'" onmouseout="this.style.background='transparent'">📥 freee入金 取込<div style="font-size:11px;color:#888">入金済情報を反映</div></button>
-          <button type="button" onclick="document.getElementById('pay-freee-menu').style.display='none';openFreeeReconcileDialog()" style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;cursor:pointer;font-size:13px" onmouseover="this.style.background='#FFF4E0'" onmouseout="this.style.background='transparent'">🔄 freee登録状況 同期<div style="font-size:11px;color:#888">取引一覧CSVと現実合わせ</div></button>
+          <div style="padding:5px 14px;font-size:10px;color:#2D5F1F;background:#F1F8E9;border-bottom:1px solid #eee;font-weight:bold">― 通常（API・自動と同じ）―</div>
+          <button type="button" onclick="document.getElementById('pay-freee-menu').style.display='none';openFreeeExportDialog()" style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;cursor:pointer;font-size:13px;border-bottom:1px solid #eee" onmouseover="this.style.background='#FFF7E6'" onmouseout="this.style.background='transparent'">📤 freee売上を登録<div style="font-size:11px;color:#888">未登録の売上をfreeeに登録（API）</div></button>
+          <button type="button" onclick="document.getElementById('pay-freee-menu').style.display='none';freeePullPaidStatus()" style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;cursor:pointer;font-size:13px;border-bottom:1px solid #eee" onmouseover="this.style.background='#E8F5E9'" onmouseout="this.style.background='transparent'">💰 freee入金を取込<div style="font-size:11px;color:#888">決済済をAPIで取得→入金済に</div></button>
+          <div style="padding:5px 14px;font-size:10px;color:#aaa;background:#FAFAFA;border-bottom:1px solid #eee">― 予備（手動・CSV）API不調時のみ ―</div>
+          <button type="button" onclick="document.getElementById('pay-freee-menu').style.display='none';openFreeeImportDialog()" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;background:transparent;cursor:pointer;font-size:12px;color:#777;border-bottom:1px solid #eee" onmouseover="this.style.background='#F5F5F5'" onmouseout="this.style.background='transparent'">📥 入金CSV取込（予備）<div style="font-size:11px;color:#aaa">API不調時の手動取込</div></button>
+          <button type="button" onclick="document.getElementById('pay-freee-menu').style.display='none';openFreeeReconcileDialog()" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;background:transparent;cursor:pointer;font-size:12px;color:#777" onmouseover="this.style.background='#F5F5F5'" onmouseout="this.style.background='transparent'">🔄 登録状況 同期（予備）<div style="font-size:11px;color:#aaa">取引一覧CSVと突合</div></button>
         </div>
       </div>
     </div>
@@ -2068,17 +2080,29 @@ tr.veh-maint-row:hover{background:#FFECD6}
           (現在 freeeに登録済の部門例: その他, カー用品, ディテーリング, 一般レンタカー, <b>代車レンタカー</b>, 法人レンタル, 車両販売)
         </div>
       </div>
+      <div class="form-group">
+        <label class="form-label">freee API URL (GASウェブアプリ /exec)</label>
+        <input class="form-control" id="s-freee-api-url" placeholder="https://script.google.com/macros/s/.../exec" style="font-family:monospace;font-size:12px">
+        <div class="text-sm text-muted" style="margin-top:4px;line-height:1.6">
+          設定すると「📊 freee用CSV出力」画面に <b>📤 freeeにAPI登録</b> ボタンが出ます。<br>
+          GAS経由でfreeeに売上取引を直接作成（CSV手動アップ不要）。空欄なら従来のCSV運用のまま。
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">このPCで freee売上を自動登録 (1日1回)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding-top:4px">
+          <input type="checkbox" id="s-freee-autopost-pc" onchange="try{localStorage.setItem('limeFreeeAutoPostPc', this.checked?'1':'0');}catch(_){}; toast(this.checked?'✅ このPCで自動売上登録を有効化':'このPCの自動売上登録を無効化');">
+          <span>ONで、このPCでLIMEOneを開いた時に1日1回、未登録売上を自動でfreeeに登録（事務メインPCだけON推奨）。②入金照合は全PCで自動実行。</span>
+        </label>
+      </div>
     </div>
     <!-- v2026.04.29cf: freee MCP連携準備 (将来の自動化) -->
     <div style="margin-top:14px;padding:12px;background:#F4FBF6;border:1px dashed #4F8A3E;border-radius:6px">
-      <div style="font-size:13px;font-weight:bold;color:#2D5F1F;margin-bottom:6px">🔮 freee API直結による完全自動化 (検討中)</div>
+      <div style="font-size:13px;font-weight:bold;color:#2D5F1F;margin-bottom:6px">✅ freee API直結 (売上の自動登録) — 稼働中</div>
       <div style="font-size:11px;color:#444;line-height:1.7">
-        現状: CSV出力 → 手動でfreeeにアップ / 入金CSV を月1で取込 / 「✓ 登録済」を手動マーク<br>
-        将来: <b>freee API/MCP連携</b>で 売上自動登録・入金自動照合・登録済フラグの自動同期 が可能<br>
-        <span style="color:#888">必要なもの: freeeアカウント (要確認) / API利用権限 / 担当者によるOAuth承認</span>
-      </div>
-      <div style="margin-top:8px;font-size:11px;color:#7A4500">
-        💡 ご希望なら、freee MCP連携 (Claude経由でfreee操作) を追加できます。
+        上の「freee API URL」を設定すれば、売上はGAS経由でfreeeに直接登録できます (CSV手動アップ不要)。<br>
+        手順: 📊 freee連携 → 📊 freee用CSV出力 → 一覧を確認 → <b>📤 freeeにAPI登録</b><br>
+        <span style="color:#888">入金照合(取込)の自動化は Phase2 で追加予定。CSV出力も従来通り併用できます。</span>
       </div>
     </div>
     <!-- 外部連携: Google カレンダー + LINE 通知 -->
@@ -2268,7 +2292,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <div id="sec-insurer-block">
         <div class="form-section sec-insurer">🏢 保険会社</div>
         <div class="form-grid cols3">
-          <div class="form-group"><label class="form-label req">保険会社 <span class="text-muted text-sm">一覧から選ぶ or 直接入力(未登録は保存時に自動登録)</span></label>
+          <div class="form-group"><label class="form-label">保険会社 <span class="text-muted text-sm">一覧から選ぶ or 直接入力(未登録は保存時に自動登録)</span></label>
             <input type="hidden" id="f-insurerId">
             <div style="display:flex;gap:6px;align-items:center">
               <input class="form-control" id="f-insurerDisplay" placeholder="保険会社名を入力 または 📋で一覧から選ぶ" style="background:#fff;flex:1" oninput="onInsurerTextInput()">
@@ -2293,7 +2317,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <!-- 契約者・配車 -->
       <div class="form-section sec-driver">👤 契約者・配車先</div>
       <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label req">契約者</label><input class="form-control" id="f-contractorName"></div>
+        <div class="form-group"><label class="form-label">契約者</label><input class="form-control" id="f-contractorName"></div>
         <div class="form-group"><label class="form-label">運転者</label><input class="form-control" id="f-driverName"></div>
         <div class="form-group"><label class="form-label">運転者TEL</label><input class="form-control" id="f-driverTel"></div>
         <!-- 配車先(工場) - 区分=一般 のときは非表示 (顧客が直接来店するため工場経由なし) -->
@@ -2822,7 +2846,10 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-05-29e';
+const APP_VERSION = '2026-06-06';
+// freee API直結用の共有トークン（GAS側 FREEE_SHARED_TOKEN と一致させる）。
+// 公開HTMLに出るが、実エンドポイントURLは settings(data.json/非公開)にのみ持つため保護される。
+const FREEE_API_TOKEN = 'lime-freee-2026-k9Xz7Qp3Rm';
 const STATUSES = ['受付','配車予定','配車済','利用中','回収連絡','手配書FAX済','返却済','仮請求','請求済','入金済','キャンセル'];
 const STATUS_LABEL = {
   '受付':'受付','確認中':'確認連絡','配車予定':'配車予定','配車済':'配車完了','利用中':'利用中',
@@ -2954,6 +2981,7 @@ const defaultData = () => ({
     efaxSendUrl:'https://portal.efax.co.jp/myaccount/newfax?number={FAX}',  // eFax送信画面URL ({FAX}は自動置換)
     freeeImportStartDate:'2026-04-27',
     freeeDepartment:'代車レンタカー',
+    freeeApiUrl:'',
     counters:{ caseSeq:1, invoiceSeq:1 }
   },
   insurers:[], vehicleClasses: DEFAULT_CLASSES.slice(), staff:[], holidays:[],
@@ -3102,8 +3130,10 @@ function normalizeData(d){
   }
   // 案件の不要フィールド (UIから廃止済み・データもクリーンアップ)
   // ※ invoiceIssuedAt は現在も使用中のため削除しない
-  // v2026.04.29bz: invoiceDays/invoiceUnitPrice (請求上書き) はExcel取込時のレガシー、現在不要
-  const CASE_OBSOLETE_FIELDS = ['_classMigrated','_sb','invoiceDays','invoiceUnitPrice'];
+  // 2026-06-03: invoiceDays/invoiceUnitPrice は一般貸渡(GRモーダル)で現役使用中のため削除しない。
+  //   以前ここに含めていたため、GRで入力した請求単価/請求日数がリロードで消える不具合があった
+  //   (請求が標準料金×自動日数に黙って戻る過少請求リスク)。GR_FIELDS/貸渡証生成が両者を参照する。
+  const CASE_OBSOLETE_FIELDS = ['_classMigrated','_sb'];
   const cases = (d.cases || []).map(c => {
     let out = { ...c };
     const newCode = CLASS_ALIASES[c.vehicleClass];
@@ -9239,10 +9269,12 @@ function saveCase(){
   _resolveManualInsurer();
   const c = collectForm();
   const errors = [];
-  if(!c.contractorName && !c.driverName) errors.push('契約者または運転者');
+  // 2026-05-30b: 契約者(または運転者)の必須チェックを廃止(ユーザー要望)。
+  //   受付段階で氏名未確定のケースが多いため、入力欄は残しつつ必須ではなくす。
+  //   `req` クラスも HTML 2296 から削除済み。健全性チェック(12899)は名前無し案件をレポートする(非ブロック)ので維持。
   if(!c.receivedAt) errors.push('受付日');
-  // 区分=一般 は専用モーダル(gr-modal)経由のみ。念のため保険会社必須から外す防御策として残置
-  if(c.category !== '一般' && !c.insurerId) errors.push('保険会社');
+  // 2026-05-30c: 保険会社の必須チェックを廃止(ユーザー要望)。`req` クラスも HTML 2271 から削除済み。
+  //   受付段階で保険会社未確定のケースを許容。後から追記可能。`category!=='一般'` 分岐の意味も無くなったので行ごと削除。
   // 車両クラス・配車情報は受付直後だと未確定でもOK (警告のみ)
   const warns = [];
   if(!c.vehicleClass && !c.vehicleId) warns.push('車両クラス');
@@ -9509,6 +9541,13 @@ function duplicateCase(){
   }
   DATA.cases.unshift(n);
   save();
+  // 🚙 v2026-05-30a: 複製で作った案件も「新規案件」として LINE/カレンダー通知を発火。
+  //   旧: 通知が呼ばれず、複製ルートだけ通知が来ない構造的バグ
+  //       (runFlowAction で 2026-05-23 に修正したのと同じクラスのバグ)。
+  //   継続レンタル/別事故/フル複製のいずれも受付Noが新規＝newCase として通知が必要。
+  if(typeof _fireCaseNotifications === 'function'){
+    try { _fireCaseNotifications(n, true, null); } catch(e){ console.warn('duplicateCase notify failed:', e); }
+  }
   closeCaseModal();
   const modeLabel = {1:'継続レンタル', 2:'別事故', 3:'フル複製'}[mode];
   toast(`✅ ${modeLabel}で複製しました (${n.caseNo})`, true);
@@ -11567,11 +11606,14 @@ function getRentalContractFrontHtml(c){
   const unitPrice = Number(c.invoiceUnitPrice || c.unitPrice || 0);
   let days = Number(c.invoiceDays || c.useDays || 0);
   if(!days && c.useStart && c.useEnd){
-    // useStart/useEnd から自動計算 (24時間単位の繰り上げ)
+    // useStart/useEnd から自動計算 (貸渡日数=updateGRPeriod と同ロジックに統一)
     const ts = new Date((c.useStart) + 'T' + (c.useStartTime||'10:00') + ':00');
     const te = new Date((c.useEnd)   + 'T' + (c.useEndTime  ||'10:00') + ':00');
     if(!isNaN(ts) && !isNaN(te) && te > ts){
-      days = Math.ceil((te - ts) / 86400000);
+      // 2026-06-03: 旧 Math.ceil(ms/86400000) は 48h丁度の2泊3日が2日になり過少請求だった
+      const _h = Math.floor((te - ts) / 3600000);
+      const _nights = Math.round((new Date(c.useEnd) - new Date(c.useStart)) / 86400000);
+      days = (_h <= 24) ? 1 : Math.max(_nights + 1, Math.ceil(_h / 24));
     }
   }
   const discount = Number(c.discount || 0);
@@ -12386,6 +12428,7 @@ function renderFaxInvoiceBulk(v){
 function renderPayments(){
   // v2026.04.29ba: freee修正待ちカードを先に描画 (件数があれば表示)
   if(typeof renderFreeeFixCard === 'function') renderFreeeFixCard();
+  if(typeof renderFreeeAutoLog === 'function') renderFreeeAutoLog();
   //  - 入金月フィルタが空 → 未収案件 (返却済/仮請求/請求済)
   //  - 入金月フィルタあり → 入金済案件のみ (paidAt がその月)
   //  - 状態フィルタ「入金済」を選ぶ → 入金済全件
@@ -14002,13 +14045,15 @@ function fillSettings(){
   if($('s-efax-from')) $('s-efax-from').value = s.efaxFrom || '';
   if($('s-freee-start')) $('s-freee-start').value = s.freeeImportStartDate || '2026-04-27';
   if($('s-freee-dept')) $('s-freee-dept').value = s.freeeDepartment || '代車レンタカー';
+  if($('s-freee-api-url')) $('s-freee-api-url').value = s.freeeApiUrl || '';
+  if($('s-freee-autopost-pc')) $('s-freee-autopost-pc').checked = (typeof localStorage!=='undefined' && localStorage.getItem('limeFreeeAutoPostPc')==='1');
   // 外部連携 (GAS Web App URL + 通知トリガ)
   if($('s-gas-url')) $('s-gas-url').value = s.gasWebAppUrl || '';
   if($('s-notify-new-case')) $('s-notify-new-case').checked = !!s.notifyOnNewCase;
   if($('s-notify-recovery-date')) $('s-notify-recovery-date').checked = !!s.notifyOnRecoveryDate;
 }
 function saveSettings(){
-  const map = {'s-company-name':'companyName','s-trade-name':'tradeName','s-address':'address','s-tel':'tel','s-fax':'fax','s-invoice-reg':'invoiceReg','s-bank-name':'bankName','s-bank-branch':'bankBranch','s-bank-type':'bankType','s-bank-number':'bankNumber','s-bank-holder':'bankHolder','s-tax-rate':'taxRate','s-pay-due-days':'payDueDays','s-inv-note':'invNote','s-adminPasscode':'adminPasscode','s-efax-send-url':'efaxSendUrl','s-efax-from':'efaxFrom','s-freee-start':'freeeImportStartDate','s-freee-dept':'freeeDepartment','s-gas-url':'gasWebAppUrl'};
+  const map = {'s-company-name':'companyName','s-trade-name':'tradeName','s-address':'address','s-tel':'tel','s-fax':'fax','s-invoice-reg':'invoiceReg','s-bank-name':'bankName','s-bank-branch':'bankBranch','s-bank-type':'bankType','s-bank-number':'bankNumber','s-bank-holder':'bankHolder','s-tax-rate':'taxRate','s-pay-due-days':'payDueDays','s-inv-note':'invNote','s-adminPasscode':'adminPasscode','s-efax-send-url':'efaxSendUrl','s-efax-from':'efaxFrom','s-freee-start':'freeeImportStartDate','s-freee-dept':'freeeDepartment','s-freee-api-url':'freeeApiUrl','s-gas-url':'gasWebAppUrl'};
   Object.entries(map).forEach(([id,k])=>{ const el=$(id); if(!el) return; const v=el.value; DATA.settings[k]= (k==='taxRate'||k==='payDueDays')? Number(v||0) : v; });
   // チェックボックス系
   if($('s-notify-new-case')) DATA.settings.notifyOnNewCase = $('s-notify-new-case').checked;
@@ -15297,6 +15342,8 @@ async function initApp(){
   setTimeout(()=> { try { showDailyBriefing(); } catch(e){ console.warn('briefing error', e); } }, 2200);
   // v2026.04.29cf: 月初(1〜3日)で前月レポートが未出力なら通知
   setTimeout(()=> { try { checkMonthlyReportReminder(); } catch(e){} }, 3500);
+  // 2026-06-05c: freee 自動処理（①売上登録・②入金照合 を1日1回・Dropbox同期が落ち着いた頃に実行）
+  setTimeout(()=> { try { freeeAutoRun(); } catch(e){ console.warn('freeeAutoRun error', e); } }, 12000);
   // 前回開いていた画面を復元 (instruction/invoice はコンテキストが必要なのでダッシュボードへ)
   let lastPage = 'dashboard';
   try {
@@ -15584,7 +15631,8 @@ function renderFreeeFixCard(){
               <td style="padding:6px 8px;text-align:right;font-weight:bold;color:${diffColor}">${diffSign}${yen(x.diff)}</td>
               <td style="padding:6px 8px;text-align:center;white-space:nowrap" onclick="event.stopPropagation()">
                 <button class="btn btn-xs btn-outline" style="background:#FFF7E6;border-color:#E69E50;color:#7A4500;margin-right:4px" onclick="openFreeeDealSearch('${escJs(c.caseNo||'')}')" title="freeeの取引検索を開きます">🔗 freeeで開く</button>
-                <button class="btn btn-xs btn-green" onclick="markFreeeFixed('${c.id}')" title="この案件のfreee修正を完了として記録">✓ 修正済</button>
+                <button class="btn btn-xs" style="background:#2D5F1F;color:#fff;border:none;margin-right:4px" onclick="freeeApproveAmountFix('${c.id}')" title="承認してfreeeの取引金額を自動修正（入金済は不可）">🔄 承認して修正</button>
+                <button class="btn btn-xs btn-green" onclick="markFreeeFixed('${c.id}')" title="freee側で手動修正した場合に完了として記録">✓ 修正済(手動)</button>
               </td>
             </tr>`;
           }).join('')}
@@ -15698,6 +15746,264 @@ function freeeFormatRow(t){
   ];
 }
 
+// ============================================================
+// freee API直結（GAS経由で売上を取引登録）— Phase 1b / 2026-06-05
+//   CSV(freeeFormatRow)と同じ対象・同じ日本語名を使う。出口がCSV→APIに変わるだけ。
+//   GAS側(freee_deals.gs)が日本語名→ID変換・取引先名寄せ・POST /deals を担う。
+// ============================================================
+function freeeApiRow(t){
+  const c = t.c;
+  const amount = t.amount;
+  const ins = (typeof findInsurer === 'function' ? findInsurer(c.insurerId) : null) || {};
+  const partnerName = ins.name || '';
+  const insContact = c.insurerContact || '';
+  const dept = (c.category === '一般')
+    ? '一般レンタカー'
+    : ((DATA.settings && DATA.settings.freeeDepartment) || '代車レンタカー');
+
+  if(t.isNoc){
+    const noc = c.nocCharge || {};
+    const issued = (noc.issuedAt || todayISO()).slice(0,10);
+    const due = addDays(issued, NOC_DUE_DAYS);
+    const itemNames = (noc.items || []).map(it => it.label).join('・') || '休業補償料';
+    const nocDriver = c.driverName || c.contractorName || '';
+    const nocMemo = ['NOC', c.caseNo || '', nocDriver, itemNames].filter(Boolean).join(' / ');
+    return {
+      refNumber:   (c.caseNo || '') + '-NOC',
+      issueDate:   issued,
+      dueDate:     due,
+      partnerName: '休業補償',
+      accountItem: '雑収入',
+      taxName:     '課税売上10%',
+      amount:      amount,
+      sectionName: dept,
+      description: nocMemo
+    };
+  }
+
+  const memo = [c.caseNo || '', partnerName, insContact].filter(Boolean).join(' / ');
+  const _payN = DATA.settings.payDueDays || 14;
+  const dueDate = c.paymentDueAt
+    || addDays(c.invoiceIssuedAt || (c.useEnd ? c.useEnd.slice(0,10) : '') || todayISO(), _payN);
+  return {
+    refNumber:   c.caseNo || '',
+    issueDate:   (c.useEnd || '').slice(0,10),
+    dueDate:     dueDate,
+    partnerName: partnerName,
+    accountItem: '売上高',
+    taxName:     '課税売上10%',
+    amount:      amount,
+    sectionName: dept,
+    description: memo
+  };
+}
+
+// 売上をGAS経由でfreeeに直接API登録（既存CSVは温存・別ボタン）
+async function freeePostDealsToApi(opts){
+  opts = opts || {};
+  const url = ((DATA.settings && DATA.settings.freeeApiUrl) || '').trim();
+  if(!url){ if(!opts.silent) toast('freee API URLが未設定です（設定 → freee連携 で登録）','error'); return; }
+  const { targets } = freeeExportTargets();
+  if(!targets.length){ if(!opts.silent) toast('登録対象の未エクスポート案件はありません ✅'); return; }
+  const totalAmount = targets.reduce((s,t)=>s+t.amount, 0);
+  if(!opts.auto && !confirm(`📤 freeeへ売上を直接登録します (API)。\n\n件数: ${targets.length}件\n合計(税込): ${yen(totalAmount)}\n\nGAS経由でfreeeに取引を作成し、各案件を「freee登録済」にします。\n\n※送信後はfreee側で着信をご確認ください (GASの仕様上、画面では成否を読めません)。`)) return;
+
+  const rows = targets.map(freeeApiRow);
+  try {
+    // GAS Web App は CORSヘッダを返さないため no-cors（応答は読めない＝楽観マーク・§4.9と同方針）
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'createDeals', token: FREEE_API_TOKEN, rows })
+    });
+  } catch(e){
+    console.error('freee API POST 失敗:', e);
+    toast('freeeへの送信でエラー: ' + e.message, 'error');
+    return;
+  }
+
+  // 楽観的に「エクスポート済」マーク（markFreeeExported と同じ作法）
+  const today = todayISO();
+  const now = Date.now();
+  let marked = 0;
+  targets.forEach(t => {
+    const c = findCaseById(t.c.id);
+    if(!c) return;
+    if(t.isNoc){
+      if(!c.nocCharge) c.nocCharge = {};
+      c.nocCharge.freeeExportedAt = today;
+      c.nocCharge.freeeExportedAmount = t.amount;
+    } else {
+      c.freeeExportedAt = today;
+      c.freeeExportedAmount = t.amount;
+    }
+    c.updatedAt = now;  // 共有モードのマージで他PCの古い版に負けないように
+    marked++;
+  });
+  _freeeLogAuto('sales', marked);
+  save();
+  const d = document.getElementById('freee-export-dialog');
+  if(d) d.remove();
+  if(!opts.silent || marked) toast(`📤 ${marked}件をfreeeにAPI登録しました（freee側で取引の着信をご確認ください）`, true);
+}
+
+// ============================================================
+// Phase 2: 入金照合 — freeeの「決済済」をJSONPで取得し案件を「入金済」に
+//   読み取り主体・低リスク。消込自体はfreee側(手動/自動登録ルール)で行う前提。
+//   JSONP採用理由: GAS Web Appはブラウザのfetch応答をCORSで読めないため。
+// ============================================================
+function freeePullPaidStatus(opts){
+  opts = opts || {};
+  const url = ((DATA.settings && DATA.settings.freeeApiUrl) || '').trim();
+  if(!url){ if(!opts.silent) toast('freee API URLが未設定です（設定 → freee連携 で登録）','error'); return; }
+  const cb = 'freeeJsonpPaid_' + Date.now();
+  const script = document.createElement('script');
+  let done = false;
+  const cleanup = () => { try{ delete window[cb]; }catch(_){ window[cb] = undefined; } if(script.parentNode) script.parentNode.removeChild(script); };
+  const timer = setTimeout(() => { if(done) return; done = true; cleanup(); if(!opts.silent) toast('freee入金取込: 応答タイムアウト','error'); }, 30000);
+  window[cb] = function(res){
+    if(done) return; done = true; clearTimeout(timer); cleanup();
+    if(!res || !res.ok){ if(!opts.silent) toast('freee入金取込: ' + ((res && res.error) || '失敗'), 'error'); return; }
+    applyFreeePaid(res.paid || {}, opts);
+  };
+  const since = (DATA.settings && DATA.settings.freeeImportStartDate) || '';
+  script.src = url + '?action=paidStatus&token=' + encodeURIComponent(FREEE_API_TOKEN)
+             + '&since=' + encodeURIComponent(since)
+             + '&callback=' + cb;
+  script.onerror = () => { if(done) return; done = true; clearTimeout(timer); cleanup(); if(!opts.silent) toast('freee入金取込: 通信エラー','error'); };
+  if(!opts.silent) toast('💰 freeeの入金状況を取得中...');
+  document.head.appendChild(script);
+}
+
+// 取得した決済済マップ {受付No:{date,dealId}} を案件に反映（freee登録済かつ未入金のみ前進）
+function applyFreeePaid(paidMap, opts){
+  opts = opts || {};
+  let changed = 0;
+  const today = todayISO();
+  const now = Date.now();
+  DATA.cases.forEach(c => {
+    if(!c || !c.caseNo) return;
+    if(c.status === '入金済' || c.status === 'キャンセル') return;
+    if(!c.freeeExportedAt) return;            // freee未登録の案件は対象外（安全ガード）
+    const p = paidMap[c.caseNo];
+    if(!p) return;
+    c.status = '入金済';
+    c.freeePaidAt = p.date || today;
+    c.updatedAt = now;                        // 共有マージで他PCの古い版に負けないように
+    changed++;
+  });
+  if(changed){
+    _freeeLogAuto('paid', changed);
+    save();
+    if(typeof renderDashboard === 'function') { try { renderDashboard(); } catch(_){} }
+    if(typeof renderFreeeFixCard === 'function') { try { renderFreeeFixCard(); } catch(_){} }
+    if(typeof renderFreeeAutoLog === 'function') { try { renderFreeeAutoLog(); } catch(_){} }
+  }
+  if(!opts.silent || changed){
+    toast(changed ? `💰 freee入金照合: ${changed}件を「入金済」にしました` : '💰 freee入金照合: 新たな入金はありません', true);
+  }
+}
+
+// ===== freee 自動化（①②自動・③承認修正・ログ）2026-06-05c =====
+// 当日の自動処理件数を集計（管理者エリア表示用）
+function _freeeLogAuto(kind, count){
+  const s = DATA.settings; if(!s) return;
+  const today = todayISO();
+  let log = s.freeeAutoLog;
+  if(!log || log.date !== today) log = { date: today, sales:0, paid:0, fixed:0 };
+  log[kind] = (Number(log[kind])||0) + (Number(count)||0);
+  log.at = Date.now();
+  s.freeeAutoLog = log;
+}
+
+// 1日1回の自動実行（事務PCでLIMEOne起動時に呼ぶ）。
+//   ②入金照合=全PCで1日1回（読取主体・低リスク）/ ①売上自動登録=このPCで明示ON時のみ（二重投稿防止）
+function freeeAutoRun(){
+  const s = DATA.settings || {};
+  if(!s.freeeApiUrl) return;
+  const today = todayISO();
+  let gate = false;
+  if(s.freeeAutoLastPaid !== today){
+    s.freeeAutoLastPaid = today; gate = true;
+    setTimeout(()=>{ try { freeePullPaidStatus({ silent:true, auto:true }); } catch(e){ console.warn('freee auto paid', e); } }, 4000);
+  }
+  if(typeof localStorage !== 'undefined' && localStorage.getItem('limeFreeeAutoPostPc') === '1' && s.freeeAutoLastSales !== today){
+    s.freeeAutoLastSales = today; gate = true;
+    setTimeout(()=>{ try { freeePostDealsToApi({ silent:true, auto:true }); } catch(e){ console.warn('freee auto sales', e); } }, 8000);
+  }
+  if(gate){ s._updatedAt = Date.now(); save(); }
+}
+
+// ③ 管理者が承認 → freeeの取引金額を修正（入金済は不可）
+function freeeApproveAmountFix(caseId){
+  const c = findCaseById(caseId);
+  if(!c){ toast('案件が見つかりません','error'); return; }
+  const url = ((DATA.settings && DATA.settings.freeeApiUrl) || '').trim();
+  if(!url){ toast('freee API URLが未設定です（設定 → freee連携 で登録）','error'); return; }
+  if(c.status === '入金済'){ toast('入金済の取引は自動修正できません。freeeで手動対応してください','error'); return; }
+  const a = (typeof calcAmounts==='function') ? calcAmounts(c) : null;
+  const cur = a ? Math.round(a.total || 0) : Number(c.invoiceAmount || 0);
+  const prev = Number(c.freeeExportedAmount || 0);
+  if(prev === cur){ toast('差額はありません'); if(typeof renderFreeeFixCard==='function') renderFreeeFixCard(); return; }
+  if(!confirm(`案件 ${c.caseNo} のfreee取引金額を修正します。\n\nfreee登録時: ¥${prev.toLocaleString()}\n現在金額  : ¥${cur.toLocaleString()}\n\nGAS経由でfreeeの取引金額を更新します（受付Noで取引を特定）。よろしいですか?`)) return;
+  const row = freeeApiRow({ c, amount: cur });
+  fetch(url, {
+    method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'updateDeals', token: FREEE_API_TOKEN, rows:[row] })
+  }).catch(e=>console.warn('freee updateDeal POST', e));
+  c.freeeExportedAmount = cur;
+  c.freeeExportedAt = todayISO();
+  c.updatedAt = Date.now();
+  _freeeLogAuto('fixed', 1);
+  save();
+  toast(`🔄 ${c.caseNo} のfreee金額修正を送信しました（freeeで反映をご確認ください）`, true);
+  if(typeof renderFreeeFixCard==='function') renderFreeeFixCard();
+}
+
+// 管理者エリア：freee自動処理ログの表示（pay-freee-autolog-body に描画）
+function renderFreeeAutoLog(){
+  const host = document.getElementById('pay-freee-autolog-body');
+  if(!host) return;
+  const log = (DATA.settings && DATA.settings.freeeAutoLog) || null;
+  const pc = (typeof localStorage!=='undefined' && localStorage.getItem('limeFreeeAutoPostPc')==='1');
+  const lastSales = (DATA.settings && DATA.settings.freeeAutoLastSales) || '';
+  // 🚦 自動投入「GO」: このPCを売上自動投入の担当にする (管理者のみ・端末固有)
+  //   二重投稿防止のため担当は1台だけ。管理者モードのこのカードからON/OFFする。
+  const goBtn = pc
+    ? `<button class="btn btn-sm" style="background:#C53030;color:#fff;border-color:#C53030" onclick="toggleFreeeAutoPostPcAdmin()">⏸ このPCの自動投入を解除</button>`
+    : `<button class="btn btn-sm btn-primary" onclick="toggleFreeeAutoPostPcAdmin()">▶ このPCを自動投入担当にする（GO）</button>`;
+  const goBlock = `
+    <div style="margin-top:10px;padding:9px 11px;background:#fff;border:1px dashed ${pc?'#2D5F1F':'#C0CDB6'};border-radius:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:12.5px">${pc?'✅ <b style="color:#2D5F1F">このPCが売上の自動投入担当です</b>':'このPCは自動投入<b>OFF</b>（②入金照合のみ実行）'}</span>
+      ${goBtn}
+      <span style="font-size:11px;color:#888">最終 自動売上投入日: ${esc(lastSales||'記録なし')}</span>
+    </div>`;
+  if(!log){
+    host.innerHTML = `<span style="color:#666">本日の自動処理はまだありません（担当PCでLIMEOneを開くと1日1回自動実行）。</span>${goBlock}`;
+    return;
+  }
+  host.innerHTML = `
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+      <div><span style="font-size:11px;color:#666">日付</span><br><b>${esc(log.date||'')}</b></div>
+      <div><span style="font-size:11px;color:#666">売上 自動登録</span><br><b style="color:var(--navy);font-size:16px">${Number(log.sales)||0}</b> 件</div>
+      <div><span style="font-size:11px;color:#666">入金 照合</span><br><b style="color:var(--green);font-size:16px">${Number(log.paid)||0}</b> 件</div>
+      <div><span style="font-size:11px;color:#666">金額 修正(承認)</span><br><b style="color:#7A4500;font-size:16px">${Number(log.fixed)||0}</b> 件</div>
+    </div>${goBlock}`;
+}
+
+// 🚦 自動投入「GO」トグル (管理者モードのfreeeカードから。端末固有=localStorage)
+function toggleFreeeAutoPostPcAdmin(){
+  if(typeof isAdmin === 'function' && !isAdmin()){ toast('管理者モードで操作してください'); return; }
+  const cur = (typeof localStorage!=='undefined' && localStorage.getItem('limeFreeeAutoPostPc')==='1');
+  const next = !cur;
+  if(next && !confirm('このPCを「売上の自動投入担当」にします。\n\n・このPCでLIMEOneを開くと1日1回、未登録の売上をfreeeへ自動登録します。\n・二重投稿を防ぐため、担当PCは必ず1台だけにしてください（他のPCはOFFのまま）。\n\nよろしいですか？')) return;
+  try{ localStorage.setItem('limeFreeeAutoPostPc', next?'1':'0'); }catch(_){}
+  const chk = document.getElementById('s-freee-autopost-pc'); if(chk) chk.checked = next;  // 設定画面のトグルと同期
+  toast(next?'✅ このPCを売上の自動投入担当に設定しました':'このPCの自動投入を解除しました', true);
+  renderFreeeAutoLog();
+}
+
 const FREEE_CSV_HEADERS = ['収支区分','管理番号','発生日','決済期日','取引先コード','取引先','勘定科目','税区分','金額','税計算区分','税額','備考','品目','部門','メモタグ（複数指定可、カンマ区切り）','セグメント1','セグメント2','セグメント3','決済日','決済口座','決済金額'];
 
 function csvEscape(v){
@@ -15781,7 +16087,7 @@ function openFreeeExportDialog(){
   dialog.innerHTML = `
     <div class="modal" style="max-width:900px;width:95vw">
       <div class="modal-header" style="background:#FFF7E6">
-        <span class="modal-title">📊 freee取引一括登録CSV出力</span>
+        <span class="modal-title">📤 freee 売上を登録（API / 予備でCSVも可）</span>
         <button class="modal-close" title="閉じる" onclick="this.closest('.modal-overlay').remove()">✕</button>
       </div>
       <div class="modal-body">
@@ -15806,7 +16112,8 @@ function openFreeeExportDialog(){
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">キャンセル</button>
         <div style="flex:1"></div>
-        <button class="btn btn-primary" onclick="downloadFreeeCsv()" ${targets.length===0?'disabled':''} title="${targets.length}件をCSVファイルとしてダウンロード">📥 CSV ダウンロード (${targets.length}件)</button>
+        ${(DATA.settings && DATA.settings.freeeApiUrl) ? `<button class="btn btn-green" onclick="freeePostDealsToApi()" ${targets.length===0?'disabled':''} title="GAS経由でfreeeに直接登録（API・CSVアップロード不要）">📤 freeeにAPI登録 (${targets.length}件)</button>` : ''}
+        <button class="btn btn-outline" onclick="downloadFreeeCsv()" ${targets.length===0?'disabled':''} title="予備：${targets.length}件をCSVでダウンロード（API不調時の手動アップ用）" style="color:#888">📥 CSV出力（予備）</button>
       </div>
     </div>
   `;
