@@ -1861,7 +1861,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-04h';
+const APP_VERSION = '2026-06-04i';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3468,21 +3468,23 @@ function setStockClass(cls){ _stockClassFilter = cls; renderStockList(); }
 function renderStockList(){
   if(!DATA){ $('m-stock-count').textContent = ''; $('m-stock-chips').innerHTML = ''; $('m-stock-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
   const q = ($('m-stock-search')?.value || '').toLowerCase().trim();
+  // ★実データの車両クラスは vehicleClass (例 "TK")。class はフォールバック。
+  const cls = v => (v.vehicleClass || v.class || '').trim();
   const all = _availableVehicles();
   // クラス別ワンタップチップ (空き在庫があるクラスのみ・件数付き)
   const byClass = {};
-  all.forEach(v => { const k = (v.class||'').trim(); if(k) byClass[k] = (byClass[k]||0) + 1; });
+  all.forEach(v => { const k = cls(v); if(k) byClass[k] = (byClass[k]||0) + 1; });
   const classes = Object.keys(byClass).sort((a,b) => a.localeCompare(b));
   $('m-stock-chips').innerHTML =
     `<button class="m-chip ${_stockClassFilter===''?'on':''}" onclick="setStockClass('')">すべて ${all.length}</button>` +
     classes.map(c => `<button class="m-chip ${_stockClassFilter===c?'on':''}" onclick="setStockClass('${esc(c)}')">${esc(c)} ${byClass[c]}</button>`).join('');
   // 絞り込み: クラス → テキスト
   let list = all;
-  if(_stockClassFilter) list = list.filter(v => (v.class||'').trim() === _stockClassFilter);
+  if(_stockClassFilter) list = list.filter(v => cls(v) === _stockClassFilter);
   if(q){
     list = list.filter(v => {
       const pl = v.plate || {};
-      const t = [v.name, v.maker, v.grade, v.class, pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ').toLowerCase();
+      const t = [v.name, v.maker, v.grade, cls(v), pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ').toLowerCase();
       return q.split(/\s+/).every(term => !term || t.includes(term));
     });
   }
@@ -3492,11 +3494,11 @@ function renderStockList(){
     $('m-stock-list').innerHTML = `<div class="m-empty" style="padding:24px 10px"><div class="ico">🔍</div><div class="ttl">${narrowed ? '該当する空き車両がありません' : '稼働可能な車両がありません'}</div></div>`;
     return;
   }
-  list = list.slice().sort((a,b) => (a.class||'').localeCompare(b.class||'') || (a.name||'').localeCompare(b.name||''));
+  list = list.slice().sort((a,b) => cls(a).localeCompare(cls(b)) || (a.name||'').localeCompare(b.name||''));
   $('m-stock-list').innerHTML = list.map(v => {
     const pl = v.plate || {};
     const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
-    const meta = [plate, v.class, v.dailyRate ? `¥${fmtNum(v.dailyRate)}/日` : ''].filter(Boolean).join(' ・ ');
+    const meta = [plate, cls(v), v.dailyRate ? `¥${fmtNum(v.dailyRate)}/日` : ''].filter(Boolean).join(' ・ ');
     return `
       <div class="m-vehicle-item">
         <div class="v-ico">🚙</div>
@@ -3523,7 +3525,7 @@ function filterVehicleList(){
   });
   const filtered = vehicles.filter(v => {
     if(!q) return true;
-    const target = [v.name, v.maker, v.grade, v.class,
+    const target = [v.name, v.maker, v.grade, v.vehicleClass || v.class,
       (v.plate||{}).area, (v.plate||{}).no, (v.plate||{}).kana, (v.plate||{}).tail
     ].filter(Boolean).join(' ').toLowerCase();
     return target.includes(q);
@@ -3542,7 +3544,7 @@ function filterVehicleList(){
         <div class="v-ico">🚙</div>
         <div class="v-body">
           <div class="v-name">${esc(v.name||v.maker||'(車種名なし)')}</div>
-          <div class="v-meta">${esc(plate)} ${v.class?`・${esc(v.class)}`:''}</div>
+          <div class="v-meta">${esc(plate)} ${(v.vehicleClass||v.class)?`・${esc(v.vehicleClass||v.class)}`:''}</div>
         </div>
         ${inUse ? '<div class="v-status">利用中</div>' : ''}
       </div>
@@ -3559,7 +3561,7 @@ async function selectVehicle(vehicleId){
   // 案件に車両情報を反映
   c.vehicleId = v.id;
   c.vehicleName = v.name || c.vehicleName || '';
-  c.vehicleClass = v.class || c.vehicleClass || '';
+  c.vehicleClass = v.vehicleClass || v.class || c.vehicleClass || '';
   const pl = v.plate || {};
   c.plateArea = pl.area || c.plateArea || '';
   c.plateNo = pl.no || c.plateNo || '';
