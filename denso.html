@@ -69,7 +69,8 @@ a{color:var(--accent-light);text-decoration:none}
   color:var(--text);height:56px;display:flex;align-items:center;
   padding:0 14px;gap:11px;flex-shrink:0;position:relative;z-index:10;
 }
-.m-logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent-deep),var(--accent-light));display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,.35)}
+.m-logo{width:32px;height:32px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,.35);overflow:hidden}
+.m-logo img{width:100%;height:100%;object-fit:cover;display:block}
 .m-title{font-size:16px;letter-spacing:.2px;color:var(--text);font-weight:800;flex:1;line-height:1.15}
 .m-title small{display:block;font-size:9.5px;letter-spacing:1.5px;color:var(--accent);font-weight:700;margin-top:1px}
 .m-header-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--accent);background:var(--accent-dim);border:1px solid var(--accent-border)}
@@ -386,7 +387,7 @@ a{color:var(--accent-light);text-decoration:none}
     <button class="m-ub-btn" onclick="dismissUpdateBanner()" aria-label="閉じる">✕</button>
   </div>
   <header class="m-header">
-    <div class="m-logo">⚡</div>
+    <div class="m-logo"><img src="denso-icon-v2.png" alt="なびんちゅ"></div>
     <div class="m-title">なびんちゅ<small id="hdr-ver">v—</small></div>
     <button class="m-reload-btn" id="reload-btn" onclick="manualReload()" title="最新データに更新"><span id="reload-ic">🔄</span><span class="m-reload-lbl">更新</span></button>
     <button class="m-header-btn" id="dbx-sync-btn" onclick="syncNow()" style="display:none" title="今すぐ同期">☁️</button>
@@ -410,7 +411,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-04d';
+const APP_VERSION = '2026-06-04e';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -612,7 +613,7 @@ function adminLogout(){ localStorage.removeItem('denso_admin'); toast('管理者
 function renderHome(){
   const jobs=DATA.jobs.filter(j=>j.status!=='キャンセル');
   if(jobs.length===0){
-    document.getElementById('page-home').innerHTML=`<div class="page-h">⚡ ダッシュボード</div>
+    document.getElementById('page-home').innerHTML=`<div class="page-h">🏠 ダッシュボード</div>
       <div class="card" style="text-align:center;padding:28px 18px"><div style="font-size:42px">🚗</div>
       <div style="font-size:16px;font-weight:800;margin:10px 0 4px">まだ案件がありません</div>
       <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:16px;line-height:1.6">データはこの端末(ブラウザ)に保存されます。<br>Dropbox連携すると他の端末と同じデータを共有できます。</div>
@@ -648,7 +649,7 @@ function renderHome(){
   const board=COLS.map(col=>{ const cs=jobs.filter(col.f).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')); const empty=!cs.length; if(!empty) anyBoard=true; return `<div class="bsec${empty?' empty':''}"><div class="bsec-h"><span class="bsec-dot" style="background:${col.c}"></span><span class="bsec-k">${col.k}</span><span class="bsec-n">${cs.length}</span></div><div class="bcards">${empty?'<div class="bcol-empty">なし</div>':cs.map(boardCard).join('')}</div></div>`; }).join('');
   const boardHtml=anyBoard?board:'<div class="bcol-empty" style="margin:6px 0 4px">進行中の案件はありません</div>';
   const html=`
-  <div class="page-h">⚡ ホーム <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
+  <div class="page-h">🏠 ホーム <span style="color:var(--muted);font-weight:500;font-size:11px">${fmtD(today)}</span></div>
   <button class="btn btn-primary" style="width:100%;height:52px;font-size:16px;font-weight:800;margin-bottom:14px;box-shadow:0 3px 12px rgba(37,99,235,.3)" onclick="openJobModal()">＋ 新規依頼を登録</button>
   <div class="card" style="margin-bottom:14px">
     <div class="card-title">✅ 今やること</div>
