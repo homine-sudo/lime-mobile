@@ -126,6 +126,16 @@
   .now-load .nl .k{font-size:9px;color:var(--ink3);letter-spacing:.08em;margin-top:5px;text-transform:uppercase}
   .now-mrow{font-size:11px;color:var(--ink2);text-align:center;margin:11px 0 2px;padding-top:10px;border-top:1px solid var(--line);letter-spacing:.03em}
   .now-mrow b{font-family:var(--serif);font-size:14px;color:var(--ink);font-weight:500;margin:0 1px}
+  /* 受付の勢い (順調判定・公平な前年比) */
+  .recpace{margin:2px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .recpace .rp-hd{font-size:8.5px;color:var(--ink3);letter-spacing:.24em;text-transform:uppercase;margin-bottom:4px}
+  .recpace .rp{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 8px;padding:6px 0;border-bottom:1px dotted var(--line)}
+  .recpace .rp:last-child{border-bottom:0}
+  .recpace .rp-nm{font-size:12px;color:var(--ink2);min-width:66px;letter-spacing:.02em}
+  .recpace .rp-badge{font-size:11.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap}
+  .recpace .rp-badge.up{color:var(--acc)} .recpace .rp-badge.dn{color:var(--danger)} .recpace .rp-badge.flat{color:var(--ink3)}
+  .recpace .rp-nums{font-size:10px;color:var(--ink3);letter-spacing:.01em;margin-left:auto;white-space:nowrap}
+  .recpace .rp-nums .up{color:var(--acc)} .recpace .rp-nums .dn{color:var(--danger)}
   /* progress — IWC chapter ring風。極細1pxヘアライン */
   .bar{
     height:1px;background:var(--line2);margin-top:18px;position:relative;
@@ -616,7 +626,9 @@
 
     <!-- ④ 受付件数 (レンタカー + DETALIA 統合 — 旧2カードを1枚に集約) -->
     <div class="card dept det-split">
-      <div class="lbl">受付件数 (件)</div>
+      <div class="lbl">受付 ペース ・ 件数</div>
+      <!-- 受付の勢い (順調判定・公平な前年比) -->
+      <div class="recpace" id="rec-pace"></div>
 
       <!-- レンタカー -->
       <div class="rec-grp">レンタカー</div>
@@ -657,7 +669,7 @@
         <span class="dsp-v small num" id="det-recy">—</span>
       </div>
       <div class="dsp-cmp">
-        前年同月 <span id="det-recmy">—</span>  ·  前年度同期 <span id="det-recyy">—</span>
+        前年同期 <span id="det-recmy">—</span>  ·  前年度同期 <span id="det-recyy">—</span>
       </div>
 
       <!-- 電装取付 -->
@@ -888,7 +900,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-07';
+const APP_VERSION = '2026-06-07a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1144,15 +1156,23 @@ function receptionStats(){
   const curYM = Y+'-'+pad2(M);
   const prevYM = (Y-1)+'-'+pad2(M);
   const today = todayISO();
+  const N = now.getDate();                          // 当月 経過日数 = 公平な前年同月比の基準
+  const win30Start = addDays(today,-29);            // 直近30日窓 [start, today]
+  const ly=new Date(now); ly.setFullYear(ly.getFullYear()-1);
+  const lyToday = ly.toISOString().slice(0,10);
+  const win30PrevEnd = lyToday, win30PrevStart = addDays(lyToday,-29); // 前年 同30日窓
   const curFY = fyOf(today);
-  const init=()=>({month:0,year:0,prevMonth:0,prevYearPart:0,prevYearFull:0});
+  // prevMonthSame=前年同月の同N日まで(公平比較) / r30=直近30日 / r30prev=前年同30日窓
+  const init=()=>({month:0,year:0,prevMonth:0,prevMonthSame:0,prevYearPart:0,prevYearFull:0,r30:0,r30prev:0});
   const rental=init(), detalia=init(), denso=init();
   const tally=(c, group, dateStr, ymStr)=>{
     if(ymStr===curYM) group.month++;
-    if(ymStr===prevYM) group.prevMonth++;
+    if(ymStr===prevYM){ group.prevMonth++; if(Number(dateStr.slice(8,10))<=N) group.prevMonthSame++; }
     if(inFYToToday(dateStr, curFY, today)) group.year++;
     else if(inPrevFYSamePeriod(dateStr, curFY, today)) group.prevYearPart++;
     if(inFYFull(dateStr, curFY-1)) group.prevYearFull++;
+    if(dateStr>=win30Start && dateStr<=today) group.r30++;
+    if(dateStr>=win30PrevStart && dateStr<=win30PrevEnd) group.r30prev++;
   };
   const ymOf=v=>{const m=String(v||'').match(/^(\d{4})-(\d{1,2})/);return m?m[1]+'-'+pad2(m[2]):null};
   rentalCases().forEach(c=>{
@@ -1527,7 +1547,7 @@ function renderNow(){
   };
   // レンタカー (シンプル2行)
   $('rent-recm').textContent=rec.rental.month+' 件';
-  $('rent-recmy').innerHTML=fmtCmp(rec.rental.month, rec.rental.prevMonth, '前年同月');
+  $('rent-recmy').innerHTML=fmtCmp(rec.rental.month, rec.rental.prevMonthSame, '前年同期');
   $('rent-recy').textContent=rec.rental.year+' 件';
   $('rent-recyy').innerHTML=fmtCmp(rec.rental.year, rec.rental.prevYearPart, '前年度同期');
   // DETALIA (一般 / 業販 / 次郎 の3行 + 合計)
@@ -1546,13 +1566,36 @@ function renderNow(){
     const cls=pct>=0?'up':'dn';const sign=pct>=0?'+':'';
     return prevN+' <span class="'+cls+'">'+sign+pct+'%</span>';
   };
-  $('det-recmy').innerHTML=fmtCmpInline(rec.detalia.month, rec.detalia.prevMonth);
+  $('det-recmy').innerHTML=fmtCmpInline(rec.detalia.month, rec.detalia.prevMonthSame);
   $('det-recyy').innerHTML=fmtCmpInline(rec.detalia.year, rec.detalia.prevYearPart);
   // 電装取付 (レンタカーと同じ2行レイアウト)
   $('den-recm').textContent=rec.denso.month+' 件';
-  $('den-recmy').innerHTML=fmtCmp(rec.denso.month, rec.denso.prevMonth, '前年同月');
+  $('den-recmy').innerHTML=fmtCmp(rec.denso.month, rec.denso.prevMonthSame, '前年同期');
   $('den-recy').textContent=rec.denso.year+' 件';
   $('den-recyy').innerHTML=fmtCmp(rec.denso.year, rec.denso.prevYearPart, '前年度同期');
+
+  // ─── 受付の勢い (順調判定) — 主指標=直近30日の前年同期比 / 補助=当月(同経過日数)・当年度 ───
+  const pctOf=(c,p)=>p>0?Math.round((c-p)/p*100):null;
+  const verdict=(c,p)=>{
+    if(p<=0) return c>0?{t:'新規 ↑',c:'up'}:{t:'—',c:'flat'};
+    const x=pctOf(c,p);
+    if(x>=100) return {t:'急増 ↑ +'+x+'%',c:'up'};
+    if(x>=10)  return {t:'順調 ↑ +'+x+'%',c:'up'};
+    if(x<=-10) return {t:'鈍化 ↓ '+x+'%',c:'dn'};
+    return {t:'横ばい '+(x>=0?'+':'')+x+'%',c:'flat'};
+  };
+  const fmtp=x=>x==null?'<span class="ink3">—</span>':'<span class="'+(x>=0?'up':'dn')+'">'+(x>=0?'+':'')+x+'%</span>';
+  const paceRow=(nm,g)=>{
+    const v=verdict(g.r30,g.r30prev);
+    return '<div class="rp"><span class="rp-nm">'+nm+'</span>'+
+      '<span class="rp-badge '+v.c+'">'+v.t+'</span>'+
+      '<span class="rp-nums">当月 '+fmtp(pctOf(g.month,g.prevMonthSame))+' · 年度 '+fmtp(pctOf(g.year,g.prevYearPart))+'</span></div>';
+  };
+  $('rec-pace').innerHTML =
+    '<div class="rp-hd">受付の勢い · 直近30日 前年比</div>'+
+    paceRow('レンタカー', rec.rental)+
+    paceRow('DETALIA', rec.detalia)+
+    paceRow('電装', rec.denso);
 
   // 稼働 (稼働タブと同じ計算 — vehicleStats)
   const vs=vehicleStats();
@@ -2077,9 +2120,9 @@ function setupTabs(){
 function DEMO_R(){
   const cases=[];const status=['受付','確認中','配車予定','配車済','利用中','回収連絡','返却済','請求済','入金済'];
   const today=new Date();
-  // spread 180 cases over the last 13 months including current
-  for(let i=0;i<180;i++){
-    const monthsBack=Math.floor(i/15); // ~15 cases per month, last 12 months
+  // spread 360 cases over the last 24 months (前年データを含めて 受付ペースの前年比を検証可能に)
+  for(let i=0;i<360;i++){
+    const monthsBack=Math.floor(i/15); // ~15 cases per month, last 24 months
     const dt=new Date(today.getFullYear(),today.getMonth()-monthsBack,1+Math.floor(Math.random()*27));
     if(dt>today) dt.setDate(today.getDate());
     const useStart=dt.toISOString().slice(0,10);
@@ -2105,7 +2148,7 @@ function DEMO_R(){
 function DEMO_D(){
   const cases=[];const sizes=['S','M','L','LL'];const plans=['新車プラン','スタンダード','ガラスコーティング','セラミック'];
   const today=new Date();
-  for(let i=0;i<60;i++){
+  for(let i=0;i<120;i++){
     const monthsBack=Math.floor(i/5);
     const dt=new Date(today.getFullYear(),today.getMonth()-monthsBack,1+Math.floor(Math.random()*27));
     if(dt>today) dt.setDate(today.getDate());
