@@ -112,12 +112,8 @@
   .delta.up{color:var(--acc)} .delta.dn{color:var(--danger)}
   .delta.up::before{content:'+';margin-right:2px;font-size:11px;vertical-align:-1px}
   .delta.dn::before{content:'−';margin-right:2px;font-size:11px;vertical-align:-1px}
-  /* 汎用 増減カラー (着地見込み/現況 等。スコープ済 .rec-cmp .up 等はより詳細度が高く優先) */
+  /* 汎用 増減カラー (受付の勢い/現況 等。スコープ済 .rec-cmp .up 等はより詳細度が高く優先) */
   .up{color:var(--acc)} .dn{color:var(--danger)}
-  /* 着地見込み card — duo 内の見込み数字 */
-  .fc-proj{font-family:var(--serif);font-size:24px;font-weight:500;color:var(--ink);line-height:1.05;letter-spacing:-.006em;margin:4px 0 2px;white-space:nowrap}
-  .fc-proj .unit{font-size:10px;color:var(--ink3);margin-left:4px;letter-spacing:.18em;text-transform:uppercase;font-weight:400;font-family:var(--sans)}
-  .fc-sub{font-size:11px;color:var(--ink2);letter-spacing:.02em;line-height:1.7}
   /* 現況 — 今動いている (3事業の進行中件数) */
   .now-load{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:2px}
   .now-load .nl{padding:10px 4px;text-align:center;border:1px solid var(--line);background:var(--panel2)}
@@ -129,13 +125,13 @@
   /* 受付の勢い (順調判定・公平な前年比) */
   .recpace{margin:2px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
   .recpace .rp-hd{font-size:8.5px;color:var(--ink3);letter-spacing:.24em;text-transform:uppercase;margin-bottom:4px}
-  .recpace .rp{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 8px;padding:6px 0;border-bottom:1px dotted var(--line)}
+  .recpace .rp{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 10px;padding:7px 0;border-bottom:1px dotted var(--line)}
   .recpace .rp:last-child{border-bottom:0}
   .recpace .rp-nm{font-size:12px;color:var(--ink2);min-width:66px;letter-spacing:.02em}
-  .recpace .rp-badge{font-size:11.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap}
+  .recpace .rp-cnt{font-family:var(--serif);font-size:20px;font-weight:500;color:var(--ink);line-height:1}
+  .recpace .rp-cnt .u{font-size:10px;color:var(--ink3);margin-left:1px;font-family:var(--sans);letter-spacing:.04em}
+  .recpace .rp-badge{font-size:11.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;margin-left:auto}
   .recpace .rp-badge.up{color:var(--acc)} .recpace .rp-badge.dn{color:var(--danger)} .recpace .rp-badge.flat{color:var(--ink3)}
-  .recpace .rp-nums{font-size:10px;color:var(--ink3);letter-spacing:.01em;margin-left:auto;white-space:nowrap}
-  .recpace .rp-nums .up{color:var(--acc)} .recpace .rp-nums .dn{color:var(--danger)}
   /* progress — IWC chapter ring風。極細1pxヘアライン */
   .bar{
     height:1px;background:var(--line2);margin-top:18px;position:relative;
@@ -575,25 +571,6 @@
       </div>
     </div>
 
-    <!-- ①.5 着地見込み (直近3ヶ月ペース基準) -->
-    <div class="card">
-      <div class="lbl">着地見込み <span class="sm ink3" style="font-weight:normal;letter-spacing:.04em;text-transform:none">直近3ヶ月ペース基準</span></div>
-      <div class="duo-grid">
-        <div class="duo">
-          <div class="duo-h">当月 <span class="duo-d" id="fc-m-rem">—</span></div>
-          <div class="fc-proj num" id="fc-m-proj">—<span class="unit">円</span></div>
-          <div class="fc-sub" id="fc-m-actual">実績 —</div>
-          <div class="fc-sub" id="fc-m-tgt">—</div>
-        </div>
-        <div class="duo">
-          <div class="duo-h"><span id="fc-y-label">年度</span></div>
-          <div class="fc-proj num" id="fc-y-proj">—<span class="unit">円</span></div>
-          <div class="fc-sub" id="fc-y-actual">実績 —</div>
-          <div class="fc-sub" id="fc-y-prev">—</div>
-        </div>
-      </div>
-    </div>
-
     <!-- ② 部門別 売上 (3部門 × 当月/当年度) -->
     <div class="card">
       <div class="lbl">部門別 売上 (税込)</div>
@@ -900,7 +877,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-07a';
+const APP_VERSION = '2026-06-07b';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1269,38 +1246,6 @@ function thisMonthSummary(){
   return {tm,total:r+d+e,rental:r,detalia:d,denso:e,rentalCnt:rc,detaliaCnt:dc,densoCnt:ec,prev:rPrev+dPrev+ePrev,yoy:rYoy+dYoy+eYoy};
 }
 
-// ===== 着地見込み — 直近3ヶ月の日次ペースで当月末・年度末を予測 (2026-06-07) =====
-//   日次ペース = 直近3ヶ月(当月を除く満了月)の合算売上 ÷ その日数
-//   当月見込み = 当月実績 + 日次ペース×残日数 / 年度見込み = 年度実績 + 日次ペース×年度残日数
-function forecast(){
-  const now=new Date();
-  const Y=now.getFullYear(), M=now.getMonth();          // M=0-based
-  const today=todayISO();
-  const dayOfMonth=now.getDate();
-  const daysInMonth=new Date(Y,M+1,0).getDate();
-  const remMonth=Math.max(0,daysInMonth-dayOfMonth);
-  const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
-  let past=0, pastDays=0;
-  for(let i=1;i<=3;i++){
-    const d=new Date(Y,M-i,1);
-    const key=d.getFullYear()+'-'+pad2(d.getMonth()+1);
-    pastDays+=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
-    billableRental().forEach(c=>{ if(rentalSalesYM(c)===key) past+=rentalAmount(c).total; });
-    detaliaCases().forEach(c=>{ if(detaliaYM(c)===key) past+=detaliaAmount(c,taxR).total; });
-    billableDenso().forEach(j=>{ if(densoSalesYM(j)===key) past+=densoAmount(j); });
-  }
-  const dailyAvg = pastDays>0 ? past/pastDays : 0;
-  const mNow=thisMonthSummary();
-  const monthActual=mNow.total;
-  const monthProj=Math.round(monthActual + dailyAvg*remMonth);
-  const yr=thisYearSummary();
-  const fyEnd=(yr.fy+1)+'-03-31';
-  const remFY=Math.max(0, daysBetween(today, fyEnd));
-  const fyProj=Math.round(yr.cur + dailyAvg*remFY);
-  return {dayOfMonth,daysInMonth,remMonth,dailyAvg,monthActual,monthProj,
-          fy:yr.fy,fyActual:yr.cur,fyProj,prevFull:yr.prevFull,remFY};
-}
-
 // ===== 現況 — 全社の「今 動いている」案件ボリューム (2026-06-07) =====
 function currentLoad(){
   const today=todayISO();
@@ -1574,7 +1519,7 @@ function renderNow(){
   $('den-recy').textContent=rec.denso.year+' 件';
   $('den-recyy').innerHTML=fmtCmp(rec.denso.year, rec.denso.prevYearPart, '前年度同期');
 
-  // ─── 受付の勢い (順調判定) — 主指標=直近30日の前年同期比 / 補助=当月(同経過日数)・当年度 ───
+  // ─── 受付 · 今月の件数 と 前年同期比(前年同月の同経過日数) ───
   const pctOf=(c,p)=>p>0?Math.round((c-p)/p*100):null;
   const verdict=(c,p)=>{
     if(p<=0) return c>0?{t:'新規 ↑',c:'up'}:{t:'—',c:'flat'};
@@ -1584,15 +1529,14 @@ function renderNow(){
     if(x<=-10) return {t:'鈍化 ↓ '+x+'%',c:'dn'};
     return {t:'横ばい '+(x>=0?'+':'')+x+'%',c:'flat'};
   };
-  const fmtp=x=>x==null?'<span class="ink3">—</span>':'<span class="'+(x>=0?'up':'dn')+'">'+(x>=0?'+':'')+x+'%</span>';
   const paceRow=(nm,g)=>{
-    const v=verdict(g.r30,g.r30prev);
+    const v=verdict(g.month, g.prevMonthSame);
     return '<div class="rp"><span class="rp-nm">'+nm+'</span>'+
-      '<span class="rp-badge '+v.c+'">'+v.t+'</span>'+
-      '<span class="rp-nums">当月 '+fmtp(pctOf(g.month,g.prevMonthSame))+' · 年度 '+fmtp(pctOf(g.year,g.prevYearPart))+'</span></div>';
+      '<span class="rp-cnt">'+g.month+'<span class="u">件</span></span>'+
+      '<span class="rp-badge '+v.c+'">'+v.t+'</span></div>';
   };
   $('rec-pace').innerHTML =
-    '<div class="rp-hd">受付の勢い · 直近30日 前年比</div>'+
+    '<div class="rp-hd">受付 · 今月の件数（前年同期比）</div>'+
     paceRow('レンタカー', rec.rental)+
     paceRow('DETALIA', rec.detalia)+
     paceRow('電装', rec.denso);
@@ -1674,37 +1618,9 @@ function renderNow(){
   drawSpark('spark-12',merged,t12.labels);
   $('spark-12-cap').textContent=fmtJaYM(t12.labels[0])+' 〜 '+fmtJaYM(t12.labels[t12.labels.length-1]);
 
-  renderForecast();
   renderLoad();
 }
 function fmtJaYM(k){if(!k) return '—';const [y,m]=k.split('-');return y+'年'+Number(m)+'月'}
-
-// ───── 着地見込み (TOP) ─────
-function renderForecast(){
-  const f=forecast();
-  // 当月
-  $('fc-m-rem').textContent='残 '+f.remMonth+'日 ('+f.dayOfMonth+'/'+f.daysInMonth+')';
-  $('fc-m-proj').innerHTML=yen(f.monthProj)+'<span class="unit">円</span>';
-  $('fc-m-actual').textContent='実績 '+yen(f.monthActual)+' 円';
-  const tgt=monthlyTarget();
-  if(tgt>0){
-    const rate=Math.round(f.monthProj/tgt*100);
-    const diff=f.monthProj-tgt;
-    $('fc-m-tgt').innerHTML='目標達成見込 <b>'+rate+'%</b> '+(diff>=0?'<span class="up">+'+yen(diff)+'</span>':'<span class="dn">'+yen(diff)+'</span>');
-  } else {
-    $('fc-m-tgt').innerHTML='<span class="ink3">月次目標 未設定</span>';
-  }
-  // 年度
-  $('fc-y-label').textContent=f.fy+'年度 見込み';
-  $('fc-y-proj').innerHTML=yen(f.fyProj)+'<span class="unit">円</span>';
-  $('fc-y-actual').textContent='実績 '+yen(f.fyActual)+' 円 · 残'+f.remFY+'日';
-  if(f.prevFull>0){
-    const yr=Math.round((f.fyProj-f.prevFull)/f.prevFull*100);
-    $('fc-y-prev').innerHTML='前年度通期比 '+(yr>=0?'<span class="up">+'+yr+'%</span>':'<span class="dn">'+yr+'%</span>');
-  } else {
-    $('fc-y-prev').innerHTML='<span class="ink3">前年度通期 —</span>';
-  }
-}
 
 // ───── 現況 全社の稼働ボリューム (TOP) ─────
 function renderLoad(){
