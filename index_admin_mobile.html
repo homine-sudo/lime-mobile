@@ -112,6 +112,20 @@
   .delta.up{color:var(--acc)} .delta.dn{color:var(--danger)}
   .delta.up::before{content:'+';margin-right:2px;font-size:11px;vertical-align:-1px}
   .delta.dn::before{content:'−';margin-right:2px;font-size:11px;vertical-align:-1px}
+  /* 汎用 増減カラー (着地見込み/現況 等。スコープ済 .rec-cmp .up 等はより詳細度が高く優先) */
+  .up{color:var(--acc)} .dn{color:var(--danger)}
+  /* 着地見込み card — duo 内の見込み数字 */
+  .fc-proj{font-family:var(--serif);font-size:24px;font-weight:500;color:var(--ink);line-height:1.05;letter-spacing:-.006em;margin:4px 0 2px;white-space:nowrap}
+  .fc-proj .unit{font-size:10px;color:var(--ink3);margin-left:4px;letter-spacing:.18em;text-transform:uppercase;font-weight:400;font-family:var(--sans)}
+  .fc-sub{font-size:11px;color:var(--ink2);letter-spacing:.02em;line-height:1.7}
+  /* 現況 — 今動いている (3事業の進行中件数) */
+  .now-load{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:2px}
+  .now-load .nl{padding:10px 4px;text-align:center;border:1px solid var(--line);background:var(--panel2)}
+  .now-load .nl .v{font-family:var(--serif);font-size:26px;font-weight:500;color:var(--ink);line-height:1}
+  .now-load .nl .v .u{font-size:10px;color:var(--ink3);margin-left:2px;letter-spacing:.06em;font-family:var(--sans)}
+  .now-load .nl .k{font-size:9px;color:var(--ink3);letter-spacing:.08em;margin-top:5px;text-transform:uppercase}
+  .now-mrow{font-size:11px;color:var(--ink2);text-align:center;margin:11px 0 2px;padding-top:10px;border-top:1px solid var(--line);letter-spacing:.03em}
+  .now-mrow b{font-family:var(--serif);font-size:14px;color:var(--ink);font-weight:500;margin:0 1px}
   /* progress — IWC chapter ring風。極細1pxヘアライン */
   .bar{
     height:1px;background:var(--line2);margin-top:18px;position:relative;
@@ -551,6 +565,25 @@
       </div>
     </div>
 
+    <!-- ①.5 着地見込み (直近3ヶ月ペース基準) -->
+    <div class="card">
+      <div class="lbl">着地見込み <span class="sm ink3" style="font-weight:normal;letter-spacing:.04em;text-transform:none">直近3ヶ月ペース基準</span></div>
+      <div class="duo-grid">
+        <div class="duo">
+          <div class="duo-h">当月 <span class="duo-d" id="fc-m-rem">—</span></div>
+          <div class="fc-proj num" id="fc-m-proj">—<span class="unit">円</span></div>
+          <div class="fc-sub" id="fc-m-actual">実績 —</div>
+          <div class="fc-sub" id="fc-m-tgt">—</div>
+        </div>
+        <div class="duo">
+          <div class="duo-h"><span id="fc-y-label">年度</span></div>
+          <div class="fc-proj num" id="fc-y-proj">—<span class="unit">円</span></div>
+          <div class="fc-sub" id="fc-y-actual">実績 —</div>
+          <div class="fc-sub" id="fc-y-prev">—</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ② 部門別 売上 (3部門 × 当月/当年度) -->
     <div class="card">
       <div class="lbl">部門別 売上 (税込)</div>
@@ -641,9 +674,16 @@
       </div>
     </div>
 
-    <!-- ⑤ 現場の忙しさ - 今日と明日 -->
+    <!-- ⑤ 現況 · 全社 (今動いている3事業 + 当月処理 + 直近2日) -->
     <div class="card">
-      <div class="lbl">現場 · 直近2日間</div>
+      <div class="lbl">現況 · 全社</div>
+      <div class="now-load">
+        <div class="nl"><div class="v num" id="cl-rental">—</div><div class="k">レンタカー稼働中</div></div>
+        <div class="nl"><div class="v num" id="cl-det">—</div><div class="k">DETALIA入庫中</div></div>
+        <div class="nl"><div class="v num" id="cl-den">—</div><div class="k">電装 進行中</div></div>
+      </div>
+      <div class="now-mrow" id="cl-month">当月処理 —</div>
+      <div class="hr" style="margin:12px 0 4px"></div>
       <div class="duo-grid">
         <div class="duo">
           <div class="duo-h">本日 <span class="duo-d" id="duo-today-date">—</span></div>
@@ -732,7 +772,7 @@
     <div class="card">
       <div class="lbl">車両別 採算 <span class="sm ink3" style="font-weight:normal">直近12ヶ月 売上 − 年間費用</span></div>
       <table class="kv" id="ops-vehicle-roi"></table>
-      <div class="sm ink3" style="margin-top:4px">費用＝freee固定資産台帳の年間減価償却（保有車）／リース料×12（リース車）。償却済の古い車は費用ゼロ＝採算良。</div>
+      <div class="sm ink3" style="margin-top:4px">費用＝freee固定資産台帳の年間減価償却（保有車）／リース料×12（リース車）。償却済の古い車は費用ゼロ＝採算良。<br>採算率＝ROI÷売上 ／ 日あたり＝ROI÷稼働日数 ／ 車検は期限60日以内を警告。</div>
     </div>
   </section>
 
@@ -848,7 +888,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-05c';
+const APP_VERSION = '2026-06-07';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1209,6 +1249,53 @@ function thisMonthSummary(){
   return {tm,total:r+d+e,rental:r,detalia:d,denso:e,rentalCnt:rc,detaliaCnt:dc,densoCnt:ec,prev:rPrev+dPrev+ePrev,yoy:rYoy+dYoy+eYoy};
 }
 
+// ===== 着地見込み — 直近3ヶ月の日次ペースで当月末・年度末を予測 (2026-06-07) =====
+//   日次ペース = 直近3ヶ月(当月を除く満了月)の合算売上 ÷ その日数
+//   当月見込み = 当月実績 + 日次ペース×残日数 / 年度見込み = 年度実績 + 日次ペース×年度残日数
+function forecast(){
+  const now=new Date();
+  const Y=now.getFullYear(), M=now.getMonth();          // M=0-based
+  const today=todayISO();
+  const dayOfMonth=now.getDate();
+  const daysInMonth=new Date(Y,M+1,0).getDate();
+  const remMonth=Math.max(0,daysInMonth-dayOfMonth);
+  const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
+  let past=0, pastDays=0;
+  for(let i=1;i<=3;i++){
+    const d=new Date(Y,M-i,1);
+    const key=d.getFullYear()+'-'+pad2(d.getMonth()+1);
+    pastDays+=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    billableRental().forEach(c=>{ if(rentalSalesYM(c)===key) past+=rentalAmount(c).total; });
+    detaliaCases().forEach(c=>{ if(detaliaYM(c)===key) past+=detaliaAmount(c,taxR).total; });
+    billableDenso().forEach(j=>{ if(densoSalesYM(j)===key) past+=densoAmount(j); });
+  }
+  const dailyAvg = pastDays>0 ? past/pastDays : 0;
+  const mNow=thisMonthSummary();
+  const monthActual=mNow.total;
+  const monthProj=Math.round(monthActual + dailyAvg*remMonth);
+  const yr=thisYearSummary();
+  const fyEnd=(yr.fy+1)+'-03-31';
+  const remFY=Math.max(0, daysBetween(today, fyEnd));
+  const fyProj=Math.round(yr.cur + dailyAvg*remFY);
+  return {dayOfMonth,daysInMonth,remMonth,dailyAvg,monthActual,monthProj,
+          fy:yr.fy,fyActual:yr.cur,fyProj,prevFull:yr.prevFull,remFY};
+}
+
+// ===== 現況 — 全社の「今 動いている」案件ボリューム (2026-06-07) =====
+function currentLoad(){
+  const today=todayISO();
+  const rentalCars=vehicleStats().inUse;                 // 稼働中の実車台数
+  const rentalActive=currentlyDispatchedCases().length;  // 稼働中の案件数
+  // DETALIA: 入庫済(arrival到来) かつ 未納車・未入金 = 作業ピット内
+  const detIn=detaliaCases().filter(c=>{
+    const arr=c.arrival && String(c.arrival).slice(0,10)<=today;
+    return arr && !c.delivery && !c.paidDate;
+  }).length;
+  // 電装: 未請求・未入金・未キャンセル = 進行中の仕事
+  const densoOpen=densoJobs().filter(j=>!['請求済','入金済'].includes(j.status)).length;
+  return {rentalCars, rentalActive, detIn, densoOpen};
+}
+
 function monthlyTarget(){
   // 優先順位: ユーザーがアプリ内で設定した値 > DETALIA設定の monthlyTarget > 0
   const user=Number(localStorage.getItem(LS.monthlyTarget)||0);
@@ -1543,8 +1630,48 @@ function renderNow(){
   const merged=t12.labels.map((_,i)=>t12.rental[i]+t12.detalia[i]+(t12.denso[i]||0));
   drawSpark('spark-12',merged,t12.labels);
   $('spark-12-cap').textContent=fmtJaYM(t12.labels[0])+' 〜 '+fmtJaYM(t12.labels[t12.labels.length-1]);
+
+  renderForecast();
+  renderLoad();
 }
 function fmtJaYM(k){if(!k) return '—';const [y,m]=k.split('-');return y+'年'+Number(m)+'月'}
+
+// ───── 着地見込み (TOP) ─────
+function renderForecast(){
+  const f=forecast();
+  // 当月
+  $('fc-m-rem').textContent='残 '+f.remMonth+'日 ('+f.dayOfMonth+'/'+f.daysInMonth+')';
+  $('fc-m-proj').innerHTML=yen(f.monthProj)+'<span class="unit">円</span>';
+  $('fc-m-actual').textContent='実績 '+yen(f.monthActual)+' 円';
+  const tgt=monthlyTarget();
+  if(tgt>0){
+    const rate=Math.round(f.monthProj/tgt*100);
+    const diff=f.monthProj-tgt;
+    $('fc-m-tgt').innerHTML='目標達成見込 <b>'+rate+'%</b> '+(diff>=0?'<span class="up">+'+yen(diff)+'</span>':'<span class="dn">'+yen(diff)+'</span>');
+  } else {
+    $('fc-m-tgt').innerHTML='<span class="ink3">月次目標 未設定</span>';
+  }
+  // 年度
+  $('fc-y-label').textContent=f.fy+'年度 見込み';
+  $('fc-y-proj').innerHTML=yen(f.fyProj)+'<span class="unit">円</span>';
+  $('fc-y-actual').textContent='実績 '+yen(f.fyActual)+' 円 · 残'+f.remFY+'日';
+  if(f.prevFull>0){
+    const yr=Math.round((f.fyProj-f.prevFull)/f.prevFull*100);
+    $('fc-y-prev').innerHTML='前年度通期比 '+(yr>=0?'<span class="up">+'+yr+'%</span>':'<span class="dn">'+yr+'%</span>');
+  } else {
+    $('fc-y-prev').innerHTML='<span class="ink3">前年度通期 —</span>';
+  }
+}
+
+// ───── 現況 全社の稼働ボリューム (TOP) ─────
+function renderLoad(){
+  const L=currentLoad();
+  $('cl-rental').innerHTML=L.rentalCars+'<span class="u">台</span>';
+  $('cl-det').innerHTML=L.detIn+'<span class="u">件</span>';
+  $('cl-den').innerHTML=L.densoOpen+'<span class="u">件</span>';
+  const m=thisMonthSummary();
+  $('cl-month').innerHTML='当月処理　レンタカー <b>'+m.rentalCnt+'</b> · DETALIA <b>'+m.detaliaCnt+'</b> · 電装 <b>'+m.densoCnt+'</b> 件';
+}
 
 function drawSpark(id,values,labels){
   const svg=$(id);if(!svg) return;
@@ -1683,8 +1810,19 @@ function renderVehicleROI(){
   const host=document.getElementById('ops-vehicle-roi'); if(!host) return;
   const vehs=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済');
   const sinceStr=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+  const today=todayISO();
   const rev={};
   billableRental().forEach(c=>{ if(!c.vehicleId) return; const ue=(c.useEnd||'').slice(0,10); if(!ue||ue<sinceStr) return; rev[c.vehicleId]=(rev[c.vehicleId]||0)+rentalAmount(c).total; });
+  // 直近12ヶ月の稼働日数 (per vehicle) — 採算率/日あたりの分母
+  const used={};
+  rentalCases().forEach(c=>{
+    if(!c.vehicleId||c.status==='キャンセル'||!c.useStart) return;
+    const s=c.useStart<sinceStr?sinceStr:c.useStart;
+    const eRaw=c.useEnd||addDays(c.useStart,30);
+    const e=eRaw>today?today:eRaw;
+    const d=daysBetween(s,e);
+    if(d>0) used[c.vehicleId]=(used[c.vehicleId]||0)+d;
+  });
   let rows=vehs.map(v=>{
     const plate=_vplate(v); const r=rev[v.id]||0;
     const dep=FREEE_VEHICLE_DEP[plate]; const lease=(Number(v.leaseFee)||0)*12;
@@ -1692,12 +1830,35 @@ function renderVehicleROI(){
     if(dep!=null){ cost=dep; kind=dep>0?'保有':'償却済'; }
     else if(lease>0){ cost=lease; kind='リース'; }
     else { cost=0; kind='—'; }
-    return { nm:v.plateDisplay||v.name||plate||'(無名)', r, cost, kind, roi:r-cost };
+    const roi=r-cost;
+    const usedD=used[v.id]||0;
+    const margin = r>0 ? Math.round(roi/r*100) : null;       // 採算率 = ROI ÷ 売上
+    const perDay = usedD>0 ? Math.round(roi/usedD) : null;   // 日あたり = ROI ÷ 稼働日数
+    // 車検: 残日数 (過去ならマイナス)
+    const insp=(v.inspectionDate||'').slice(0,10);
+    let inspDays=null;
+    if(insp) inspDays = insp<today ? -daysBetween(insp,today) : daysBetween(today,insp);
+    return { nm:v.plateDisplay||v.name||plate||'(無名)', r, cost, kind, roi, usedD, margin, perDay, inspDays };
   }).filter(x=>x.r>0||x.cost>0);
   if(!rows.length){ host.innerHTML='<tr><td class="ink3 sm">データなし</td></tr>'; return; }
   rows.sort((a,b)=>b.roi-a.roi);
   const f=n=>yen(Math.round(n));
-  const rh=x=>`<tr><td><b>${esc(x.nm)}</b> <span class="ink3" style="font-size:10px">${esc(x.kind)}</span><div class="ink3" style="font-size:10px">売上 ${f(x.r)} − 費用 ${f(x.cost)}</div></td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.roi>=0?'var(--acc)':'#C0392B'}">${x.roi>=0?'+':''}${f(x.roi)} 円</td></tr>`;
+  const inspBadge=x=>{
+    if(x.inspDays==null) return '';
+    if(x.inspDays<0)   return ' <span class="badge danger" style="font-size:9px;padding:1px 5px">車検切れ</span>';
+    if(x.inspDays<=60) return ' <span class="badge warn" style="font-size:9px;padding:1px 5px">車検'+x.inspDays+'日</span>';
+    return '';
+  };
+  const rh=x=>{
+    const mg  = x.margin==null ? '—' : (x.margin>=0?'+':'')+x.margin+'%';
+    const mgc = x.margin==null ? 'var(--ink3)' : (x.margin>=0?'var(--acc)':'#C0392B');
+    const pd  = x.perDay==null ? '—' : (x.perDay>=0?'+':'')+f(x.perDay);
+    return `<tr><td>`+
+      `<b>${esc(x.nm)}</b> <span class="ink3" style="font-size:10px">${esc(x.kind)}</span>${inspBadge(x)}`+
+      `<div class="ink3" style="font-size:10px">売上 ${f(x.r)} − 費用 ${f(x.cost)}</div>`+
+      `<div class="ink3" style="font-size:10px">稼働 ${x.usedD}日 · 採算率 <span style="color:${mgc}">${mg}</span> · 日あたり ${pd}</div>`+
+      `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.roi>=0?'var(--acc)':'#C0392B'}">${x.roi>=0?'+':''}${f(x.roi)} 円</td></tr>`;
+  };
   const top=rows.slice(0,6);
   const bot=rows.slice(-5).reverse().filter(x=>top.indexOf(x)<0);
   host.innerHTML =
@@ -1927,7 +2088,18 @@ function DEMO_R(){
     cases.push({id:'R'+i,caseNo:dt.getFullYear()+'-'+pad2(dt.getMonth()+1)+'-'+pad2(i),status:st,receivedAt:useStart,useStart,useEnd,unitPrice:5500+Math.floor(Math.random()*8)*1100,discount:0,vehicleId:'V'+(i%22),category:Math.random()<0.85?'損保':'一般',driverName:'運転者'+i,recoveryCalledAt:useEnd,invoiceIssuedAt:st==='請求済'?useEnd:null,paymentDueAt:st==='請求済'?addDays(useEnd,30):null});
   }
   const vehicles=[];const demoCls=['K','K','K','K','K','S','S','S','SH','SV','MH','WA','WS','P','VK','TK','K','S','SH','K','S','P'];
-  for(let i=0;i<22;i++) vehicles.push({id:'V'+i,name:'車両'+i,plateNo:String(1000+i),status:'稼働',vehicleClass:demoCls[i]||'K'});
+  for(let i=0;i<22;i++){
+    // 車検日: 一部を 60日以内 / 1台は期限切れ にして警告バッジを検証可能に
+    const inspM = i%5===0 ? today.getMonth() : today.getMonth()+(i%9);  // 直近〜数ヶ月先に分散
+    const insp = new Date(today.getFullYear(), inspM, i===3?Math.max(1,today.getDate()-5):20).toISOString().slice(0,10);
+    vehicles.push({
+      id:'V'+i, name:'車両'+i, plateDisplay:'沖縄 5'+pad2(10+i)+' わ '+(1000+i),
+      plate:{area:'沖縄',no:'5'+pad2(10+i),kana:'わ',tail:String(1000+i)},
+      status:'稼働可', vehicleClass:demoCls[i]||'K',
+      leaseFee: i%3===0 ? 13900+i*600 : 0,  // 1/3 をリース車に
+      inspectionDate: insp
+    });
+  }
   return {cases,vehicles,settings:{taxRate:10}};
 }
 function DEMO_D(){
