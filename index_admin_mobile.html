@@ -431,8 +431,8 @@
   .subdial .sd-pivot{fill:var(--acc)}
   .subdial .sd-lbl{fill:var(--ink3);font-family:var(--serif);font-size:7;letter-spacing:.18em;font-style:italic}
   .subdial .sd-toplbl{fill:var(--ink3);font-family:'Inter',sans-serif;font-size:5.5;letter-spacing:.34em;font-weight:500}
-  .subdial-val{font-family:var(--serif);font-size:14px;color:var(--ink);font-weight:500;letter-spacing:.02em;margin-top:-4px}
-  .subdial-cap{font-family:var(--serif);font-style:italic;font-size:10px;color:var(--ink3);letter-spacing:.04em;margin-top:2px}
+  .subdial-val{font-family:var(--serif);font-size:23px;color:var(--ink);font-weight:500;letter-spacing:.01em;line-height:1;margin-top:2px}
+  .subdial-cap{font-family:var(--serif);font-style:italic;font-size:10.5px;color:var(--ink3);letter-spacing:.04em;margin-top:3px}
 
   /* AUTOMATIC italic + date window (6時位置のデイトアパチャー風) */
   .card.hero .auto-row{
@@ -517,38 +517,29 @@
           <svg class="subdial" viewBox="0 0 100 100" id="sd-left">
             <circle class="sd-rim" cx="50" cy="50" r="44"/>
             <circle class="sd-face" cx="50" cy="50" r="38"/>
-            <circle class="sd-gui" cx="50" cy="50" r="30"/>
-            <circle class="sd-gui" cx="50" cy="50" r="22"/>
-            <circle class="sd-gui" cx="50" cy="50" r="14"/>
-            <text class="sd-toplbl" x="50" y="32" text-anchor="middle">UTIL</text>
             <g class="sd-ticks" id="sd-left-ticks"></g>
             <g class="sd-needle" id="sd-left-needle" transform="rotate(0 50 50)">
-              <line x1="50" y1="50" x2="50" y2="14"/>
-              <line x1="50" y1="50" x2="50" y2="58" class="tail"/>
+              <line x1="50" y1="50" x2="50" y2="16"/>
+              <line x1="50" y1="50" x2="50" y2="57" class="tail"/>
             </g>
-            <circle class="sd-pivot" cx="50" cy="50" r="1.8"/>
-            <text class="sd-lbl" x="50" y="80" text-anchor="middle">稼働台数</text>
+            <circle class="sd-pivot" cx="50" cy="50" r="2"/>
           </svg>
-          <div class="subdial-val num" id="sd-left-val">— / —</div>
-          <div class="subdial-cap" id="sd-left-cap">稼働率 —</div>
+          <div class="subdial-val num" id="sd-left-val">—%</div>
+          <div class="subdial-cap" id="sd-left-cap">稼働 —/— 台</div>
         </div>
         <div class="subdial-wrap">
           <svg class="subdial" viewBox="0 0 100 100" id="sd-right">
             <circle class="sd-rim" cx="50" cy="50" r="44"/>
             <circle class="sd-face" cx="50" cy="50" r="38"/>
-            <circle class="sd-gui" cx="50" cy="50" r="30"/>
-            <circle class="sd-gui" cx="50" cy="50" r="22"/>
-            <text class="sd-toplbl" x="50" y="32" text-anchor="middle">TARGET</text>
             <g class="sd-ticks" id="sd-right-ticks"></g>
             <g class="sd-needle" id="sd-right-needle" transform="rotate(0 50 50)">
-              <line x1="50" y1="50" x2="50" y2="14"/>
-              <line x1="50" y1="50" x2="50" y2="58" class="tail"/>
+              <line x1="50" y1="50" x2="50" y2="16"/>
+              <line x1="50" y1="50" x2="50" y2="57" class="tail"/>
             </g>
-            <circle class="sd-pivot" cx="50" cy="50" r="1.8"/>
-            <text class="sd-lbl" x="50" y="80" text-anchor="middle">月次目標</text>
+            <circle class="sd-pivot" cx="50" cy="50" r="2"/>
           </svg>
           <div class="subdial-val num" id="sd-right-val">—%</div>
-          <div class="subdial-cap" id="sd-right-cap">目標 —</div>
+          <div class="subdial-cap" id="sd-right-cap">月次目標 —</div>
         </div>
       </div>
 
@@ -781,25 +772,6 @@
     </div>
   </section>
 
-  <!-- ========== 未入金 ========== -->
-  <section id="sec-ar">
-    <div class="card">
-      <div class="lbl">未入金 残高 (税込)</div>
-      <div class="big num" id="ar-total">—<span class="unit">円</span></div>
-      <div class="sm" id="ar-cnt">— 件</div>
-      <div class="stat-grid" style="margin-top:14px">
-        <div class="cell"><div class="lbl">30日以内</div><div class="v num" id="ar-30">—</div></div>
-        <div class="cell"><div class="lbl">31–60日</div><div class="v num" id="ar-60">—</div></div>
-        <div class="cell"><div class="lbl">61日以上</div><div class="v num" id="ar-90">—</div></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="lbl">経過日数が長い順</div>
-      <div class="list" id="ar-list"></div>
-    </div>
-  </section>
-
   <!-- ========== 設定 ========== -->
   <section id="sec-set">
     <div class="card">
@@ -853,10 +825,9 @@
   <!-- 親指リーチ最適化のため左上方向のみへ扇形展開 (FAB位置=右下) -->
   <nav id="crown" class="crown closed" aria-label="セクションナビ">
     <button class="petal" data-tab="now"  style="--ang:-75deg"><span>TOP</span></button>
-    <button class="petal" data-tab="rev"  style="--ang:-99deg"><span>売上</span></button>
-    <button class="petal" data-tab="ops"  style="--ang:-123deg"><span>稼働</span></button>
-    <button class="petal" data-tab="pipe" style="--ang:-147deg"><span>案件</span></button>
-    <button class="petal" data-tab="ar"   style="--ang:-171deg"><span>未入金</span></button>
+    <button class="petal" data-tab="rev"  style="--ang:-105deg"><span>売上</span></button>
+    <button class="petal" data-tab="ops"  style="--ang:-135deg"><span>稼働</span></button>
+    <button class="petal" data-tab="pipe" style="--ang:-165deg"><span>案件</span></button>
     <button class="petal" data-tab="set"  style="--ang:-195deg"><span>設定</span></button>
     <button class="crown-btn" id="crown-btn" type="button" aria-expanded="false">
       <span class="cur" id="crown-cur">TOP</span>
@@ -877,7 +848,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-07b';
+const APP_VERSION = '2026-06-07c';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1408,37 +1379,6 @@ function vehicleStats(){
   return {tot, inUse:inUse.size, free:tot-inUse.size, avg, rows, span, idle: rows.filter(r=>r.days===0)};
 }
 
-// AR (accounts receivable) — billed but not yet paid
-function arList(){
-  const today=new Date();
-  const list=[];
-  rentalCases().forEach(c=>{
-    if(c.status!=='請求済'&&c.status!=='仮請求') return;
-    const a=rentalAmount(c);
-    let issued=c.invoiceIssuedAt||null;
-    if(!issued && c.salesYear && c.salesMonth){
-      issued=`${c.salesYear}-${pad2(Number(c.salesMonth))}-01`;
-    }
-    const due=c.paymentDueAt||null;
-    const elapsed= issued? daysBetween(issued, today.toISOString().slice(0,10)):0;
-    list.push({src:'rental',c,total:a.total,issued,due,elapsed,label:`受付№${c.caseNo||c.id} · ${c.driverName||c.dispatchToName||c.insurerContact||'—'}`});
-  });
-  // DETALIA: billMonth filled but no paidDate
-  detaliaCases().forEach(c=>{
-    if(!c.billMonth||c.paidDate) return;
-    const a=detaliaAmount(c,(DD&&DD.settings&&DD.settings.taxRate)||10);
-    const issued=c.delivery||c.arrival;
-    const elapsed=issued?daysBetween(String(issued).slice(0,10),today.toISOString().slice(0,10)):null;
-    list.push({src:'detalia',c,total:a.total,issued,elapsed:elapsed||0,label:`${c.carModel||'—'} · ${c.customer||'—'}`});
-  });
-  list.sort((a,b)=>b.elapsed-a.elapsed);
-  const b30=list.filter(x=>x.elapsed<=30).length;
-  const b60=list.filter(x=>x.elapsed>30&&x.elapsed<=60).length;
-  const b90=list.filter(x=>x.elapsed>60).length;
-  const sum=list.reduce((s,x)=>s+x.total,0);
-  return {list, sum, b30,b60,b90};
-}
-
 function dayActivity(dateISO){
   // 指定日の現場活動を集計 (本日/明日 共通)
   const cs=rentalCases().filter(c=>c.status!=='キャンセル');
@@ -1554,8 +1494,8 @@ function renderNow(){
   const sweepLeft = -150 + (utilPct/100)*300; // -150 〜 +150 (300°のアーク)
   const ndLeft=document.getElementById('sd-left-needle');
   if(ndLeft) ndLeft.setAttribute('transform','rotate('+sweepLeft+' 50 50)');
-  $('sd-left-val').textContent=vs.inUse+' / '+vs.tot+' 台';
-  $('sd-left-cap').textContent='稼働率 '+utilPct+'%';
+  $('sd-left-val').textContent=utilPct+'%';
+  $('sd-left-cap').textContent='稼働 '+vs.inUse+'/'+vs.tot+'台';
   // 左ダイヤルのticks (0/25/50/75/100% に対応する位置)
   const lTicks=document.getElementById('sd-left-ticks');
   if(lTicks && !lTicks.children.length){
@@ -1574,8 +1514,8 @@ function renderNow(){
   const sweepRight = -150 + Math.min(100,tgtPct)/100*300;
   const ndRight=document.getElementById('sd-right-needle');
   if(ndRight) ndRight.setAttribute('transform','rotate('+sweepRight+' 50 50)');
-  $('sd-right-val').textContent = tgtNow ? tgtPct+'%' : '未設定';
-  $('sd-right-cap').textContent = tgtNow ? ('目標 ¥'+yen(tgtNow)) : '設定タブから入力';
+  $('sd-right-val').textContent = tgtNow ? tgtPct+'%' : '—';
+  $('sd-right-cap').textContent = tgtNow ? ('月次目標 ¥'+yen(tgtNow)) : '月次目標 未設定';
   const rTicks=document.getElementById('sd-right-ticks');
   if(rTicks && !rTicks.children.length){
     const angles=[-150,-75,0,75,150];
@@ -1922,23 +1862,6 @@ function renderPipe(){
   _renderUniPipe('pipe-denso', densoUnified());
 }
 
-function renderAr(){
-  const a=arList();
-  $('ar-total').innerHTML=yen(a.sum)+'<span class="unit">円</span>';
-  $('ar-cnt').textContent=a.list.length+' 件';
-  $('ar-30').textContent=a.b30; $('ar-60').textContent=a.b60; $('ar-90').textContent=a.b90;
-  $('ar-list').innerHTML=a.list.slice(0,30).map(x=>{
-    const bk=x.elapsed>60?'danger':x.elapsed>30?'warn':'ok';
-    return `<div class="item">
-      <div class="nm">
-        <div class="t">${esc(x.label)} <span class="badge ${bk}">${x.elapsed}日</span></div>
-        <div class="s">${x.src==='rental'?'レンタカー':'DETALIA'} · ${esc(x.issued||'—')}</div>
-      </div>
-      <div class="val">${yen(x.total)}</div>
-    </div>`;
-  }).join('') || '<div class="ink3 sm">未入金なし</div>';
-}
-
 function renderSet(){
   $('set-dbx-state').textContent=DEMO?'デモモード':(DBX_TOKEN?'連携済':'未連携');
   $('set-rental-state').textContent=DR?(DR.cases||[]).length+' 件':'—';
@@ -1959,15 +1882,15 @@ function renderAll(){
     showTab('set');
     return;
   }
-  renderNow();renderRev();renderOps();renderPipe();renderAr();renderSet();
+  renderNow();renderRev();renderOps();renderPipe();renderSet();
 }
 
 // ---------- TABS / CROWN FAB ----------
-const TAB_LABELS = {now:'TOP', rev:'売上', ops:'稼働', pipe:'案件', ar:'未入金', set:'設定'};
+const TAB_LABELS = {now:'TOP', rev:'売上', ops:'稼働', pipe:'案件', set:'設定'};
 let _currentTab = 'now';
 function showTab(t){
   _currentTab = t;
-  ['now','rev','ops','pipe','ar','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
+  ['now','rev','ops','pipe','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
   // Crown 中央表示と petal 現在地ハイライト
   const cur=$('crown-cur'); if(cur) cur.textContent=TAB_LABELS[t]||t;
   document.querySelectorAll('.crown .petal').forEach(p=>p.classList.toggle('current',p.dataset.tab===t));
