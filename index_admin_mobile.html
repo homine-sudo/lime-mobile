@@ -459,21 +459,11 @@
     font-size:13px;color:var(--ink);font-weight:500;letter-spacing:.04em;
   }
 
-  /* YTD divider — 横にIWCっぽい細い double line */
+  /* YTD divider — シンプルな細罫 (装飾そぎ落とし) */
   .card.hero .ytd-divider{
     margin:22px 16px 16px;
     height:1px;
     background:var(--line);
-    position:relative;
-    box-shadow:0 3px 0 -2px var(--line);  /* 二重線(下にもう1本) */
-  }
-  .card.hero .ytd-divider::after{
-    content:'';position:absolute;
-    left:50%;top:50%;
-    width:3px;height:3px;border-radius:50%;
-    background:var(--gold);
-    transform:translate(-50%,-50%);
-    box-shadow:0 0 0 4px var(--panel);
   }
   /* corner ticks 廃止 (互換) */
   .card.hero .corner-tick,.card.hero .auto-label{display:none}
@@ -497,21 +487,15 @@
 
     <!-- ① HERO: IWC Portugieser 7 Days ダイヤルに忠実 -->
     <div class="card hero">
-      <!-- 12時位置: HARI TERRACE ロゴプレート (IWC SCHAFFHAUSEN 風) -->
-      <div class="dial-logo">
-        <div class="dial-brand">HARI TERRACE</div>
-        <div class="dial-sub">OKINAWA</div>
-      </div>
-
-      <!-- センター大数字 (時針位置) -->
-      <div class="lbl" style="text-align:center;margin-bottom:8px;margin-top:8px">当月 合算売上 · 税込</div>
+      <!-- 当月 合算売上 (主役) -->
+      <div class="lbl" style="text-align:center;margin-bottom:8px;margin-top:4px">当月 合算売上 · 税込</div>
       <div class="big num" id="now-total" style="text-align:center">—<span class="unit">円</span></div>
       <div style="display:flex;gap:24px;margin-top:14px;align-items:baseline;justify-content:center">
         <span class="delta" id="now-mom">前月比 —</span>
         <span class="delta ink3" id="now-yoy">前年同月 —</span>
       </div>
 
-      <!-- サブダイヤル 2つ: 9時位置=稼働秒針風 / 3時位置=POWER RESERVE風 -->
+      <!-- 稼働率 サブダイヤル (1つに集約) -->
       <div class="subdial-row">
         <div class="subdial-wrap">
           <svg class="subdial" viewBox="0 0 100 100" id="sd-left">
@@ -527,32 +511,9 @@
           <div class="subdial-val num" id="sd-left-val">—%</div>
           <div class="subdial-cap" id="sd-left-cap">稼働 —/— 台</div>
         </div>
-        <div class="subdial-wrap">
-          <svg class="subdial" viewBox="0 0 100 100" id="sd-right">
-            <circle class="sd-rim" cx="50" cy="50" r="44"/>
-            <circle class="sd-face" cx="50" cy="50" r="38"/>
-            <g class="sd-ticks" id="sd-right-ticks"></g>
-            <g class="sd-needle" id="sd-right-needle" transform="rotate(0 50 50)">
-              <line x1="50" y1="50" x2="50" y2="16"/>
-              <line x1="50" y1="50" x2="50" y2="57" class="tail"/>
-            </g>
-            <circle class="sd-pivot" cx="50" cy="50" r="2"/>
-          </svg>
-          <div class="subdial-val num" id="sd-right-val">—%</div>
-          <div class="subdial-cap" id="sd-right-cap">月次目標 —</div>
-        </div>
       </div>
 
-      <!-- AUTOMATIC italic + date window (6時位置のデイトアパチャー風) -->
-      <div class="auto-row">
-        <div class="automatic-label">Automatic</div>
-        <div class="date-window">
-          <span class="dw-label">FY</span>
-          <span class="dw-val num" id="dw-fy">—</span>
-        </div>
-      </div>
-
-      <!-- YTD分割 (年度累計) -->
+      <!-- 年度累計 -->
       <div class="ytd-divider"></div>
       <div class="lbl" style="text-align:center;margin-bottom:8px"><span id="ytd-year">—</span>年度 累計 · 4月〜本日</div>
       <div class="med num" id="ytd-total" style="text-align:center">—<span class="unit" style="font-size:10px">円</span></div>
@@ -848,7 +809,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-07c';
+const APP_VERSION = '2026-06-07d';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1507,29 +1468,6 @@ function renderNow(){
       return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
     }).join('');
   }
-
-  // ─── サブダイヤル: 右=月次目標達成率 (power reserve風) ───
-  const tgtNow=monthlyTarget();
-  const tgtPct = tgtNow ? Math.min(160, Math.round(s.total*100/tgtNow)) : 0;
-  const sweepRight = -150 + Math.min(100,tgtPct)/100*300;
-  const ndRight=document.getElementById('sd-right-needle');
-  if(ndRight) ndRight.setAttribute('transform','rotate('+sweepRight+' 50 50)');
-  $('sd-right-val').textContent = tgtNow ? tgtPct+'%' : '—';
-  $('sd-right-cap').textContent = tgtNow ? ('月次目標 ¥'+yen(tgtNow)) : '月次目標 未設定';
-  const rTicks=document.getElementById('sd-right-ticks');
-  if(rTicks && !rTicks.children.length){
-    const angles=[-150,-75,0,75,150];
-    rTicks.innerHTML=angles.map(a=>{
-      const rad=(a-90)*Math.PI/180;
-      const x1=50+Math.cos(rad)*44, y1=50+Math.sin(rad)*44;
-      const x2=50+Math.cos(rad)*40, y2=50+Math.sin(rad)*40;
-      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-    }).join('');
-  }
-
-  // ─── デイトウィンドウ (6時位置のデイトアパチャー風) ─── 年度表示
-  const curFY = fyOf(todayISO());
-  $('dw-fy').textContent = curFY;
 
   const today=todayISO();
   // 売上日額 = currentlyDispatched 案件の unitPrice 合計
