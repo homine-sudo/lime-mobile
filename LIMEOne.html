@@ -1012,24 +1012,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
     </div>
     <div class="tbl-wrap" id="dashboard-weekly"></div>
   </div>
-  <!-- 📢 社内連絡板: 週間スケジュール直下 -->
-  <div class="card" style="padding:10px 12px;background:#FFFBEB;border-left:4px solid #E6C54C;margin-bottom:8px" id="dashboard-imsg-card">
-    <div class="card-title" style="margin-bottom:6px;font-size:13px;display:flex;align-items:center;gap:6px">
-      📢 <span>社内連絡板</span>
-      <span id="imsg-active-count" style="color:#B45309;font-weight:bold;font-size:11px"></span>
-      <span class="text-muted" style="font-size:10px;margin-left:auto">✓ 対応済みは薄く表示</span>
-    </div>
-    <!-- 投稿フォーム -->
-    <div style="display:flex;gap:6px;align-items:stretch;margin-bottom:8px">
-      <input id="imsg-input" class="form-control" placeholder="例: 明日○○工場へ修理状況の確認お願いします" style="flex:1;font-size:12px;padding:6px 8px" onkeydown="if(event.key==='Enter')postInternalMessage()">
-      <select id="imsg-author" class="form-control" style="width:110px;font-size:12px;padding:6px 8px" onchange="saveMessageAuthor()">
-        <option value="">投稿者を選択</option>
-      </select>
-      <button class="btn btn-primary btn-sm" style="padding:6px 14px" onclick="postInternalMessage()">📢 投稿</button>
-    </div>
-    <!-- メッセージ一覧 -->
-    <div id="imsg-list" style="max-height:300px;overflow-y:auto"></div>
-  </div>
+  <!-- 📢 社内連絡板は廃止 (2026-06-06 ユーザー要望)。DATA.internalMessages のデータと関数は保持(死蔵)。 -->
   <!-- 2) KPI: 本日の配車 / 本日の回収 / 利用中 / 今月案件数 / 本日稼働中車両 -->
   <div class="kpi-grid" id="kpi-grid"></div>
   <!-- 3) アラート2カラム: 利用期限・回収予定 と 車検・点検 -->
@@ -2846,7 +2829,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-06';
+const APP_VERSION = '2026-06-06a';
 // freee API直結用の共有トークン（GAS側 FREEE_SHARED_TOKEN と一致させる）。
 // 公開HTMLに出るが、実エンドポイントURLは settings(data.json/非公開)にのみ持つため保護される。
 const FREEE_API_TOKEN = 'lime-freee-2026-k9Xz7Qp3Rm';
@@ -6930,8 +6913,7 @@ function renderDashboard(){
 
   // ⏰ 利用期限/回収予定日アラート: 7日以内 + 超過 (利用中/配車済 のみ対象)
   renderDeadlineAlerts();
-  // 📢 社内連絡板
-  renderInternalMessages();
+  // 📢 社内連絡板は廃止 (2026-06-06)。renderInternalMessages() 呼び出しを撤去。
 }
 
 // ========== 📢 社内連絡板 ==========
