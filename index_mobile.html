@@ -1256,13 +1256,12 @@ a{color:var(--info);text-decoration:none}
         <div style="font-size:13px;color:var(--muted);line-height:1.7">
           ・車両に異常がないか確認<br>
           ・燃料・書類・鍵の準備<br>
-          ・出発時刻を記録 → LINE通知<br>
         </div>
       </div>
       <div class="m-flow-actions">
         <div class="m-flow-actions-row">
           <button class="m-btn m-btn-outline" onclick="goBack()">キャンセル</button>
-          <button class="m-btn m-btn-success" id="m-prep-depart-btn" onclick="onDeparture()">🚀 出発</button>
+          <button class="m-btn m-btn-success" id="m-prep-depart-btn" onclick="goPrepToPhoto()">📷 チェックシート撮影へ</button>
         </div>
       </div>
     </section>
@@ -1861,7 +1860,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-04i';
+const APP_VERSION = '2026-06-06';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3332,7 +3331,7 @@ function renderFlowProgress(hostId, currentStep){
         { lbl: 'FAX送信' }
       ]
     : [
-        { lbl: '準備・出発' },
+        { lbl: '準備' },
         { lbl: 'シート撮影' },
         { lbl: '配車完了' },
         { lbl: 'FAX送信' }
@@ -3389,14 +3388,11 @@ async function renderFlowPrepScreen(){
   // 車両表示 (割当済み or 未割当)
   renderPrepVehicleSection(c);
 
-  // 出発ボタンの状態 (車両が割当てられていれば有効)
+  // 「撮影へ進む」ボタンの状態 (車両が割当てられていれば有効)。旧「出発」は廃止。
   const hasVehicle = !!(c.vehicleId || c.vehicleName || c.plateNo);
   const depBtn = $('m-prep-depart-btn');
-  if(c.departedAt){
-    depBtn.textContent = `✅ 出発済 (${(c.departedAt||'').slice(11,16)}) — 次へ進む`;
-    depBtn.disabled = false;
-  } else {
-    depBtn.textContent = '🚀 出発';
+  if(depBtn){
+    depBtn.textContent = '📷 チェックシート撮影へ';
     depBtn.disabled = !hasVehicle;
   }
 }
@@ -3593,36 +3589,15 @@ async function selectVehicle(vehicleId){
 }
 
 // ============================================================
-// DEPARTURE (出発記録 + LINE通知)
-// ============================================================
-async function onDeparture(){
+// 準備 → チェックシート撮影へ進む
+//   ★旧「🚀出発」を廃止 (出発時刻 departedAt の記録 / departed LINE通知 / 安全運転案内 を
+//     すべてやめ、準備からそのまま撮影へ進むだけにした。ユーザー要望 2026-06-06)
+async function goPrepToPhoto(){
   if(!_flow) return;
   const c = findCaseById(_flow.caseId); if(!c) return;
-  // 既に出発済 → 次画面へ
-  if(c.departedAt){
-    await renderFlowPhotoScreen();
-    showScreen('flow-photo');
-    return;
-  }
-  showSpinner('出発を記録 + LINE通知中...');
-  try {
-    c.departedAt = nowDateTimeLocal();
-    _stampUpdated(c);
-    await saveToDropbox();
-    // LINE通知 (失敗しても続行)
-    try {
-      await sendExternalNotify('departed', _buildNotifyPayload(c, 'departed'));
-    } catch(e){}
-    hideSpinner();
-    toast('🚀 出発を記録 / LINE通知済', 'success');
-    // 安全運転の案内を表示してから次画面へ
-    await _showSafeDrivingNotice();
-    await renderFlowPhotoScreen();
-    showScreen('flow-photo');
-  } catch(e){
-    hideSpinner();
-    toast('保存エラー: '+e.message,'error');
-  }
+  if(!(c.vehicleId || c.vehicleName || c.plateNo)){ toast('先に配車する車両を選択してください','error'); return; }
+  await renderFlowPhotoScreen();
+  showScreen('flow-photo');
 }
 
 // 出発時の安全運転案内
