@@ -429,7 +429,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-08c';
+const APP_VERSION = '2026-06-08d';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1248,6 +1248,7 @@ function saveReport(id,complete){
 
 /* ───────── 月次請求 ───────── */
 let billMonth=curMonth(); let billMode='sales';
+let osAllPeriod=false; let osSel={};  // 外注費清算: 月をまたいで選択モード/選択中jobId
 function billMonthOf(j){ return j.billingMonth || ((['作業完了','報告済'].includes(j.status))?(j.workedAt||'').slice(0,7):''); }
 function billingMonths(){ const a=[]; const now=new Date(); for(let i=0;i<12;i++){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); a.push(d.getFullYear()+'-'+pad2(d.getMonth()+1)); } return a; }
 function renderBilling(){
@@ -1311,17 +1312,81 @@ function renderMonthlyDetail(){
   </div>`;
 }
 function renderOutsourceSettle(){
-  const jobs=DATA.jobs.filter(j=> j.status!=='キャンセル' && j.outsource&&j.outsource.used && num(j.outsource.cost)>0 && (j.workedAt||'').slice(0,7)===billMonth);
-  const groups={}; jobs.forEach(j=>{ const v=j.outsource.vendor||'(未設定)'; (groups[v]=groups[v]||[]).push(j); });
+  const all=DATA.jobs.filter(j=> j.status!=='キャンセル' && j.outsource&&j.outsource.used && num(j.outsource.cost)>0);
+  const toggle=`<div class="chips" style="margin-bottom:10px">
+    <button class="chip ${!osAllPeriod?'active':''}" onclick="osAllPeriod=false;renderBilling()">🗓 月で見る</button>
+    <button class="chip ${osAllPeriod?'active':''}" onclick="osAllPeriod=true;_osAutoSelectUnpaid();renderBilling()">📋 月をまたいで選択</button>
+  </div>`;
+  const scope=osAllPeriod? all : all.filter(j=>(j.workedAt||'').slice(0,7)===billMonth);
+  const groups={}; scope.forEach(j=>{ const v=j.outsource.vendor||'(未設定)'; (groups[v]=groups[v]||[]).push(j); });
   const vendors=Object.keys(groups);
-  const total=jobs.reduce((s,j)=>s+num(j.outsource.cost),0);
-  const unpaid=jobs.filter(j=>!j.outsource.paid).reduce((s,j)=>s+num(j.outsource.cost),0);
-  return `<div class="kpi-grid">
-    <div class="kpi purple"><div class="kpi-lbl">外注費 合計</div><div class="kpi-val" style="font-size:21px">${yen(total)}</div><div class="kpi-sub">${jobs.length}件 / ${vendors.length}社</div></div>
+  if(osAllPeriod){
+    const selJobs=scope.filter(j=>osSel[j.id]);
+    const selTotal=selJobs.reduce((s,j)=>s+num(j.outsource.cost),0);
+    const unpaidTotal=scope.filter(j=>!j.outsource.paid).reduce((s,j)=>s+num(j.outsource.cost),0);
+    return toggle+`<div class="kpi-grid">
+      <div class="kpi purple"><div class="kpi-lbl">選択中</div><div class="kpi-val" style="font-size:21px">${yen(selTotal)}</div><div class="kpi-sub">${selJobs.length}件 選択中</div></div>
+      <div class="kpi red"><div class="kpi-lbl">未清算 合計(全期間)</div><div class="kpi-val" style="font-size:21px">${yen(unpaidTotal)}</div></div>
+    </div>
+    <div class="hint" style="margin:-4px 2px 12px">タップで選択/解除。外注先ごとに「選択分」を月をまたいでまとめて送信・清算できます</div>
+    ${vendors.length? vendors.map(v=>outsourceVendorCardSelect(v,groups[v])).join('') : '<div class="empty"><div class="ico">🤝</div><div class="t">外注費の案件はありません</div></div>'}`;
+  }
+  const total=scope.reduce((s,j)=>s+num(j.outsource.cost),0);
+  const unpaid=scope.filter(j=>!j.outsource.paid).reduce((s,j)=>s+num(j.outsource.cost),0);
+  return toggle+`<div class="kpi-grid">
+    <div class="kpi purple"><div class="kpi-lbl">外注費 合計</div><div class="kpi-val" style="font-size:21px">${yen(total)}</div><div class="kpi-sub">${scope.length}件 / ${vendors.length}社</div></div>
     <div class="kpi red"><div class="kpi-lbl">未清算</div><div class="kpi-val" style="font-size:21px">${yen(unpaid)}</div></div>
   </div>
   <div class="hint" style="margin:-4px 2px 12px">作業実施月(${fmtMonth(billMonth)})の外注費。元請け金額は含みません</div>
   ${vendors.length? vendors.map(v=>outsourceVendorCard(v,groups[v])).join('') : '<div class="empty"><div class="ico">🤝</div><div class="t">この月の外注費はありません</div></div>'}`;
+}
+/* 外注費清算: 月をまたいで選択してまとめて送信・清算 */
+function _osPeriodLabel(jobs){ const ms=jobs.map(j=>(j.workedAt||'').slice(0,7)).filter(Boolean).sort(); if(!ms.length) return '随時'; const a=ms[0],b=ms[ms.length-1]; return a===b?fmtMonth(a):fmtMonth(a)+'〜'+fmtMonth(b); }
+function _osFileTag(jobs){ const ms=jobs.map(j=>(j.workedAt||'').slice(0,7)).filter(Boolean).sort(); if(!ms.length) return todayISO().slice(0,7); const a=ms[0],b=ms[ms.length-1]; return a===b?a:a+'_'+b; }
+function _osAutoSelectUnpaid(){ osSel={}; DATA.jobs.forEach(j=>{ if(j.status!=='キャンセル'&&j.outsource&&j.outsource.used&&num(j.outsource.cost)>0&&!j.outsource.paid) osSel[j.id]=true; }); }
+function _osToggle(id){ if(osSel[id]) delete osSel[id]; else osSel[id]=true; renderBilling(); }
+function _osSelectVendor(vendor,select){ DATA.jobs.forEach(j=>{ if(j.status!=='キャンセル'&&j.outsource&&j.outsource.used&&num(j.outsource.cost)>0&&(j.outsource.vendor||'(未設定)')===vendor){ if(select) osSel[j.id]=true; else delete osSel[j.id]; } }); renderBilling(); }
+function outsourceVendorCardSelect(vendor,jobs){
+  jobs=jobs.slice().sort((a,b)=>(a.workedAt||'').localeCompare(b.workedAt||''));
+  const selJobs=jobs.filter(j=>osSel[j.id]);
+  const selTotal=selJobs.reduce((s,j)=>s+num(j.outsource.cost),0);
+  const allSel=jobs.length>0 && jobs.every(j=>osSel[j.id]);
+  const n=selJobs.length;
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:15px;font-weight:700">🤝 ${esc(vendor)}${vendor&&vendor!=='(未設定)'?' 様':''}</div>
+      <button class="btn btn-ghost btn-sm" style="padding:5px 11px;min-height:32px" onclick="_osSelectVendor(this.dataset.v,${allSel?'false':'true'})" data-v="${esc(vendor)}">${allSel?'全解除':'全選択'}</button>
+    </div>
+    ${jobs.map(j=>{ const on=!!osSel[j.id]; return `<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="_osToggle('${j.id}')">
+      <div class="chk ${on?'on':''}" style="width:22px;height:22px;flex-shrink:0;margin-top:1px">✓</div>
+      <div style="flex:1;min-width:0;font-size:12.5px">
+        <div style="font-weight:600">${fmtD(j.workedAt)} ${esc(j.carModel||'')}${num(j.qty)>1?' ×'+num(j.qty)+'台':''}${j.outsource.paid?' <span style="color:var(--green);font-weight:700">支払済</span>':''}</div>
+        <div style="color:var(--muted)">${esc(j.workDesc||'')}${j.workPlace?'　📍'+esc(j.workPlace):''}</div>
+      </div>
+      <div style="white-space:nowrap;font-weight:700">${yen(j.outsource.cost)}</div>
+    </div>`; }).join('')}
+    <div class="money-box" style="margin:10px 0 8px"><div class="money-row total"><span>選択 ${n}件 の支払合計</span><b>${yen(selTotal)}</b></div></div>
+    <button class="btn btn-secondary btn-sm btn-full" style="margin-bottom:8px${n?'':';opacity:.45'}" ${n?'':'disabled'} onclick="shareSelectedSettlement(this.dataset.v)" data-v="${esc(vendor)}">📤 選択 ${n}件 の支払明細を送信</button>
+    <button class="btn btn-success btn-sm btn-full" style="${n?'':'opacity:.45'}" ${n?'':'disabled'} onclick="settleSelectedOutsource(this.dataset.v)" data-v="${esc(vendor)}">✅ 選択 ${n}件 を清算済にする</button>
+  </div>`;
+}
+async function shareSelectedSettlement(vendor){
+  const jobs=DATA.jobs.filter(j=> j.status!=='キャンセル' && j.outsource&&j.outsource.used && num(j.outsource.cost)>0 && (j.outsource.vendor||'(未設定)')===vendor && osSel[j.id]).sort((a,b)=>(a.workedAt||'').localeCompare(b.workedAt||''));
+  if(!jobs.length){ toast('送信する明細を選択してください','err'); return; }
+  toast('支払明細を作成中…');
+  let blob; try{ blob=await composeSettlementImage(vendor,jobs); }catch(e){ console.error(e); toast('作成に失敗しました','err'); return; }
+  const fname='外注費明細_'+((vendor&&vendor!=='(未設定)')?vendor:'外注先')+'_'+_osFileTag(jobs)+'.jpg';
+  const file=new File([blob],fname,{type:'image/jpeg'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:'外注費お支払明細',text:settlementCaption(vendor,jobs)}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast('明細画像を保存しました。LINEで添付してください');
+}
+async function settleSelectedOutsource(vendor){
+  const jobs=DATA.jobs.filter(j=> j.outsource&&j.outsource.used && (j.outsource.vendor||'(未設定)')===vendor && osSel[j.id]);
+  if(!jobs.length){ toast('選択がありません','err'); return; }
+  if(!await confirmModal((vendor&&vendor!=='(未設定)'?vendor+' の ':'')+'選択した '+jobs.length+'件 を清算済(支払済)にしますか？',{okText:'清算済にする'})) return;
+  jobs.forEach(j=>{ j.outsource.paid=true; stamp(j); delete osSel[j.id]; });
+  save(); toast('清算済にしました','ok'); renderBilling();
 }
 function outsourceVendorCard(vendor,jobs){
   const total=jobs.reduce((s,j)=>s+num(j.outsource.cost),0);
@@ -1722,8 +1787,9 @@ async function shareWorkOrder(id){
   toast('指示書画像を保存しました。LINEで添付してください');
 }
 /* 外注費 お支払明細書を画像に合成して外注先へ送信 (LINE等・元請け金額=工賃は出さない・外注費のみ) */
-async function composeSettlementImage(vendor,jobs,month){
+async function composeSettlementImage(vendor,jobs){
   const st=DATA.settings;
+  const period=_osPeriodLabel(jobs);
   const total=jobs.reduce((s,j)=>s+num(j.outsource.cost),0);
   const W=860, pad=40, big=document.createElement('canvas'); big.width=W; big.height=9000;
   const ctx=big.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,9000); ctx.textBaseline='top';
@@ -1739,7 +1805,7 @@ async function composeSettlementImage(vendor,jobs,month){
   const vw=Math.min(ctx.measureText(vlabel).width,360); ctx.strokeStyle='#16202E'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad,y+30); ctx.lineTo(pad+vw,y+30); ctx.stroke();
   y+=44;
   ctx.font='14px sans-serif'; ctx.fillStyle='#555';
-  ctx.fillText('対象月　'+fmtMonth(month)+'（作業実施分）',pad,y); y+=22;
+  ctx.fillText('対象　'+period+'（作業実施分）',pad,y); y+=22;
   ctx.fillText('発行元　'+(st.company||'')+(st.tel?'　TEL '+st.tel:''),pad,y); y+=26;
   ctx.font='14px sans-serif'; ctx.fillStyle='#16202E'; ctx.fillText('下記の通り外注費をお支払いいたします。',pad,y); y+=30;
   // ── 明細テーブル ヘッダ
@@ -1770,14 +1836,14 @@ async function composeSettlementImage(vendor,jobs,month){
   ctx.fillStyle='#16202E'; ctx.font='bold 16px sans-serif'; ctx.fillText('お支払合計（税抜）',pad+14,y+16);
   ctx.font='bold 25px sans-serif'; ctx.textAlign='right'; ctx.fillText(yen(total),W-pad-14,y+12); ctx.textAlign='left';
   y+=50+12;
-  ctx.font='12px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.fillText(jobs.length+'件　/　'+fmtMonth(month)+' 作業実施分',pad,y); y+=20;
+  ctx.font='12px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.fillText(jobs.length+'件　/　'+period+' 作業実施分',pad,y); y+=20;
   ctx.font='11px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.fillText('※ 本書は外注費(お支払額)のみを記載しています。元請け金額・粗利は含まれません。',pad,y); y+=pad;
   const out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y); out.getContext('2d').drawImage(big,0,0);
   return await new Promise(res=>out.toBlob(b=>res(b),'image/jpeg',0.92));
 }
-function settlementCaption(vendor,jobs,month){
+function settlementCaption(vendor,jobs){
   const total=jobs.reduce((s,j)=>s+num(j.outsource.cost),0);
-  const L=['【外注費 お支払明細】 '+fmtMonth(month)];
+  const L=['【外注費 お支払明細】 '+_osPeriodLabel(jobs)];
   L.push((vendor&&vendor!=='(未設定)')?vendor+' 様':'外注先');
   jobs.forEach(j=>{ L.push('・'+fmtD(j.workedAt)+' '+(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.workPlace?'＠'+j.workPlace:'')+'　'+yen(j.outsource.cost)); });
   L.push('お支払合計(税抜) '+yen(total));
@@ -1787,11 +1853,11 @@ async function shareOutsourceSettlement(vendor,month){
   const jobs=DATA.jobs.filter(j=> j.status!=='キャンセル' && j.outsource&&j.outsource.used && num(j.outsource.cost)>0 && (j.outsource.vendor||'(未設定)')===vendor && (j.workedAt||'').slice(0,7)===month);
   if(!jobs.length){ toast('対象の外注費がありません','err'); return; }
   toast('支払明細を作成中…');
-  let blob; try{ blob=await composeSettlementImage(vendor,jobs,month); }catch(e){ console.error(e); toast('作成に失敗しました','err'); return; }
+  let blob; try{ blob=await composeSettlementImage(vendor,jobs); }catch(e){ console.error(e); toast('作成に失敗しました','err'); return; }
   const fname='外注費明細_'+((vendor&&vendor!=='(未設定)')?vendor:'外注先')+'_'+month+'.jpg';
   const file=new File([blob],fname,{type:'image/jpeg'});
   if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file],title:'外注費お支払明細 '+fmtMonth(month),text:settlementCaption(vendor,jobs,month)}); return; }
+    try{ await navigator.share({files:[file],title:'外注費お支払明細 '+fmtMonth(month),text:settlementCaption(vendor,jobs)}); return; }
     catch(e){ if(e&&e.name==='AbortError') return; }
   }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
