@@ -429,7 +429,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-08d';
+const APP_VERSION = '2026-06-08e';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -441,6 +441,8 @@ let DATA = null;
 function defaultData(){
   return {
     jobs:[],
+    extraCharges:[],   // 案件外の請求項目(配送費など)。{id,clientId,clientName,month,desc,qty,unitPrice,invoiceNo,invoicedAt,paid,paidAt}
+
     clients:[{id:'cl-proceed',name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'}],
     subcontractors:[{id:'sub-moromizato',name:'諸見里 貢',tel:'',memo:''}],
     presets:[
@@ -1260,16 +1262,21 @@ function renderBilling(){
 }
 function renderSalesBilling(){
   const target=DATA.jobs.filter(j=> j.status!=='キャンセル' && billMonthOf(j)===billMonth && ['作業完了','報告済','請求済','入金済'].includes(j.status));
-  const groups={}; target.forEach(j=>{ const k=j.clientId||('_'+j.clientName); (groups[k]=groups[k]||[]).push(j); });
-  const groupArr=Object.keys(groups).map(k=>({key:k,jobs:groups[k],client:clientById(groups[k][0].clientId)}));
-  const totalBill=target.reduce((s,j)=>s+jobSubtotal(j),0);
-  const totalBillTax=target.reduce((s,j)=>s+withTax(jobSubtotal(j)),0);
-  const totalProfit=target.reduce((s,j)=>s+jobProfit(j),0);
+  const extras=(DATA.extraCharges||[]).filter(e=>e.month===billMonth);
+  const groups={};
+  target.forEach(j=>{ const k=j.clientId||('_'+j.clientName); (groups[k]=groups[k]||{jobs:[],extras:[]}).jobs.push(j); });
+  extras.forEach(e=>{ const k=e.clientId||('_'+e.clientName); (groups[k]=groups[k]||{jobs:[],extras:[]}).extras.push(e); });
+  const groupArr=Object.keys(groups).map(k=>{ const g=groups[k]; const cid=(g.jobs[0]||{}).clientId||(g.extras[0]||{}).clientId; return {key:k,jobs:g.jobs,extras:g.extras,client:clientById(cid)}; });
+  const jobsSub=target.reduce((s,j)=>s+jobSubtotal(j),0);
+  const extrasSub=extras.reduce((s,e)=>s+ecAmount(e),0);
+  const totalBill=jobsSub+extrasSub;
+  const totalProfit=target.reduce((s,j)=>s+jobProfit(j),0)+extrasSub;
   return `<div class="kpi-grid">
-    <div class="kpi"><div class="kpi-lbl">請求合計(税抜)</div><div class="kpi-val" style="font-size:21px">${yen(totalBill)}</div><div class="kpi-sub">税込 ${yen(totalBillTax)} ・ ${target.length}件/${groupArr.length}社</div></div>
+    <div class="kpi"><div class="kpi-lbl">請求合計(税抜)</div><div class="kpi-val" style="font-size:21px">${yen(totalBill)}</div><div class="kpi-sub">税込 ${yen(withTax(totalBill))} ・ ${target.length}件${extras.length?'＋他'+extras.length+'件':''}/${groupArr.length}社</div></div>
     <div class="kpi green"><div class="kpi-lbl">粗利合計</div><div class="kpi-val" style="font-size:21px">${yen(totalProfit)}</div></div>
   </div>
-  ${groupArr.length? groupArr.map(billingGroupCard).join('') : '<div class="empty"><div class="ico">🗓</div><div class="t">この月の請求対象案件はありません</div><div style="font-size:11px;color:var(--muted);margin-top:6px">案件を「作業完了」にすると請求対象になります</div></div>'}`;
+  <button class="btn btn-secondary btn-sm btn-full" style="margin-bottom:12px" onclick="openExtraCharge()">＋ 配送費など 案件外の請求を追加</button>
+  ${groupArr.length? groupArr.map(billingGroupCard).join('') : '<div class="empty"><div class="ico">🗓</div><div class="t">この月の請求対象がありません</div><div style="font-size:11px;color:var(--muted);margin-top:6px">案件を「作業完了」にするか、上の「＋ 案件外の請求」で追加できます</div></div>'}`;
 }
 /* 月別 売上明細ビュー: 月別推移バー＋選択月の合計＋作業内容一覧(作業日順) */
 function _monthSales(mm){ return DATA.jobs.filter(j=> j.status!=='キャンセル' && billMonthOf(j)===mm && ['作業完了','報告済','請求済','入金済'].includes(j.status)).reduce((s,j)=>s+jobSubtotal(j),0); }
@@ -1415,15 +1422,16 @@ async function unsettleOutsource(vendor,month){
   save(); toast('清算を取り消しました','ok'); renderBilling();
 }
 function billingGroupCard(g){
-  const name=g.client?g.client.name:(g.jobs[0].clientName||'(取引先未設定)');
-  const sub=g.jobs.reduce((s,j)=>s+jobSubtotal(j),0);
+  const extras=g.extras||[];
+  const name=g.client?g.client.name:((g.jobs[0]||{}).clientName||(extras[0]||{}).clientName||'(取引先未設定)');
+  const sub=g.jobs.reduce((s,j)=>s+jobSubtotal(j),0)+extras.reduce((s,e)=>s+ecAmount(e),0);
   const total=withTax(sub);
-  const allInvoiced=g.jobs.every(j=>['請求済','入金済'].includes(j.status));
-  const allPaid=g.jobs.every(j=>j.status==='入金済');
+  const allInvoiced=g.jobs.every(j=>['請求済','入金済'].includes(j.status)) && extras.every(e=>e.invoiceNo);
+  const allPaid=g.jobs.every(j=>j.status==='入金済') && extras.every(e=>e.paid);
   const state=allPaid?'paid':allInvoiced?'invoiced':'todo';
-  const invNo=(g.jobs.find(j=>j.invoiceNo)||{}).invoiceNo||'';
-  const invAt=(g.jobs.find(j=>j.invoicedAt)||{}).invoicedAt||'';
-  const paidAt=(g.jobs.find(j=>j.paidAt)||{}).paidAt||'';
+  const invNo=(g.jobs.find(j=>j.invoiceNo)||extras.find(e=>e.invoiceNo)||{}).invoiceNo||'';
+  const invAt=(g.jobs.find(j=>j.invoicedAt)||extras.find(e=>e.invoicedAt)||{}).invoicedAt||'';
+  const paidAt=(g.jobs.find(j=>j.paidAt)||extras.find(e=>e.paidAt)||{}).paidAt||'';
   const due=endOfNextMonth(billMonth);
   // 現在地バッジ
   const badge=`<span class="badge ${allPaid?'st-入金済':allInvoiced?'st-請求済':'st-作業完了'}">${allPaid?'✓ 入金済':allInvoiced?'請求済・入金待ち':'未請求'}</span>`;
@@ -1457,6 +1465,9 @@ function billingGroupCard(g){
     ${g.jobs.map(j=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)" onclick="openJobDetail('${j.id}')">
       <span>${fmtD(j.workedAt||j.requestedAt)} ${esc(billingDescOf(j))}${num(j.qty)>1?' '+num(j.qty)+'台':''}</span>
       <span style="white-space:nowrap">${yen(jobSubtotal(j))}</span></div>`).join('')}
+    ${extras.map(e=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="min-width:0"><span class="tag" style="margin-right:5px">🚚 その他</span>${esc(e.desc||'請求項目')}${num(e.qty)>1?' ×'+num(e.qty):''} <button class="btn btn-ghost" style="padding:1px 8px;min-height:22px;font-size:11px;margin-left:2px" onclick="event.stopPropagation();openExtraCharge('${e.id}')">編集</button></span>
+      <span style="white-space:nowrap">${yen(ecAmount(e))}</span></div>`).join('')}
     <div class="money-box" style="margin:10px 0 8px">
       <div class="money-row total"><span>小計(税抜)</span><b>${yen(sub)}</b></div>
       <div class="money-row"><span>消費税(${taxRate()}%)</span><b>${yen(total-sub)}</b></div>
@@ -1470,9 +1481,13 @@ function billingGroupCard(g){
 function groupJobs(key,month){
   return DATA.jobs.filter(j=> j.status!=='キャンセル' && (j.clientId||('_'+j.clientName))===key && billMonthOf(j)===month && ['作業完了','報告済','請求済','入金済'].includes(j.status));
 }
+/* 案件外の請求項目(配送費など) */
+function ecAmount(e){ return (num(e.qty||1)||1)*num(e.unitPrice); }
+function groupExtras(key,month){ return (DATA.extraCharges||[]).filter(e=> e.month===month && (e.clientId||('_'+e.clientName))===key); }
 function generateInvoice(key,month,markInvoiced){
-  const jobs=groupJobs(key,month); if(!jobs.length){ toast('対象がありません','err'); return; }
-  const client=clientById(jobs[0].clientId);
+  const jobs=groupJobs(key,month); const extras=groupExtras(key,month);
+  if(!jobs.length && !extras.length){ toast('対象がありません','err'); return; }
+  const client=clientById((jobs[0]||{}).clientId||(extras[0]||{}).clientId);
   const st=DATA.settings;
   if(markInvoiced && !st.company){ toast('先に⚙️設定で自社情報を入力してください','err'); openSettings(); return; }
   let invNo;
@@ -1480,21 +1495,25 @@ function generateInvoice(key,month,markInvoiced){
     const n=num(st.nextInvoiceNo)||1; invNo='INV-'+String(n).padStart(10,'0'); st.nextInvoiceNo=n+1; st._updatedAt=Date.now();
     const issueDate=endOfMonth(month);
     jobs.forEach(j=>{ if(j.status!=='入金済') j.status='請求済'; j.invoiceNo=invNo; j.invoicedAt=issueDate; if(!j.billingMonth) j.billingMonth=month; stamp(j); });
+    extras.forEach(e=>{ e.invoiceNo=invNo; e.invoicedAt=issueDate; e.updatedAt=Date.now(); });
     save();
-  } else { invNo=jobs[0].invoiceNo || ('INV-'+String(num(st.nextInvoiceNo)||1).padStart(10,'0')); }
-  openInvoiceWindow(client,jobs,month,invNo);
+  } else { invNo=(jobs[0]||{}).invoiceNo || (extras[0]||{}).invoiceNo || ('INV-'+String(num(st.nextInvoiceNo)||1).padStart(10,'0')); }
+  openInvoiceWindow(client,jobs,month,invNo,extras);
   if(markInvoiced){ closeModal(); toast('請求書 '+invNo+' を発行しました','ok'); renderBilling(); }
 }
-function openInvoiceWindow(client,jobs,month,invNo){
+function openInvoiceWindow(client,jobs,month,invNo,extras){
   const st=DATA.settings;
+  extras=extras||[];
   jobs=jobs.slice().sort((a,b)=>(a.workedAt||'9999-99-99').localeCompare(b.workedAt||'9999-99-99')); // 取引日順
-  const sub=jobs.reduce((s,j)=>s+jobSubtotal(j),0);
+  const sub=jobs.reduce((s,j)=>s+jobSubtotal(j),0)+extras.reduce((s,e)=>s+ecAmount(e),0);
   const tax=Math.round(sub*taxRate()/100), total=sub+tax;
   const issueDate=endOfMonth(month), dueDate=endOfNextMonth(month);
+  const clientName=client?client.name:((jobs[0]||{}).clientName||(extras[0]||{}).clientName||'');
   const hasDate=jobs.some(j=>j.workedAt); // 取引日列は作業完了(workedAtあり)がある時のみ表示
   const ymd=s=>esc(String(s||'').replace(/-/g,'/'));
-  const dataRows=jobs.map(j=>`<tr>${hasDate?`<td class="c">${ymd(j.workedAt)}</td>`:''}<td>${invoiceDescHtml(j)}</td><td class="c">${num(j.qty)||1} 台</td><td class="r">${(num(j.unitFee)).toLocaleString('ja-JP')}</td><td class="r">${(jobSubtotal(j)).toLocaleString('ja-JP')}</td></tr>`).join('');
-  const minRows=9; let fillerRows=''; for(let i=jobs.length;i<minRows;i++) fillerRows+=`<tr class="empty">${hasDate?'<td>&nbsp;</td>':''}<td>&nbsp;</td><td></td><td></td><td></td></tr>`;
+  const dataRows=jobs.map(j=>`<tr>${hasDate?`<td class="c">${ymd(j.workedAt)}</td>`:''}<td>${invoiceDescHtml(j)}</td><td class="c">${num(j.qty)||1} 台</td><td class="r">${(num(j.unitFee)).toLocaleString('ja-JP')}</td><td class="r">${(jobSubtotal(j)).toLocaleString('ja-JP')}</td></tr>`).join('')
+    + extras.map(e=>`<tr>${hasDate?'<td class="c"></td>':''}<td><div class="d-main">${esc(e.desc||'請求項目')}</div></td><td class="c">${num(e.qty)||1}</td><td class="r">${num(e.unitPrice).toLocaleString('ja-JP')}</td><td class="r">${ecAmount(e).toLocaleString('ja-JP')}</td></tr>`).join('');
+  const minRows=9; let fillerRows=''; for(let i=jobs.length+extras.length;i<minRows;i++) fillerRows+=`<tr class="empty">${hasDate?'<td>&nbsp;</td>':''}<td>&nbsp;</td><td></td><td></td><td></td></tr>`;
   const logoImg=st.logo?`<img src="${st.logo}" style="max-height:58px;max-width:150px;margin-top:8px">`:'';
   const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>請求書 ${esc(invNo)}</title>
   <style>
@@ -1544,7 +1563,7 @@ function openInvoiceWindow(client,jobs,month,invNo){
     <div class="title">御請求書</div><div class="title-rule"></div>
     <div class="head">
       <div>
-        <div class="to-name">${esc(client?client.name:jobs[0].clientName||'')}<span class="ochu">御中</span></div>
+        <div class="to-name">${esc(clientName)}<span class="ochu">御中</span></div>
         <div class="to-amount"><div class="lbl">ご請求金額（税込）</div><div class="amt">¥${total.toLocaleString('ja-JP')}</div></div>
         <div class="lead">下記の通りご請求申し上げます。</div>
       </div>
@@ -1583,18 +1602,63 @@ function openInvoiceWindow(client,jobs,month,invNo){
   w.document.write(html); w.document.close();
 }
 async function markPaid(key,month){
-  const js=groupJobs(key,month);
-  const cl=clientById(js[0]&&js[0].clientId); const nm=cl?cl.name:(js[0]&&js[0].clientName)||'この取引先';
-  const amt=withTax(js.reduce((s,j)=>s+jobSubtotal(j),0));
+  const js=groupJobs(key,month); const ex=groupExtras(key,month);
+  const cl=clientById((js[0]||{}).clientId||(ex[0]||{}).clientId); const nm=cl?cl.name:((js[0]||{}).clientName||(ex[0]||{}).clientName)||'この取引先';
+  const amt=withTax(js.reduce((s,j)=>s+jobSubtotal(j),0)+ex.reduce((s,e)=>s+ecAmount(e),0));
   const date=await dateInputModal(`${nm} の ${fmtMonth(month)}分（税込 ${yen(amt)}）の入金を記録します。\n入金日を確認してください（既定は本日）。`,todayISO(),{okText:'入金を記録する',dateLabel:'入金日'});
   if(!date) return;
   js.forEach(j=>{ j.status='入金済'; j.paidAt=date; stamp(j); });
+  ex.forEach(e=>{ e.paid=true; e.paidAt=date; e.updatedAt=Date.now(); });
   save(); toast('入金済にしました（'+fmtD(date)+'）','ok'); renderBilling();
 }
 async function unmarkPaid(key,month){
   if(!await confirmModal('入金を取り消して「請求済（入金待ち）」に戻しますか？\n請求書番号はそのまま残ります。',{okText:'未入金に戻す'})) return;
   groupJobs(key,month).forEach(j=>{ if(j.status==='入金済'){ j.status='請求済'; j.paidAt=''; stamp(j); } });
+  groupExtras(key,month).forEach(e=>{ if(e.paid){ e.paid=false; e.paidAt=''; e.updatedAt=Date.now(); } });
   save(); toast('未入金（請求済）に戻しました','ok'); renderBilling();
+}
+/* 案件外の請求項目(配送費など)の追加・編集 */
+function openExtraCharge(id){
+  const e=id?(DATA.extraCharges||[]).find(x=>x.id===id):{id:'',clientId:'',clientName:'',month:billMonth,desc:'',qty:1,unitPrice:''};
+  if(!e){ toast('項目が見つかりません','err'); return; }
+  const isNew=!id;
+  const clientOpts=`<option value="">— 取引先を選択 —</option>`+DATA.clients.map(c=>`<option value="${c.id}" ${e.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`<div class="modal-head"><h2>${isNew?'その他の請求を追加':'請求項目を編集'}</h2><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="hint" style="margin-bottom:10px">案件に登録しない請求（配送費・出張費など）を、取引先の月次請求書に合算します。</div>
+    <div class="field"><label>取引先(請求先) <span style="color:var(--red);font-weight:700">＊必須</span></label><select id="ec-client">${clientOpts}</select></div>
+    <div class="field"><label>計上月</label><input type="month" id="ec-month" value="${esc(e.month||billMonth)}"></div>
+    <div class="field"><label>内容</label><input id="ec-desc" value="${esc(e.desc||'')}" placeholder="（記入例）配送費"></div>
+    <div class="field-row">
+      <div class="field" style="flex:0 0 90px"><label>数量</label><input id="ec-qty" inputmode="numeric" value="${esc(e.qty||1)}"></div>
+      <div class="field"><label>単価(税抜)</label><input id="ec-unit" inputmode="numeric" value="${e.unitPrice!==''&&e.unitPrice!=null?esc(e.unitPrice):''}" placeholder="0"></div>
+    </div>
+  </div>
+  <div class="modal-foot">
+    ${isNew?'':`<button class="btn btn-danger btn-sm" style="flex:0 0 auto" onclick="deleteExtraCharge('${e.id}')">削除</button>`}
+    <button class="btn btn-ghost" onclick="closeModal()">閉じる</button>
+    <button class="btn btn-primary" onclick="saveExtraCharge('${id||''}')">保存</button>
+  </div>`;
+  bg.classList.add('open');
+}
+function saveExtraCharge(id){
+  const clientId=document.getElementById('ec-client').value;
+  if(!clientId){ toast('取引先を選択してください','err'); return; }
+  const cl=clientById(clientId);
+  const month=document.getElementById('ec-month').value||billMonth;
+  const desc=document.getElementById('ec-desc').value.trim();
+  const qty=num(document.getElementById('ec-qty').value)||1;
+  const unitPrice=document.getElementById('ec-unit').value.trim();
+  if(num(unitPrice)<=0){ toast('単価を入力してください','err'); return; }
+  if(id){ const e=(DATA.extraCharges||[]).find(x=>x.id===id); if(e){ Object.assign(e,{clientId,clientName:cl?cl.name:'',month,desc:desc||'請求項目',qty,unitPrice,updatedAt:Date.now()}); } }
+  else { (DATA.extraCharges=DATA.extraCharges||[]).push({id:uid(),clientId,clientName:cl?cl.name:'',month,desc:desc||'請求項目',qty,unitPrice,invoiceNo:'',invoicedAt:'',paid:false,paidAt:'',createdAt:Date.now(),updatedAt:Date.now()}); }
+  save(); closeModal(); toast('保存しました','ok'); billMonth=month; renderBilling();
+}
+async function deleteExtraCharge(id){
+  if(!await confirmModal('この請求項目を削除しますか？',{danger:true,okText:'削除'})) return;
+  DATA.extraCharges=(DATA.extraCharges||[]).filter(x=>x.id!==id);
+  save(); closeModal(); toast('削除しました'); renderBilling();
 }
 
 /* ───────── 作業指示書 / 受入ラベル(印刷) ───────── */
@@ -2084,7 +2148,7 @@ const DBX_APP_KEY='fly154tcdbz09x9';
 const DBX_DATA_PATH='/ライム共有DB/システムデータ電装/data.json';
 const DBX_LS={token:'denso_dbx_token',refresh:'denso_dbx_refresh',verifier:'denso_dbx_verifier',cachedRev:'denso_dbx_rev',cachedSnap:'denso_dbx_snap'};
 let DBX_TOKEN=null, DBX_REFRESH=null, _lastDbxRev=null, _lastSyncSnapshot=null, _isSyncing=false, _saveTail=null, _saveFollow=null, _syncTimer=null, _lastTokenRefresh=Date.now();
-const _SYNC_COLS=['jobs','clients','subcontractors','presets'];
+const _SYNC_COLS=['jobs','clients','subcontractors','presets','extraCharges'];
 function _asciiSafeJson(obj){ return JSON.stringify(obj).replace(/[\x7F-￿]/g, c=>'\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4)); }
 function _genVerifier(){ const a=new Uint8Array(48); crypto.getRandomValues(a); return btoa(String.fromCharCode.apply(null,a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 async function _sha256b64u(s){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return btoa(String.fromCharCode.apply(null,new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
