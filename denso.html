@@ -429,7 +429,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-08b';
+const APP_VERSION = '2026-06-08c';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -721,12 +721,14 @@ function jobsFiltered(){
   else if(jobFilter==='awaiting') jobs=jobs.filter(j=>j.status!=='キャンセル'&&_isAwaitingParts(j));
   else if(jobFilter==='today') jobs=jobs.filter(_isToday);
   else if(jobFilter==='deadline') jobs=jobs.filter(j=>deadlineState(j)).sort((a,b)=>(a.deadline||'').localeCompare(b.deadline||''));
+  else if(jobFilter==='attention') jobs=jobs.filter(j=>j.status!=='キャンセル'&&(_isToday(j)||_isAwaitingParts(j)||j.status==='作業完了'||deadlineState(j)));
+  else if(jobFilter==='billing') jobs=jobs.filter(j=>['請求済','入金済'].includes(j.status));
   else if(jobFilter==='all'){} else jobs=jobs.filter(j=>j.status===jobFilter);
   if(jobSearch){ const q=jobSearch.toLowerCase(); jobs=jobs.filter(j=>{ const cl=clientById(j.clientId); return [j.jobNo,cl?cl.name:j.clientName,j.carModel,j.carPlate,j.endUser,j.workPlace,j.siteContact,j.workDesc,j.memo].join(' ').toLowerCase().includes(q); }); }
   return jobs;
 }
 function renderJobs(){
-  const filters=[['active','進行中'],['today','今日'],['inquiry','依頼・受注'],['awaiting','着荷待ち'],['作業完了','報告待ち'],['deadline','期日'],['請求済','請求済'],['入金済','入金済'],['all','全て']];
+  const filters=[['active','進行中'],['attention','要対応'],['inquiry','依頼・受注'],['billing','請求・入金'],['all','全て']];
   const jobs=jobsFiltered();
   document.getElementById('page-jobs').innerHTML=`
   <div class="page-h">📋 案件一覧 <span style="color:var(--muted);font-weight:500;font-size:11px">${jobs.length}件</span></div>
