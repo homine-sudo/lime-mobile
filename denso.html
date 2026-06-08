@@ -411,7 +411,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-04e';
+const APP_VERSION = '2026-06-08a';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -855,6 +855,7 @@ function openJobModal(id){
       <div class="field"><label>工賃単価(税別/1台)</label><input id="f-unitfee" inputmode="numeric" value="${esc(j.unitFee)}" placeholder="（記入例）25000" oninput="recalcMoney()"></div>
     </div>
     <div class="field"><label>請求書の摘要 <span style="color:var(--muted);font-weight:400">(空欄なら「車種＋相手先様＋取付内容」)</span></label><input id="f-billingdesc" value="${esc(j.billingDesc)}" placeholder="" oninput="syncBillingHint()"><div class="hint" id="billing-hint"></div></div>
+    <div class="field"><label>売上・請求 計上月 <span style="color:var(--muted);font-weight:400">(空欄なら作業日の月)</span></label><input type="month" id="f-billmonth" value="${esc(j.billingMonth||'')}"><div class="hint">この月の請求にまとまり、経営ダッシュボードの売上もこの月で集計されます</div></div>
 
     <div class="sec-label">📦 部品(取引先支給)</div>
     <div class="hint" style="margin-top:-4px;margin-bottom:8px">部品は取引先支給が基本。届いたか(着荷)の管理に使います・値段は不要</div>
@@ -969,6 +970,7 @@ function saveJob(){
   j.qty=num(document.getElementById('f-qty').value)||1;
   j.unitFee=document.getElementById('f-unitfee').value.trim();
   j.billingDesc=document.getElementById('f-billingdesc').value.trim();
+  j.billingMonth=document.getElementById('f-billmonth').value;  // 売上・請求 計上月(空欄なら作業日の月から自動算出)
   j.memo=document.getElementById('f-memo').value;
   const outOn=document.getElementById('f-out-chk').classList.contains('on');
   let vendor=document.getElementById('f-out-vendor').value;
@@ -1081,7 +1083,7 @@ function openJobDetail(id){
       ${j.deadline?`<dt>作業期日</dt><dd>${fmtD(j.deadline)}${deadlineState(j)==='over'?' <b style="color:var(--red)">⚠️超過</b>':deadlineState(j)==='soon'?' <b style="color:var(--orange)">⏰間近</b>':''}</dd>`:''}
       <dt>作業予定</dt><dd>${workScheduleStr(j)}</dd>
       ${j.workedAt?`<dt>作業日</dt><dd>${workDoneStr(j)} ${esc(j.worker||'')}${j.outsource&&j.outsource.used?'＋外注 '+esc(j.outsource.vendor||'')+(j.outsource.vendor?' 様':''):''}</dd>`:''}
-      ${j.billingMonth?`<dt>請求月</dt><dd>${fmtMonth(j.billingMonth)}</dd>`:''}
+      ${billMonthOf(j)?`<dt>売上・請求月</dt><dd>${fmtMonth(billMonthOf(j))}${!j.billingMonth?' <span style="color:var(--muted);font-size:11px">(作業日から自動)</span>':''}</dd>`:''}
       ${j.invoiceNo?`<dt>請求No</dt><dd>${esc(j.invoiceNo)}</dd>`:''}
     </dl>
     ${isAdmin()?`<div class="money-box">
