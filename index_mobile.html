@@ -1860,7 +1860,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-06a';
+const APP_VERSION = '2026-06-06b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5657,6 +5657,21 @@ function getVehiclesList(){
   return list;
 }
 
+// その車両に紐づく案件から「最新の返却メーター(走行距離)」を拾う (読み取り算出・データ移行なし)
+function _vehicleLatestMeter(vid){
+  if(!vid) return null;
+  let best = null;
+  (DATA?.cases || []).forEach(c => {
+    if(c.vehicleId !== vid) return;
+    const m = (c.meterAtReturn != null && c.meterAtReturn !== '') ? Number(c.meterAtReturn) : null;
+    if(m == null || !isFinite(m)) return;
+    const d = (c.useEnd || c.recoveryCalledAt || '').slice(0,10);
+    if(!best || d > best.date || (d === best.date && m > best.km)){
+      best = { km: m, date: d, caseNo: c.caseNo };
+    }
+  });
+  return best;
+}
 function renderVehiclesList(){
   if(!DATA){ $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
   const tab = localStorage.getItem('limeMob_vehTab') || 'all';
@@ -5697,6 +5712,7 @@ function _renderVehicleCard(v){
           <span class="v-status ${cls}">${esc(statusLbl)}</span>
         </div>
         <div class="v-meta">${esc(v.name||v.maker||'')}${v.class||v.vehicleClass?` ・ ${esc(v.class||v.vehicleClass)}`:''}</div>
+        ${(()=>{ const mt=_vehicleLatestMeter(v.id); return mt?`<div class="v-meta" style="margin-top:3px">🛣️ 走行距離 <b>${fmtNum(mt.km)}</b> km <span style="color:var(--muted)">(返却 ${esc(mt.date)})</span></div>`:''; })()}
         ${nextIns||shaken ? `<div class="v-meta" style="margin-top:3px">${nextIns?`📅 次回点検: ${esc(nextIns)}`:''}${nextIns&&shaken?' / ':''}${shaken?`🚨 車検: ${esc(shaken)}`:''}</div>` : ''}
       </div>
       <div class="v-actions">${actionHtml}</div>
