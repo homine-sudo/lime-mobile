@@ -1368,9 +1368,11 @@ a{color:var(--info);text-decoration:none}
       </div>
       <div class="m-tabs">
         <button class="active" data-veh-tab="all" onclick="setVehTab('all')">📋 全て</button>
+        <button data-veh-tab="available" onclick="setVehTab('available')">🟢 貸出可</button>
         <button data-veh-tab="active" onclick="setVehTab('active')">✅ 稼働可</button>
         <button data-veh-tab="maint" onclick="setVehTab('maint')">🛠️ 点検中</button>
       </div>
+      <div class="m-chips" id="m-veh-chips" style="margin:8px 0 4px"></div>
       <div id="m-veh-list"></div>
     </section>
 
@@ -1860,7 +1862,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-06b';
+const APP_VERSION = '2026-06-06c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3441,8 +3443,8 @@ function closeVehicleModal(){
 //   (配車済/利用中/回収連絡/手配書FAX済 の案件に割当中でない)。
 //   点検入庫中・整備中・売却済・廃車 は除外。
 // ============================================================
-function _availableVehicles(){
-  const vehicles = DATA?.vehicles || [];
+// 現在出払っている車両ID集合 (配車済/利用中/回収連絡/手配書FAX済 の案件に割当中)
+function _inUseVehicleIds(){
   const inUse = new Set();
   (DATA?.cases || []).forEach(o => {
     if(!_isActive(o)) return;
@@ -3450,6 +3452,11 @@ function _availableVehicles(){
       inUse.add(o.vehicleId);
     }
   });
+  return inUse;
+}
+function _availableVehicles(){
+  const vehicles = DATA?.vehicles || [];
+  const inUse = _inUseVehicleIds();
   return vehicles.filter(v => (v.status === '稼働可' || !v.status) && !inUse.has(v.id));
 }
 let _stockClassFilter = '';
@@ -5616,11 +5623,14 @@ function _vrSyncWareki(){
   if(b){ const w = _toWareki(($('m-vr-inspectionDate')||{}).value); b.textContent = w ? `和暦: ${w}` : ''; }
 }
 
+let _vehClassFilter = '';
 function setVehTab(tab){
   localStorage.setItem('limeMob_vehTab', tab);
+  _vehClassFilter = '';  // タブ切替でクラス絞りはリセット
   document.querySelectorAll('[data-veh-tab]').forEach(b => b.classList.toggle('active', b.dataset.vehTab === tab));
   renderVehiclesList();
 }
+function setVehClass(cls){ _vehClassFilter = cls; renderVehiclesList(); }
 
 function getVehiclesList(){
   const tab = localStorage.getItem('limeMob_vehTab') || 'all';
@@ -5628,6 +5638,7 @@ function getVehiclesList(){
   let list = (DATA?.vehicles || []).slice();
   if(tab === 'active') list = list.filter(v => v.status === '稼働可' || !v.status);
   else if(tab === 'maint') list = list.filter(v => v.status === '点検入庫中' || v.status === '整備中');
+  else if(tab === 'available'){ const inUse = _inUseVehicleIds(); list = list.filter(v => (v.status === '稼働可' || !v.status) && !inUse.has(v.id)); }  // 🟢 貸出可 = 稼働可かつ出払っていない
   // 売却済/廃車 は通常表示しない (allタブでも除外)
   list = list.filter(v => v.status !== '売却済' && v.status !== '廃車');
   if(q){
@@ -5673,12 +5684,23 @@ function _vehicleLatestMeter(vid){
   return best;
 }
 function renderVehiclesList(){
-  if(!DATA){ $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; return; }
+  if(!DATA){ $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; if($('m-veh-chips')) $('m-veh-chips').innerHTML = ''; return; }
   const tab = localStorage.getItem('limeMob_vehTab') || 'all';
   document.querySelectorAll('[data-veh-tab]').forEach(b => b.classList.toggle('active', b.dataset.vehTab === tab));
-  const list = getVehiclesList();
+  const base = getVehiclesList();  // タブ + テキスト検索 まで適用
+  // 🏷️ ワンタップ クラスチップ (現タブ+検索の結果から・件数付き)
+  const vcls = v => (v.vehicleClass || v.class || '').trim();
+  const byClass = {}; base.forEach(v => { const k = vcls(v); if(k) byClass[k] = (byClass[k]||0) + 1; });
+  const classes = Object.keys(byClass).sort((a,b) => a.localeCompare(b));
+  if($('m-veh-chips')){
+    $('m-veh-chips').innerHTML = base.length ? (
+      `<button class="m-chip ${_vehClassFilter===''?'on':''}" onclick="setVehClass('')">すべて ${base.length}</button>` +
+      classes.map(c => `<button class="m-chip ${_vehClassFilter===c?'on':''}" onclick="setVehClass('${esc(c)}')">${esc(c)} ${byClass[c]}</button>`).join('')
+    ) : '';
+  }
+  const list = _vehClassFilter ? base.filter(v => vcls(v) === _vehClassFilter) : base;
   if(list.length === 0){
-    $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">🚙</div><div class="ttl">車両がありません</div></div>';
+    $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">🚙</div><div class="ttl">該当する車両がありません</div></div>';
     return;
   }
   $('m-veh-list').innerHTML = list.map(v => _renderVehicleCard(v)).join('');
