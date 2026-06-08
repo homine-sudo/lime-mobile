@@ -376,6 +376,24 @@ a{color:var(--accent-light);text-decoration:none}
   .modal-foot{padding:14px 20px}
   .chip{cursor:pointer}.btn{cursor:pointer}
 }
+/* 月別 売上明細ビュー */
+.mt-chart{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:104px;padding:6px 2px 0}
+.mt-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;cursor:pointer;min-width:0}
+.mt-bar-val{font-size:9px;color:var(--text-dim);font-weight:800;white-space:nowrap;line-height:1}
+.mt-bar{width:72%;max-width:30px;background:var(--accent-border);border-radius:5px 5px 0 0;transition:background .15s}
+.mt-bar.on{background:var(--accent)}
+.mt-bar-lbl{font-size:10px;color:var(--muted);font-weight:700}
+.mt-bar-lbl.on{color:var(--accent);font-weight:800}
+.md-row{display:flex;gap:10px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid var(--border);cursor:pointer}
+.md-row:last-child{border-bottom:none}
+.md-row:active{background:var(--card2)}
+.md-date{font-size:11.5px;color:var(--text-dim);font-weight:700;white-space:nowrap;padding-top:2px;flex:0 0 52px}
+.md-main{flex:1;min-width:0}
+.md-car{font-size:14px;font-weight:800;color:var(--text);line-height:1.25}
+.md-qty{font-size:11px;color:var(--accent);font-weight:700}
+.md-desc{font-size:12px;color:var(--text-dim);margin-top:2px;line-height:1.4}
+.md-cl{font-size:11px;color:var(--muted);margin-top:3px}
+.md-amt{font-size:14.5px;font-weight:800;color:var(--text);white-space:nowrap;padding-top:1px}
 </style>
 </head>
 <body>
@@ -411,7 +429,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-08a';
+const APP_VERSION = '2026-06-08b';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1234,8 +1252,8 @@ function renderBilling(){
   const months=billingMonths();
   const head=`<div class="page-h">💴 月次請求・清算</div>
   <div class="field"><label>対象月(末締め)</label><select onchange="billMonth=this.value;renderBilling()">${months.map(mm=>`<option value="${mm}" ${mm===billMonth?'selected':''}>${fmtMonth(mm)}</option>`).join('')}</select></div>
-  <div class="chips"><button class="chip ${billMode==='sales'?'active':''}" onclick="billMode='sales';renderBilling()">📤 売上請求</button><button class="chip ${billMode==='outsource'?'active':''}" onclick="billMode='outsource';renderBilling()">🤝 外注費清算</button></div>`;
-  document.getElementById('page-billing').innerHTML=head + (billMode==='sales'? renderSalesBilling() : renderOutsourceSettle());
+  <div class="chips"><button class="chip ${billMode==='detail'?'active':''}" onclick="billMode='detail';renderBilling()">📋 売上明細</button><button class="chip ${billMode==='sales'?'active':''}" onclick="billMode='sales';renderBilling()">📤 売上請求</button><button class="chip ${billMode==='outsource'?'active':''}" onclick="billMode='outsource';renderBilling()">🤝 外注費清算</button></div>`;
+  document.getElementById('page-billing').innerHTML=head + (billMode==='detail'? renderMonthlyDetail() : billMode==='sales'? renderSalesBilling() : renderOutsourceSettle());
 }
 function renderSalesBilling(){
   const target=DATA.jobs.filter(j=> j.status!=='キャンセル' && billMonthOf(j)===billMonth && ['作業完了','報告済','請求済','入金済'].includes(j.status));
@@ -1249,6 +1267,46 @@ function renderSalesBilling(){
     <div class="kpi green"><div class="kpi-lbl">粗利合計</div><div class="kpi-val" style="font-size:21px">${yen(totalProfit)}</div></div>
   </div>
   ${groupArr.length? groupArr.map(billingGroupCard).join('') : '<div class="empty"><div class="ico">🗓</div><div class="t">この月の請求対象案件はありません</div><div style="font-size:11px;color:var(--muted);margin-top:6px">案件を「作業完了」にすると請求対象になります</div></div>'}`;
+}
+/* 月別 売上明細ビュー: 月別推移バー＋選択月の合計＋作業内容一覧(作業日順) */
+function _monthSales(mm){ return DATA.jobs.filter(j=> j.status!=='キャンセル' && billMonthOf(j)===mm && ['作業完了','報告済','請求済','入金済'].includes(j.status)).reduce((s,j)=>s+jobSubtotal(j),0); }
+function renderMonthlyDetail(){
+  const months=billingMonths();                 // 直近12ヶ月(新しい順)
+  const trend=months.slice(0,6).reverse().map(mm=>({m:mm,v:_monthSales(mm)}));  // 直近6ヶ月(古い→新しい)
+  const maxV=Math.max(1,...trend.map(t=>t.v));
+  const bars=trend.map(t=>{
+    const h=t.v>0?Math.max(6,Math.round(t.v/maxV*72)):3, on=t.m===billMonth;
+    return `<div class="mt-bar-wrap" onclick="billMonth='${t.m}';renderBilling()">
+      <div class="mt-bar-val">${t.v?('¥'+Math.round(t.v/1000).toLocaleString('ja-JP')+'k'):''}</div>
+      <div class="mt-bar ${on?'on':''}" style="height:${h}px"></div>
+      <div class="mt-bar-lbl ${on?'on':''}">${(+t.m.split('-')[1])}月</div></div>`;
+  }).join('');
+  const jobs=DATA.jobs.filter(j=> j.status!=='キャンセル' && billMonthOf(j)===billMonth && ['作業完了','報告済','請求済','入金済'].includes(j.status))
+    .sort((a,b)=>(a.workedAt||'9999-99-99').localeCompare(b.workedAt||'9999-99-99'));
+  const sub=jobs.reduce((s,j)=>s+jobSubtotal(j),0), profit=jobs.reduce((s,j)=>s+jobProfit(j),0);
+  const units=jobs.reduce((s,j)=>s+(num(j.qty)||1),0);
+  const rows=jobs.length? jobs.map(j=>{ const cl=clientById(j.clientId);
+    return `<div class="md-row" onclick="openJobDetail('${j.id}')">
+      <div class="md-date">${fmtD(j.workedAt||j.requestedAt)}</div>
+      <div class="md-main">
+        <div class="md-car">${esc(j.carModel||'(車種未設定)')}${num(j.qty)>1?` <span class="md-qty">×${num(j.qty)}台</span>`:''}</div>
+        ${j.workDesc?`<div class="md-desc">${esc(j.workDesc)}</div>`:''}
+        <div class="md-cl">${esc(cl?cl.name:j.clientName||'')}${j.endUser?' ／ '+esc(j.endUser)+'様':''}</div>
+      </div>
+      <div class="md-amt">${yen(jobSubtotal(j))}</div></div>`;
+  }).join('') : '<div class="empty"><div class="ico">🗓</div><div class="t">この月の売上(完了案件)はありません</div><div style="font-size:11px;color:var(--muted);margin-top:6px">案件を「作業完了」にすると、ここに売上として表示されます</div></div>';
+  return `<div class="card" style="padding:14px 12px 12px">
+    <div class="card-title">📈 月別 売上(税抜) <span style="font-weight:500;color:var(--muted);font-size:11px">タップで月を切替</span></div>
+    <div class="mt-chart">${bars}</div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">${fmtMonth(billMonth)} 売上(税抜)</div><div class="kpi-val" style="font-size:21px">${yen(sub)}</div><div class="kpi-sub">税込 ${yen(withTax(sub))} ・ ${jobs.length}件 / ${units}台</div></div>
+    ${isAdmin()?`<div class="kpi green"><div class="kpi-lbl">粗利</div><div class="kpi-val" style="font-size:21px">${yen(profit)}</div><div class="kpi-sub">売上の${sub>0?Math.round(profit/sub*100):0}%</div></div>`:''}
+  </div>
+  <div class="card" style="padding:8px 12px 10px">
+    <div class="card-title" style="margin:6px 2px 2px">🔧 ${fmtMonth(billMonth)} の作業内容 <span style="font-weight:500;color:var(--muted);font-size:11px">作業日順</span></div>
+    ${rows}
+  </div>`;
 }
 function renderOutsourceSettle(){
   const jobs=DATA.jobs.filter(j=> j.status!=='キャンセル' && j.outsource&&j.outsource.used && num(j.outsource.cost)>0 && (j.workedAt||'').slice(0,7)===billMonth);
