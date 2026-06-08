@@ -1860,7 +1860,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-06';
+const APP_VERSION = '2026-06-06a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5886,7 +5886,14 @@ async function renderCaseDetail(c){
 
   // 2. 車両情報
   const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
-  const vehHtml = (c.vehicleName || plate) ? `
+  // 走行距離 (回収完了時に入力: 貸出メーター / 返却メーター / 利用走行距離=差分)
+  const _md = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? Number(c.meterAtDispatch) : null;
+  const _mr = (c.meterAtReturn != null && c.meterAtReturn !== '') ? Number(c.meterAtReturn) : null;
+  const _meterRows =
+    (_md != null ? `<div class="m-kv"><span class="k">貸出メーター</span><span class="v">${fmtNum(_md)} km</span></div>` : '') +
+    (_mr != null ? `<div class="m-kv"><span class="k">返却メーター</span><span class="v">${fmtNum(_mr)} km</span></div>` : '') +
+    ((_md != null && _mr != null && _mr >= _md) ? `<div class="m-kv"><span class="k">利用走行距離</span><span class="v"><b>${fmtNum(_mr - _md)} km</b></span></div>` : '');
+  const vehHtml = (c.vehicleName || plate || _meterRows) ? `
     <div class="m-detail-section">
       <h3>🚙 車両情報</h3>
       <div class="m-kv"><span class="k">車種</span><span class="v">${esc(c.vehicleName||'')||'<span class="empty">―</span>'}</span></div>
@@ -5895,6 +5902,7 @@ async function renderCaseDetail(c){
       ${c.unitPrice ? `<div class="m-kv"><span class="k">日額</span><span class="v">${fmtNum(c.unitPrice)} 円 (税込)</span></div>` : ''}
       ${c.useStart ? `<div class="m-kv"><span class="k">利用開始</span><span class="v">${fmtDateFull(c.useStart)}</span></div>` : ''}
       ${c.useEnd ? `<div class="m-kv"><span class="k">利用終了</span><span class="v">${fmtDateFull(c.useEnd)}</span></div>` : ''}
+      ${_meterRows}
     </div>
   ` : '';
 
