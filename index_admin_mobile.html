@@ -795,7 +795,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-07f';
+const APP_VERSION = '2026-06-07g';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1652,7 +1652,8 @@ function renderVehicleROI(){
     const insp=(v.inspectionDate||'').slice(0,10);
     let inspDays=null;
     if(insp) inspDays = insp<today ? -daysBetween(insp,today) : daysBetween(today,insp);
-    return { nm:v.plateDisplay||v.name||plate||'(無名)', r, cost, kind, roi, usedD, margin, perDay, inspDays };
+    const model=(v.name||'').trim(); const plateStr=(v.plateDisplay||plate||'').trim();
+    return { name: model||plateStr||'(無名)', plate: model?plateStr:'', r, cost, kind, roi, usedD, margin, perDay, inspDays };
   }).filter(x=>x.r>0||x.cost>0);
   if(!rows.length){ host.innerHTML='<tr><td class="ink3 sm">データなし</td></tr>'; return; }
   rows.sort((a,b)=>b.roi-a.roi);
@@ -1668,7 +1669,7 @@ function renderVehicleROI(){
     const mgc = x.margin==null ? 'var(--ink3)' : (x.margin>=0?'var(--acc)':'#C0392B');
     const pd  = x.perDay==null ? '—' : (x.perDay>=0?'+':'')+f(x.perDay);
     return `<tr><td>`+
-      `<b>${esc(x.nm)}</b> <span class="ink3" style="font-size:10px">${esc(x.kind)}</span>${inspBadge(x)}`+
+      `<b>${esc(x.name)}</b>${x.plate?` <span class="ink3" style="font-size:10px">${esc(x.plate)}</span>`:''} <span class="ink3" style="font-size:10px">${esc(x.kind)}</span>${inspBadge(x)}`+
       `<div class="ink3" style="font-size:10px">売上 ${f(x.r)} − 費用 ${f(x.cost)}</div>`+
       `<div class="ink3" style="font-size:10px">稼働 ${x.usedD}日 · 採算率 <span style="color:${mgc}">${mg}</span> · 日あたり ${pd}</div>`+
       `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.roi>=0?'var(--acc)':'#C0392B'}">${x.roi>=0?'+':''}${f(x.roi)} 円</td></tr>`;
