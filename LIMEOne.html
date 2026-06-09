@@ -2305,7 +2305,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <div class="form-group"><label class="form-label">運転者TEL</label><input class="form-control" id="f-driverTel"></div>
         <!-- 配車先(工場) - 区分=一般 のときは非表示 (顧客が直接来店するため工場経由なし) -->
         <div id="sec-factory-block" class="form-group" style="grid-column:span 4">
-          <label class="form-label">🏭 配車先(工場) <span class="text-muted text-sm">TEL入力で工場名・住所を自動入力 / または 一覧から選ぶ</span></label>
+          <label class="form-label">🏭 配車先(工場) <span class="text-muted text-sm">TEL入力で自動入力 / 一覧から選ぶ / 未登録は保存時に自動登録</span></label>
           <div style="display:flex;gap:6px;align-items:end;flex-wrap:wrap">
             <div style="width:180px"><label class="form-label">配車先TEL ★</label><input class="form-control" id="f-dispatchToTel" oninput="onDispatchToTelChange()" placeholder="098-xxx-xxxx"></div>
             <div style="flex:1;min-width:200px"><label class="form-label">配車先名</label><input class="form-control" id="f-dispatchToName" placeholder="ホンダカーズ○○店"></div>
@@ -2829,7 +2829,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-09a';
+const APP_VERSION = '2026-06-09b';
 // freee API直結用の共有トークン（GAS側 FREEE_SHARED_TOKEN と一致させる）。
 // 公開HTMLに出るが、実エンドポイントURLは settings(data.json/非公開)にのみ持つため保護される。
 const FREEE_API_TOKEN = 'lime-freee-2026-k9Xz7Qp3Rm';
@@ -7567,6 +7567,7 @@ function runFlowAction(applyFn, defaultToast){
   //   カレンダー連携が一切発火しないバグがあった。
   const _oldSnapshot = JSON.parse(JSON.stringify(c));
   if(typeof _resolveManualInsurer === 'function') _resolveManualInsurer();
+  if(typeof _resolveManualFactory === 'function') _resolveManualFactory();
   Object.assign(c, collectForm());
   const msg = applyFn(c);
   save();
@@ -8754,6 +8755,30 @@ function onDispatchToTelChange(){
     }
   }
 }
+// 配車先(工場)が手入力 (マスタ未登録) の場合、保存時にマスタへ自動登録 (保険会社 _resolveManualInsurer と対称・2026-06-09b)
+function _resolveManualFactory(){
+  const cat = ($('f-category')||{}).value;
+  if(cat === '一般') return; // 一般貸渡は工場経由なし
+  const name = (($('f-dispatchToName')||{}).value||'').trim();
+  if(!name) return; // 工場名未入力なら何もしない
+  const tel = (($('f-dispatchToTel')||{}).value||'').trim();
+  const address = (($('f-dispatchToAddress')||{}).value||'').trim();
+  if(!Array.isArray(DATA.factories)) DATA.factories = [];
+  // 既存検索: TEL一致 → 名前一致 (重複登録を防ぐ)
+  let fac = tel ? findFactoryByTel(tel) : null;
+  if(!fac) fac = DATA.factories.find(f => (f.name||'').trim() === name);
+  if(fac){
+    // 既存マスタあり: TEL/住所の空欄だけ案件入力で補完 (名前は上書きしない)
+    let updated = false;
+    if(tel && !(fac.tel||'').trim()){ fac.tel = tel; updated = true; }
+    if(address && !(fac.address||'').trim()){ fac.address = address; updated = true; }
+    if(updated){ toast(`🏭 工場「${fac.name}」のマスタ情報を補完しました`); }
+    return;
+  }
+  // 新規登録
+  DATA.factories.push({ id: uid('fac-'), name, tel, address, note:'' });
+  toast(`🏭 工場「${name}」をマスタに新規登録しました`);
+}
 function openVehiclePicker(){
   const cls = Array.from(new Set(DATA.vehicles.filter(v=>v.status!=='廃車').map(v=>v.vehicleClass).filter(Boolean))).sort();
   $('vp-class-filter').innerHTML = '<option value="">クラス(全て)</option>' + cls.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -9245,6 +9270,7 @@ function saveCase(){
   }
   // 保険会社が手入力 (マスタ未リンク) の場合、保存前にマスタへ自動登録してリンク
   _resolveManualInsurer();
+  _resolveManualFactory();
   const c = collectForm();
   const errors = [];
   // 2026-05-30b: 契約者(または運転者)の必須チェックを廃止(ユーザー要望)。
