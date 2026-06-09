@@ -1862,7 +1862,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-06c';
+const APP_VERSION = '2026-06-09';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3311,14 +3311,24 @@ function renderInfoBox(c, hostId, kind){
     ? `<div class="m-info-row"><span class="lbl">担当</span><span class="val">${_staffParts.join(' ／ ')}</span></div>`
     : '';
 
+  // 回収先(配車先と別なら回収先を表示)。kind==='recovery' の画面でのみ回収先に切替。回収先入力はPC案件編集 (2026-06-09c)
+  const _rd = (typeof _recoveryDest==='function') ? _recoveryDest(c) : {name:c.dispatchToName||'',address:c.dispatchToAddress||'',tel:c.dispatchToTel||'',isDifferent:!!(c.recoveryToName||'').trim()};
+  const _isRec = (kind==='recovery');
+  const _destName  = _isRec ? _rd.name : (c.dispatchToName||'');
+  const _destAddr  = _isRec ? _rd.address : (c.dispatchToAddress||'');
+  const _destTel   = _isRec ? _rd.tel : (c.dispatchToContactTel||c.dispatchToTel||'');
+  const _destLabel = _isRec ? (_rd.isDifferent ? '🏁回収先(配車先と別)' : '回収先') : '配車先';
+  const _destContact = (_isRec && _rd.isDifferent) ? '' : (c.dispatchToContact||'');
+  const _destMapBtn = _destAddr ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(_destAddr)}" target="_blank" rel="noopener">📍 地図を開く</a>` : '';
+
   $(hostId).innerHTML = `
     <div class="caseno">📋 ${esc(c.caseNo||'')}</div>
     <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
     ${_staffRow}
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val strong">${kind==='recovery'?(fmtDateFull(c.recoveryCalledAt)||'<span class="empty">未設定</span>'):dispatchInfo}</span></div>
     <div class="m-info-row"><span class="lbl">運転者</span><span class="val">${driver?`<b>${esc(driver)}</b>`:'<span class="empty">―</span>'} ${c.driverTel?tel(c.driverTel):''}</span></div>
-    <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収先':'配車先'}</span><span class="val">${c.dispatchToName?`<b>${esc(c.dispatchToName)}</b>`:'<span class="empty">―</span>'}${c.dispatchToContact?`<br>担当: ${esc(c.dispatchToContact)} 様`:''}${(c.dispatchToContactTel||c.dispatchToTel)?` ${tel(c.dispatchToContactTel||c.dispatchToTel)}`:''}</span></div>
-    ${c.dispatchToAddress?`<div class="m-info-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsBtn}</span></div>`:''}
+    <div class="m-info-row"><span class="lbl">${_destLabel}</span><span class="val">${_destName?`<b>${esc(_destName)}</b>`:'<span class="empty">―</span>'}${_destContact?`<br>担当: ${esc(_destContact)} 様`:''}${_destTel?` ${tel(_destTel)}`:''}</span></div>
+    ${_destAddr?`<div class="m-info-row"><span class="lbl">住所</span><span class="val">${esc(_destAddr)} ${_destMapBtn}</span></div>`:''}
     <div class="m-info-row m-memo-edit-row" onclick="openMemoEdit('${c.id}')" style="cursor:pointer" title="タップで社内メモを編集"><span class="lbl">社内メモ</span><span class="val" style="color:#5A3F00;background:#FFF9E6;padding:6px 8px;border-radius:6px">${c.internalMemo?esc(c.internalMemo):'<span style="color:var(--muted);font-style:italic">＋ タップで追加</span>'} <span style="float:right;color:var(--muted);font-size:12px">✏️</span></span></div>
     ${c.negotiationLog?`<div class="m-info-row"><span class="lbl">交渉記録</span><span class="val" style="color:#3D2459;background:#FAF5FE;padding:6px 8px;border-radius:6px;white-space:pre-wrap;line-height:1.6">${esc(c.negotiationLog)}</span></div>`:''}
   `;
@@ -4945,6 +4955,7 @@ async function saveNewCase(enterFlow){
     recoveryCompleted: false,
     confirmCalledAt:'', faxSentAtDispatch:'', faxSentAtReturn:'',
     recoveryCalledAt:'', dispatchDoneAt:'', dispatchDoneNote:'',
+    recoveryToName:'', recoveryToAddress:'', recoveryToTel:'',  // 回収先(配車先と異なる場合・PCで入力・空なら配車先と同じ)
     departedAt:'',
     // 走行距離記録 (キロ数のみ・未記録なら null)
     meterAtDispatch:null, meterAtReturn:null,
@@ -5311,6 +5322,16 @@ function _buildNotifyPayload(c, eventType){
   };
 }
 
+// 回収先 = recoveryTo* があればそれ一式、なければ配車先(dispatchTo*)。配車と回収で場所が違うケース(例:自宅配車→工場回収)に対応 (2026-06-09c・PC LIMEOne.html と同一)
+function _recoveryDest(c){
+  const useR = !!((c.recoveryToName||'').trim());
+  return {
+    name:    useR ? (c.recoveryToName||'')    : (c.dispatchToName||''),
+    address: useR ? (c.recoveryToAddress||'') : (c.dispatchToAddress||''),
+    tel:     useR ? (c.recoveryToTel||'')     : (c.dispatchToTel||''),
+    isDifferent: useR
+  };
+}
 function _buildLineMessage(c, eventType){
   const ins = c.insurerId ? (findInsurer(c.insurerId) || {}) : {};
   const driver = c.driverName || c.contractorName || '';
@@ -5386,12 +5407,16 @@ function _buildLineMessage(c, eventType){
     ].filter(Boolean).join('\n');
   }
   if(eventType === 'recoveryDateSet'){
+    const rd = _recoveryDest(c);
+    const recoveryLine = rd.isDifferent
+      ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '') + (rd.tel ? ' / ' + rd.tel : '')
+      : (c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '');
     return [
       '🚛 回収予定日 登録',
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収予定: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
-      c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '',
+      recoveryLine,
       vehicleStr ? '車両: ' + vehicleStr : '',
       staffLine
     ].filter(Boolean).join('\n');
@@ -5421,13 +5446,17 @@ function _buildLineMessage(c, eventType){
     ].filter(Boolean).join('\n');
   }
   if(eventType === 'recoveryDone'){
+    const rd = _recoveryDest(c);
+    const recoveryLine = rd.isDifferent
+      ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '')
+      : (c.dispatchToName ? '回収元: ' + c.dispatchToName : '');
     return [
       '🚛 回収完了',
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
-      c.dispatchToName ? '回収元: ' + c.dispatchToName : '',
+      recoveryLine,
       vehicleStr ? '車両: ' + vehicleStr : '',
       staffLine
     ].filter(Boolean).join('\n');

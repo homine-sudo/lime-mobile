@@ -2441,6 +2441,12 @@ tr.veh-maint-row:hover{background:#FFECD6}
               ※ 予定日を先に入力可。実際に回収したら「回収完了」をON → 状態が「車両回収済」に進みます。
             </div>
           </div>
+          <!-- 回収先 (配車先と異なる場合のみ入力・空欄なら配車先と同じ) -->
+          <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:10px;align-items:end;margin-top:8px;padding-top:8px;border-top:1px dashed #CFDEF7">
+            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">🏁 回収先名 <span class="text-muted" style="font-size:10px;font-weight:normal">(配車先と違う時だけ入力・空欄=配車先と同じ)</span></label><input class="form-control" id="f-recoveryToName" placeholder="例: 自宅へ配車→回収は工場 の工場名" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB"></div>
+            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">回収先住所</label><input class="form-control" id="f-recoveryToAddress" placeholder="空欄なら配車先住所" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB"></div>
+            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">回収先TEL</label><input class="form-control" id="f-recoveryToTel" placeholder="空欄なら配車先TEL" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB"></div>
+          </div>
           <!-- 走行距離記録 (任意入力・キロ数のみ) -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:10px;align-items:end;margin-top:8px;padding-top:8px;border-top:1px dashed #CFDEF7">
             <div class="form-group" style="margin:0">
@@ -2829,7 +2835,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-09b';
+const APP_VERSION = '2026-06-09c';
 // freee API直結用の共有トークン（GAS側 FREEE_SHARED_TOKEN と一致させる）。
 // 公開HTMLに出るが、実エンドポイントURLは settings(data.json/非公開)にのみ持つため保護される。
 const FREEE_API_TOKEN = 'lime-freee-2026-k9Xz7Qp3Rm';
@@ -7681,6 +7687,7 @@ function defaultCase(){
     confirmCalledAt:'', faxSentAtDispatch:'', faxSentAtReturn:'',
     departedAt:'',  // モバイル現場版「出発」操作のタイムスタンプ
     recoveryCalledAt:'', recoveryCompleted:false,
+    recoveryToName:'', recoveryToAddress:'', recoveryToTel:'',  // 回収先(配車先と異なる場合・空なら配車先と同じ)
     // 走行距離記録 (キロ数のみ・未記録なら null)
     meterAtDispatch:null, meterAtReturn:null,
     checks: defaultChecks()
@@ -7735,7 +7742,7 @@ function toggleCheck(i){
   if(typeof scheduleAutoSave === 'function') scheduleAutoSave();  // dirty 立てる: ✓ON/OFF で離脱警告対象に
   renderChecklist();
 }
-const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedDailyRate','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
+const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedDailyRate','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','recoveryToName','recoveryToAddress','recoveryToTel','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
   // 一般貸渡用 (自旅138号 貸渡証/貸渡簿の必須項目)
   'borrowerAddress','driverAddress','driverLicenseType','driverLicenseNo',
   // 一般貸渡 業務情報 (受取場所・補償・特記事項)
@@ -14101,6 +14108,16 @@ function _buildNotifyPayload(c, eventType){
   };
 }
 
+// 回収先 = recoveryTo* があればそれ一式、なければ配車先(dispatchTo*)。配車と回収で場所が違うケース(例:自宅配車→工場回収)に対応 (2026-06-09c)
+function _recoveryDest(c){
+  const useR = !!((c.recoveryToName||'').trim());
+  return {
+    name:    useR ? (c.recoveryToName||'')    : (c.dispatchToName||''),
+    address: useR ? (c.recoveryToAddress||'') : (c.dispatchToAddress||''),
+    tel:     useR ? (c.recoveryToTel||'')     : (c.dispatchToTel||''),
+    isDifferent: useR
+  };
+}
 function _buildLineMessage(c, eventType){
   const ins = c.insurerId ? (findInsurer(c.insurerId) || {}) : {};
   const driver = c.driverName || c.contractorName || '';
@@ -14168,12 +14185,16 @@ function _buildLineMessage(c, eventType){
     ].filter(Boolean).join('\n');
   }
   if(eventType === 'recoveryDateSet'){
+    const rd = _recoveryDest(c);
+    const recoveryLine = rd.isDifferent
+      ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '') + (rd.tel ? ' / ' + rd.tel : '')
+      : (c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '');
     return [
       '🚛 回収予定日 登録',
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収予定: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
-      c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '',
+      recoveryLine,
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.staff ? '担当: ' + c.staff : ''
     ].filter(Boolean).join('\n');
@@ -14203,13 +14224,17 @@ function _buildLineMessage(c, eventType){
     ].filter(Boolean).join('\n');
   }
   if(eventType === 'recoveryDone'){
+    const rd = _recoveryDest(c);
+    const recoveryLine = rd.isDifferent
+      ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '')
+      : (c.dispatchToName ? '回収元: ' + c.dispatchToName : '');
     return [
       '🚛 回収完了',
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
-      c.dispatchToName ? '回収元: ' + c.dispatchToName : '',
+      recoveryLine,
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.staff ? '担当: ' + c.staff : ''
     ].filter(Boolean).join('\n');
