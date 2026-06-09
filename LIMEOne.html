@@ -1195,7 +1195,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
       </div>
       <div class="tbl-wrap" style="max-height:55vh;overflow:auto">
         <table>
-          <thead><tr><th style="width:40%">担当者名</th><th>TEL</th><th>FAX</th><th style="width:70px"></th></tr></thead>
+          <thead><tr><th style="width:40%">担当者名</th><th>TEL</th><th>FAX</th></tr></thead>
           <tbody id="cp-tbody"></tbody>
         </table>
       </div>
@@ -2829,7 +2829,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-09';
+const APP_VERSION = '2026-06-09a';
 // freee API直結用の共有トークン（GAS側 FREEE_SHARED_TOKEN と一致させる）。
 // 公開HTMLに出るが、実エンドポイントURLは settings(data.json/非公開)にのみ持つため保護される。
 const FREEE_API_TOKEN = 'lime-freee-2026-k9Xz7Qp3Rm';
@@ -8464,11 +8464,10 @@ function renderContactPicker(){
   const tb = $('cp-tbody');
   if(!tb) return;
   tb.innerHTML = filtered.map(c => `
-    <tr style="cursor:pointer" onclick="pickContactFromPicker(${JSON.stringify(c.name||'').replace(/"/g,'&quot;')})">
+    <tr style="cursor:pointer" title="クリックで選択" onclick="pickContactFromPicker(${JSON.stringify(c.name||'').replace(/"/g,'&quot;')})">
       <td><b>${esc(c.name||'')}</b>${c.isDefault?' <span class="badge" style="background:#d0e7ff;color:#0b5cad;font-size:11px">既定</span>':''}${c.dept?`<br><span class="text-sm text-muted">${esc(c.dept)}</span>`:''}</td>
       <td class="text-sm">${esc(c.tel||'-')}</td>
       <td class="text-sm">${esc(c.fax||'-')}</td>
-      <td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pickContactFromPicker(${JSON.stringify(c.name||'').replace(/"/g,'&quot;')})">選ぶ</button></td>
     </tr>`).join('');
 }
 function pickContactFromPicker(name){
