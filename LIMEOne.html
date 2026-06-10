@@ -1772,6 +1772,14 @@ tr.veh-maint-row:hover{background:#FFECD6}
       </table>
     </div>
   </div>
+  <!-- 💰 車両別 生涯ROI (購入〜現在/売却までの稼ぎ・データ正本=index_admin_mobile.html と同じ埋め込み実績) -->
+  <div class="card" style="padding:10px;margin-bottom:8px;background:#FFFDF2;border:1px solid #E8DCA8">
+    <div class="card-title" style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+      💰 <span>車両別 生涯ROI</span>
+      <span style="font-size:11px;color:#666;font-weight:normal">※購入〜現在/売却までの累計。期間セレクタ非連動 (2024-25=確定実績・2026年〜=ライブ集計)</span>
+    </div>
+    <div id="bi-life-roi"></div>
+  </div>
 
   <!-- ============================================== -->
   <!-- 📅 時間別 -->
@@ -2835,7 +2843,18 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-09c';
+const APP_VERSION = '2026-06-10';
+// ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
+// ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
+// 2024-2025の車両別売上 (system正 + 損保代車管理簿Excel補助・売却/金城記録ありは合算しない)。年1回更新。keyは _vplate。
+// 2026以降の売上はシステムからライブ集計するので、ここには入れない (二重計上防止)。
+const VEHICLE_HIST_REV = {"沖縄420わ4285":{"y2024":529100,"y2025":127600},"沖縄582わ4390":{"y2024":710350,"y2025":550000},"沖縄582わ4391":{"y2024":662200,"y2025":96800},"沖縄582わ4457":{"y2024":421650,"y2025":596200},"沖縄582わ4422":{"y2024":553850,"y2025":374000},"沖縄582わ4619":{"y2024":806700,"y2025":314600},"沖縄506れ2657":{"y2024":794500,"y2025":451000},"沖縄582わ5565":{"y2024":752950,"y2025":326700},"沖縄506れ3844":{"y2024":726350,"y2025":372350},"沖縄506れ3501":{"y2024":326400,"y2025":939400},"沖縄480わ4775":{"y2024":387490,"y2025":123200},"沖縄506れ4057":{"y2024":691900,"y2025":976800},"沖縄506れ4058":{"y2024":416650,"y2025":158950},"沖縄582わ5893":{"y2024":697400,"y2025":436150},"沖縄582わ5894":{"y2024":501600,"y2025":205700},"沖縄506れ6611":{"y2024":710800,"y2025":286300},"沖縄582わ6765":{"y2024":798650,"y2025":314050},"沖縄506れ9005":{"y2024":732050,"y2025":396000},"沖縄506れ9006":{"y2024":794200,"y2025":201850},"沖縄582わ7095":{"y2024":878900,"y2025":294800},"沖縄582わ7229":{"y2024":620400,"y2025":110080},"沖縄506れ9538":{"y2024":690800,"y2025":421900},"沖縄58Aわ267":{"y2024":420700,"y2025":476300},"沖縄58Aわ265":{"y2024":778800,"y2025":352000},"沖縄303わ6857":{"y2024":723400,"y2025":326900},"沖縄507れ5335":{"y2024":603850,"y2025":683500},"沖縄303わ6792":{"y2024":616550,"y2025":0},"沖縄58Aわ1077":{"y2024":487300,"y2025":580800},"沖縄58Aわ1076":{"y2024":567600,"y2025":487300},"沖縄58Aわ1075":{"y2024":237600,"y2025":800800},"沖縄480わ5523":{"y2024":334400,"y2025":66000},"沖縄303わ7441":{"y2024":489500,"y2025":468600},"沖縄303わ7659":{"y2024":384300,"y2025":639300},"沖縄303わ7874":{"y2024":0,"y2025":579150},"沖縄58Aわ1914":{"y2024":217200,"y2025":330000},"沖縄58Aわ2329":{"y2024":0,"y2025":290400},"沖縄507れ8153":{"y2024":0,"y2025":541100},"沖縄507れ8811":{"y2024":0,"y2025":261950},"沖縄507れ8794":{"y2024":0,"y2025":433800},"沖縄58Aわ2994":{"y2024":0,"y2025":338800},"沖縄58Aわ2992":{"y2024":0,"y2025":337150},"沖縄58Aわ2993":{"y2024":0,"y2025":184800},"沖縄508れ3632":{"y2024":0,"y2025":84150},"沖縄58Aわ5602":{"y2024":0,"y2025":35200}};
+// 車両を特定できなかった売上(車両不明)。特定率(データ信頼度)の分母に使う。
+const VEHICLE_HIST_UNATTR = {"y2024":16048140,"y2025":68326791};
+// 車両別 累計整備費(金城・2025-04〜2026-05)。生涯ROIの維持費に使用。keyは _vplate。
+const VEHICLE_KINJO_LIFE = {"沖縄582わ4390":31900,"沖縄582わ4391":31700,"沖縄582わ4457":33900,"沖縄582わ4422":32200,"沖縄582わ4619":37000,"沖縄506れ2657":61800,"沖縄582わ5565":11000,"沖縄302わ8959":68000,"沖縄480わ4775":22000,"沖縄506れ4057":78000,"沖縄506れ4058":77900,"沖縄582わ5893":47300,"沖縄582わ5894":22300,"沖縄506れ6611":145000,"沖縄582わ6765":48000,"沖縄506れ9005":61000,"沖縄506れ9006":61000,"沖縄582わ7095":48000,"沖縄582わ7229":57500,"沖縄506れ9538":60600,"沖縄58Aわ267":51000,"沖縄58Aわ265":49000,"沖縄303わ6857":67200,"沖縄507れ5335":24300,"沖縄58Aわ1077":11500,"沖縄480わ5523":22400,"沖縄303わ7441":72900,"沖縄303わ7659":50800,"沖縄303わ7874":82700,"沖縄58Aわ1914":23100,"沖縄507れ8153":23000,"沖縄507れ8794":51000,"沖縄58Aわ2994":11300,"沖縄304わ502":26100,"沖縄508れ586":11500,"沖縄508れ585":11900,"沖縄58Aわ4210":13200,"沖縄58Aわ4503":11000,"沖縄58Aわ4507":11300,"沖縄58Aわ4692":11700,"沖縄304わ2141":12700,"沖縄58Aわ5139":11000,"沖縄58Aわ5472":9800,"沖縄58Aわ5602":11900,"沖縄58Aわ6700":10800,"沖縄58Aわ6699":11300,"沖縄508れ6974":8800};
+// 売却車 (車両管理簿 売却・返却シート)。生涯ROI=累計売上+売却額-取得-整備。keyは _vplate。
+const VEHICLE_SOLD = {"沖縄582わ8099":{"model":"スペーシア","plate":"582 わ 8099","acq":450000,"sale":650000,"soldYM":"2024-08","lease":false,"lessor":"自社保有","y2024":92400,"y2025":0,"y2026":0,"kinjo":0},"沖縄303わ7443":{"model":"MINIクーパーS 3D","plate":"303 わ 7443","acq":2230000,"sale":2800000,"soldYM":"2024-12","lease":false,"lessor":"リコーリース","y2024":192500,"y2025":0,"y2026":0,"kinjo":0},"沖縄303れ7879":{"model":"VOXY","plate":"303 れ 7879","acq":3000000,"sale":3505349,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":400950,"y2025":0,"y2026":0,"kinjo":0},"沖縄100わ2969":{"model":"ハイラックス","plate":"100 わ 2969","acq":4300000,"sale":4500000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄507わ6903":{"model":"アクア","plate":"507 わ 6903","acq":1827950,"sale":2000000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":231750,"y2025":55000,"y2026":0,"kinjo":0},"沖縄400わ4330":{"model":"サクシード","plate":"400 わ 4330","acq":650000,"sale":150000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":142025,"y2025":135000,"y2026":0,"kinjo":0},"沖縄582わ7503":{"model":"ワゴンR","plate":"582 わ 7503","acq":340000,"sale":52000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄507れ6590":{"model":"アクア","plate":"507 れ 6590","acq":1600000,"sale":1350000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":110000,"y2025":45000,"y2026":0,"kinjo":6600},"沖縄582わ6585":{"model":"ワゴンR","plate":"582 わ 6585","acq":310000,"sale":300000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄58Aわ1172":{"model":"タント","plate":"58A わ 1172","acq":676900,"sale":490000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄304わ509":{"model":"アルファード30","plate":"304 わ 509","acq":4000000,"sale":3900000,"soldYM":"2025-11","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":32500},"沖縄303わ1634":{"model":"VOXY","plate":"303 わ 1634","acq":3485000,"sale":2864000,"soldYM":"2026-03","lease":true,"lessor":"おきぎんリース","y2024":1730200,"y2025":873500,"y2026":0,"kinjo":60000},"沖縄303わ1846":{"model":"ステップワゴン","plate":"303 わ 1846","acq":3236097,"sale":2900000,"soldYM":"2026-04","lease":true,"lessor":"第一総業リース","y2024":2044200,"y2025":795200,"y2026":0,"kinjo":73700},"沖縄582わ5563":{"model":"N-BOX","plate":"582 わ 5563","acq":1690487,"sale":1300000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":722150,"y2025":721600,"y2026":0,"kinjo":0},"沖縄506れ4826":{"model":"セレナ","plate":"506 れ 4826","acq":3400000,"sale":2600000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":1403400,"y2025":556100,"y2026":0,"kinjo":12800},"沖縄582わ6893":{"model":"N-BOX","plate":"582 わ 6893","acq":1745000,"sale":1100000,"soldYM":"2026-04","lease":false,"lessor":"第一総業リース","y2024":550150,"y2025":644600,"y2026":0,"kinjo":0},"沖縄582わ5564":{"model":"N-BOX","plate":"582 わ 5564","acq":1690487,"sale":1300000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":718250,"y2025":427900,"y2026":0,"kinjo":11300}};
 // freee API直結用の共有トークン（GAS側 FREEE_SHARED_TOKEN と一致させる）。
 // 公開HTMLに出るが、実エンドポイントURLは settings(data.json/非公開)にのみ持つため保護される。
 const FREEE_API_TOKEN = 'lime-freee-2026-k9Xz7Qp3Rm';
@@ -5455,6 +5474,7 @@ function renderBI(){
   renderBIRankings(cases);
   renderBIUtilTable(util);
   renderBIGroupUtil(util);
+  renderBIVehicleROI();
   renderBIForecast();
   renderBIMatrix();
   renderBIPareto(cases);
@@ -6631,6 +6651,94 @@ function renderBIGroupUtil(util){
   const totRate = Math.min(100, totD / (pd * totC) * 100);
   const totalRow = `<tr style="border-top:2px solid #ccc;font-weight:bold"><td class="left">合計</td><td>${totC}台</td><td>${totRate.toFixed(1)}%</td><td>${totD}日</td><td class="money">¥${Math.round(totS).toLocaleString()}</td></tr>`;
   tbody.innerHTML = rows + totalRow;
+}
+
+// 💰 車両別 生涯ROI (経営分析・2026-06-10)
+// 生涯ROI = 累計売上(2024-25埋め込み実績 + 2026年〜ライブ) + 売却額 − 取得価額 − 整備費(金城実額)。
+// データ正本=index_admin_mobile.html (車両管理.html にも同実装)。保険/税の按分はダッシュボード側のみ＝ここはやや甘め。
+function renderBIVehicleROI(){
+  const host = $('bi-life-roi'); if(!host) return;
+  const vplate = v => { const p = v && v.plate; return p ? ((p.area||'沖縄')+(p.no||'')+(p.kana||'')+(p.tail||'')).replace(/[\s　]/g,'') : ''; };
+  const pdisp = v => (v.plateDisplay||'').trim() || (v.plate ? [v.plate.area,v.plate.no,v.plate.kana,v.plate.tail].filter(Boolean).join(' ') : '');
+  // 2026年以降の請求対象売上を車両別にライブ集計 (freeeExportTargets と同ゲート)。
+  // 日数は calcAmounts(終了日を含む) ではなく ダッシュボード rentalAmount と同じ「終了−開始」(泊数) ＝
+  // 生涯ROIの数値を index_admin_mobile.html / 車両管理.html と完全一致させるため (ここを calcAmounts に変えると3システムでROIがズレる)
+  const live = {}; let un26 = 0;
+  (DATA.cases||[]).forEach(c=>{
+    if(c.status === 'キャンセル') return;
+    if(!c.useEnd || String(c.useEnd).slice(0,10) < '2026-01-01') return;
+    if(c.category === '一般' && !['請求済','入金済'].includes(c.status)) return;
+    const d1 = new Date(String(c.useStart||'').slice(0,10));
+    const d2 = new Date(String(c.useEnd).slice(0,10));
+    const rdays = (c.useStart && isFinite(d1) && isFinite(d2)) ? Math.max(0, Math.round((d2-d1)/86400000)) : 0;
+    const amt = Math.max(0, rdays * Number(c.unitPrice||0) - Number(c.discount||0));
+    if(c.vehicleId) live[c.vehicleId] = (live[c.vehicleId]||0) + amt; else un26 += amt;
+  });
+  const fleet = (DATA.vehicles||[]).filter(v => v.status !== '廃車' && v.status !== '売却済');
+  const rows = fleet.map(v=>{
+    const key = vplate(v);
+    const h = VEHICLE_HIST_REV[key] || {};
+    const hist = (Number(h.y2024)||0) + (Number(h.y2025)||0);
+    const live26 = live[v.id]||0;
+    const total = hist + live26;
+    const price = Number(v.vehiclePrice)||0;
+    const kinjo = Number(VEHICLE_KINJO_LIFE[key])||0;
+    const recov = price > 0 ? Math.round(total/price*100) : null;
+    return { v, total, hist, live26, price, kinjo, recov, roi: total - price - kinjo };
+  }).filter(x => x.total > 0 || x.price > 0).sort((a,b) => b.roi - a.roi);
+  // データ特定率 (車両に紐付いた売上 ÷ 全売上)
+  const attr = rows.reduce((a,x) => a + x.total, 0);
+  const unattr = VEHICLE_HIST_UNATTR.y2024 + VEHICLE_HIST_UNATTR.y2025 + un26;
+  const cover = (attr+unattr) > 0 ? Math.round(attr/(attr+unattr)*100) : 0;
+  const paid = rows.filter(x => x.recov != null && x.recov >= 100).length;
+  const bar = recov => {
+    if(recov == null) return '<span style="color:#999">―</span>';
+    const w = Math.min(100, recov);
+    const col = recov >= 100 ? '#2E7D32' : (recov >= 50 ? '#1E5AA8' : '#C99700');
+    return `<div style="display:flex;align-items:center;gap:6px;min-width:100px"><div style="flex:1;height:7px;background:#EEE;border-radius:4px;overflow:hidden"><div style="width:${w}%;height:100%;background:${col}"></div></div><span style="font-weight:bold;color:${col};font-size:11px;width:40px;text-align:right">${recov}%</span></div>`;
+  };
+  const tr = x => {
+    const tag = (x.recov != null && x.recov >= 100) ? ' <span class="badge badge-green" style="font-size:9px;padding:1px 5px">💰回収済</span>' : '';
+    return `<tr><td class="left"><b>${esc(x.v.name||'')}</b> <span style="color:#888;font-size:10px">${esc(pdisp(x.v))}</span>${tag}</td>`+
+      `<td class="money">${x.total?'¥'+fmtNum(x.total):'―'}${x.live26?`<div style="color:#888;font-size:9px">26年〜 ¥${fmtNum(x.live26)}</div>`:''}</td>`+
+      `<td class="money" style="color:#888">${x.price?'¥'+fmtNum(x.price):'―'}</td>`+
+      `<td class="money" style="color:#888">${x.kinjo?'¥'+fmtNum(x.kinjo):'―'}</td>`+
+      `<td>${bar(x.recov)}</td>`+
+      `<td class="money" style="font-weight:bold;color:${x.roi>=0?'#2E7D32':'#C0392B'}">${x.roi>=0?'+':''}¥${fmtNum(x.roi)}</td></tr>`;
+  };
+  // 売却済の確定成績 (車両管理簿 売却・返却シート由来)
+  const sold = Object.values(VEHICLE_SOLD).map(s=>{
+    const total = (s.y2024||0)+(s.y2025||0)+(s.y2026||0);
+    return { ...s, total, roi: total + (s.sale||0) - (s.acq||0) - (s.kinjo||0) };
+  }).sort((a,b) => b.roi - a.roi);
+  const soldSum = sold.reduce((a,s) => a + s.roi, 0);
+  const str = s => `<tr><td class="left">${esc(s.model)} <span style="color:#888;font-size:10px">${esc(s.plate)}</span></td>`+
+    `<td style="color:#888;font-size:11px">${esc(s.soldYM)}</td>`+
+    `<td class="money">${s.total?'¥'+fmtNum(s.total):'<span style="color:#C99700">¥0 ⚠️</span>'}</td>`+
+    `<td class="money" style="color:#888">¥${fmtNum(s.acq)}</td>`+
+    `<td class="money" style="color:#888">¥${fmtNum(s.sale)}</td>`+
+    `<td class="money" style="font-weight:bold;color:${s.roi>=0?'#2E7D32':'#C0392B'}">${s.roi>=0?'+':''}¥${fmtNum(s.roi)}</td></tr>`;
+  host.innerHTML = `
+    <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;margin-bottom:6px">
+      <span>対象 <b>${rows.length}</b> 台</span>
+      <span>💰 回収済み(回収率100%超) <b style="color:#2E7D32">${paid}</b> 台</span>
+      <span>データ特定率 <b>${cover}%</b> <span style="color:#888;font-size:10px">(2024-25は記録が乏しく控えめ・2026年〜は正確)</span></span>
+    </div>
+    <div class="tbl-wrap" style="max-height:380px;overflow:auto">
+      <table style="font-size:11px">
+        <thead><tr><th class="left">車両</th><th class="money" style="width:110px">累計売上</th><th class="money" style="width:90px">取得</th><th class="money" style="width:80px">整備(金城)</th><th style="width:110px">回収率</th><th class="money" style="width:100px">生涯ROI</th></tr></thead>
+        <tbody>${rows.map(tr).join('') || '<tr><td colspan="6" class="empty-state">データなし</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div style="font-size:10px;color:#888;margin:4px 0 10px">※生涯ROI＝累計売上−取得価額−整備費(金城実額)。保険/税の按分は経営ダッシュボード(スマホ)側のみ＝ここは少し甘めに出ます。</div>
+    <div style="font-size:12px;font-weight:bold;margin-bottom:4px">🏁 売却した車の生涯成績 (${sold.length}台・合計 <span style="color:${soldSum>=0?'#2E7D32':'#C0392B'}">${soldSum>=0?'+':''}¥${fmtNum(soldSum)}</span>)</div>
+    <div class="tbl-wrap" style="max-height:300px;overflow:auto">
+      <table style="font-size:11px">
+        <thead><tr><th class="left">車両</th><th style="width:70px">売却</th><th class="money" style="width:110px">累計売上</th><th class="money" style="width:90px">取得</th><th class="money" style="width:90px">売却額</th><th class="money" style="width:100px">生涯ROI</th></tr></thead>
+        <tbody>${sold.map(str).join('')}</tbody>
+      </table>
+    </div>
+    <div style="font-size:10px;color:#888;margin-top:4px">※売却済は車両管理簿「売却・返却」シート由来の確定値。累計売上 ¥0 ⚠️ は過去の車両記録が無いだけで実際はもっと稼いでいる(ROIは控えめ)。</div>`;
 }
 
 // 週間スケジュールの前週/今週/次週切替
