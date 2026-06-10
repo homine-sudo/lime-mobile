@@ -738,8 +738,15 @@
     </div>
 
     <div class="card">
-      <div class="lbl">車両別 生涯ROI <span class="sm ink3" style="font-weight:normal">回収率・累計売上・生涯粗利（稼ぎ頭／お荷物）</span></div>
+      <div class="lbl">車両別 生涯ROI <span class="sm ink3" style="font-weight:normal">回収率・累計売上・生涯ROI（稼ぎ頭／お荷物）</span></div>
       <table class="kv" id="life-roi"></table>
+      <div class="sm ink3" style="margin-top:4px">生涯ROI＝累計売上＋売却額−取得価額−維持費（維持費＝金城整備の実額＋保険/税/車両費の取得原価按分×保有年数）。</div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">売却した車の生涯成績 <span class="sm ink3" style="font-weight:normal">購入〜売却までの最終損益</span></div>
+      <div id="life-sold"></div>
+      <div class="sm ink3" style="margin-top:4px">車両管理簿「売却・返却」の取得/売却額＋累計レンタル売上＋整備費で算出。高級車など損保代車に載らない車は「売却損益のみ」。</div>
     </div>
 
     <div class="card">
@@ -827,7 +834,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-10';
+const APP_VERSION = '2026-06-10b';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1653,12 +1660,16 @@ function polar(cx,cy,r,deg){ const a=(deg-90)*Math.PI/180; return [cx+r*Math.cos
 const FREEE_VEHICLE_DEP = {"沖縄480わ4285":0,"沖縄480わ4317":0,"沖縄506れ3844":0,"沖縄582わ5563":0,"沖縄582わ5564":0,"沖縄582わ5565":0,"沖縄506れ4826":424999,"沖縄582わ5893":181249,"沖縄582わ5894":181249,"沖縄506れ6611":380479,"沖縄582わ6765":228520,"沖縄582わ7503":0,"沖縄303わ6857":0,"沖縄303わ7659":0,"沖縄303わ7874":0,"沖縄507れ8153":381361,"沖縄507れ8794":0,"沖縄507れ8811":0,"沖縄303わ9565":714394,"沖縄508れ1881":715023,"沖縄304わ2141":780010,"沖縄58Aわ5141":322325,"沖縄58Aわ5140":346781,"沖縄58Aわ5139":352839,"沖縄304わ502":720303,"沖縄58Aわ4210":89829,"沖縄58Aわ4057":492382,"沖縄58Aわ4503":449479,"沖縄508れ3632":301363,"沖縄58Aわ":650435,"沖縄507れ4411":707799,"沖縄58Aわ6699":849726,"沖縄58Aわ6700":835277,"沖縄508れ6171":1004914,"沖縄508れ6167":1004914,"沖縄508れ6974":1226514};
 // 金城モータース 車両別 整備費(直近12ヶ月・証憑から実額抽出・売却車除外・正規ナンバー)。年数回更新。
 const FREEE_KINJO_COST = {"沖縄507れ8794":51000,"沖縄58Aわ2329":11200,"沖縄420わ4285":32400,"沖縄506れ9006":61000,"沖縄582わ7229":57500,"沖縄582わ6765":48000,"沖縄304わ502":26100,"沖縄582わ7095":48000,"沖縄507れ5335":24300,"沖縄506れ2657":61800,"沖縄582わ4619":37000,"沖縄58Aわ1077":18100,"沖縄506れ9538":60600,"沖縄303わ6792":13300,"沖縄506れ9005":61000,"沖縄480わ5523":22400,"沖縄303わ6857":67200,"沖縄58Aわ4210":13200,"沖縄58Aわ267":74200,"沖縄58Aわ2993":23000,"沖縄58Aわ1075":10600,"沖縄303わ7441":72900,"沖縄303わ7659":50800,"沖縄507れ8811":11900,"沖縄507れ8153":23000,"沖縄58Aわ1076":22100,"沖縄480わ4775":22000,"沖縄506れ4057":78000,"沖縄582わ5894":22300,"沖縄582わ5893":47300,"沖縄527わ4317":60000,"沖縄506れ4058":77900,"沖縄303わ7874":82700,"沖縄582わ5565":11000,"沖縄582わ4422":20500,"沖縄582わ4390":20700,"沖縄582わ4391":20500,"沖縄582わ4457":22400,"沖縄58Aわ4503":11000,"沖縄506れ6611":90000,"沖縄58Aわ4692":11700,"沖縄58Aわ4507":11300,"沖縄58Aわ5140":11000,"沖縄58Aわ5139":11000,"沖縄304わ2141":12700,"沖縄58Aわ5471":10600,"沖縄58Aわ2994":11300,"沖縄58Aわ5602":23800,"沖縄58Aわ5472":9800,"沖縄508れ6974":8800,"沖縄506れ3844":70000,"沖縄508れ4411":11800,"沖縄302わ8959":68000,"沖縄507れ9962":10400,"沖縄508れ585":11900,"沖縄58Aわ6699":11300,"沖縄508れ586":11500,"沖縄58Aわ6700":10800,"沖縄58Aわ1914":11900,"沖縄58Aわ265":49000};
-// ===== 生涯ROI 用 車両別 過去実績売上 (2026-06-10) =====
-// 2024-2025の車両別売上 (system正 + 損保代車管理簿Excel補助で復元・差1表記ゆれ合算済)。年1回更新。keyは _vplate。
+// ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
+// 2024-2025の車両別売上 (system正 + 損保代車管理簿Excel補助・売却/金城記録ありは合算しない)。年1回更新。keyは _vplate。
 // 2026以降の売上はシステムからライブ集計するので、ここには入れない (二重計上防止)。
-const VEHICLE_HIST_REV = {"沖縄303わ6857":{"y2024":535300,"y2025":326900},"沖縄507れ8811":{"y2024":0,"y2025":261950},"沖縄582わ4457":{"y2024":421650,"y2025":596200},"沖縄582わ4619":{"y2024":806700,"y2025":314600},"沖縄58Aわ5602":{"y2024":0,"y2025":35200},"沖縄58Aわ1075":{"y2024":237600,"y2025":800800},"沖縄506れ9005":{"y2024":732050,"y2025":396000},"沖縄582わ4390":{"y2024":710350,"y2025":550000},"沖縄506れ2657":{"y2024":794500,"y2025":451000},"沖縄58Aわ2329":{"y2024":0,"y2025":290400},"沖縄303わ6792":{"y2024":616550,"y2025":0},"沖縄582わ4422":{"y2024":553850,"y2025":374000},"沖縄480わ5523":{"y2024":334400,"y2025":66000},"沖縄420わ4285":{"y2024":577500,"y2025":127600},"沖縄582わ7095":{"y2024":878900,"y2025":294800},"沖縄58Aわ1076":{"y2024":567600,"y2025":487300},"沖縄508れ3632":{"y2024":0,"y2025":84150},"沖縄506れ3501":{"y2024":326400,"y2025":939400},"沖縄582わ6765":{"y2024":798650,"y2025":314050},"沖縄303わ7659":{"y2024":384300,"y2025":639300},"沖縄582わ5893":{"y2024":1247550,"y2025":1080750},"沖縄58Aわ2992":{"y2024":0,"y2025":337150},"沖縄507れ8153":{"y2024":0,"y2025":541100},"沖縄506れ4057":{"y2024":691900,"y2025":976800},"沖縄58Aわ1077":{"y2024":487300,"y2025":580800},"沖縄582わ5565":{"y2024":2193350,"y2025":1476200},"沖縄303わ7441":{"y2024":682000,"y2025":468600},"沖縄303わ7874":{"y2024":400950,"y2025":579150},"沖縄506れ3844":{"y2024":726350,"y2025":372350},"沖縄506れ9006":{"y2024":794200,"y2025":201850},"沖縄507れ5335":{"y2024":603850,"y2025":683500},"沖縄506れ9538":{"y2024":690800,"y2025":421900},"沖縄58Aわ2993":{"y2024":0,"y2025":184800},"沖縄58Aわ2994":{"y2024":0,"y2025":338800},"沖縄506れ4058":{"y2024":416650,"y2025":158950},"沖縄507れ8794":{"y2024":0,"y2025":433800},"沖縄58Aわ1914":{"y2024":217200,"y2025":330000},"沖縄58Aわ267":{"y2024":420700,"y2025":476300},"沖縄480わ4775":{"y2024":387490,"y2025":123200},"沖縄582わ4391":{"y2024":662200,"y2025":96800},"沖縄582わ7229":{"y2024":620400,"y2025":110080},"沖縄582わ5894":{"y2024":501600,"y2025":205700},"沖縄58Aわ265":{"y2024":778800,"y2025":352000},"沖縄506れ6611":{"y2024":710800,"y2025":286300}};
+const VEHICLE_HIST_REV = {"沖縄420わ4285":{"y2024":529100,"y2025":127600},"沖縄582わ4390":{"y2024":710350,"y2025":550000},"沖縄582わ4391":{"y2024":662200,"y2025":96800},"沖縄582わ4457":{"y2024":421650,"y2025":596200},"沖縄582わ4422":{"y2024":553850,"y2025":374000},"沖縄582わ4619":{"y2024":806700,"y2025":314600},"沖縄506れ2657":{"y2024":794500,"y2025":451000},"沖縄582わ5565":{"y2024":752950,"y2025":326700},"沖縄506れ3844":{"y2024":726350,"y2025":372350},"沖縄506れ3501":{"y2024":326400,"y2025":939400},"沖縄480わ4775":{"y2024":387490,"y2025":123200},"沖縄506れ4057":{"y2024":691900,"y2025":976800},"沖縄506れ4058":{"y2024":416650,"y2025":158950},"沖縄582わ5893":{"y2024":697400,"y2025":436150},"沖縄582わ5894":{"y2024":501600,"y2025":205700},"沖縄506れ6611":{"y2024":710800,"y2025":286300},"沖縄582わ6765":{"y2024":798650,"y2025":314050},"沖縄506れ9005":{"y2024":732050,"y2025":396000},"沖縄506れ9006":{"y2024":794200,"y2025":201850},"沖縄582わ7095":{"y2024":878900,"y2025":294800},"沖縄582わ7229":{"y2024":620400,"y2025":110080},"沖縄506れ9538":{"y2024":690800,"y2025":421900},"沖縄58Aわ267":{"y2024":420700,"y2025":476300},"沖縄58Aわ265":{"y2024":778800,"y2025":352000},"沖縄303わ6857":{"y2024":723400,"y2025":326900},"沖縄507れ5335":{"y2024":603850,"y2025":683500},"沖縄303わ6792":{"y2024":616550,"y2025":0},"沖縄58Aわ1077":{"y2024":487300,"y2025":580800},"沖縄58Aわ1076":{"y2024":567600,"y2025":487300},"沖縄58Aわ1075":{"y2024":237600,"y2025":800800},"沖縄480わ5523":{"y2024":334400,"y2025":66000},"沖縄303わ7441":{"y2024":489500,"y2025":468600},"沖縄303わ7659":{"y2024":384300,"y2025":639300},"沖縄303わ7874":{"y2024":0,"y2025":579150},"沖縄58Aわ1914":{"y2024":217200,"y2025":330000},"沖縄58Aわ2329":{"y2024":0,"y2025":290400},"沖縄507れ8153":{"y2024":0,"y2025":541100},"沖縄507れ8811":{"y2024":0,"y2025":261950},"沖縄507れ8794":{"y2024":0,"y2025":433800},"沖縄58Aわ2994":{"y2024":0,"y2025":338800},"沖縄58Aわ2992":{"y2024":0,"y2025":337150},"沖縄58Aわ2993":{"y2024":0,"y2025":184800},"沖縄508れ3632":{"y2024":0,"y2025":84150},"沖縄58Aわ5602":{"y2024":0,"y2025":35200}};
 // 車両を特定できなかった売上(車両不明)。特定率(データ信頼度)の分母に使う。
 const VEHICLE_HIST_UNATTR = {"y2024":16048140,"y2025":68326791};
+// 車両別 累計整備費(金城・2025-04〜2026-05)。生涯ROIの維持費に使用。keyは _vplate。
+const VEHICLE_KINJO_LIFE = {"沖縄582わ4390":31900,"沖縄582わ4391":31700,"沖縄582わ4457":33900,"沖縄582わ4422":32200,"沖縄582わ4619":37000,"沖縄506れ2657":61800,"沖縄582わ5565":11000,"沖縄302わ8959":68000,"沖縄480わ4775":22000,"沖縄506れ4057":78000,"沖縄506れ4058":77900,"沖縄582わ5893":47300,"沖縄582わ5894":22300,"沖縄506れ6611":145000,"沖縄582わ6765":48000,"沖縄506れ9005":61000,"沖縄506れ9006":61000,"沖縄582わ7095":48000,"沖縄582わ7229":57500,"沖縄506れ9538":60600,"沖縄58Aわ267":51000,"沖縄58Aわ265":49000,"沖縄303わ6857":67200,"沖縄507れ5335":24300,"沖縄58Aわ1077":11500,"沖縄480わ5523":22400,"沖縄303わ7441":72900,"沖縄303わ7659":50800,"沖縄303わ7874":82700,"沖縄58Aわ1914":23100,"沖縄507れ8153":23000,"沖縄507れ8794":51000,"沖縄58Aわ2994":11300,"沖縄304わ502":26100,"沖縄508れ586":11500,"沖縄508れ585":11900,"沖縄58Aわ4210":13200,"沖縄58Aわ4503":11000,"沖縄58Aわ4507":11300,"沖縄58Aわ4692":11700,"沖縄304わ2141":12700,"沖縄58Aわ5139":11000,"沖縄58Aわ5472":9800,"沖縄58Aわ5602":11900,"沖縄58Aわ6700":10800,"沖縄58Aわ6699":11300,"沖縄508れ6974":8800};
+// 売却車 (車両管理簿 売却・返却シート)。生涯ROI=累計売上+売却額-取得-整備。keyは _vplate。
+const VEHICLE_SOLD = {"沖縄582わ8099":{"model":"スペーシア","plate":"582 わ 8099","acq":450000,"sale":650000,"soldYM":"2024-08","lease":false,"lessor":"自社保有","y2024":92400,"y2025":0,"y2026":0,"kinjo":0},"沖縄303わ7443":{"model":"MINIクーパーS 3D","plate":"303 わ 7443","acq":2230000,"sale":2800000,"soldYM":"2024-12","lease":false,"lessor":"リコーリース","y2024":192500,"y2025":0,"y2026":0,"kinjo":0},"沖縄303れ7879":{"model":"VOXY","plate":"303 れ 7879","acq":3000000,"sale":3505349,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":400950,"y2025":0,"y2026":0,"kinjo":0},"沖縄100わ2969":{"model":"ハイラックス","plate":"100 わ 2969","acq":4300000,"sale":4500000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄507わ6903":{"model":"アクア","plate":"507 わ 6903","acq":1827950,"sale":2000000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":231750,"y2025":55000,"y2026":0,"kinjo":0},"沖縄400わ4330":{"model":"サクシード","plate":"400 わ 4330","acq":650000,"sale":150000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":142025,"y2025":135000,"y2026":0,"kinjo":0},"沖縄582わ7503":{"model":"ワゴンR","plate":"582 わ 7503","acq":340000,"sale":52000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄507れ6590":{"model":"アクア","plate":"507 れ 6590","acq":1600000,"sale":1350000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":110000,"y2025":45000,"y2026":0,"kinjo":6600},"沖縄582わ6585":{"model":"ワゴンR","plate":"582 わ 6585","acq":310000,"sale":300000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄58Aわ1172":{"model":"タント","plate":"58A わ 1172","acq":676900,"sale":490000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄304わ509":{"model":"アルファード30","plate":"304 わ 509","acq":4000000,"sale":3900000,"soldYM":"2025-11","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":32500},"沖縄303わ1634":{"model":"VOXY","plate":"303 わ 1634","acq":3485000,"sale":2864000,"soldYM":"2026-03","lease":true,"lessor":"おきぎんリース","y2024":1730200,"y2025":873500,"y2026":0,"kinjo":60000},"沖縄303わ1846":{"model":"ステップワゴン","plate":"303 わ 1846","acq":3236097,"sale":2900000,"soldYM":"2026-04","lease":true,"lessor":"第一総業リース","y2024":2044200,"y2025":795200,"y2026":0,"kinjo":73700},"沖縄582わ5563":{"model":"N-BOX","plate":"582 わ 5563","acq":1690487,"sale":1300000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":722150,"y2025":721600,"y2026":0,"kinjo":0},"沖縄506れ4826":{"model":"セレナ","plate":"506 れ 4826","acq":3400000,"sale":2600000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":1403400,"y2025":556100,"y2026":0,"kinjo":12800},"沖縄582わ6893":{"model":"N-BOX","plate":"582 わ 6893","acq":1745000,"sale":1100000,"soldYM":"2026-04","lease":false,"lessor":"第一総業リース","y2024":550150,"y2025":644600,"y2026":0,"kinjo":0},"沖縄582わ5564":{"model":"N-BOX","plate":"582 わ 5564","acq":1690487,"sale":1300000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":718250,"y2025":427900,"y2026":0,"kinjo":11300}};
 const DEMO_HIST = {}; // ?demo=1 用 (実車不在のため検証用に動的シード)
 
 // 維持費按分プール: 前期(確定)の 保険料(損保ジャパンpartner絞り=車両保険のみ)+租税公課+車両費総額 と 金城車両費 をfreeeから取得 (車両別データが無い保険・税は取得原価按分)。
@@ -1681,7 +1692,7 @@ function freeeFetchMaintenance(){
   go('', function(bal){
     MAINT={ insurance:0, taxDues:_plItem(bal,'租税公課'), vehicleTotal:_plItem(bal,'車両費'), kinjoTotal:0 };
     go('&partner_id=62512057', function(bal2){ MAINT.kinjoTotal=_plItem(bal2,'車両費');
-      go('&partner_id=10728966', function(bal3){ MAINT.insurance=_plItem(bal3,'保険料'); try{ renderVehicleROI(); }catch(e){} }); // 損保ジャパン=車両保険のみ(共済/生命保険を除外)
+      go('&partner_id=10728966', function(bal3){ MAINT.insurance=_plItem(bal3,'保険料'); try{ renderVehicleROI(); }catch(e){} try{ renderVehicleLifetime(); }catch(e){} }); // 損保ジャパン=車両保険のみ(共済/生命保険を除外)
     });
   });
 }
@@ -1783,12 +1794,22 @@ function _lifeRows(){
   const live={}, used12={};
   billableRental().forEach(c=>{ if(!c.vehicleId) return; const ue=(c.useEnd||'').slice(0,10); if(ue>='2026-01-01') live[c.vehicleId]=(live[c.vehicleId]||0)+rentalAmount(c).total; });
   rentalCases().forEach(c=>{ if(!c.vehicleId||c.status==='キャンセル'||!c.useStart) return; const s=c.useStart<sinceStr?sinceStr:c.useStart; const eRaw=c.useEnd||addDays(c.useStart,30); const e=eRaw>today?today:eRaw; const d=daysBetween(s,e); if(d>0) used12[c.vehicleId]=(used12[c.vehicleId]||0)+d; });
+  // 維持費按分プール率 (freee前期: 保険料+租税公課+金城以外車両費 ÷ 取得原価合計) — renderVehicleROIと同式
+  const priceTotal=vehs.reduce((a,v)=>a+(Number(v.vehiclePrice)||0),0);
+  let poolRate=0;
+  if(MAINT && priceTotal>0){ const kinjoOther=Math.max(0,(MAINT.vehicleTotal||0)-(MAINT.kinjoTotal||0)); poolRate=((MAINT.insurance||0)+(MAINT.taxDues||0)+kinjoOther)/priceTotal; }
+  const KINJO = DEMO ? {} : VEHICLE_KINJO_LIFE;
   return vehs.map(v=>{
     const vp=_vplate(v); const h=HIST[vp]||{y2024:0,y2025:0};
     const hist=(h.y2024||0)+(h.y2025||0); const r26=live[v.id]||0; const total=hist+r26;
     const price=Number(v.vehiclePrice)||0; const sold=Number(v.soldPrice)||0;
     const recov= price>0? Math.round(total/price*100): null;
-    const gross= total + sold - price;
+    // 保有年数 (購入日〜現在。なければ1年扱い)
+    let yearsHeld=1; const pd=parseD(v.purchaseDate); if(pd) yearsHeld=Math.max(0.5,(Date.now()-pd.getTime())/(365.25*864e5));
+    const kinjoLife = (DEMO? Math.round(price*0.02) : (KINJO[vp]||0));      // 累計整備費(実額)
+    const apportion = Math.round(price*poolRate*yearsHeld);                  // 保険+税+他車両費 按分(保有年数分)
+    const runCost = kinjoLife + apportion;                                   // 生涯運用コスト
+    const gross= total + sold - price - runCost;                            // 精密 生涯ROI
     const usedD=used12[v.id]||0;
     const insp=(v.inspectionDate||'').slice(0,10);
     let inspDays=null; if(insp) inspDays= insp<today? -daysBetween(insp,today): daysBetween(today,insp);
@@ -1797,8 +1818,17 @@ function _lifeRows(){
       const base=parseD(v.purchaseDate||v.firstRegistration);
       if(base) leaseLeft=Math.round((base.getTime()+Number(v.leasePeriod)*2629800000 - Date.now())/2629800000);
     }
-    return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),total,hist,r26,price,sold,recov,gross,usedD,inspDays,leaseLeft,lease:Number(v.leaseFee)>0,sold_st:v.status==='売却済'};
+    return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),total,hist,r26,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,lease:Number(v.leaseFee)>0,sold_st:v.status==='売却済'};
   }).filter(x=>x.total>0||x.price>0);
+}
+// 売却車 生涯ROI 行 (VEHICLE_SOLD)
+function _soldRows(){
+  if(DEMO) return [];
+  return Object.values(VEHICLE_SOLD).map(s=>{
+    const total=(s.y2024||0)+(s.y2025||0)+(s.y2026||0);
+    const roi= total + (s.sale||0) - (s.acq||0) - (s.kinjo||0);
+    return {model:s.model||'',plate:s.plate||'',soldYM:s.soldYM||'',total,acq:s.acq||0,sale:s.sale||0,kinjo:s.kinjo||0,roi,lease:!!s.lease};
+  }).sort((a,b)=>b.roi-a.roi);
 }
 function renderVehicleLifetime(){
   const host=document.getElementById('life-roi'); if(!host) return;
@@ -1858,9 +1888,9 @@ function renderVehicleLifetime(){
     else if(x.usedD<=20) tag=' <span class="badge warn" style="font-size:9px;padding:1px 5px">💤遊休</span>';
     return `<tr><td>`+
       `<b>${esc(x.name)}</b> <span class="ink3" style="font-size:10px">${esc(x.plate)}</span>${tag}`+
-      `<div class="ink3" style="font-size:10px">累計 ${f(x.total)} ／ 取得 ${x.price?f(x.price):'—'}${x.sold?' ／ 売却 '+f(x.sold):''}</div>`+
+      `<div class="ink3" style="font-size:10px">累計 ${f(x.total)} ／ 取得 ${x.price?f(x.price):'—'}${x.runCost?' ／ 維持 '+f(x.runCost):''}${x.sold?' ／ 売却 '+f(x.sold):''}</div>`+
       `<div class="life-bar"><div class="life-track"><i style="width:${barW}%;background:${bc}"></i></div><span style="color:${bc}">${rc}</span></div>`+
-      `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.gross>=0?'var(--acc)':'#C0392B'}">${x.gross>=0?'+':''}${f(x.gross)}<div class="ink3" style="font-size:9px;font-weight:400">生涯粗利</div></td></tr>`;
+      `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.gross>=0?'var(--acc)':'#C0392B'}">${x.gross>=0?'+':''}${f(x.gross)}<div class="ink3" style="font-size:9px;font-weight:400">生涯ROI</div></td></tr>`;
   };
   host.innerHTML =
     '<tr><td colspan=2 style="background:#EEF5E8;color:#2D5F1F;font-size:11px;font-weight:700">▲ 稼ぎ頭（累計売上）</td></tr>'+
@@ -1879,6 +1909,24 @@ function renderVehicleLifetime(){
         <div class="cls-bar"><i style="width:${Math.max(2,Math.round(a.roi/maxRoi*100))}%;background:${a.roi>=100?'#2D7D33':'var(--acc)'}"></i></div>
         <div class="cls-rate num">${a.roi}<span class="ink3" style="font-size:11px">%</span></div>
       </div>`).join('') : '<div class="ink3 sm">データなし</div>';
+  }
+  // 売却した車の生涯成績 (VEHICLE_SOLD)
+  const soldEl=document.getElementById('life-sold');
+  if(soldEl){
+    const sr=_soldRows();
+    if(!sr.length){ soldEl.innerHTML=''; }
+    else{
+      const tot=sr.reduce((a,x)=>a+x.roi,0);
+      soldEl.innerHTML='<div class="lbl2" style="color:#777">売却した車の生涯成績 — '+sr.length+'台 ・ 合計 <b style="color:'+(tot>=0?'#2D7D33':'#C0392B')+'">'+(tot>=0?'+':'')+f(tot)+'</b></div>'+
+        sr.map(s=>{
+          const rev0=s.total<=0;
+          const recovW=s.acq>0?Math.min(100,Math.max(2,Math.round(s.total/s.acq*100))):2;
+          return '<div class="sc-row"><b>'+esc(s.model||s.plate)+'</b> <span class="ink3" style="font-size:10px">'+esc(s.plate)+'</span> <span class="ink3" style="font-size:9px">'+esc(s.soldYM)+'売却</span>'+(s.lease?' <span class="badge" style="font-size:9px;padding:1px 5px;background:#EEF;color:#3355AA">リース</span>':'')+
+            '<div class="ink3" style="font-size:10px">累計売上 '+f(s.total)+(rev0?' <span style="color:#C99700">(貸渡分なし=売却損益のみ)</span>':'')+' ＋売却 '+f(s.sale)+' −取得 '+f(s.acq)+(s.kinjo?' −整備 '+f(s.kinjo):'')+'</div>'+
+            '<div class="life-bar"><div class="life-track"><i style="width:'+recovW+'%;background:#999"></i></div><span class="num" style="font-size:12px;font-weight:700;color:'+(s.roi>=0?'var(--acc)':'#C0392B')+'">'+(s.roi>=0?'+':'')+f(s.roi)+'</span></div>'+
+          '</div>';
+        }).join('');
+    }
   }
 }
 
