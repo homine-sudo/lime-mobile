@@ -91,7 +91,7 @@ body.staff-mode .admin-only{display:none !important}
 @media(max-width:900px){.alerts-grid{grid-template-columns:1fr !important}}
 /* 日付・時刻入力のクリアボタン (1クリックで消去) */
 .dc-wrap{position:relative;display:block;width:100%}
-.dc-wrap input[type="date"],.dc-wrap input[type="time"]{padding-right:54px !important}
+.dc-wrap input[type="date"],.dc-wrap input[type="time"]{padding-right:54px !important;width:100%}
 .dc-wrap .date-clear-btn{position:absolute;right:21px;top:50%;transform:translateY(-50%);width:20px;height:20px;padding:0;border:none;background:#E5E5E5;color:#555;border-radius:50%;font-size:11px;line-height:1;cursor:pointer;display:none;z-index:3;font-weight:bold}
 .dc-wrap .date-clear-btn:hover{background:#E8846C;color:#fff}
 .dc-wrap.has-value .date-clear-btn,.dc-wrap:hover .date-clear-btn{display:block}
@@ -247,6 +247,12 @@ tr.veh-maint-row:hover{background:#FFECD6}
 .form-section.sec-check{background:linear-gradient(90deg,#E5F4F1,#F2FAF8);color:#1A6B5E;border-left-color:#5BB1A0}
 .form-section.sec-memo{background:linear-gradient(90deg,#F1E8FA,#F9F4FE);color:#5A2E84;border-left-color:#9F7BC9}
 .modal-body .form-section:first-child{margin-top:0}
+/* 案件モーダル セクションジャンプチップ (2026-06-10b 磨き込み) */
+.sec-jump-bar{position:sticky;top:0;z-index:6;display:flex;gap:5px;flex-wrap:wrap;background:rgba(255,255,255,.97);padding:6px 0;margin:4px 0 2px;border-bottom:1px solid var(--border)}
+.sec-jump-chip{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:12px;background:#F7FBEF;color:var(--deep);cursor:pointer;white-space:nowrap;line-height:1.4}
+.sec-jump-chip:hover{background:#EAF5DC;border-color:var(--lime)}
+/* ナビ横スクロールの気づきインジケータ (2026-06-10b): タブが右に隠れている時だけ表示 */
+#nav-scroll-hint{position:fixed;top:0;right:0;width:34px;display:none;align-items:center;justify-content:center;background:linear-gradient(90deg,rgba(30,58,43,0),var(--deep) 55%);color:#fff;font-weight:bold;font-size:16px;z-index:60;cursor:pointer;user-select:none}
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
@@ -936,6 +942,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
   <span class="admin-badge" id="admin-badge" onclick="toggleAdminMode()" title="クリックで切替"></span>
   <div class="nav-status" id="nav-status"></div>
 </nav>
+<div id="nav-scroll-hint" title="タブが右に続いています (クリックでスクロール)" onclick="document.querySelector('.nav').scrollBy({left:220,behavior:'smooth'})">»</div>
 
 <!-- ページコンテキストバー: 現在地・説明・ショートカットを常時表示 -->
 <div class="page-context-bar" id="page-context-bar">
@@ -1526,7 +1533,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <span style="color:#ccc">|</span>
       <span style="font-size:11px;color:#2D5F1F;font-weight:bold">入金:</span>
       <select id="pay-filter-paid-month" onchange="renderPayments()" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:#F4FBF6;font-size:12px"><option value="">月</option></select>
-      <input id="pay-filter-paid-date" type="date" onchange="renderPayments()" title="入金日(特定日)で絞込" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:#F4FBF6;width:130px;font-size:12px">
+      <input id="pay-filter-paid-date" type="date" onchange="renderPayments()" title="入金日(特定日)で絞込" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:#F4FBF6;width:175px;font-size:12px">
       <button type="button" onclick="$('pay-filter-paid-month').value='';$('pay-filter-paid-date').value='';renderPayments()" title="入金フィルタクリア" style="border:none;background:transparent;cursor:pointer;color:#999;font-size:14px;padding:0 4px">✕</button>
     </div>
     <div class="tbl-wrap">
@@ -2149,13 +2156,13 @@ tr.veh-maint-row:hover{background:#FFECD6}
         ② 通知トリガをチェック<br>
         ③ <b>「💾 設定を保存」</b> をクリック<br>
         ④ <b>「🧪 テスト送信」</b> でカレンダー+LINE 両方に届くか確認<br><br>
-        <button type="button" class="btn btn-outline btn-sm" onclick="copyGASTemplate()" style="background:#FFF7E6;border-color:#E69E50;color:#7A4500">📋 GASコードをコピー</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyGASTemplate()">📋 GASコードをコピー</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="showGASTemplate()" style="margin-left:8px">📄 GASコードを表示</button>
       </div>
     </details>
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="saveSettings()">💾 設定を保存</button>
-      <button class="btn btn-outline" onclick="runSelfTest()" title="主要機能の動作チェックを実行" style="background:#F4FBF6;border-color:#4F8A3E;color:#2D5F1F">🧪 動作テスト実行</button>
+      <button class="btn btn-outline" onclick="runSelfTest()" title="主要機能の動作チェックを実行">🧪 動作テスト実行</button>
       <button class="btn btn-outline" onclick="previewRentalAgreement()" title="一般貸渡用 貸渡約款 (裏面印刷用) のプレビュー">📄 貸渡約款プレビュー</button>
     </div>
   </div>
@@ -2174,7 +2181,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
     <div style="border-top:1px dashed #CFDEF7;padding-top:10px;margin-bottom:10px">
       <div style="font-size:12px;font-weight:bold;color:var(--navy);margin-bottom:6px">📂 完全バックアップ (推奨・全データ復元可能)</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-green" onclick="exportFullBackup()" title="全データ(案件・車両・工場・保険会社・設定など)をExcelで保存。この1ファイルから完全復元できます">📊 完全バックアップ (Excel)</button>
+        <button class="btn btn-primary" onclick="exportFullBackup()" title="全データ(案件・車両・工場・保険会社・設定など)をExcelで保存。この1ファイルから完全復元できます">📊 完全バックアップ (Excel)</button>
         <label class="btn btn-outline" style="cursor:pointer" title="完全バックアップExcelから全データを復元。現在のデータは上書きされます">📂 完全バックアップ復元 (Excel)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importFullBackup(this)"></label>
         <span style="border-left:1px solid #ddd;height:20px;margin:0 4px"></span>
         <button class="btn btn-secondary" onclick="exportJSON()" title="生データをJSONで保存(最も忠実な復元用)">📋 JSONエクスポート</button>
@@ -2253,6 +2260,18 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <div class="flow-stepper" id="flow-stepper"></div>
       <div class="flow-action-hint" id="flow-hint"></div>
       <div class="flow-actions" id="flow-actions"></div>
+      <!-- セクションジャンプ (2026-06-10b): 長いフォーム内の目的セクションへ1クリック移動 -->
+      <div class="sec-jump-bar">
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-receive')">📋 受付</button>
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-insurer')">🏢 保険</button>
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-driver')">👤 契約者・配車先</button>
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-dispatch')">📝 配車予約</button>
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-vehicle')">🚗 車両</button>
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-usage')">📅 期間・金額</button>
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-check')">☑ チェック</button>
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-memo')">✏️ メモ</button>
+        <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-billing')">🧾 請求・入金</button>
+      </div>
       <!-- 必須・推奨項目の凡例 -->
       <div style="font-size:11px;color:#666;background:#F8FAFC;border:1px solid #E0E6F0;border-radius:4px;padding:6px 10px;margin:6px 0">
         <b style="color:#C53030">*</b> = 必須項目（保存ブロック）
@@ -2843,7 +2862,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-10a';
+const APP_VERSION = '2026-06-10b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (system正 + 損保代車管理簿Excel補助・売却/金城記録ありは合算しない)。年1回更新。keyは _vplate。
@@ -6700,13 +6719,13 @@ function renderBIVehicleROI(){
     return `<div style="display:flex;align-items:center;gap:6px;min-width:100px"><div style="flex:1;height:7px;background:#EEE;border-radius:4px;overflow:hidden"><div style="width:${w}%;height:100%;background:${col}"></div></div><span style="font-weight:bold;color:${col};font-size:11px;width:40px;text-align:right">${recov}%</span></div>`;
   };
   const tr = x => {
-    const tag = (x.recov != null && x.recov >= 100) ? ' <span class="badge badge-green" style="font-size:9px;padding:1px 5px">💰回収済</span>' : '';
+    const tag = (x.recov != null && x.recov >= 100) ? ' <span class="badge badge-green" style="font-size:10px;padding:1px 5px">💰回収済</span>' : '';
     return `<tr><td class="left"><b>${esc(x.v.name||'')}</b> <span style="color:#888;font-size:10px">${esc(pdisp(x.v))}</span>${tag}</td>`+
-      `<td class="money">${x.total?'¥'+fmtNum(x.total):'―'}${x.live26?`<div style="color:#888;font-size:9px">26年〜 ¥${fmtNum(x.live26)}</div>`:''}</td>`+
+      `<td class="money">${x.total?'¥'+fmtNum(x.total):'―'}${x.live26?`<div style="color:#888;font-size:10px">26年〜 ¥${fmtNum(x.live26)}</div>`:''}</td>`+
       `<td class="money" style="color:#888">${x.price?'¥'+fmtNum(x.price):'―'}</td>`+
       `<td class="money" style="color:#888">${x.kinjo?'¥'+fmtNum(x.kinjo):'―'}</td>`+
       `<td>${bar(x.recov)}</td>`+
-      `<td class="money" style="font-weight:bold;color:${x.roi>=0?'#2E7D32':'#C0392B'}">${x.roi>=0?'+':''}¥${fmtNum(x.roi)}${x.roiPct!=null?`<div style="font-size:9px;font-weight:normal">${x.roiPct>=0?'+':''}${x.roiPct}%</div>`:''}</td></tr>`;
+      `<td class="money" style="font-weight:bold;color:${x.roi>=0?'#2E7D32':'#C0392B'}">${x.roi>=0?'+':''}¥${fmtNum(x.roi)}${x.roiPct!=null?`<div style="font-size:10px;font-weight:normal">${x.roiPct>=0?'+':''}${x.roiPct}%</div>`:''}</td></tr>`;
   };
   // 売却済の確定成績 (車両管理簿 売却・返却シート由来)
   const sold = Object.values(VEHICLE_SOLD).map(s=>{
@@ -6720,7 +6739,7 @@ function renderBIVehicleROI(){
     `<td class="money">${s.total?'¥'+fmtNum(s.total):'<span style="color:#C99700">¥0 ⚠️</span>'}</td>`+
     `<td class="money" style="color:#888">¥${fmtNum(s.acq)}</td>`+
     `<td class="money" style="color:#888">¥${fmtNum(s.sale)}</td>`+
-    `<td class="money" style="font-weight:bold;color:${s.roi>=0?'#2E7D32':'#C0392B'}">${s.roi>=0?'+':''}¥${fmtNum(s.roi)}${s.roiPct!=null?`<div style="font-size:9px;font-weight:normal">${s.roiPct>=0?'+':''}${s.roiPct}%</div>`:''}</td></tr>`;
+    `<td class="money" style="font-weight:bold;color:${s.roi>=0?'#2E7D32':'#C0392B'}">${s.roi>=0?'+':''}¥${fmtNum(s.roi)}${s.roiPct!=null?`<div style="font-size:10px;font-weight:normal">${s.roiPct>=0?'+':''}${s.roiPct}%</div>`:''}</td></tr>`;
   host.innerHTML = `
     <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;margin-bottom:6px">
       <span>対象 <b>${rows.length}</b> 台</span>
@@ -7546,6 +7565,38 @@ function _scrollCaseModalToRelevantSection(isNew, status){
   sec.classList.add('sec-highlight-pulse');
   setTimeout(()=> sec.classList.remove('sec-highlight-pulse'), 1800);
 }
+// セクションジャンプチップ (2026-06-10b): 上の自動スクロールと同じ機構を手動ジャンプに転用
+function jumpCaseSection(cls){
+  const body = document.querySelector('#case-modal .modal-body');
+  const sec = document.querySelector('#case-modal .'+cls);
+  if(!body || !sec) return;
+  const bar = document.querySelector('#case-modal .sec-jump-bar');
+  const barH = bar ? bar.getBoundingClientRect().height : 0;
+  const rect = sec.getBoundingClientRect();
+  const bodyRect = body.getBoundingClientRect();
+  const offset = rect.top - bodyRect.top + body.scrollTop - barH - 10;
+  body.scrollTo({top: Math.max(0, offset), behavior:'smooth'});
+  sec.classList.add('sec-highlight-pulse');
+  setTimeout(()=> sec.classList.remove('sec-highlight-pulse'), 1800);
+}
+// ナビ横スクロールの気づき (2026-06-10b): タブが右に隠れている時だけ「»」を右端に表示
+function _updateNavScrollHint(){
+  const nav = document.querySelector('.nav');
+  const hint = document.getElementById('nav-scroll-hint');
+  if(!nav || !hint) return;
+  const more = nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 6;
+  hint.style.display = more ? 'flex' : 'none';
+  if(more) hint.style.height = nav.getBoundingClientRect().height + 'px';
+}
+(function(){
+  const setup = () => {
+    const nav = document.querySelector('.nav');
+    if(nav) nav.addEventListener('scroll', _updateNavScrollHint, {passive:true});
+    window.addEventListener('resize', _updateNavScrollHint);
+    _updateNavScrollHint();
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup); else setup();
+})();
 // 既存案件を開いた時に 利用期限(予定) のみ自動補完 (change イベント発火しないため)
 // 対象=車両 のときに限り、利用開始 +30日 で 利用期限 を埋める。利用終了は触らない。
 function ensureUseDeadlineAndEnd(){
@@ -14853,7 +14904,7 @@ async function showBackupStatus(){
         </div>
         <div id="backup-status-tbody" class="text-sm">読込中…</div>
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-green btn-sm" onclick="exportFullBackup()" title="全データ(案件・車両・工場・保険会社・設定など)をExcelで保存">📊 完全バックアップ (Excel)</button>
+          <button class="btn btn-primary btn-sm" onclick="exportFullBackup()" title="全データ(案件・車両・工場・保険会社・設定など)をExcelで保存">📊 完全バックアップ (Excel)</button>
           <button class="btn btn-outline btn-sm" onclick="exportJSON()" title="生データをJSONで保存(最も忠実)">📋 完全バックアップ (JSON)</button>
           <button class="btn btn-outline btn-sm" onclick="exportToExcel()" title="案件管理簿のみExcelで保存(従来形式)">📥 案件のみExcel</button>
           <div style="flex:1"></div>
