@@ -1862,7 +1862,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-09';
+const APP_VERSION = '2026-06-10';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5379,6 +5379,7 @@ function _buildLineMessage(c, eventType){
       ins.name ? '保険会社: ' + ins.name : '',
       c.insurerContact ? '保険会社担当: ' + c.insurerContact : '',
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       staffLine
     ].filter(Boolean).join('\n');
@@ -5399,6 +5400,7 @@ function _buildLineMessage(c, eventType){
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.useStart ? '利用開始: ' + c.useStart : '',
       c.useEnd ? '利用終了: ' + c.useEnd : '',
@@ -5410,7 +5412,7 @@ function _buildLineMessage(c, eventType){
     const rd = _recoveryDest(c);
     const recoveryLine = rd.isDifferent
       ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '') + (rd.tel ? ' / ' + rd.tel : '')
-      : (c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '');
+      : (c.dispatchToName ? '配車先工場: ' + c.dispatchToName + (c.dispatchToAddress ? ' / ' + c.dispatchToAddress : '') : '');
     return [
       '🚛 回収予定日 登録',
       '受付No: ' + (c.caseNo||''),
@@ -5441,6 +5443,7 @@ function _buildLineMessage(c, eventType){
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       staffLine
     ].filter(Boolean).join('\n');
@@ -5449,7 +5452,7 @@ function _buildLineMessage(c, eventType){
     const rd = _recoveryDest(c);
     const recoveryLine = rd.isDifferent
       ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '')
-      : (c.dispatchToName ? '回収元: ' + c.dispatchToName : '');
+      : (c.dispatchToName ? '回収元: ' + c.dispatchToName + (c.dispatchToAddress ? ' / ' + c.dispatchToAddress : '') : '');
     return [
       '🚛 回収完了',
       '受付No: ' + (c.caseNo||''),

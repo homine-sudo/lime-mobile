@@ -1022,6 +1022,23 @@ tr.veh-maint-row:hover{background:#FFECD6}
   <!-- 📢 社内連絡板は廃止 (2026-06-06 ユーザー要望)。DATA.internalMessages のデータと関数は保持(死蔵)。 -->
   <!-- 2) KPI: 本日の配車 / 本日の回収 / 利用中 / 今月案件数 / 本日稼働中車両 -->
   <div class="kpi-grid" id="kpi-grid"></div>
+  <!-- 2b) 業務パイプライン: 状態別の件数チップ (クリックで案件管理の該当状態へ) 2026-06-10c -->
+  <div class="card" style="padding:8px 12px" id="dash-pipeline-card">
+    <div class="card-title" style="margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:6px">
+      🔀 <span>業務パイプライン</span>
+      <span class="text-muted" style="font-size:10px">状態別の件数。クリックで案件管理の該当状態へ</span>
+    </div>
+    <div id="dash-pipeline" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+  </div>
+  <!-- 2c) 今月の売上サマリ (admin-only・発生月=利用終了日ベース=freee出力と同基準) 2026-06-10c -->
+  <div class="card admin-only" style="padding:8px 12px;background:#FFFDF2;border-left:4px solid #E6C54C" id="dash-month-sales-card">
+    <div class="card-title" style="margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:6px">
+      💴 <span>今月の売上 (発生ベース)</span>
+      <span class="text-muted" style="font-size:10px">利用終了日が当月の請求対象 (freee出力と同基準)</span>
+      <button class="btn btn-outline btn-xs" style="margin-left:auto;padding:2px 8px;font-size:10px" onclick="showPage('bi')">経営分析 →</button>
+    </div>
+    <div id="dash-month-sales" style="display:flex;gap:22px;flex-wrap:wrap;align-items:baseline"></div>
+  </div>
   <!-- 3) アラート2カラム: 利用期限・回収予定 と 車検・点検 -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px" class="alerts-grid">
     <div class="card alert-compact" style="padding:8px 10px;background:#FFF7E6;border-left:4px solid var(--orange);margin-bottom:0" id="dashboard-deadline-alerts-card">
@@ -1036,6 +1053,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <div class="card-title" style="margin-bottom:4px;font-size:12px;display:flex;align-items:center;gap:6px;color:#2C2C2A">
         🔧 <span>車検・点検期日</span>
         <span id="veh-alert-count" style="color:#2C2C2A;font-weight:bold;font-size:11px"></span>
+        <span class="text-muted" style="font-size:10px">車検2ヶ月前〜 / 点検30日前〜</span>
         <button class="btn btn-outline btn-xs" style="margin-left:auto;padding:2px 8px;font-size:10px" onclick="showPage('vehicles')">→</button>
       </div>
       <div class="tbl-wrap alert-compact-table" id="dashboard-alerts"></div>
@@ -2862,7 +2880,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-10b';
+const APP_VERSION = '2026-06-10c';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (system正 + 損保代車管理簿Excel補助・売却/金城記録ありは合算しない)。年1回更新。keyは _vplate。
@@ -6844,6 +6862,45 @@ function renderDashboard(){
     <div class="kpi-card lime"><div class="kpi-label">今月の案件数</div><div class="kpi-value">${monthCases}件</div><div class="kpi-sub">${now.getFullYear()}年${now.getMonth()+1}月 受付</div></div>
     <div class="kpi-card"><div class="kpi-label">本日 稼働中</div><div class="kpi-value">${todayActiveCount}<span style="font-size:14px;color:#666">/${vehAll.length}台</span></div><div class="kpi-sub">瞬間稼働率 ${todayUtilRate}%</div></div>
   `;
+
+  // 🔀 業務パイプライン (2026-06-10c): 状態別件数チップ。クリックで案件管理の該当状態フィルタへ
+  const pipeEl = $('dash-pipeline');
+  if(pipeEl){
+    const pipeStatuses = STATUSES.filter(s => s !== '入金済' && s !== 'キャンセル');
+    const byStatus = {};
+    cases.forEach(c => { byStatus[c.status] = (byStatus[c.status]||0) + 1; });
+    pipeEl.innerHTML = pipeStatuses.map((st,i) => {
+      const n = byStatus[st]||0;
+      const on = n > 0;
+      const chip = `<button type="button" onclick="showPage('cases');setTimeout(()=>{const s=document.getElementById('filter-status');if(s){s.value='${st}';renderCases();}},80)"
+        title="案件管理で「${st}」を絞り込み表示"
+        style="border:1px solid ${on?'var(--lime)':'#E0E0DC'};border-radius:14px;padding:4px 12px;font-size:12px;cursor:pointer;background:${on?'#F7FBEF':'#FAFAF8'};color:${on?'var(--deep)':'#AAA'};white-space:nowrap">
+        ${esc(st)} <b style="font-size:13px;${on?'color:var(--green)':''}">${n}</b></button>`;
+      return chip + (i < pipeStatuses.length-1 ? '<span style="color:#CCC;font-size:10px">›</span>' : '');
+    }).join('');
+  }
+
+  // 💴 今月の売上サマリ (2026-06-10c admin-only): 発生月=利用終了日・freeeExportTargets と同ゲート
+  const msEl = $('dash-month-sales');
+  if(msEl){
+    const _monthSales = (ymStr) => cases.filter(c => {
+      if(c.status === 'キャンセル') return false;
+      if(!c.useEnd || !String(c.useEnd).startsWith(ymStr)) return false;
+      if(c.category === '一般' && !['請求済','入金済'].includes(c.status)) return false;
+      return true;
+    }).reduce((s,c) => s + calcAmounts(c).total, 0);
+    const curSales = _monthSales(ym);
+    const prevYm = `${now.getFullYear()-1}-${pad2(now.getMonth()+1)}`;
+    const prevSales = _monthSales(prevYm);
+    const yoy = prevSales > 0 ? Math.round((curSales - prevSales) / prevSales * 100) : null;
+    const yoyHtml = yoy == null
+      ? '<span style="color:#888;font-size:11px">前年同月データなし</span>'
+      : `<span style="font-weight:bold;font-size:15px;color:${yoy>=0?'#2E7D32':'#C0392B'}">${yoy>=0?'+':''}${yoy}%</span> <span style="color:#888;font-size:10px">前年比</span>`;
+    msEl.innerHTML = `
+      <div><span style="font-size:22px;font-weight:bold;color:var(--deep)">${yen(curSales)}</span> <span style="color:#888;font-size:11px">${now.getMonth()+1}月</span></div>
+      <div>${yoyHtml}</div>
+      <div><span style="font-size:13px;color:#555">${yen(prevSales)}</span> <span style="color:#888;font-size:10px">前年${now.getMonth()+1}月</span></div>`;
+  }
 
   // 📊 グラフ類はダッシュボードから廃止 (データ分析・売上集計タブを参照)
   // recent (要素が存在する場合のみ。ダッシュボードから削除済みでも安全)
@@ -14321,6 +14378,7 @@ function _buildLineMessage(c, eventType){
       ins.name ? '保険会社: ' + ins.name : '',
       c.insurerContact ? '保険会社担当: ' + c.insurerContact : '',
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.staff ? '担当: ' + c.staff : ''
     ].filter(Boolean).join('\n');
@@ -14339,6 +14397,7 @@ function _buildLineMessage(c, eventType){
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.useStart ? '利用開始: ' + c.useStart : '',
       c.useEnd ? '利用終了: ' + c.useEnd : '',
@@ -14350,7 +14409,7 @@ function _buildLineMessage(c, eventType){
     const rd = _recoveryDest(c);
     const recoveryLine = rd.isDifferent
       ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '') + (rd.tel ? ' / ' + rd.tel : '')
-      : (c.dispatchToName ? '配車先工場: ' + c.dispatchToName : '');
+      : (c.dispatchToName ? '配車先工場: ' + c.dispatchToName + (c.dispatchToAddress ? ' / ' + c.dispatchToAddress : '') : '');
     return [
       '🚛 回収予定日 登録',
       '受付No: ' + (c.caseNo||''),
@@ -14381,6 +14440,7 @@ function _buildLineMessage(c, eventType){
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
       c.dispatchToName ? '配車先: ' + c.dispatchToName : '',
+      c.dispatchToAddress ? '住所: ' + c.dispatchToAddress : '',
       vehicleStr ? '車両: ' + vehicleStr : '',
       c.staff ? '担当: ' + c.staff : ''
     ].filter(Boolean).join('\n');
@@ -14389,7 +14449,7 @@ function _buildLineMessage(c, eventType){
     const rd = _recoveryDest(c);
     const recoveryLine = rd.isDifferent
       ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '')
-      : (c.dispatchToName ? '回収元: ' + c.dispatchToName : '');
+      : (c.dispatchToName ? '回収元: ' + c.dispatchToName + (c.dispatchToAddress ? ' / ' + c.dispatchToAddress : '') : '');
     return [
       '🚛 回収完了',
       '受付No: ' + (c.caseNo||''),
@@ -15644,7 +15704,7 @@ function showDailyBriefing(){
     ${item('📤','本日の配車', dispatchToday.length, 'var(--navy)', `showPage('dashboard')`)}
     ${item('📥','本日の回収', returnToday.length, 'var(--orange)', `showPage('dashboard')`)}
     ${item('💰','振込期日超過', overduePay.length, 'var(--red)', `showPage('payments')`)}
-    ${item('🔧','車検・点検 30日以内', vehAlerts.length, '#888', `showPage('vehicles')`)}
+    ${item('🔧','車検(2ヶ月以内)・点検(30日以内)', vehAlerts.length, '#888', `showPage('vehicles')`)}
     ${item('💸','freee修正待ち', freeeFix.length, '#7A4500', `showPage('payments')`)}
     <div style="margin-top:6px;font-size:10px;color:#888;text-align:right">クリックで該当ページへ</div>
   `;
