@@ -834,7 +834,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-10c';
+const APP_VERSION = '2026-06-10d';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1696,6 +1696,25 @@ function freeeFetchMaintenance(){
     });
   });
 }
+// 金城 車両別整備費のライブ追従 (2026-06〜の新規分・freee摘要/メモタグの車両ナンバーで自動集計)。
+// 埋め込み VEHICLE_KINJO_LIFE/FREEE_KINJO_COST は 2026-05 までの実額 ＝ since=2026-06-01 で二重計上しない。
+let KINJO_LIVE = null;
+function _kinjoLive(plate){ return (KINJO_LIVE && KINJO_LIVE.perVehicle && Number(KINJO_LIVE.perVehicle[plate]))||0; }
+function freeeFetchKinjoLive(){
+  if(KINJO_LIVE) return;
+  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url) return;
+  const cb='freeeKnj_'+Date.now();
+  const s=document.createElement('script'); let done=false;
+  const clean=()=>{ try{delete window[cb]}catch(_){window[cb]=undefined} if(s.parentNode)s.parentNode.removeChild(s); };
+  const tmr=setTimeout(()=>{ if(done)return; done=true; clean(); },30000);
+  window[cb]=function(res){
+    if(done)return; done=true; clearTimeout(tmr); clean();
+    if(res&&res.ok&&res.kinjo){ KINJO_LIVE=res.kinjo; try{ renderVehicleROI(); }catch(e){} try{ renderVehicleLifetime(); }catch(e){} }
+  };
+  s.onerror=()=>{ if(done)return; done=true; clearTimeout(tmr); clean(); };
+  s.src=url+'?action=kinjoByVehicle&since=2026-06-01&token='+encodeURIComponent(FREEE_API_TOKEN)+'&callback='+cb;
+  document.head.appendChild(s);
+}
 // 保有月割: 取得後の経過月数/12 (購入日があれば)。新車導入直後の按分維持費/リースを実態に圧縮。
 function _holdRatio(v){
   const pd=v&&v.purchaseDate; if(!pd) return 1;
@@ -1738,7 +1757,7 @@ function renderVehicleROI(){
     if(dep!=null){ baseCost=dep; kind=dep>0?'保有':'償却済'; }
     else if(lease>0){ baseCost=Math.round(lease*holdR); kind='リース'; }
     else { baseCost=0; kind='—'; }
-    const kinjo = FREEE_KINJO_COST[plate]||0;            // 金城 車両別 整備実額(直近12ヶ月)
+    const kinjo = (FREEE_KINJO_COST[plate]||0) + _kinjoLive(plate); // 金城 車両別 整備実額(埋込〜2026-05 + freeeタグ集計ライブ)
     const apportion = Math.round(price*poolRate*holdR);  // 保険+税+金城以外車両費 按分
     const maint = kinjo + apportion;
     const cost = baseCost + maint;
@@ -1811,7 +1830,7 @@ function _lifeRows(){
     const recov= invest>0? Math.round(total/invest*100): null;
     // 保有年数 (購入日〜現在。なければ1年扱い)
     let yearsHeld=1; const pd=parseD(v.purchaseDate); if(pd) yearsHeld=Math.max(0.5,(Date.now()-pd.getTime())/(365.25*864e5));
-    const kinjoLife = (DEMO? Math.round(price*0.02) : (KINJO[vp]||0));      // 累計整備費(実額)
+    const kinjoLife = (DEMO? Math.round(price*0.02) : ((KINJO[vp]||0) + _kinjoLive(vp))); // 累計整備費(埋込実額 + freeeタグ集計ライブ)
     const apportion = Math.round(price*poolRate*yearsHeld);                  // 保険+税+他車両費 按分(保有年数分)
     const runCost = kinjoLife + apportion;                                   // 生涯運用コスト
     const gross= isLease? (total - leasePaid - runCost) : (total + sold - price - runCost); // 生涯ROI(リース=実支出ベース)
@@ -1989,6 +2008,7 @@ function renderOps(){
       <div class="cls-rate num">${cg.total.rate.toFixed(0)}<span class="ink3" style="font-size:11px">%</span></div>
     </div>`:'') || '<div class="ink3 sm">データなし</div>';
   try{ freeeFetchMaintenance(); }catch(e){}
+  try{ freeeFetchKinjoLive(); }catch(e){}
   try{ renderVehicleROI(); }catch(e){}
   try{ renderVehicleLifetime(); }catch(e){}
 }
