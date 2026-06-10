@@ -2843,7 +2843,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-10';
+const APP_VERSION = '2026-06-10a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (system正 + 損保代車管理簿Excel補助・売却/金城記録ありは合算しない)。年1回更新。keyは _vplate。
@@ -6684,7 +6684,9 @@ function renderBIVehicleROI(){
     const price = Number(v.vehiclePrice)||0;
     const kinjo = Number(VEHICLE_KINJO_LIFE[key])||0;
     const recov = price > 0 ? Math.round(total/price*100) : null;
-    return { v, total, hist, live26, price, kinjo, recov, roi: total - price - kinjo };
+    const roi = total - price - kinjo;
+    const roiPct = price > 0 ? Math.round(roi/price*100) : null;   // 投資利益率 = 生涯ROI ÷ 取得価額
+    return { v, total, hist, live26, price, kinjo, recov, roi, roiPct };
   }).filter(x => x.total > 0 || x.price > 0).sort((a,b) => b.roi - a.roi);
   // データ特定率 (車両に紐付いた売上 ÷ 全売上)
   const attr = rows.reduce((a,x) => a + x.total, 0);
@@ -6704,12 +6706,13 @@ function renderBIVehicleROI(){
       `<td class="money" style="color:#888">${x.price?'¥'+fmtNum(x.price):'―'}</td>`+
       `<td class="money" style="color:#888">${x.kinjo?'¥'+fmtNum(x.kinjo):'―'}</td>`+
       `<td>${bar(x.recov)}</td>`+
-      `<td class="money" style="font-weight:bold;color:${x.roi>=0?'#2E7D32':'#C0392B'}">${x.roi>=0?'+':''}¥${fmtNum(x.roi)}</td></tr>`;
+      `<td class="money" style="font-weight:bold;color:${x.roi>=0?'#2E7D32':'#C0392B'}">${x.roi>=0?'+':''}¥${fmtNum(x.roi)}${x.roiPct!=null?`<div style="font-size:9px;font-weight:normal">${x.roiPct>=0?'+':''}${x.roiPct}%</div>`:''}</td></tr>`;
   };
   // 売却済の確定成績 (車両管理簿 売却・返却シート由来)
   const sold = Object.values(VEHICLE_SOLD).map(s=>{
     const total = (s.y2024||0)+(s.y2025||0)+(s.y2026||0);
-    return { ...s, total, roi: total + (s.sale||0) - (s.acq||0) - (s.kinjo||0) };
+    const roi = total + (s.sale||0) - (s.acq||0) - (s.kinjo||0);
+    return { ...s, total, roi, roiPct: (s.acq>0 ? Math.round(roi/s.acq*100) : null) };
   }).sort((a,b) => b.roi - a.roi);
   const soldSum = sold.reduce((a,s) => a + s.roi, 0);
   const str = s => `<tr><td class="left">${esc(s.model)} <span style="color:#888;font-size:10px">${esc(s.plate)}</span></td>`+
@@ -6717,7 +6720,7 @@ function renderBIVehicleROI(){
     `<td class="money">${s.total?'¥'+fmtNum(s.total):'<span style="color:#C99700">¥0 ⚠️</span>'}</td>`+
     `<td class="money" style="color:#888">¥${fmtNum(s.acq)}</td>`+
     `<td class="money" style="color:#888">¥${fmtNum(s.sale)}</td>`+
-    `<td class="money" style="font-weight:bold;color:${s.roi>=0?'#2E7D32':'#C0392B'}">${s.roi>=0?'+':''}¥${fmtNum(s.roi)}</td></tr>`;
+    `<td class="money" style="font-weight:bold;color:${s.roi>=0?'#2E7D32':'#C0392B'}">${s.roi>=0?'+':''}¥${fmtNum(s.roi)}${s.roiPct!=null?`<div style="font-size:9px;font-weight:normal">${s.roiPct>=0?'+':''}${s.roiPct}%</div>`:''}</td></tr>`;
   host.innerHTML = `
     <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;margin-bottom:6px">
       <span>対象 <b>${rows.length}</b> 台</span>
@@ -6730,7 +6733,7 @@ function renderBIVehicleROI(){
         <tbody>${rows.map(tr).join('') || '<tr><td colspan="6" class="empty-state">データなし</td></tr>'}</tbody>
       </table>
     </div>
-    <div style="font-size:10px;color:#888;margin:4px 0 10px">※生涯ROI＝累計売上−取得価額−整備費(金城実額)。保険/税の按分は経営ダッシュボード(スマホ)側のみ＝ここは少し甘めに出ます。</div>
+    <div style="font-size:10px;color:#888;margin:4px 0 10px">※生涯ROI＝累計売上−取得価額−整備費(金城実額)。％＝生涯ROI÷取得価額(投資利益率)。保険/税の按分は経営ダッシュボード(スマホ)側のみ＝ここは少し甘めに出ます。</div>
     <div style="font-size:12px;font-weight:bold;margin-bottom:4px">🏁 売却した車の生涯成績 (${sold.length}台・合計 <span style="color:${soldSum>=0?'#2E7D32':'#C0392B'}">${soldSum>=0?'+':''}¥${fmtNum(soldSum)}</span>)</div>
     <div class="tbl-wrap" style="max-height:300px;overflow:auto">
       <table style="font-size:11px">
