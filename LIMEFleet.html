@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LIME Fleet">
+<meta name="theme-color" content="#1E3A28">
+<title>LIME Fleet — 車両資産管理</title>
+<style>
+:root{
+  --bg:#F6F5F0; --card:#FFFFFF; --ink:#1C2A20; --ink2:#4A5A50; --ink3:#8A968E;
+  --acc:#2D5F2D; --acc-d:#1E3A28; --lime:#7CB342; --gold:#A8842C;
+  --danger:#B03A2E; --warn:#B07D2C; --line:#E4E2D8; --soft:#EEF3EA;
+  --mono:'SF Mono','Cascadia Code',Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Yu Gothic UI',Meiryo,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* ===== header ===== */
+header{position:sticky;top:0;z-index:50;background:var(--acc-d);color:#F2F1E8;padding:10px 16px calc(0px + env(safe-area-inset-top,0px));padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.hdr-row{display:flex;align-items:baseline;justify-content:space-between;max-width:1080px;margin:0 auto}
+.brand{font-family:Georgia,'Times New Roman',serif;font-size:19px;letter-spacing:2.5px}
+.brand b{color:#A9C97E;font-weight:600}
+.hdr-sub{font-size:10px;color:#B9C4B4;display:flex;gap:10px;align-items:baseline}
+.tabs{display:flex;gap:2px;max-width:1080px;margin:8px auto 0;overflow-x:auto}
+.tab{flex:0 0 auto;padding:7px 16px;border-radius:8px 8px 0 0;font-size:12.5px;color:#C9D2C2;cursor:pointer;white-space:nowrap;border:none;background:transparent;font-weight:600}
+.tab.on{background:var(--bg);color:var(--acc-d)}
+/* ===== layout ===== */
+main{max-width:1080px;margin:0 auto;padding:14px 14px calc(30px + env(safe-area-inset-bottom,0px))}
+.screen{display:none}.screen.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.card h3{font-size:13px;color:var(--acc-d);letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.sm{font-size:11px}.xs{font-size:10px}.ink2{color:var(--ink2)}.ink3{color:var(--ink3)}
+.pos{color:var(--acc)}.neg{color:var(--danger)}
+/* ===== badges/chips ===== */
+.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;vertical-align:1px}
+.b-lease{background:#FBF3E2;color:var(--gold)}
+.b-own{background:var(--soft);color:var(--acc)}
+.b-danger{background:#F9E8E5;color:var(--danger)}
+.b-warn{background:#F9F1E0;color:var(--warn)}
+.b-ok{background:var(--soft);color:var(--acc)}
+.b-info{background:#E8EEF5;color:#2C5282}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.chip{padding:4px 12px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:11.5px;color:var(--ink2);cursor:pointer;font-weight:600}
+.chip.on{background:var(--acc-d);border-color:var(--acc-d);color:#F2F1E8}
+/* ===== vehicle grid ===== */
+.search{width:100%;padding:9px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff}
+.search:focus{outline:none;border-color:var(--acc)}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(295px,1fr));gap:10px;margin-top:10px}
+.vcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;transition:border-color .12s}
+.vcard:hover{border-color:var(--acc)}
+.vcard .vname{font-weight:700;font-size:14.5px}
+.vcard .vplate{font-size:11px;color:var(--ink3)}
+.vrow{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:3px}
+.recovbar{height:5px;background:var(--line);border-radius:3px;margin-top:7px;overflow:hidden}
+.recovbar i{display:block;height:100%;border-radius:3px;background:var(--lime)}
+.recovbar i.full{background:var(--acc)}
+/* ===== detail overlay ===== */
+#ovl{display:none;position:fixed;inset:0;background:rgba(20,30,22,.45);z-index:100}
+#ovl.on{display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:720px){#ovl.on{align-items:center}}
+#dpanel{background:var(--bg);width:100%;max-width:680px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+@media(min-width:720px){#dpanel{border-radius:16px}}
+.dhead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.dclose{border:none;background:var(--line);border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer;color:var(--ink2)}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:12.5px}
+dl.kv dt{color:var(--ink3)}dl.kv dd{text-align:right}
+.big{font-size:21px;font-weight:700}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input.mkt{width:130px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;font-size:14px;text-align:right;font-family:var(--mono)}
+.btn{padding:8px 16px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer}
+.btn-p{background:var(--acc-d);color:#F2F1E8}
+.btn-o{background:#fff;border:1px solid var(--line);color:var(--ink2)}
+.btn-dis{background:var(--line);color:var(--ink3);cursor:default}
+/* ===== tables ===== */
+table.t{width:100%;border-collapse:collapse;font-size:12px}
+table.t th{text-align:left;color:var(--ink3);font-weight:600;font-size:10.5px;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:6px;border-bottom:1px solid #F0EEE6;vertical-align:top}
+table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
+/* ===== summary stats ===== */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 8px;text-align:center}
+.stat .v{font-size:20px;font-weight:700;font-family:var(--mono)}
+.stat .l{font-size:10px;color:var(--ink3);margin-top:2px}
+/* ===== misc ===== */
+#toast-host{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{background:var(--acc-d);color:#fff;padding:9px 18px;border-radius:20px;font-size:12.5px;opacity:.96;transition:opacity .4s;max-width:90vw}
+.toast.err{background:var(--danger)}.toast.ok{background:var(--acc)}
+#spinner{display:none;position:fixed;inset:0;z-index:200;background:rgba(246,245,240,.55);align-items:center;justify-content:center}
+#spinner.on{display:flex}
+#spinner i{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{color:var(--ink3);font-size:12.5px;text-align:center;padding:24px 0}
+.note{font-size:10px;color:var(--ink3);line-height:1.6;margin-top:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-row">
+    <div class="brand">LIME <b>FLEET</b></div>
+    <div class="hdr-sub"><span id="sync-st">―</span><span id="ver"></span></div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-scr="vehicles" onclick="showScr('vehicles')">🚗 車両</button>
+    <button class="tab" data-scr="roi" onclick="showScr('roi')">💰 生涯ROI</button>
+    <button class="tab" data-scr="sold" onclick="showScr('sold')">📄 売却済</button>
+    <button class="tab" data-scr="settings" onclick="showScr('settings')">⚙ 設定</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===== 車両一覧 ===== -->
+  <section id="scr-vehicles" class="screen on">
+    <input class="search" id="vsearch" placeholder="🔍 車種・ナンバー・クラス・リース会社" oninput="renderVehicles()">
+    <div class="chips" id="vchips"></div>
+    <div class="sm ink3" id="vcount" style="margin-top:6px"></div>
+    <div class="vgrid" id="vgrid"></div>
+  </section>
+
+  <!-- ===== 生涯ROI ===== -->
+  <section id="scr-roi" class="screen">
+    <div class="stats" id="roi-stats"></div>
+    <div class="card" style="margin-top:12px">
+      <h3>🔔 売却候補（車検90日内・リース満了6ヶ月内・低稼働）</h3>
+      <table class="t"><tbody id="roi-cand"></tbody></table>
+    </div>
+    <div class="card">
+      <h3>車両別 生涯ROI（全車）</h3>
+      <table class="t">
+        <thead><tr><th>車両</th><th class="r">累計売上</th><th class="r">回収率</th><th class="r">生涯ROI</th></tr></thead>
+        <tbody id="roi-all"></tbody>
+      </table>
+      <div class="note" id="roi-note"></div>
+    </div>
+  </section>
+
+  <!-- ===== 売却済 ===== -->
+  <section id="scr-sold" class="screen">
+    <div class="card">
+      <h3>売却した車の生涯成績</h3>
+      <table class="t">
+        <thead><tr><th>車両</th><th class="r">累計売上</th><th class="r">取得</th><th class="r">売却額</th><th class="r">生涯ROI</th></tr></thead>
+        <tbody id="sold-rows"></tbody>
+      </table>
+      <div class="sm" id="sold-total" style="margin-top:8px;text-align:right;font-weight:700"></div>
+    </div>
+  </section>
+
+  <!-- ===== 設定 ===== -->
+  <section id="scr-settings" class="screen">
+    <div class="card">
+      <h3>🔗 Dropbox 連携</h3>
+      <div class="sm ink2" id="set-dbx-st" style="margin-bottom:10px">―</div>
+      <button class="btn btn-p" onclick="dbxAuthorize()">Dropbox と連携</button>
+      <button class="btn btn-o" onclick="reloadData()">🔄 再読込</button>
+      <button class="btn btn-o" onclick="dbxLogout()">連携解除</button>
+    </div>
+    <div class="card">
+      <h3>📊 データ状態</h3>
+      <dl class="kv" id="set-data-st"></dl>
+      <div class="note">車両マスタ・財務(取得価額/リース)＝レンタカー data.json（読み取りのみ・書き込みは LIME One から）。<br>ROI履歴・相場・見積＝システムデータ車両/data.json（このアプリが正本）。<br>相場ウォッチ＝market.json（Claude が月次更新・手動上書きが優先）。</div>
+    </div>
+    <div class="card">
+      <h3>ℹ️ LIME Fleet について</h3>
+      <div class="sm ink2" style="line-height:1.8">
+        車両資産管理システム — 1台ごとの財務・ROI・相場・売却見積の正本。<br>
+        バージョン: <b id="set-ver"></b><br>
+        Phase 1: 土台（ROI・売り時・相場手動）／Phase 2: リース契約条件／Phase 3: 相場自動／Phase 4: 見積3種
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== 車両詳細 ===== -->
+<div id="ovl" onclick="if(event.target===this)closeDetail()">
+  <div id="dpanel"></div>
+</div>
+
+<div id="toast-host"></div>
+<div id="spinner"><i></i></div>
+
+<script>
+'use strict';
+const APP_VERSION='2026-06-11';
+const DBX_APP_KEY='fly154tcdbz09x9';
+const PATH_RENTAL='/ライム共有DB/システムデータ（R）/data.json';
+const PATH_FLEET ='/ライム共有DB/システムデータ車両/data.json';
+const PATH_MARKET='/ライム共有DB/システムデータ車両/market.json';
+const FREEE_API_TOKEN='lime-freee-2026-k9Xz7Qp3Rm';
+const LS={token:'limeFleet_dbxToken',refresh:'limeFleet_dbxRefresh',verifier:'limeFleet_dbxVerifier',
+  cachedR:'limeFleet_cachedR',cachedF:'limeFleet_cachedF',cachedM:'limeFleet_cachedM',loadedAt:'limeFleet_loadedAt'};
+const DEMO=new URLSearchParams(location.search).get('demo')==='1';
+
+// ---------- helpers ----------
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const yen=n=>Math.round(Number(n)||0).toLocaleString('ja-JP');
+const pad2=n=>String(n).padStart(2,'0');
+const todayISO=()=>{const d=new Date();const tz=d.getTimezoneOffset()*60000;return new Date(d-tz).toISOString().slice(0,10)};
+const parseD=v=>{if(!v)return null;const d=new Date(v);return isNaN(d.getTime())?null:d};
+function daysBetween(a,b){const da=parseD(a),db=parseD(b);if(!da||!db)return 0;return Math.max(0,Math.round((db-da)/86400000))}
+function addDays(a,n){const d=parseD(a);if(!d)return '';d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+function ym(s){if(!s)return null;const m=String(s).match(/^(\d{4})-(\d{1,2})/);if(!m)return null;return m[1]+'-'+pad2(m[2])}
+function toast(msg,k){const t=document.createElement('div');t.className='toast'+(k?' '+k:'');t.textContent=msg;$('toast-host').appendChild(t);setTimeout(()=>t.style.opacity=0,2600);setTimeout(()=>t.remove(),3100)}
+function showSpinner(){$('spinner').classList.add('on')}
+function hideSpinner(){$('spinner').classList.remove('on')}
+
+// ---------- Dropbox PKCE ----------
+function getRedirectUri(){return location.origin+location.pathname}
+function genVerifier(){const a=new Uint8Array(48);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function shaB64Url(s){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function dbxAuthorize(){
+  const v=genVerifier();const ch=await shaB64Url(v);
+  sessionStorage.setItem(LS.verifier,v);
+  const p=new URLSearchParams({client_id:DBX_APP_KEY,response_type:'code',code_challenge:ch,code_challenge_method:'S256',redirect_uri:getRedirectUri(),token_access_type:'offline'});
+  location.href='https://www.dropbox.com/oauth2/authorize?'+p;
+}
+let DBX_TOKEN=localStorage.getItem(LS.token)||null;
+async function dbxHandleCallback(){
+  const url=new URL(location.href);
+  const code=url.searchParams.get('code');
+  if(!code) return false;
+  const v=sessionStorage.getItem(LS.verifier);
+  if(!v){toast('verifier紛失','err');return false}
+  showSpinner();
+  try{
+    const p=new URLSearchParams({code,grant_type:'authorization_code',client_id:DBX_APP_KEY,code_verifier:v,redirect_uri:getRedirectUri()});
+    const res=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:p.toString()});
+    if(!res.ok) throw new Error(res.status);
+    const d=await res.json();
+    DBX_TOKEN=d.access_token;
+    localStorage.setItem(LS.token,DBX_TOKEN);
+    if(d.refresh_token) localStorage.setItem(LS.refresh,d.refresh_token);
+    sessionStorage.removeItem(LS.verifier);
+    history.replaceState({},'',getRedirectUri());
+    toast('Dropbox 連携完了','ok');
+    return true;
+  }catch(e){toast('認証失敗 '+e.message,'err');return false}
+  finally{hideSpinner()}
+}
+async function dbxRefresh(){
+  const r=localStorage.getItem(LS.refresh);if(!r) return false;
+  try{
+    const p=new URLSearchParams({grant_type:'refresh_token',refresh_token:r,client_id:DBX_APP_KEY});
+    const res=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:p.toString()});
+    if(!res.ok) return false;
+    const d=await res.json();DBX_TOKEN=d.access_token;localStorage.setItem(LS.token,DBX_TOKEN);return true;
+  }catch(e){return false}
+}
+function dbxLogout(){localStorage.removeItem(LS.token);localStorage.removeItem(LS.refresh);DBX_TOKEN=null;toast('連携解除しました');renderSettings()}
+// Dropbox-API-Arg は ASCII 限定 (CLAUDE.md §4.1)
+function _asciiSafe(o){return JSON.stringify(o).replace(/[-￿]/g,c=>'\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4))}
+async function dbxDownload(path){
+  if(!DBX_TOKEN) throw new Error('未認証');
+  const doReq=()=>fetch('https://content.dropboxapi.com/2/files/download',{method:'POST',headers:{'Authorization':'Bearer '+DBX_TOKEN,'Dropbox-API-Arg':_asciiSafe({path})}});
+  let res=await doReq();
+  if(res.status===401){ if(await dbxRefresh()) res=await doReq(); }
+  if(res.status===409){const t=await res.text();throw new Error('not_found: '+path.split('/').pop()+' '+t.slice(0,60))}
+  if(!res.ok) throw new Error('DL fail '+res.status);
+  let rev=null;
+  try{ rev=(JSON.parse(res.headers.get('dropbox-api-result')||'{}').rev)||null; }catch(e){}
+  return {json:JSON.parse(await res.text()), rev};
+}
+
+// ---------- DATA ----------
+let DR=null;        // レンタカー data.json (読み取りのみ・車両マスタ+案件)
+let FD=null;        // Fleet data.json (このアプリの正本・読み書き)
+let FD_REV=null;    // Fleet data.json の Dropbox rev (競合検出用)
+let MK=null;        // market.json (Claude相場ウォッチ・読み取りのみ)
+
+async function loadAll(){
+  if(DEMO){ DR=demoR(); FD=demoF(); MK={updatedAt:'',prices:{}}; setSync('デモ'); return; }
+  if(!DBX_TOKEN){
+    const cR=localStorage.getItem(LS.cachedR),cF=localStorage.getItem(LS.cachedF),cM=localStorage.getItem(LS.cachedM);
+    if(cR&&cF){DR=JSON.parse(cR);FD=JSON.parse(cF);if(cM)MK=JSON.parse(cM);setSync('キャッシュ');toast('キャッシュから表示');return}
+    setSync('未連携');
+    throw new Error('Dropbox 未連携');
+  }
+  showSpinner();
+  try{
+    const [r,f,m]=await Promise.allSettled([dbxDownload(PATH_RENTAL),dbxDownload(PATH_FLEET),dbxDownload(PATH_MARKET)]);
+    if(r.status==='fulfilled') DR=r.value.json;
+    else { const cR=localStorage.getItem(LS.cachedR); if(cR) DR=JSON.parse(cR); toast('レンタカー: '+r.reason.message,'err'); }
+    if(f.status==='fulfilled'){ FD=f.value.json; FD_REV=f.value.rev; }
+    else { const cF=localStorage.getItem(LS.cachedF); if(cF){FD=JSON.parse(cF);FD_REV=null;} toast('Fleet正本: '+f.reason.message,'err'); }
+    if(m.status==='fulfilled') MK=m.value.json; // market.json は無くても黙認
+    if(DR) localStorage.setItem(LS.cachedR,JSON.stringify(DR));
+    if(FD) localStorage.setItem(LS.cachedF,JSON.stringify(FD));
+    if(MK) localStorage.setItem(LS.cachedM,JSON.stringify(MK));
+    localStorage.setItem(LS.loadedAt,new Date().toISOString());
+    setSync('同期済 '+new Date().toTimeString().slice(0,5));
+  } finally { hideSpinner(); }
+}
+function setSync(s){$('sync-st').textContent='🔗 '+s}
+async function reloadData(){ try{ await loadAll(); renderAll(); toast('再読込しました','ok'); }catch(e){ toast(e.message,'err'); } }
+
+// Fleet正本の保存 (rev競合検出・LIMEOneのフィールドマージほど書き込み頻度がないため rev 方式で十分)
+let _saving=false;
+async function saveFleet(){
+  if(DEMO){ toast('デモモード: 保存スキップ'); return true; }
+  if(!DBX_TOKEN){ toast('Dropbox未連携のため保存できません','err'); return false; }
+  if(_saving){ toast('保存中です…'); return false; }
+  _saving=true; showSpinner();
+  try{
+    FD.updatedAt=Date.now(); FD.updatedBy='LIME Fleet v'+APP_VERSION;
+    const arg={path:PATH_FLEET, mode: FD_REV?{'.tag':'update',update:FD_REV}:{'.tag':'overwrite'}, autorename:false, mute:true};
+    const doReq=()=>fetch('https://content.dropboxapi.com/2/files/upload',{method:'POST',
+      headers:{'Authorization':'Bearer '+DBX_TOKEN,'Dropbox-API-Arg':_asciiSafe(arg),'Content-Type':'application/octet-stream'},
+      body:JSON.stringify(FD,null,1)});
+    let res=await doReq();
+    if(res.status===401){ if(await dbxRefresh()) res=await doReq(); }
+    if(res.status===409){ toast('他端末の変更と競合 → 再読込します','err'); await loadAll(); renderAll(); return false; }
+    if(!res.ok) throw new Error('保存失敗 '+res.status);
+    const meta=await res.json(); FD_REV=meta.rev;
+    localStorage.setItem(LS.cachedF,JSON.stringify(FD));
+    toast('保存しました','ok');
+    return true;
+  }catch(e){ toast(e.message,'err'); return false; }
+  finally{ _saving=false; hideSpinner(); }
+}
+
+// ---------- 売上集計 (index_admin_mobile.html と完全一致のルール) ----------
+// 日数 = 終了−開始 (泊数)。calcAmounts(+1日) とは別規約 — 生涯ROI 3実装統一規約 (混ぜない)
+function rentalAmount(c){
+  const effEnd=c.useEnd||(c.recoveryCalledAt?String(c.recoveryCalledAt).slice(0,10):'');
+  const days=(c.useStart&&effEnd)?daysBetween(c.useStart,effEnd):0;
+  const unit=Number(c.unitPrice||0);
+  const gross=days*unit;
+  const disc=Number(c.discount||0);
+  return {days,total:Math.max(0,gross-disc)};
+}
+function rentalCases(){return (DR&&DR.cases)||[]}
+// 売上計上ゲート: キャンセル除外 + useEnd必須 + 一般貸渡は請求済以降 (PC freeeExportTargets と同条件)
+function billableRental(){
+  return rentalCases().filter(c=>{
+    if(c.status==='キャンセル') return false;
+    if(!c.useEnd) return false;
+    if(c.category==='一般' && !['請求済','入金済'].includes(c.status)) return false;
+    return true;
+  });
+}
+function _vplate(v){const p=v&&v.plate;if(!p)return '';return (p.area||'沖縄')+(p.no||'')+(p.kana||'')+(p.tail||'')}
+
+// ---------- freee 連携 (admin と同じ GAS JSONP・按分プール+金城ライブ) ----------
+let MAINT=null;
+function _plItem(bal,name){for(const b of (bal||[])){if(!b.total_line&&b.account_item_name===name)return Number(b.closing_balance||0)}return 0}
+function _currentFY(){const d=new Date();return d.getMonth()+1>=4?d.getFullYear():d.getFullYear()-1}
+function freeeFetchMaintenance(){
+  if(MAINT) return;
+  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url) return;
+  const fy=_currentFY()-1;
+  const go=(extra,onbal)=>{
+    const cb='fleetMnt_'+(window.__fseq=(window.__fseq||0)+1);
+    const s=document.createElement('script'); let done=false;
+    const clean=()=>{ try{delete window[cb]}catch(_){window[cb]=undefined} if(s.parentNode)s.parentNode.removeChild(s); };
+    const tmr=setTimeout(()=>{ if(done)return; done=true; clean(); },30000);
+    window[cb]=function(res){ if(done)return; done=true; clearTimeout(tmr); clean(); onbal((res&&res.ok&&res.report&&res.report.trial_pl&&res.report.trial_pl.balances)||[]); };
+    s.onerror=()=>{ if(done)return; done=true; clearTimeout(tmr); clean(); };
+    s.src=url+'?action=report&type=pl&fiscal_year='+fy+extra+'&token='+encodeURIComponent(FREEE_API_TOKEN)+'&callback='+cb;
+    document.head.appendChild(s);
+  };
+  go('',function(bal){
+    MAINT={insurance:0,taxDues:_plItem(bal,'租税公課'),vehicleTotal:_plItem(bal,'車両費'),kinjoTotal:0};
+    go('&partner_id=62512057',function(bal2){ MAINT.kinjoTotal=_plItem(bal2,'車両費');
+      go('&partner_id=10728966',function(bal3){ MAINT.insurance=_plItem(bal3,'保険料'); try{renderAll()}catch(e){} }); // 損保ジャパン=車両保険のみ
+    });
+  });
+}
+let KINJO_LIVE=null;
+function _kinjoLive(plate){return (KINJO_LIVE&&KINJO_LIVE.perVehicle&&Number(KINJO_LIVE.perVehicle[plate]))||0}
+function freeeFetchKinjoLive(){
+  if(KINJO_LIVE) return;
+  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url) return;
+  const cb='fleetKnj_'+Date.now();
+  const s=document.createElement('script'); let done=false;
+  const clean=()=>{ try{delete window[cb]}catch(_){window[cb]=undefined} if(s.parentNode)s.parentNode.removeChild(s); };
+  const tmr=setTimeout(()=>{ if(done)return; done=true; clean(); },30000);
+  window[cb]=function(res){ if(done)return; done=true; clearTimeout(tmr); clean(); if(res&&res.ok&&res.kinjo){ KINJO_LIVE=res.kinjo; try{renderAll()}catch(e){} } };
+  s.onerror=()=>{ if(done)return; done=true; clearTimeout(tmr); clean(); };
+  s.src=url+'?action=kinjoByVehicle&since=2026-06-01&token='+encodeURIComponent(FREEE_API_TOKEN)+'&callback='+cb;
+  document.head.appendChild(s);
+}
+
+// ---------- 相場 (手動 data.json.market > Claude market.json) ----------
+function marketOf(plate){
+  const m=(FD&&FD.market&&FD.market[plate])||null;
+  if(m&&Number(m.price)>0) return {price:Number(m.price),src:m.source||'手動',at:(m.updatedAt||'').slice(0,10),manual:true};
+  const w=(MK&&MK.prices&&MK.prices[plate])||null;
+  if(w&&Number(w.price)>0) return {price:Number(w.price),src:w.source||'相場ウォッチ',at:(MK.updatedAt||'').slice(0,10),manual:false};
+  return null;
+}
+
+// ---------- 生涯ROI (index_admin_mobile.html _lifeRows 完全踏襲・定数はFD正本から) ----------
+function _lifeRows(){
+  const today=todayISO();
+  const sinceStr=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+  const HIST=(FD&&FD.histRev)||{};
+  const KINJO=(FD&&FD.kinjoLife)||{};
+  const vehs=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車');
+  const live={},used12={};
+  billableRental().forEach(c=>{ if(!c.vehicleId)return; const ue=(c.useEnd||'').slice(0,10); if(ue>='2026-01-01') live[c.vehicleId]=(live[c.vehicleId]||0)+rentalAmount(c).total; });
+  rentalCases().forEach(c=>{ if(!c.vehicleId||c.status==='キャンセル'||!c.useStart)return; const s=c.useStart<sinceStr?sinceStr:c.useStart; const eRaw=c.useEnd||addDays(c.useStart,30); const e=eRaw>today?today:eRaw; const d=daysBetween(s,e); if(d>0) used12[c.vehicleId]=(used12[c.vehicleId]||0)+d; });
+  // 維持費按分プール率 (freee前期: 保険+租税公課+金城以外車両費 ÷ 取得原価合計)
+  const priceTotal=vehs.reduce((a,v)=>a+(Number(v.vehiclePrice)||0),0);
+  let poolRate=0;
+  if(MAINT&&priceTotal>0){ const kinjoOther=Math.max(0,(MAINT.vehicleTotal||0)-(MAINT.kinjoTotal||0)); poolRate=((MAINT.insurance||0)+(MAINT.taxDues||0)+kinjoOther)/priceTotal; }
+  return vehs.map(v=>{
+    const vp=_vplate(v); const h=HIST[vp]||{y2024:0,y2025:0};
+    const hist=(h.y2024||0)+(h.y2025||0); const r26=live[v.id]||0; const total=hist+r26;
+    const price=Number(v.vehiclePrice)||0; const sold=Number(v.soldPrice)||0;
+    // リース車は取得価額を前払いしていない: コスト=月額×経過月数(契約月数で頭打ち・実支出ベース)
+    const isLease=Number(v.leaseFee)>0;
+    let leaseMonths=0,leasePaid=0;
+    if(isLease){ const lp=Number(v.leasePeriod)||0; const lb=parseD(v.purchaseDate||v.firstRegistration); leaseMonths=lb?Math.max(1,(Date.now()-lb.getTime())/2629800000):12; if(lp>0)leaseMonths=Math.min(leaseMonths,lp); leasePaid=Math.round(Number(v.leaseFee)*leaseMonths); }
+    const invest=isLease?leasePaid:price;
+    const recov=invest>0?Math.round(total/invest*100):null;
+    let yearsHeld=1; const pd=parseD(v.purchaseDate); if(pd)yearsHeld=Math.max(0.5,(Date.now()-pd.getTime())/(365.25*864e5));
+    const kinjoLife=(KINJO[vp]||0)+_kinjoLive(vp);
+    const apportion=Math.round(price*poolRate*yearsHeld);
+    const runCost=kinjoLife+apportion;
+    const gross=isLease?(total-leasePaid-runCost):(total+sold-price-runCost);
+    const usedD=used12[v.id]||0;
+    const insp=(v.inspectionDate||'').slice(0,10);
+    let inspDays=null; if(insp)inspDays=insp<today?-daysBetween(insp,today):daysBetween(today,insp);
+    let leaseLeft=null;
+    if(isLease&&Number(v.leasePeriod)&&(v.purchaseDate||v.firstRegistration)){
+      const base=parseD(v.purchaseDate||v.firstRegistration);
+      if(base)leaseLeft=Math.round((base.getTime()+Number(v.leasePeriod)*2629800000-Date.now())/2629800000);
+    }
+    const mkt=marketOf(vp);
+    return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),grade:v.grade||'',cls:v.vehicleClass||'',
+      total,hist,r26,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,
+      isLease,leasePaid,leaseMonths,leaseFee:Number(v.leaseFee)||0,invest,mkt,sold_st:v.status==='売却済'};
+  }).filter(x=>x.total>0||x.price>0);
+}
+// 売り時判定 (admin と同一トリガー)
+function sellReasons(x){
+  const rs=[];
+  if(x.inspDays!=null&&x.inspDays<=90) rs.push(x.inspDays<0?'車検切れ':'車検'+x.inspDays+'日');
+  if(x.leaseLeft!=null&&x.leaseLeft<=6) rs.push(x.leaseLeft<0?'リース満了済':'リース満了'+x.leaseLeft+'ヶ月');
+  if(x.usedD<=20) rs.push('低稼働(直近'+x.usedD+'日)');
+  return rs;
+}
+function _soldRows(){
+  const S=(FD&&FD.sold)||{};
+  return Object.values(S).map(s=>{
+    const total=(s.y2024||0)+(s.y2025||0)+(s.y2026||0);
+    const roi=total+(s.sale||0)-(s.acq||0)-(s.kinjo||0);
+    return {model:s.model||'',plate:s.plate||'',soldYM:s.soldYM||'',total,acq:s.acq||0,sale:s.sale||0,kinjo:s.kinjo||0,roi,lease:!!s.lease};
+  }).sort((a,b)=>b.roi-a.roi);
+}
+
+// ---------- 画面 ----------
+let _rows=[];          // _lifeRows() キャッシュ (renderAll で更新)
+let _vfilter='all';    // 車両一覧チップ
+function showScr(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.scr===name));
+  $('scr-'+name).classList.add('on');
+  if(name==='settings') renderSettings();
+}
+function renderAll(){
+  _rows=DR?_lifeRows():[];
+  renderVehicles(); renderRoi(); renderSold(); renderSettings();
+}
+
+// --- 車両一覧 ---
+function setVFilter(f){_vfilter=f;renderVehicles()}
+function renderVehicles(){
+  const host=$('vgrid'); if(!host) return;
+  const q=($('vsearch').value||'').trim().toLowerCase();
+  const terms=q?q.split(/\s+/):[];
+  let rows=_rows.filter(x=>!x.sold_st);
+  // チップ集計 (フィルタ前の母集団で件数表示)
+  const base=rows;
+  const cnt={all:base.length,sell:base.filter(x=>sellReasons(x).length).length,
+    lease:base.filter(x=>x.isLease).length,own:base.filter(x=>!x.isLease).length,
+    paid:base.filter(x=>x.recov!=null&&x.recov>=100).length};
+  $('vchips').innerHTML=[
+    ['all','すべて '+cnt.all],['sell','🔔売り時 '+cnt.sell],['lease','リース '+cnt.lease],
+    ['own','自社 '+cnt.own],['paid','回収済 '+cnt.paid]
+  ].map(([k,l])=>`<button class="chip${_vfilter===k?' on':''}" onclick="setVFilter('${k}')">${l}</button>`).join('');
+  if(_vfilter==='sell') rows=rows.filter(x=>sellReasons(x).length);
+  else if(_vfilter==='lease') rows=rows.filter(x=>x.isLease);
+  else if(_vfilter==='own') rows=rows.filter(x=>!x.isLease);
+  else if(_vfilter==='paid') rows=rows.filter(x=>x.recov!=null&&x.recov>=100);
+  if(terms.length){
+    rows=rows.filter(x=>{
+      const t=(x.name+' '+x.grade+' '+x.plate+' '+x.cls+' '+(x.v.lessor||'')+' '+(x.v.maker||'')).toLowerCase();
+      return terms.every(w=>t.includes(w));
+    });
+  }
+  rows.sort((a,b)=>(a.cls||'').localeCompare(b.cls||'')||(a.name||'').localeCompare(b.name||''));
+  $('vcount').textContent='該当 '+rows.length+' 台';
+  if(!rows.length){host.innerHTML='<div class="empty">該当車両なし</div>';return}
+  host.innerHTML=rows.map(x=>{
+    const reasons=sellReasons(x);
+    const badges=
+      `<span class="badge ${x.isLease?'b-lease':'b-own'}">${x.isLease?'リース':'自社'}</span>`+
+      (x.inspDays!=null&&x.inspDays<=60?` <span class="badge ${x.inspDays<0?'b-danger':'b-warn'}">${x.inspDays<0?'車検切れ':'車検'+x.inspDays+'日'}</span>`:'')+
+      (x.leaseLeft!=null&&x.leaseLeft<=6?` <span class="badge b-warn">満了${x.leaseLeft<0?'済':x.leaseLeft+'ヶ月'}</span>`:'')+
+      (reasons.length?` <span class="badge b-info">🔔売り時</span>`:'');
+    const rec=x.recov==null?'—':x.recov+'%';
+    const recW=x.recov==null?0:Math.min(100,x.recov);
+    return `<div class="vcard" onclick="openDetail('${esc(x.vp)}')">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span class="vname">${esc(x.name)}</span><span class="xs ink3">${esc(x.cls)}</span>
+      </div>
+      <div class="vplate">${esc(x.plate)}${x.grade?' ・ '+esc(x.grade):''}</div>
+      <div style="margin-top:5px">${badges}</div>
+      <div class="vrow"><span class="ink3">累計売上</span><span class="num">¥${yen(x.total)}</span></div>
+      <div class="vrow"><span class="ink3">生涯ROI</span><span class="num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}</span></div>
+      <div class="vrow"><span class="ink3">相場</span><span class="num">${x.mkt?'¥'+yen(x.mkt.price):'<span class="ink3">未登録</span>'}</span></div>
+      <div class="recovbar"><i class="${recW>=100?'full':''}" style="width:${recW}%"></i></div>
+      <div class="xs ink3" style="margin-top:3px;text-align:right">回収率 ${rec}</div>
+    </div>`;
+  }).join('');
+}
+
+// --- 詳細 ---
+let _detailVp=null;
+function openDetail(vp){
+  const x=_rows.find(r=>r.vp===vp); if(!x) return;
+  _detailVp=vp;
+  const v=x.v;
+  const mkt=x.mkt;
+  // 簡易手取り試算 (Phase2で契約条件ベースに正確化)
+  let payoutHtml='';
+  if(mkt){
+    if(x.isLease){
+      const debt=x.leaseLeft!=null&&x.leaseLeft>0?Math.round(x.leaseFee*x.leaseLeft):0;
+      const net=mkt.price-debt;
+      payoutHtml=`<dl class="kv">
+        <dt>リース残債 概算</dt><dd class="num">¥${yen(debt)} <span class="xs ink3">(月額×残${x.leaseLeft!=null?Math.max(0,x.leaseLeft):'?'}ヶ月)</span></dd>
+        <dt>手取り目安</dt><dd class="num ${net>=0?'pos':'neg'}" style="font-weight:700">¥${yen(net)}</dd>
+      </dl><div class="note">⚠ 概算。中途解約金・所有権解除費用は Phase 2（契約条件登録）で正確化。</div>`;
+    }else{
+      payoutHtml=`<dl class="kv"><dt>手取り目安</dt><dd class="num pos" style="font-weight:700">¥${yen(mkt.price)}</dd></dl>
+      <div class="note">自社保有＝売却額がほぼ手取り（名義変更・整備費は別途）。</div>`;
+    }
+  }
+  const reasons=sellReasons(x);
+  const roiPct=x.invest>0?Math.round(x.gross/x.invest*100):null;
+  $('dpanel').innerHTML=`
+    <div class="dhead">
+      <div>
+        <div class="big">${esc(x.name)} <span class="sm ink3">${esc(x.grade)}</span></div>
+        <div class="sm ink3">${esc(x.plate)} ・ ${esc(x.cls)} ・ ${esc(v.color||'')} ・ ${esc(v.maker||'')}</div>
+        <div style="margin-top:4px">
+          <span class="badge ${x.isLease?'b-lease':'b-own'}">${x.isLease?'リース ('+esc(v.lessor||'')+')':'自社保有'}</span>
+          <span class="badge ${v.status==='稼働可'?'b-ok':'b-warn'}">${esc(v.status||'')}</span>
+          ${reasons.map(r=>`<span class="badge b-info">🔔${esc(r)}</span>`).join(' ')}
+        </div>
+      </div>
+      <button class="dclose" onclick="closeDetail()">✕</button>
+    </div>
+
+    <div class="card">
+      <h3>💴 財務</h3>
+      <dl class="kv">
+        <dt>取得価額</dt><dd class="num">¥${yen(x.price)}</dd>
+        <dt>購入日 / 初度登録</dt><dd>${esc(v.purchaseDate||'—')} / ${esc(v.firstRegistration||v.firstRegistrationRaw||'—')}</dd>
+        ${x.isLease?`
+        <dt>リース月額</dt><dd class="num">¥${yen(x.leaseFee)} × ${esc(String(v.leasePeriod||'?'))}ヶ月</dd>
+        <dt>支払累計 (経過${Math.round(x.leaseMonths)}ヶ月)</dt><dd class="num">¥${yen(x.leasePaid)}</dd>
+        <dt>リース残</dt><dd class="num">${x.leaseLeft!=null?(x.leaseLeft<0?'満了済':x.leaseLeft+'ヶ月'):'—'}</dd>
+        <dt>契約残価</dt><dd class="num">¥${yen(v.residualValue||0)}</dd>`:''}
+        <dt>車検満了</dt><dd>${esc(v.inspectionDate||'—')}${x.inspDays!=null?` <span class="xs ${x.inspDays<=60?'neg':'ink3'}">(${x.inspDays<0?'切れ':'残'+x.inspDays+'日'})</span>`:''}</dd>
+        <dt>走行距離</dt><dd class="num">${v.mileage?yen(v.mileage)+' km':'—'}</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <h3>📈 生涯ROI</h3>
+      <dl class="kv">
+        <dt>累計売上 2024-25</dt><dd class="num">¥${yen(x.hist)}</dd>
+        <dt>2026〜 (ライブ)</dt><dd class="num">¥${yen(x.r26)}</dd>
+        <dt><b>累計売上 合計</b></dt><dd class="num" style="font-weight:700">¥${yen(x.total)}</dd>
+        <dt>維持費 (金城整備)</dt><dd class="num">−¥${yen(x.kinjoLife)}</dd>
+        <dt>維持費 (保険/税 按分)</dt><dd class="num">${x.apportion?'−¥'+yen(x.apportion):'<span class="xs ink3">freee未接続</span>'}</dd>
+        <dt>${x.isLease?'リース支払累計':'取得価額'}</dt><dd class="num">−¥${yen(x.invest)}</dd>
+        <dt><b>生涯ROI</b></dt><dd class="num ${x.gross>=0?'pos':'neg'}" style="font-weight:700;font-size:16px">${x.gross>=0?'+':''}¥${yen(x.gross)}${roiPct!=null?` <span class="xs">(${roiPct>=0?'+':''}${roiPct}%)</span>`:''}</dd>
+        <dt>回収率 (累計売上÷投資)</dt><dd class="num">${x.recov!=null?x.recov+'%':'—'}</dd>
+        <dt>直近12ヶ月稼働</dt><dd class="num">${x.usedD} 日</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <h3>🏷 市場価格（売れる値段）</h3>
+      ${mkt?`<dl class="kv"><dt>現在の相場</dt><dd class="num" style="font-weight:700;font-size:16px">¥${yen(mkt.price)}</dd>
+        <dt>出どころ</dt><dd>${esc(mkt.src)}${mkt.at?' ・ '+esc(mkt.at):''}${mkt.manual?'':' <span class="xs ink3">(Claude相場ウォッチ)</span>'}</dd></dl>`
+        :'<div class="sm ink3" style="margin-bottom:8px">未登録 — 手動入力するか、Claude相場ウォッチ(Phase 3)で自動化</div>'}
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <input class="mkt" id="mkt-input" type="number" placeholder="例 1450000" value="${mkt&&mkt.manual?mkt.price:''}">
+        <button class="btn btn-p" onclick="saveMarket()">💾 相場を保存</button>
+        ${mkt&&mkt.manual?'<button class="btn btn-o" onclick="clearMarket()">クリア</button>':''}
+      </div>
+      ${payoutHtml?`<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)"><div class="sm" style="font-weight:700;margin-bottom:4px">💰 売却時の手取り 簡易試算</div>${payoutHtml}</div>`:''}
+    </div>
+
+    <div class="card">
+      <h3>📄 見積を作成</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-dis">💎 お客様向け見積書</button>
+        <button class="btn btn-dis">🤝 業者交渉シート</button>
+        <button class="btn btn-dis">📋 社内判断メモ</button>
+      </div>
+      <div class="note">Phase 4 で実装（同じ数字の源泉からワンタップ生成）。</div>
+    </div>`;
+  $('ovl').classList.add('on');
+  document.body.style.overflow='hidden';
+}
+function closeDetail(){$('ovl').classList.remove('on');document.body.style.overflow='';_detailVp=null}
+async function saveMarket(){
+  if(!_detailVp) return;
+  const val=Number($('mkt-input').value);
+  if(!(val>0)){toast('金額を入力してください','err');return}
+  if(!FD.market) FD.market={};
+  FD.market[_detailVp]={price:val,source:'手動',updatedAt:todayISO(),note:''};
+  const ok=await saveFleet();
+  if(ok){ renderAll(); openDetail(_detailVp); }
+}
+async function clearMarket(){
+  if(!_detailVp||!FD.market) return;
+  delete FD.market[_detailVp];
+  const ok=await saveFleet();
+  if(ok){ renderAll(); openDetail(_detailVp); }
+}
+
+// --- 生涯ROI タブ ---
+function renderRoi(){
+  const stEl=$('roi-stats'),candEl=$('roi-cand'),allEl=$('roi-all'); if(!stEl) return;
+  const rows=_rows.filter(x=>!x.sold_st);
+  if(!rows.length){stEl.innerHTML='';candEl.innerHTML='<tr><td class="empty">データなし</td></tr>';allEl.innerHTML='';return}
+  const paid=rows.filter(x=>x.recov!=null&&x.recov>=100).length;
+  const cands=rows.map(x=>({x,reasons:sellReasons(x)})).filter(c=>c.reasons.length).sort((a,b)=>(b.x.recov||0)-(a.x.recov||0));
+  // 特定率
+  const attr=rows.reduce((a,x)=>a+x.total,0);
+  let un26=0; billableRental().forEach(c=>{ if(c.vehicleId)return; const ue=(c.useEnd||'').slice(0,10); if(ue>='2026-01-01') un26+=rentalAmount(c).total; });
+  const unattr=((FD&&FD.histUnattr&&((FD.histUnattr.y2024||0)+(FD.histUnattr.y2025||0)))||0)+un26;
+  const cover=(attr+unattr)>0?Math.round(attr/(attr+unattr)*100):0;
+  stEl.innerHTML=`
+    <div class="stat"><div class="v">${rows.length}</div><div class="l">保有台数</div></div>
+    <div class="stat"><div class="v pos">${paid}</div><div class="l">💰回収済み(100%超)</div></div>
+    <div class="stat"><div class="v" style="color:var(--warn)">${cands.length}</div><div class="l">🔔売却候補</div></div>
+    <div class="stat"><div class="v">${cover}%</div><div class="l">データ特定率</div></div>`;
+  candEl.innerHTML=cands.length?cands.map(c=>{
+    const x=c.x;
+    return `<tr onclick="openDetail('${esc(x.vp)}')" style="cursor:pointer">
+      <td><b>${esc(x.name)}</b> <span class="xs ink3">${esc(x.plate)}</span><br>
+      <span class="xs">${c.reasons.map(r=>`<span class="badge b-warn">${esc(r)}</span>`).join(' ')}</span></td>
+      <td class="r num">回収 ${x.recov!=null?x.recov+'%':'—'}<br><span class="${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}</span></td>
+    </tr>`;
+  }).join(''):'<tr><td class="empty">現在 売却候補なし</td></tr>';
+  const sorted=[...rows].sort((a,b)=>b.gross-a.gross);
+  allEl.innerHTML=sorted.map(x=>`<tr onclick="openDetail('${esc(x.vp)}')" style="cursor:pointer">
+    <td><b>${esc(x.name)}</b> <span class="xs ink3">${esc(x.plate)}</span> <span class="badge ${x.isLease?'b-lease':'b-own'}">${x.isLease?'リース':'自社'}</span></td>
+    <td class="r num">¥${yen(x.total)}</td>
+    <td class="r num">${x.recov!=null?x.recov+'%':'—'}</td>
+    <td class="r num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}</td>
+  </tr>`).join('');
+  $('roi-note').textContent='リース=実支出ベース(月額×経過月数) / 自社保有=売上+売却−取得−維持費。自社現役は残価未計上=ROIは下限、回収率で見る。維持費=金城実額'+(MAINT?'+保険/税按分(freee)':'(保険/税按分はfreee未接続)')+'。2024-25売上は損保代車管理簿再集計済(特定率ほぼ100%)。';
+}
+
+// --- 売却済 ---
+function renderSold(){
+  const host=$('sold-rows'); if(!host) return;
+  const rows=_soldRows();
+  if(!rows.length){host.innerHTML='<tr><td class="empty">データなし</td></tr>';$('sold-total').textContent='';return}
+  host.innerHTML=rows.map(s=>`<tr>
+    <td><b>${esc(s.model)}</b> <span class="xs ink3">${esc(s.plate)}</span><br><span class="xs ink3">${esc(s.soldYM)} 売却${s.lease?' ・リース':''}</span></td>
+    <td class="r num">¥${yen(s.total)}</td>
+    <td class="r num">¥${yen(s.acq)}</td>
+    <td class="r num">¥${yen(s.sale)}</td>
+    <td class="r num ${s.roi>=0?'pos':'neg'}" style="font-weight:700">${s.roi>=0?'+':''}¥${yen(s.roi)}</td>
+  </tr>`).join('');
+  const sum=rows.reduce((a,s)=>a+s.roi,0);
+  $('sold-total').innerHTML=`合計 ${rows.length}台: <span class="num ${sum>=0?'pos':'neg'}">${sum>=0?'+':''}¥${yen(sum)}</span>`;
+}
+
+// --- 設定 ---
+function renderSettings(){
+  const stEl=$('set-dbx-st'),dEl=$('set-data-st'); if(!stEl) return;
+  stEl.textContent=DEMO?'デモモード (?demo=1)':(DBX_TOKEN?'✅ 連携済み':'未連携 — 「Dropbox と連携」を押してください');
+  const fmt=ts=>ts?new Date(ts).toLocaleString('ja-JP'):'—';
+  dEl.innerHTML=`
+    <dt>レンタカー data.json</dt><dd>${DR?'✅ '+((DR.vehicles||[]).length)+'台 / '+((DR.cases||[]).length)+'案件':'—'}</dd>
+    <dt>Fleet 正本 data.json</dt><dd>${FD?'✅ schemaV'+((FD.meta&&FD.meta.schemaVersion)||'?')+' / 相場'+Object.keys(FD.market||{}).length+'件':'—'}</dd>
+    <dt>market.json (相場ウォッチ)</dt><dd>${MK?(MK.updatedAt?'✅ '+esc(MK.updatedAt):'空 (Phase 3 で自動化)'):'—'}</dd>
+    <dt>freee 按分/金城ライブ</dt><dd>${MAINT?'✅ 接続':'未接続'} / ${KINJO_LIVE?'✅':'—'}</dd>
+    <dt>最終読込</dt><dd>${esc(fmt(localStorage.getItem(LS.loadedAt)))}</dd>`;
+  $('set-ver').textContent='v'+APP_VERSION;
+}
+
+// ---------- デモデータ ----------
+function demoR(){
+  const today=todayISO();
+  const mk=(id,tail,cls,name,grade,lease,price,fee,period,resid,purch,insp,st)=>({
+    id,plate:{area:'沖縄',no:cls==='K'?'582':'506',kana:'わ',tail},plateDisplay:'沖縄 '+(cls==='K'?'582':'506')+' わ '+tail,
+    vehicleClass:cls,name,grade,color:'白',maker:'デモ',firstRegistration:'2023-04-01',purchaseDate:purch,
+    vehiclePrice:price,leaseTotal:0,leasePeriod:period,leaseFee:fee,residualValue:resid,lessor:lease?'デモリース':'',
+    dealer:'',status:st||'稼働可',inspectionDate:insp,mileage:30000,
+  });
+  return {
+    settings:{},
+    vehicles:[
+      mk('v-1','1001','K','ムーヴ','X',true,1300000,15600,60,460000,'2023-11-01',addDays(today,45)),
+      mk('v-2','1002','S','フィット','BASIC',false,1800000,0,0,0,'2023-06-01',addDays(today,300)),
+      mk('v-3','1003','WS','セレナ','HW',true,3400000,42000,48,1200000,'2024-02-01',addDays(today,120)),
+      mk('v-4','1004','K','タント','L',true,1400000,16000,60,480000,'2022-01-01',addDays(today,-10)),
+      mk('v-5','1005','S','カムリ','WS',false,2500000,0,0,0,'2022-08-01',addDays(today,40)),
+    ],
+    cases:[
+      {id:'c1',vehicleId:'v-1',status:'入金済',category:'保険',useStart:'2026-02-01',useEnd:'2026-03-01',unitPrice:5500,discount:0},
+      {id:'c2',vehicleId:'v-2',status:'請求済',category:'保険',useStart:'2026-04-01',useEnd:'2026-05-10',unitPrice:6600,discount:0},
+      {id:'c3',vehicleId:'v-3',status:'入金済',category:'一般',useStart:'2026-05-01',useEnd:'2026-05-05',unitPrice:11000,discount:0},
+      {id:'c4',vehicleId:'v-5',status:'請求済',category:'保険',useStart:'2026-01-10',useEnd:'2026-02-20',unitPrice:7700,discount:5000},
+    ]
+  };
+}
+function demoF(){
+  return {
+    meta:{system:'LIME Fleet (demo)',schemaVersion:1},
+    histRev:{'沖縄582わ1001':{y2024:420000,y2025:980000},'沖縄506わ1002':{y2024:380000,y2025:1100000},
+      '沖縄506わ1003':{y2024:0,y2025:1500000},'沖縄582わ1004':{y2024:610000,y2025:700000},'沖縄506わ1005':{y2024:520000,y2025:1260000}},
+    histUnattr:{y2024:0,y2025:10000},
+    kinjoLife:{'沖縄582わ1001':32000,'沖縄506わ1005':67000},
+    sold:{'demo1':{model:'デモVOXY',plate:'303 わ 9999',acq:3000000,sale:2900000,soldYM:'2026-01',lease:false,y2024:1500000,y2025:1200000,y2026:0,kinjo:50000}},
+    market:{'沖縄506わ1005':{price:1850000,source:'手動',updatedAt:'2026-06-01'}},
+    leaseTerms:{},quotes:[]
+  };
+}
+
+// ---------- init ----------
+window.addEventListener('DOMContentLoaded',async()=>{
+  $('ver').textContent='v'+APP_VERSION;
+  if(!DEMO) await dbxHandleCallback();
+  try{ await loadAll(); }catch(e){ /* 未連携: 設定タブへ誘導 */ showScr('settings'); }
+  renderAll();
+  if(!DEMO){ try{freeeFetchMaintenance()}catch(e){} try{freeeFetchKinjoLive()}catch(e){} }
+});
+</script>
+</body>
+</html>
