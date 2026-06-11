@@ -1862,7 +1862,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-10';
+const APP_VERSION = '2026-06-11';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2620,6 +2620,24 @@ function getSettings(){ return DATA?.settings || {}; }
 function _stampUpdated(c){
   c.updatedAt = Date.now();
   c.updatedBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
+}
+
+// 2026-06-11: 回収完了等でメーターが入ったら、車両マスタ mileage を最新(最大)に追従させる。
+//   走行距離はマスタに手入力されず全車0=案件の meterAtReturn が実質の最新値。これを定位置にも反映。
+//   増える一方なので「現在値より大きい時だけ上書き」=順不同編集に強い(updatedAt不要)。PC _syncVehicleMileage と同一ロジック。
+function _syncVehicleMileage(c){
+  try{
+    if(!c || !c.vehicleId || !Array.isArray(DATA.vehicles)) return;
+    const cand = [c.meterAtReturn, c.meterAtDispatch]
+      .map(x => (x != null && x !== '') ? Number(x) : null)
+      .filter(x => x != null && isFinite(x) && x >= 0);
+    if(!cand.length) return;
+    const m = Math.max.apply(null, cand);
+    const v = DATA.vehicles.find(x => x.id === c.vehicleId);
+    if(!v) return;
+    const cur = Number(v.mileage) || 0;
+    if(m > cur) v.mileage = m;
+  }catch(e){ console.warn('syncVehicleMileage failed:', e); }
 }
 
 function getCheckSheets(c, kind){
@@ -3950,6 +3968,7 @@ async function onConfirmDo(){
       c.status = '返却済';
     }
     _stampUpdated(c);
+    _syncVehicleMileage(c);  // 返却/貸出メーター → 車両マスタ mileage へ追従 (走行距離を定位置に最新化)
 
     // 3. Dropboxに保存
     await saveToDropbox();
