@@ -79,7 +79,7 @@ table.t th{text-align:left;color:var(--ink3);font-weight:600;font-size:10.5px;pa
 table.t td{padding:6px;border-bottom:1px solid #F0EEE6;vertical-align:top}
 table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
 /* ===== summary stats ===== */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
 @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 8px;text-align:center}
 .stat .v{font-size:20px;font-weight:700;font-family:var(--mono)}
@@ -184,7 +184,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
 
 <script>
 'use strict';
-const APP_VERSION='2026-06-11';
+const APP_VERSION='2026-06-11b';
 const DBX_APP_KEY='fly154tcdbz09x9';
 const PATH_RENTAL='/ライム共有DB/システムデータ（R）/data.json';
 const PATH_FLEET ='/ライム共有DB/システムデータ車両/data.json';
@@ -272,7 +272,7 @@ let FD_REV=null;    // Fleet data.json の Dropbox rev (競合検出用)
 let MK=null;        // market.json (Claude相場ウォッチ・読み取りのみ)
 
 async function loadAll(){
-  if(DEMO){ DR=demoR(); FD=demoF(); MK={updatedAt:'',prices:{}}; setSync('デモ'); return; }
+  if(DEMO){ DR=demoR(); FD=demoF(); MK=demoM(); setSync('デモ'); return; }
   if(!DBX_TOKEN){
     const cR=localStorage.getItem(LS.cachedR),cF=localStorage.getItem(LS.cachedF),cM=localStorage.getItem(LS.cachedM);
     if(cR&&cF){DR=JSON.parse(cR);FD=JSON.parse(cF);if(cM)MK=JSON.parse(cM);setSync('キャッシュ');toast('キャッシュから表示');return}
@@ -385,11 +385,37 @@ function freeeFetchKinjoLive(){
 }
 
 // ---------- 相場 (手動 data.json.market > Claude market.json) ----------
-function marketOf(plate){
+// market.json は車種グループ単位 (groups[key].history 末尾が最新・金額は万円)。
+// 正規化 _mkNorm は システムデータ車両/_market_init.js の norm() と完全一致させること。
+function _mkNorm(s){
+  return String(s||'').replace(/[\s　]/g,'')
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0))
+    .replace(/[\-－‐]/g,'').toUpperCase();
+}
+function marketGroupOf(v){
+  if(!MK||!MK.groups||!v) return null;
+  const n=_mkNorm(v.name); if(!n) return null;
+  let bestKey=null,bestG=null,bestLen=0;
+  Object.keys(MK.groups).forEach(key=>{
+    const g=MK.groups[key];
+    (g.names||[key]).forEach(nm=>{
+      const k=_mkNorm(nm);
+      if(k&&n.indexOf(k)>=0&&k.length>bestLen){bestKey=key;bestG=g;bestLen=k.length}
+    });
+  });
+  if(!bestG) return null;
+  const h=bestG.history||[]; const last=h.length?h[h.length-1]:null;
+  if(!last||!(Number(last.avgMan)>0)) return null;
+  return {key:bestKey,label:bestG.label||bestKey,last};
+}
+function marketOf(plate,v){
   const m=(FD&&FD.market&&FD.market[plate])||null;
   if(m&&Number(m.price)>0) return {price:Number(m.price),src:m.source||'手動',at:(m.updatedAt||'').slice(0,10),manual:true};
   const w=(MK&&MK.prices&&MK.prices[plate])||null;
   if(w&&Number(w.price)>0) return {price:Number(w.price),src:w.source||'相場ウォッチ',at:(MK.updatedAt||'').slice(0,10),manual:false};
+  const g=marketGroupOf(v);
+  if(g) return {price:Math.round(Number(g.last.avgMan)*10000),src:'相場ウォッチ・'+(g.label||g.key),at:(g.last.date||'').slice(0,10),manual:false,
+    band:{low:Number(g.last.lowMan)||0,high:Number(g.last.highMan)||0},group:g.key};
   return null;
 }
 
@@ -409,7 +435,11 @@ function _lifeRows(){
   if(MAINT&&priceTotal>0){ const kinjoOther=Math.max(0,(MAINT.vehicleTotal||0)-(MAINT.kinjoTotal||0)); poolRate=((MAINT.insurance||0)+(MAINT.taxDues||0)+kinjoOther)/priceTotal; }
   return vehs.map(v=>{
     const vp=_vplate(v); const h=HIST[vp]||{y2024:0,y2025:0};
-    const hist=(h.y2024||0)+(h.y2025||0); const r26=live[v.id]||0; const total=hist+r26;
+    const hist=(h.y2024||0)+(h.y2025||0); const r26=live[v.id]||0;
+    // システム外売上 (法人年契約など・FD.extraRev。例: セレナ8959=八重瀬町役場 月次請求)
+    const extraList=(FD&&FD.extraRev&&FD.extraRev[vp])||[];
+    const extra=extraList.reduce((a,e)=>a+(e.y2023||0)+(e.y2024||0)+(e.y2025||0)+(e.y2026||0),0);
+    const total=hist+r26+extra;
     const price=Number(v.vehiclePrice)||0; const sold=Number(v.soldPrice)||0;
     // リース車は取得価額を前払いしていない: コスト=月額×経過月数(契約月数で頭打ち・実支出ベース)
     const isLease=Number(v.leaseFee)>0;
@@ -430,10 +460,10 @@ function _lifeRows(){
       const base=parseD(v.purchaseDate||v.firstRegistration);
       if(base)leaseLeft=Math.round((base.getTime()+Number(v.leasePeriod)*2629800000-Date.now())/2629800000);
     }
-    const mkt=marketOf(vp);
+    const mkt=marketOf(vp,v);
     return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),grade:v.grade||'',cls:v.vehicleClass||'',
-      total,hist,r26,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,
-      isLease,leasePaid,leaseMonths,leaseFee:Number(v.leaseFee)||0,invest,mkt,sold_st:v.status==='売却済'};
+      total,hist,r26,extra,extraList,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,
+      isLease,leasePaid,leaseMonths,leaseFee:Number(v.leaseFee)||0,invest,mkt,yearsHeld,sold_st:v.status==='売却済'};
   }).filter(x=>x.total>0||x.price>0);
 }
 // 売り時判定 (admin と同一トリガー)
@@ -447,7 +477,8 @@ function sellReasons(x){
 function _soldRows(){
   const S=(FD&&FD.sold)||{};
   return Object.values(S).map(s=>{
-    const total=(s.y2024||0)+(s.y2025||0)+(s.y2026||0);
+    // revTotal = 通算売上の手動訂正 (年別内訳なし・y合計より優先)
+    const total=(s.revTotal!=null)?Number(s.revTotal):((s.y2024||0)+(s.y2025||0)+(s.y2026||0));
     const roi=total+(s.sale||0)-(s.acq||0)-(s.kinjo||0);
     return {model:s.model||'',plate:s.plate||'',soldYM:s.soldYM||'',total,acq:s.acq||0,sale:s.sale||0,kinjo:s.kinjo||0,roi,lease:!!s.lease};
   }).sort((a,b)=>b.roi-a.roi);
@@ -509,7 +540,7 @@ function renderVehicles(){
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <span class="vname">${esc(x.name)}</span><span class="xs ink3">${esc(x.cls)}</span>
       </div>
-      <div class="vplate">${esc(x.plate)}${x.grade?' ・ '+esc(x.grade):''}</div>
+      <div class="vplate">${esc(x.plate)}${x.grade?' ・ '+esc(x.grade):''} ・ 保有${x.yearsHeld.toFixed(1)}年</div>
       <div style="margin-top:5px">${badges}</div>
       <div class="vrow"><span class="ink3">累計売上</span><span class="num">¥${yen(x.total)}</span></div>
       <div class="vrow"><span class="ink3">生涯ROI</span><span class="num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}</span></div>
@@ -563,6 +594,7 @@ function openDetail(vp){
       <dl class="kv">
         <dt>取得価額</dt><dd class="num">¥${yen(x.price)}</dd>
         <dt>購入日 / 初度登録</dt><dd>${esc(v.purchaseDate||'—')} / ${esc(v.firstRegistration||v.firstRegistrationRaw||'—')}</dd>
+        <dt>保有年数 (稼働年数)</dt><dd class="num">${x.yearsHeld.toFixed(1)} 年</dd>
         ${x.isLease?`
         <dt>リース月額</dt><dd class="num">¥${yen(x.leaseFee)} × ${esc(String(v.leasePeriod||'?'))}ヶ月</dd>
         <dt>支払累計 (経過${Math.round(x.leaseMonths)}ヶ月)</dt><dd class="num">¥${yen(x.leasePaid)}</dd>
@@ -577,6 +609,7 @@ function openDetail(vp){
       <h3>📈 生涯ROI</h3>
       <dl class="kv">
         <dt>累計売上 2024-25</dt><dd class="num">¥${yen(x.hist)}</dd>
+        ${x.extra?x.extraList.map(e=>`<dt>${esc(e.label||'システム外売上')}</dt><dd class="num">¥${yen((e.y2023||0)+(e.y2024||0)+(e.y2025||0)+(e.y2026||0))} <span class="xs ink3">(${esc((e.source||'').slice(0,20))})</span></dd>`).join(''):''}
         <dt>2026〜 (ライブ)</dt><dd class="num">¥${yen(x.r26)}</dd>
         <dt><b>累計売上 合計</b></dt><dd class="num" style="font-weight:700">¥${yen(x.total)}</dd>
         <dt>維持費 (金城整備)</dt><dd class="num">−¥${yen(x.kinjoLife)}</dd>
@@ -591,8 +624,9 @@ function openDetail(vp){
     <div class="card">
       <h3>🏷 市場価格（売れる値段）</h3>
       ${mkt?`<dl class="kv"><dt>現在の相場</dt><dd class="num" style="font-weight:700;font-size:16px">¥${yen(mkt.price)}</dd>
-        <dt>出どころ</dt><dd>${esc(mkt.src)}${mkt.at?' ・ '+esc(mkt.at):''}${mkt.manual?'':' <span class="xs ink3">(Claude相場ウォッチ)</span>'}</dd></dl>`
-        :'<div class="sm ink3" style="margin-bottom:8px">未登録 — 手動入力するか、Claude相場ウォッチ(Phase 3)で自動化</div>'}
+        ${mkt.band?`<dt>相場帯 (落札)</dt><dd class="num">¥${yen(mkt.band.low*10000)} 〜 ¥${yen(mkt.band.high*10000)}</dd>`:''}
+        <dt>出どころ</dt><dd>${esc(mkt.src)}${mkt.at?' ・ '+esc(mkt.at):''}${mkt.manual?'':' <span class="xs ink3">(月次ウォッチ・車種平均=参考値。確定値は手動入力が優先)</span>'}</dd></dl>`
+        :'<div class="sm ink3" style="margin-bottom:8px">未登録 — 手動入力するか、月次のClaude相場ウォッチ取得待ち</div>'}
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
         <input class="mkt" id="mkt-input" type="number" placeholder="例 1450000" value="${mkt&&mkt.manual?mkt.price:''}">
         <button class="btn btn-p" onclick="saveMarket()">💾 相場を保存</button>
@@ -642,10 +676,15 @@ function renderRoi(){
   let un26=0; billableRental().forEach(c=>{ if(c.vehicleId)return; const ue=(c.useEnd||'').slice(0,10); if(ue>='2026-01-01') un26+=rentalAmount(c).total; });
   const unattr=((FD&&FD.histUnattr&&((FD.histUnattr.y2024||0)+(FD.histUnattr.y2025||0)))||0)+un26;
   const cover=(attr+unattr)>0?Math.round(attr/(attr+unattr)*100):0;
+  // 平均ROI率 = Σ生涯ROI ÷ Σ投資額 (加重平均・投資1円あたりの利益)
+  const sumGross=rows.reduce((a,x)=>a+x.gross,0);
+  const sumInvest=rows.reduce((a,x)=>a+x.invest,0);
+  const avgRoi=sumInvest>0?Math.round(sumGross/sumInvest*100):null;
   stEl.innerHTML=`
     <div class="stat"><div class="v">${rows.length}</div><div class="l">保有台数</div></div>
     <div class="stat"><div class="v pos">${paid}</div><div class="l">💰回収済み(100%超)</div></div>
     <div class="stat"><div class="v" style="color:var(--warn)">${cands.length}</div><div class="l">🔔売却候補</div></div>
+    <div class="stat"><div class="v ${avgRoi!=null&&avgRoi>=0?'pos':'neg'}">${avgRoi!=null?(avgRoi>=0?'+':'')+avgRoi+'%':'—'}</div><div class="l">平均ROI率 (Σ生涯ROI÷Σ投資)</div></div>
     <div class="stat"><div class="v">${cover}%</div><div class="l">データ特定率</div></div>`;
   candEl.innerHTML=cands.length?cands.map(c=>{
     const x=c.x;
@@ -678,7 +717,10 @@ function renderSold(){
     <td class="r num ${s.roi>=0?'pos':'neg'}" style="font-weight:700">${s.roi>=0?'+':''}¥${yen(s.roi)}</td>
   </tr>`).join('');
   const sum=rows.reduce((a,s)=>a+s.roi,0);
-  $('sold-total').innerHTML=`合計 ${rows.length}台: <span class="num ${sum>=0?'pos':'neg'}">${sum>=0?'+':''}¥${yen(sum)}</span>`;
+  const sumAcq=rows.reduce((a,s)=>a+s.acq,0);
+  const avgPct=sumAcq>0?Math.round(sum/sumAcq*100):null;
+  $('sold-total').innerHTML=`合計 ${rows.length}台: <span class="num ${sum>=0?'pos':'neg'}">${sum>=0?'+':''}¥${yen(sum)}</span>`+
+    (avgPct!=null?` ・ 平均ROI率 <span class="num ${avgPct>=0?'pos':'neg'}">${avgPct>=0?'+':''}${avgPct}%</span> <span class="xs ink3">(ΣROI÷Σ取得)</span>`:'');
 }
 
 // --- 設定 ---
@@ -689,7 +731,7 @@ function renderSettings(){
   dEl.innerHTML=`
     <dt>レンタカー data.json</dt><dd>${DR?'✅ '+((DR.vehicles||[]).length)+'台 / '+((DR.cases||[]).length)+'案件':'—'}</dd>
     <dt>Fleet 正本 data.json</dt><dd>${FD?'✅ schemaV'+((FD.meta&&FD.meta.schemaVersion)||'?')+' / 相場'+Object.keys(FD.market||{}).length+'件':'—'}</dd>
-    <dt>market.json (相場ウォッチ)</dt><dd>${MK?(MK.updatedAt?'✅ '+esc(MK.updatedAt):'空 (Phase 3 で自動化)'):'—'}</dd>
+    <dt>market.json (相場ウォッチ)</dt><dd>${MK?(MK.groups?'✅ '+Object.keys(MK.groups).length+'グループ'+(MK.updatedAt?' / '+esc(MK.updatedAt):' / 相場未取得'):(MK.updatedAt?'✅ '+esc(MK.updatedAt):'空')):'—'}</dd>
     <dt>freee 按分/金城ライブ</dt><dd>${MAINT?'✅ 接続':'未接続'} / ${KINJO_LIVE?'✅':'—'}</dd>
     <dt>最終読込</dt><dd>${esc(fmt(localStorage.getItem(LS.loadedAt)))}</dd>`;
   $('set-ver').textContent='v'+APP_VERSION;
@@ -730,7 +772,21 @@ function demoF(){
     kinjoLife:{'沖縄582わ1001':32000,'沖縄506わ1005':67000},
     sold:{'demo1':{model:'デモVOXY',plate:'303 わ 9999',acq:3000000,sale:2900000,soldYM:'2026-01',lease:false,y2024:1500000,y2025:1200000,y2026:0,kinjo:50000}},
     market:{'沖縄506わ1005':{price:1850000,source:'手動',updatedAt:'2026-06-01'}},
+    extraRev:{'沖縄506わ1003':[{label:'デモ法人 年契約',source:'demo',y2024:300000,y2025:360000}]},
     leaseTerms:{},quotes:[]
+  };
+}
+function demoM(){
+  return {
+    meta:{note:'demo'},updatedAt:'2026-06-11',prices:{},
+    groups:{
+      'ムーヴ':{label:'ダイハツ ムーヴ',maker:'ダイハツ',names:['ムーヴ'],cond:{yearFrom:2022,yearTo:2025,kmMax:100000,color:''},watch:'保有',vehicles:['沖縄 582 わ 1001'],
+        history:[{date:'2026-06-11',count:38,lowMan:62,highMan:118,avgMan:88,topYear:'2023年',note:'demo'}]},
+      'フィット':{label:'ホンダ フィット',maker:'ホンダ',names:['フィット'],cond:{yearFrom:2023,yearTo:2026,kmMax:100000,color:''},watch:'保有',vehicles:['沖縄 506 わ 1002'],
+        history:[{date:'2026-06-11',count:51,lowMan:95,highMan:178,avgMan:139,topYear:'2024年',note:'demo'}]},
+      'カムリ':{label:'トヨタ カムリ',maker:'トヨタ',names:['カムリ'],cond:{yearFrom:2019,yearTo:2019,kmMax:100000,color:''},watch:'保有',vehicles:['沖縄 506 わ 1005'],
+        history:[{date:'2026-06-11',count:12,lowMan:120,highMan:210,avgMan:168,topYear:'2019年',note:'demo・手動優先の確認用'}]}
+    }
   };
 }
 
