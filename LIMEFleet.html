@@ -130,7 +130,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
     <div class="card">
       <h3>車両別 生涯ROI（全車）</h3>
       <table class="t">
-        <thead><tr><th>車両</th><th class="r">累計売上</th><th class="r">回収率</th><th class="r">生涯ROI</th></tr></thead>
+        <thead><tr><th>車両</th><th class="r">累計売上</th><th class="r">回収率</th><th class="r">生涯ROI (¥／%)</th></tr></thead>
         <tbody id="roi-all"></tbody>
       </table>
       <div class="note" id="roi-note"></div>
@@ -142,7 +142,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
     <div class="card">
       <h3>売却した車の生涯成績</h3>
       <table class="t">
-        <thead><tr><th>車両</th><th class="r">累計売上</th><th class="r">投下資本</th><th class="r">売却額</th><th class="r">生涯ROI</th></tr></thead>
+        <thead><tr><th>車両</th><th class="r">累計売上</th><th class="r">投下資本</th><th class="r">売却額</th><th class="r">生涯ROI (¥／%)</th></tr></thead>
         <tbody id="sold-rows"></tbody>
       </table>
       <div class="sm" id="sold-total" style="margin-top:8px;text-align:right;font-weight:700"></div>
@@ -184,7 +184,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
 
 <script>
 'use strict';
-const APP_VERSION='2026-06-11c';
+const APP_VERSION='2026-06-11d';
 const DBX_APP_KEY='fly154tcdbz09x9';
 const PATH_RENTAL='/ライム共有DB/システムデータ（R）/data.json';
 const PATH_FLEET ='/ライム共有DB/システムデータ車両/data.json';
@@ -553,7 +553,7 @@ function renderVehicles(){
       <div class="vplate">${esc(x.plate)}${x.grade?' ・ '+esc(x.grade):''} ・ 保有${x.yearsHeld.toFixed(1)}年</div>
       <div style="margin-top:5px">${badges}</div>
       <div class="vrow"><span class="ink3">累計売上</span><span class="num">¥${yen(x.total)}</span></div>
-      <div class="vrow"><span class="ink3">生涯ROI</span><span class="num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}</span></div>
+      <div class="vrow"><span class="ink3">生涯ROI</span><span class="num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}${x.invest>0?` <span class="xs">(${x.gross>=0?'+':''}${Math.round(x.gross/x.invest*100)}%)</span>`:''}</span></div>
       <div class="vrow"><span class="ink3">相場</span><span class="num">${x.mkt?'¥'+yen(x.mkt.price):'<span class="ink3">未登録</span>'}</span></div>
       <div class="recovbar"><i class="${recW>=100?'full':''}" style="width:${recW}%"></i></div>
       <div class="xs ink3" style="margin-top:3px;text-align:right">回収率 ${rec}</div>
@@ -721,7 +721,7 @@ function renderRoi(){
     <td><b>${esc(x.name)}</b> <span class="xs ink3">${esc(x.plate)}</span> <span class="badge ${x.isLease?'b-lease':'b-own'}">${x.isLease?'リース':'自社'}</span></td>
     <td class="r num">¥${yen(x.total)}</td>
     <td class="r num">${x.recov!=null?x.recov+'%':'—'}</td>
-    <td class="r num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}</td>
+    <td class="r num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}${x.invest>0?`<br><span class="xs">${x.gross>=0?'+':''}${Math.round(x.gross/x.invest*100)}%</span>`:''}</td>
   </tr>`).join('');
   $('roi-note').textContent='リース=実支出ベース(月額×経過月数) / 自社保有=売上+売却−取得−維持費。自社現役は残価未計上=ROIは下限、回収率で見る。維持費=金城実額'+(MAINT?'+保険/税按分(freee)':'(保険/税按分はfreee未接続)')+'。2024-25売上は損保代車管理簿再集計済(特定率ほぼ100%)。';
 }
@@ -738,7 +738,7 @@ function renderSold(){
     <td class="r num">¥${yen(s.total)}</td>
     <td class="r num">¥${yen(s.invest)}${leaseBuyout?`<br><span class="xs ink3">買取${yen(s.buyout)}+リース${yen(s.leasePaid)}</span>`:''}</td>
     <td class="r num">¥${yen(s.sale)}</td>
-    <td class="r num ${s.roi>=0?'pos':'neg'}" style="font-weight:700">${s.roi>=0?'+':''}¥${yen(s.roi)}</td>
+    <td class="r num ${s.roi>=0?'pos':'neg'}" style="font-weight:700">${s.roi>=0?'+':''}¥${yen(s.roi)}${s.invest>0?`<br><span class="xs">${s.roi>=0?'+':''}${Math.round(s.roi/s.invest*100)}%</span>`:''}</td>
   </tr>`;}).join('');
   const sum=rows.reduce((a,s)=>a+s.roi,0);
   const sumInv=rows.reduce((a,s)=>a+s.invest,0);
