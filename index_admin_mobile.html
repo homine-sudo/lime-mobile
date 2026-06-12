@@ -163,7 +163,7 @@
   .pipe-head .ink3{font-size:12px}
   .pipe .row.alert .nm{color:#9A3B00;font-weight:600}
   .pipe .row.alert .bar2 > i{background:#E69E50}
-  .pipe .yousotai{font-size:9px;padding:1px 5px;border-radius:8px;background:#FBEEE6;color:#9A3B00;font-weight:700;margin-left:5px;font-family:var(--sans,inherit)}
+  .pipe .yousotai{font-size:9px;padding:1px 5px;border-radius:8px;background:#FBEEE6;color:#9A3B00;font-weight:700;margin-left:5px;font-family:var(--sans,inherit);white-space:nowrap;display:inline-block}
   /* list */
   .list .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
   .list .item:last-child{border-bottom:0}
@@ -517,6 +517,13 @@
   .tap{cursor:pointer}
   .tap:active{opacity:.55}
 
+  /* ===== 案件カード → 本体システムへのリンク ===== */
+  .lbl-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .lbl-row .lbl{margin-bottom:12px}
+  .pipe-link{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);border:1px solid var(--acc);padding:4px 10px;white-space:nowrap;text-decoration:none}
+  .pipe-link:active{opacity:.55}
+  .pipe-link.off{color:var(--ink3);border-color:var(--line);pointer-events:none}
+
   /* ===== Pull to refresh ===== */
   .ptr{position:fixed;top:env(safe-area-inset-top,0);left:50%;transform:translate(-50%,-46px);z-index:25;
     background:var(--panel);border:1px solid var(--line2);padding:7px 16px;font-size:10px;letter-spacing:.16em;
@@ -830,17 +837,27 @@
   </section>
 
   <!-- ========== パイプライン ========== -->
+  <!-- 各事業カードから本体システムへリンク (2026-06-12e)。DETALIAはPC専用=リンク先なし -->
   <section id="sec-pipe">
     <div class="card">
-      <div class="lbl">レンタカー 案件</div>
+      <div class="lbl-row">
+        <div class="lbl">レンタカー 案件</div>
+        <a class="pipe-link" href="https://homine-sudo.github.io/lime-mobile/index_mobile.html" target="_blank" rel="noopener">アプリを開く ↗</a>
+      </div>
       <div class="pipe" id="pipe-rental"></div>
     </div>
     <div class="card">
-      <div class="lbl">DETALIA 案件</div>
+      <div class="lbl-row">
+        <div class="lbl">DETALIA 案件</div>
+        <span class="pipe-link off">システムはPC専用</span>
+      </div>
       <div class="pipe" id="pipe-detalia"></div>
     </div>
     <div class="card">
-      <div class="lbl">電装取付 案件</div>
+      <div class="lbl-row">
+        <div class="lbl">電装取付 案件</div>
+        <a class="pipe-link" href="https://homine-sudo.github.io/lime-mobile/denso.html" target="_blank" rel="noopener">アプリを開く ↗</a>
+      </div>
       <div class="pipe" id="pipe-denso"></div>
     </div>
   </section>
@@ -908,7 +925,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-12d';
+const APP_VERSION = '2026-06-12e';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
