@@ -184,7 +184,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
 
 <script>
 'use strict';
-const APP_VERSION='2026-06-11e';
+const APP_VERSION='2026-06-11f';
 const DBX_APP_KEY='fly154tcdbz09x9';
 const PATH_RENTAL='/ライム共有DB/システムデータ（R）/data.json';
 const PATH_FLEET ='/ライム共有DB/システムデータ車両/data.json';
@@ -441,17 +441,25 @@ function _lifeRows(){
     const extra=extraList.reduce((a,e)=>a+(e.y2023||0)+(e.y2024||0)+(e.y2025||0)+(e.y2026||0),0);
     const total=hist+r26+extra;
     const price=Number(v.vehiclePrice)||0; const sold=Number(v.soldPrice)||0;
-    // リース車は取得価額を前払いしていない: コスト=月額×経過月数(契約月数で頭打ち・実支出ベース)
+    // リース車の投下資本 = リース料総額(月額×契約月数) + 残価 (満了まで持つ前提の総取得原価)。自社保有=取得価額と同じ土俵。
+    // ※支払リース料(実支出・月額×経過月数 leasePaid)は財務欄の参考値として併記のみ。
     const isLease=Number(v.leaseFee)>0;
-    let leaseMonths=0,leasePaid=0;
-    if(isLease){ const lp=Number(v.leasePeriod)||0; const lb=parseD(v.purchaseDate||v.firstRegistration); leaseMonths=lb?Math.max(1,(Date.now()-lb.getTime())/2629800000):12; if(lp>0)leaseMonths=Math.min(leaseMonths,lp); leasePaid=Math.round(Number(v.leaseFee)*leaseMonths); }
-    const invest=isLease?leasePaid:price;
+    let leaseMonths=0,leasePaid=0,leaseTotalCost=0,leaseFeeTotal=0;
+    if(isLease){
+      const lp=Number(v.leasePeriod)||0; const resid=Number(v.residualValue)||0;
+      const lb=parseD(v.purchaseDate||v.firstRegistration);
+      leaseMonths=lb?Math.max(1,(Date.now()-lb.getTime())/2629800000):12; if(lp>0)leaseMonths=Math.min(leaseMonths,lp);
+      leasePaid=Math.round(Number(v.leaseFee)*leaseMonths);                 // 実支出(参考)
+      leaseFeeTotal=lp>0?Math.round(Number(v.leaseFee)*lp):0;               // リース料総額
+      leaseTotalCost=leaseFeeTotal>0?(leaseFeeTotal+resid):price;            // 投下資本(総額+残価・期間欠落時は車両価格で代替)
+    }
+    const invest=isLease?leaseTotalCost:price;
     const recov=invest>0?Math.round(total/invest*100):null;
     let yearsHeld=1; const pd=parseD(v.purchaseDate); if(pd)yearsHeld=Math.max(0.5,(Date.now()-pd.getTime())/(365.25*864e5));
     const kinjoLife=(KINJO[vp]||0)+_kinjoLive(vp);
     const apportion=Math.round(price*poolRate*yearsHeld);
     const runCost=kinjoLife+apportion;
-    const gross=isLease?(total-leasePaid-runCost):(total+sold-price-runCost);
+    const gross=total+sold-invest-runCost; // リース/自社保有 共通 (リースは sold=0)
     const usedD=used12[v.id]||0;
     const insp=(v.inspectionDate||'').slice(0,10);
     let inspDays=null; if(insp)inspDays=insp<today?-daysBetween(insp,today):daysBetween(today,insp);
@@ -461,16 +469,10 @@ function _lifeRows(){
       if(base)leaseLeft=Math.round((base.getTime()+Number(v.leasePeriod)*2629800000-Date.now())/2629800000);
     }
     const mkt=marketOf(vp,v);
-    // 満了買取シナリオ: 契約を最後まで走り残価で買い取った場合の総コスト = リース料総額(月額×契約月数) + 残価
-    let matuTotalCost=null,matuRecov=null,matuLeaseTotal=null;
-    if(isLease){
-      const lp=Number(v.leasePeriod)||0; const resid=Number(v.residualValue)||0;
-      if(lp>0){ matuLeaseTotal=Math.round(Number(v.leaseFee)*lp); matuTotalCost=matuLeaseTotal+resid; matuRecov=matuTotalCost>0?Math.round(total/matuTotalCost*100):null; }
-    }
     return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),grade:v.grade||'',cls:v.vehicleClass||'',
       total,hist,r26,extra,extraList,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,
-      isLease,leasePaid,leaseMonths,leaseFee:Number(v.leaseFee)||0,invest,mkt,yearsHeld,
-      matuTotalCost,matuRecov,matuLeaseTotal,residual:Number(v.residualValue)||0,sold_st:v.status==='売却済'};
+      isLease,leasePaid,leaseMonths,leaseFeeTotal,leaseTotalCost,leaseFee:Number(v.leaseFee)||0,invest,mkt,yearsHeld,
+      residual:Number(v.residualValue)||0,sold_st:v.status==='売却済'};
   }).filter(x=>x.total>0||x.price>0);
 }
 // 売り時判定 (admin と同一トリガー)
@@ -607,9 +609,11 @@ function openDetail(vp){
         <dt>保有年数 (稼働年数)</dt><dd class="num">${x.yearsHeld.toFixed(1)} 年</dd>
         ${x.isLease?`
         <dt>リース月額</dt><dd class="num">¥${yen(x.leaseFee)} × ${esc(String(v.leasePeriod||'?'))}ヶ月</dd>
-        <dt>支払累計 (経過${Math.round(x.leaseMonths)}ヶ月)</dt><dd class="num">¥${yen(x.leasePaid)}</dd>
-        <dt>リース残</dt><dd class="num">${x.leaseLeft!=null?(x.leaseLeft<0?'満了済':x.leaseLeft+'ヶ月'):'—'}</dd>
-        <dt>契約残価</dt><dd class="num">¥${yen(v.residualValue||0)}</dd>`:''}
+        <dt>リース料総額</dt><dd class="num">¥${yen(x.leaseFeeTotal)}</dd>
+        <dt>契約残価</dt><dd class="num">¥${yen(v.residualValue||0)}</dd>
+        <dt><b>投下資本 (総額+残価)</b></dt><dd class="num" style="font-weight:700">¥${yen(x.leaseTotalCost)}</dd>
+        <dt class="ink3">支払リース料 (経過${Math.round(x.leaseMonths)}ヶ月・参考)</dt><dd class="num ink3">¥${yen(x.leasePaid)}</dd>
+        <dt>リース残</dt><dd class="num">${x.leaseLeft!=null?(x.leaseLeft<0?'満了済':x.leaseLeft+'ヶ月'):'—'}</dd>`:''}
         <dt>車検満了</dt><dd>${esc(v.inspectionDate||'—')}${x.inspDays!=null?` <span class="xs ${x.inspDays<=60?'neg':'ink3'}">(${x.inspDays<0?'切れ':'残'+x.inspDays+'日'})</span>`:''}</dd>
         <dt>走行距離</dt><dd class="num">${v.mileage?yen(v.mileage)+' km':'—'}</dd>
       </dl>
@@ -624,24 +628,13 @@ function openDetail(vp){
         <dt><b>累計売上 合計</b></dt><dd class="num" style="font-weight:700">¥${yen(x.total)}</dd>
         <dt>維持費 (金城整備)</dt><dd class="num">−¥${yen(x.kinjoLife)}</dd>
         <dt>維持費 (保険/税 按分)</dt><dd class="num">${x.apportion?'−¥'+yen(x.apportion):'<span class="xs ink3">freee未接続</span>'}</dd>
-        <dt>${x.isLease?'リース支払累計':'取得価額'}</dt><dd class="num">−¥${yen(x.invest)}</dd>
+        <dt>${x.isLease?'投下資本 (リース総額+残価)':'取得価額'}</dt><dd class="num">−¥${yen(x.invest)}</dd>
         <dt><b>生涯ROI</b></dt><dd class="num ${x.gross>=0?'pos':'neg'}" style="font-weight:700;font-size:16px">${x.gross>=0?'+':''}¥${yen(x.gross)}${roiPct!=null?` <span class="xs">(${roiPct>=0?'+':''}${roiPct}%)</span>`:''}</dd>
         <dt>回収率 (累計売上÷投資)</dt><dd class="num">${x.recov!=null?x.recov+'%':'—'}</dd>
         <dt>直近12ヶ月稼働</dt><dd class="num">${x.usedD} 日</dd>
       </dl>
-      ${x.isLease?`<div class="note" style="margin-top:4px">上は<b>実支出ベース</b>（今日までに払った金で計算）。リースは取得価額を前払いしていないため、未払いの将来リース料は投資に含めない。</div>`:''}
+      ${x.isLease?`<div class="note" style="margin-top:4px">投下資本＝<b>リース料総額＋残価</b>（満了まで持って買い取る前提の総取得原価）。自社保有車（取得価額）と同じ土俵で比較。実支出（経過分の支払）は財務欄に参考表示。</div>`:''}
     </div>
-
-    ${x.isLease&&x.matuTotalCost?`<div class="card">
-      <h3>🏁 満了まで持つと（買取シナリオ）</h3>
-      <dl class="kv">
-        <dt>リース料総額 (月額×${esc(String(v.leasePeriod))}ヶ月)</dt><dd class="num">¥${yen(x.matuLeaseTotal)}</dd>
-        <dt>＋ 契約残価 (満了買取額)</dt><dd class="num">¥${yen(x.residual)}</dd>
-        <dt><b>総コスト (車1台の取得原価)</b></dt><dd class="num" style="font-weight:700">¥${yen(x.matuTotalCost)}</dd>
-        <dt>現時点 累計売上での回収率</dt><dd class="num ${x.matuRecov>=100?'pos':''}" style="font-weight:700">${x.matuRecov!=null?x.matuRecov+'%':'—'}</dd>
-      </dl>
-      <div class="note">「契約を最後まで走って残価で買い取り、1台として保有したら元が取れるか」を見る指標。${x.matuRecov>=100?'<b class="pos">既に総コストを回収済</b>＝満了買取しても黒字。':'満了買取の損益分岐は残り稼働しだい。'}実支出ベースの回収率（${x.recov!=null?x.recov+'%':'—'}）とは投資の取り方が違う。</div>
-    </div>`:''}
 
     <div class="card">
       <h3>🏷 市場価格（売れる値段）</h3>
@@ -723,7 +716,7 @@ function renderRoi(){
     <td class="r num">${x.recov!=null?x.recov+'%':'—'}</td>
     <td class="r num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}${x.invest>0?`<br><span class="xs">${x.gross>=0?'+':''}${Math.round(x.gross/x.invest*100)}%</span>`:''}</td>
   </tr>`).join('');
-  $('roi-note').textContent='リース=実支出ベース(月額×経過月数) / 自社保有=売上+売却−取得−維持費。自社現役は残価未計上=ROIは下限、回収率で見る。維持費=金城実額'+(MAINT?'+保険/税按分(freee)':'(保険/税按分はfreee未接続)')+'。2024-25売上は損保代車管理簿再集計済(特定率ほぼ100%)。';
+  $('roi-note').textContent='生涯ROI=累計売上+売却額−投下資本−維持費。投下資本: リース車=リース料総額+残価(満了買取前提) / 自社保有=取得価額。現役は残価未計上=ROIは下限、回収率(累計売上÷投下資本)で見る。維持費=金城実額'+(MAINT?'+保険/税按分(freee)':'(保険/税按分はfreee未接続)')+'。2024-25売上は損保代車管理簿再集計済。';
 }
 
 // --- 売却済 ---
