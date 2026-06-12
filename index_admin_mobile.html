@@ -794,7 +794,7 @@
     <div class="card">
       <div class="lbl">車両別 採算 <span class="sm ink3" style="font-weight:normal">直近12ヶ月 売上 − 年間費用</span></div>
       <table class="kv" id="ops-vehicle-roi"></table>
-      <div class="sm ink3" style="margin-top:4px">費用＝freee固定資産台帳の年間減価償却（保有車）／リース料×12（リース車）。償却済の古い車は費用ゼロ＝採算良。<br>採算率＝ROI÷売上 ／ 日あたり＝ROI÷稼働日数 ／ 車検は期限60日以内を警告。</div>
+      <div class="sm ink3" style="margin-top:4px">費用＝freee固定資産台帳の年間減価償却（保有車）／リース料×12（リース車）。償却済の古い車は費用ゼロ＝採算良。<br>採算率＝ROI÷売上 ／ 日あたり＝ROI÷稼働日数 ／ 車検は期限60日以内を警告。<br>データ正本: <span id="ops-roi-src">—</span></div>
     </div>
 
     <!-- ④ 生涯ROI 戦略判断 (2026-06-10) — 累計売上(2024〜)÷取得価額・売却候補・クラス別もうけ -->
@@ -808,7 +808,7 @@
     <div class="card">
       <div class="lbl">車両別 生涯ROI <span class="sm ink3" style="font-weight:normal">回収率・累計売上・生涯ROI（稼ぎ頭／お荷物）</span></div>
       <table class="kv" id="life-roi"></table>
-      <div class="sm ink3" style="margin-top:4px">生涯ROI＝累計売上＋売却額−取得価額−維持費（維持費＝金城整備の実額＋保険/税/車両費の取得原価按分×保有年数）。</div>
+      <div class="sm ink3" style="margin-top:4px">生涯ROI＝累計売上＋売却額−取得価額−維持費（維持費＝金城整備の実額＋保険/税/車両費の取得原価按分×保有年数）。<br>データ正本: <span id="life-src">—</span>（LIME Fleet と同一値）</div>
     </div>
 
     <div class="card">
@@ -849,6 +849,7 @@
         <tr><td>レンタカーデータ</td><td id="set-rental-state">—</td></tr>
         <tr><td>DETALIAデータ</td><td id="set-detalia-state">—</td></tr>
         <tr><td>電装取付データ</td><td id="set-denso-state">—</td></tr>
+        <tr><td>車両ROI正本 (Fleet)</td><td id="set-fleet-state">—</td></tr>
         <tr><td>最終取得</td><td id="set-loaded-at">—</td></tr>
       </table>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
@@ -902,18 +903,20 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-12a';
+const APP_VERSION = '2026-06-12b';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
 const PATH_RENTAL  = '/ライム共有DB/システムデータ（R）/data.json';
 const PATH_DETALIA = '/ライム共有DB/システムデータ（D)/data.json';
 const PATH_DENSO   = '/ライム共有DB/システムデータ電装/data.json';
+const PATH_FLEET   = '/ライム共有DB/システムデータ車両/data.json'; // LIME Fleet 正本 (ROI履歴・売却・整備・減価償却)
 
 const LS = {
   token:'limeAdm_dbxToken', refresh:'limeAdm_dbxRefresh',
   verifier:'limeAdm_dbxVerifier',
   cachedR:'limeAdm_cachedR', cachedD:'limeAdm_cachedD', cachedE:'limeAdm_cachedE',
+  cachedF:'limeAdm_cachedF',
   loadedAt:'limeAdm_loadedAt',
   monthlyTarget:'limeAdm_monthlyTarget'  // 月次売上目標 (経営者がこのアプリ内で設定)
 };
@@ -988,25 +991,27 @@ async function dbxDownload(path){
 }
 
 // ---------- DATA ----------
-let DR=null, DD=null, DE=null; // rental, detalia, denso(電装)
+let DR=null, DD=null, DE=null, DF=null; // rental, detalia, denso(電装), fleet(車両資産=ROI正本)
 
 async function loadAll(){
   if(DEMO){ DR=DEMO_R(); DD=DEMO_D(); DE=DEMO_E(); cacheSet(); return; }
   if(!DBX_TOKEN){
     // try cache
-    const cR=localStorage.getItem(LS.cachedR),cD=localStorage.getItem(LS.cachedD),cE=localStorage.getItem(LS.cachedE);
-    if(cR&&cD){DR=JSON.parse(cR);DD=JSON.parse(cD);if(cE)DE=JSON.parse(cE);toast('キャッシュから表示');return}
+    const cR=localStorage.getItem(LS.cachedR),cD=localStorage.getItem(LS.cachedD),cE=localStorage.getItem(LS.cachedE),cF=localStorage.getItem(LS.cachedF);
+    if(cR&&cD){DR=JSON.parse(cR);DD=JSON.parse(cD);if(cE)DE=JSON.parse(cE);if(cF)DF=JSON.parse(cF);toast('キャッシュから表示');return}
     throw new Error('Dropbox 未連携');
   }
   showSpinner();
   try{
-    const [r,d,e]=await Promise.allSettled([dbxDownload(PATH_RENTAL),dbxDownload(PATH_DETALIA),dbxDownload(PATH_DENSO)]);
+    const [r,d,e,f]=await Promise.allSettled([dbxDownload(PATH_RENTAL),dbxDownload(PATH_DETALIA),dbxDownload(PATH_DENSO),dbxDownload(PATH_FLEET)]);
     if(r.status==='fulfilled') DR=r.value;
     else { const cR=localStorage.getItem(LS.cachedR); if(cR) DR=JSON.parse(cR); toast('レンタカー: '+r.reason.message,'err'); }
     if(d.status==='fulfilled') DD=d.value;
     else { const cD=localStorage.getItem(LS.cachedD); if(cD) DD=JSON.parse(cD); toast('DETALIA: '+d.reason.message,'err'); }
     if(e.status==='fulfilled') DE=e.value;
     else { const cE=localStorage.getItem(LS.cachedE); if(cE) DE=JSON.parse(cE); /* 電装は新規=未存在でも黙認 */ }
+    if(f.status==='fulfilled') DF=f.value;
+    else { const cF=localStorage.getItem(LS.cachedF); if(cF) DF=JSON.parse(cF); /* Fleet未取得は埋込スナップショットにフォールバック=黙認 */ }
     cacheSet();
     localStorage.setItem(LS.loadedAt,new Date().toISOString());
   } finally { hideSpinner(); }
@@ -1015,6 +1020,7 @@ function cacheSet(){
   if(DR) localStorage.setItem(LS.cachedR,JSON.stringify(DR));
   if(DD) localStorage.setItem(LS.cachedD,JSON.stringify(DD));
   if(DE) localStorage.setItem(LS.cachedE,JSON.stringify(DE));
+  if(DF) localStorage.setItem(LS.cachedF,JSON.stringify(DF));
 }
 
 // ---------- CALCULATIONS ----------
@@ -1925,6 +1931,23 @@ const VEHICLE_SOLD = {"沖縄582わ8099":{"model":"スペーシア","plate":"582
 const VEHICLE_EXTRA_REV = {"沖縄302わ8959":{"y2023":726000,"y2024":1155000,"y2025":1070850,"y2026":448250,"label":"八重瀬町役場 法人レンタル（年契約・月次請求）"}};
 const DEMO_HIST = {}; // ?demo=1 用 (実車不在のため検証用に動的シード)
 
+// ===== ROIデータ正本 = LIME Fleet (システムデータ車両/data.json・2026-06-12b) =====
+// DF (Fleet data.json) を最優先で参照。未取得/未接続時のみ上の埋め込み定数にフォールバック。
+// ⚠️ 上の埋め込み定数 (VEHICLE_HIST_REV / VEHICLE_KINJO_LIFE / VEHICLE_SOLD / FREEE_VEHICLE_DEP /
+//    FREEE_KINJO_COST / VEHICLE_HIST_UNATTR / VEHICLE_EXTRA_REV) は**フォールバック専用スナップショット**。
+//    今後の ROIデータ更新は Fleet正本のみに行い、埋め込みは更新しない (veh-rev-rebuild の出力先一本化方針)。
+function _fdHistRev(){    return (DF&&DF.histRev)     || VEHICLE_HIST_REV; }
+function _fdHistUnattr(){ return (DF&&DF.histUnattr)  || VEHICLE_HIST_UNATTR; }
+function _fdKinjoLife(){  return (DF&&DF.kinjoLife)   || VEHICLE_KINJO_LIFE; }
+function _fdKinjo12m(){   return (DF&&DF.kinjoCost12m)|| FREEE_KINJO_COST; }
+function _fdVehicleDep(){ return (DF&&DF.vehicleDep)  || FREEE_VEHICLE_DEP; }
+function _fdSold(){       return (DF&&DF.sold)        || VEHICLE_SOLD; }
+function _fdExtra(vp){    // Fleet=配列(複数契約可) / 埋込=単一obj の両対応で y2023〜y2026 を合算
+  if(DF&&DF.extraRev){ const l=DF.extraRev[vp]||[]; return l.reduce((a,e)=>a+(e.y2023||0)+(e.y2024||0)+(e.y2025||0)+(e.y2026||0),0); }
+  const ex=VEHICLE_EXTRA_REV[vp]; return ex?((ex.y2023||0)+(ex.y2024||0)+(ex.y2025||0)+(ex.y2026||0)):0;
+}
+function _fdSource(){ return DF ? 'LIME Fleet 正本' : '内蔵スナップショット (Fleet未取得)'; }
+
 // 維持費按分プール: 前期(確定)の 保険料(損保ジャパンpartner絞り=車両保険のみ)+租税公課+車両費総額 と 金城車両費 をfreeeから取得 (車両別データが無い保険・税は取得原価按分)。
 let MAINT = null;
 function _plItem(bal, name){ for(const b of (bal||[])){ if(!b.total_line && b.account_item_name===name) return Number(b.closing_balance||0); } return 0; }
@@ -2001,16 +2024,17 @@ function renderVehicleROI(){
     const kinjoOther = Math.max(0,(MAINT.vehicleTotal||0)-(MAINT.kinjoTotal||0));
     poolRate = ((MAINT.insurance||0)+(MAINT.taxDues||0)+kinjoOther)/priceTotal;
   }
+  const DEP=_fdVehicleDep(), K12=_fdKinjo12m();   // 正本=Fleet (フォールバック=埋込)
   let rows=vehs.map(v=>{
     const plate=_vplate(v); const r=rev[v.id]||0;
-    const dep=FREEE_VEHICLE_DEP[plate]; const lease=(Number(v.leaseFee)||0)*12;
+    const dep=DEP[plate]; const lease=(Number(v.leaseFee)||0)*12;
     const price=Number(v.vehiclePrice)||0;
     const holdR=_holdRatio(v);
     let baseCost, kind;
     if(dep!=null){ baseCost=dep; kind=dep>0?'保有':'償却済'; }
     else if(lease>0){ baseCost=Math.round(lease*holdR); kind='リース'; }
     else { baseCost=0; kind='—'; }
-    const kinjo = (FREEE_KINJO_COST[plate]||0) + _kinjoLive(plate); // 金城 車両別 整備実額(埋込〜2026-05 + freeeタグ集計ライブ)
+    const kinjo = (K12[plate]||0) + _kinjoLive(plate); // 金城 車両別 整備実額(Fleet正本〜2026-05 + freeeタグ集計ライブ)
     const apportion = Math.round(price*poolRate*holdR);  // 保険+税+金城以外車両費 按分
     const maint = kinjo + apportion;
     const cost = baseCost + maint;
@@ -2050,6 +2074,7 @@ function renderVehicleROI(){
     '<tr><td colspan=2 style="background:#EEF5E8;color:#2D5F1F;font-size:11px;font-weight:700">▲ 黒字頭</td></tr>' +
     top.map(rh).join('') +
     (bot.length?'<tr><td colspan=2 style="background:#FBEEE6;color:#9A3B00;font-size:11px;font-weight:700">▼ 低採算・赤字</td></tr>'+bot.map(rh).join(''):'');
+  const srcEl=document.getElementById('ops-roi-src'); if(srcEl) srcEl.textContent=_fdSource();
 }
 
 // ===== ④ 生涯ROI 戦略判断 (2026-06-10) =====
@@ -2061,7 +2086,7 @@ function _seedDemoHist(){
 function _lifeRows(){
   const today=todayISO();
   const sinceStr=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
-  const HIST = DEMO ? DEMO_HIST : VEHICLE_HIST_REV;
+  const HIST = DEMO ? DEMO_HIST : _fdHistRev();
   const vehs=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車');
   const live={}, used12={};
   billableRental().forEach(c=>{ if(!c.vehicleId) return; const ue=(c.useEnd||'').slice(0,10); if(ue>='2026-01-01') live[c.vehicleId]=(live[c.vehicleId]||0)+rentalAmount(c).total; });
@@ -2070,12 +2095,11 @@ function _lifeRows(){
   const priceTotal=vehs.reduce((a,v)=>a+(Number(v.vehiclePrice)||0),0);
   let poolRate=0;
   if(MAINT && priceTotal>0){ const kinjoOther=Math.max(0,(MAINT.vehicleTotal||0)-(MAINT.kinjoTotal||0)); poolRate=((MAINT.insurance||0)+(MAINT.taxDues||0)+kinjoOther)/priceTotal; }
-  const KINJO = DEMO ? {} : VEHICLE_KINJO_LIFE;
-  const EXTRA = (typeof VEHICLE_EXTRA_REV!=='undefined' && !DEMO) ? VEHICLE_EXTRA_REV : {};
+  const KINJO = DEMO ? {} : _fdKinjoLife();
   return vehs.map(v=>{
     const vp=_vplate(v); const h=HIST[vp]||{y2024:0,y2025:0};
     const hist=(h.y2024||0)+(h.y2025||0); const r26=live[v.id]||0;
-    const ex=EXTRA[vp]||{}; const extra=(ex.y2023||0)+(ex.y2024||0)+(ex.y2025||0)+(ex.y2026||0); // システム外売上(法人年契約等)
+    const extra=DEMO?0:_fdExtra(vp); // システム外売上(法人年契約等・Fleet正本 extraRev)
     const total=hist+r26+extra;
     const price=Number(v.vehiclePrice)||0; const sold=Number(v.soldPrice)||0;
     // リース車の投下資本 = リース料総額(月額×契約月数) + 残価 (満了買取前提の総取得原価)。自社保有=取得価額と同じ土俵。
@@ -2111,7 +2135,7 @@ function _lifeRows(){
 // 売却車 生涯ROI 行 (VEHICLE_SOLD)
 function _soldRows(){
   if(DEMO) return [];
-  return Object.values(VEHICLE_SOLD).map(s=>{
+  return Object.values(_fdSold()).map(s=>{
     const total=(s.revTotal!=null)?Number(s.revTotal):((s.y2024||0)+(s.y2025||0)+(s.y2026||0)); // revTotal=通算売上訂正
     const invest=(s.lease&&Number(s.investCapital)>0)?Number(s.investCapital):(s.acq||0);        // リース買取車=投下資本(買取+リース料累計)
     const roi= total + (s.sale||0) - invest - (s.kinjo||0);
@@ -2130,7 +2154,7 @@ function renderVehicleLifetime(){
   // 特定率 (データ信頼度)
   const attr=rows.reduce((a,x)=>a+x.total,0);
   let un26=0; billableRental().forEach(c=>{ if(c.vehicleId) return; const ue=(c.useEnd||'').slice(0,10); if(ue>='2026-01-01') un26+=rentalAmount(c).total; });
-  const unattr=(DEMO?0:(VEHICLE_HIST_UNATTR.y2024+VEHICLE_HIST_UNATTR.y2025))+un26;
+  const unattr=(DEMO?0:(( _fdHistUnattr().y2024||0)+(_fdHistUnattr().y2025||0)))+un26;
   const cover=(attr+unattr)>0?Math.round(attr/(attr+unattr)*100):0;
   // 売却候補 (売り時メモの5トリガー: 車検/リース満了/低稼働)
   const cand=active.map(x=>{
@@ -2185,6 +2209,7 @@ function renderVehicleLifetime(){
     '<tr><td colspan=2 style="background:#EEF5E8;color:#2D5F1F;font-size:11px;font-weight:700">▲ 稼ぎ頭（累計売上）</td></tr>'+
     top.map(rh).join('')+
     (bot.length?'<tr><td colspan=2 style="background:#FBEEE6;color:#9A3B00;font-size:11px;font-weight:700">▼ 低調・お荷物</td></tr>'+bot.map(rh).join(''):'');
+  const srcEl2=document.getElementById('life-src'); if(srcEl2) srcEl2.textContent=_fdSource();
   // クラス別 もうけ (投資回収率 = 累計売上 ÷ 取得額)
   if(clsEl){
     const agg={};
@@ -2323,6 +2348,7 @@ function renderSet(){
   $('set-rental-state').textContent=DR?(DR.cases||[]).length+' 件':'—';
   $('set-detalia-state').textContent=DD?(DD.cases||[]).length+' 件':'—';
   $('set-denso-state').textContent=DE?((DE.jobs||[]).length+' 件'):(DEMO?'—':'未接続');
+  $('set-fleet-state').textContent=DF?('正本接続 (売上履歴 '+Object.keys(DF.histRev||{}).length+'台・売却 '+Object.keys(DF.sold||{}).length+'台)'):(DEMO?'デモ (内蔵値)':'未接続 → 内蔵スナップショット使用');
   $('set-loaded-at').textContent=localStorage.getItem(LS.loadedAt)||'—';
   $('set-ver').textContent=APP_VERSION;
 }
