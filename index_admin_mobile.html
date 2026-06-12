@@ -480,6 +480,47 @@
   }
   /* corner ticks 廃止 (互換) */
   .card.hero .corner-tick,.card.hero .auto-label{display:none}
+
+  /* ===== 気づき (自動インサイト・2026-06-12a) ===== */
+  .ins-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dotted var(--line);cursor:pointer}
+  .ins-row:last-child{border-bottom:0}
+  .ins-row:active{opacity:.6}
+  .ins-dot{flex:0 0 7px;width:7px;height:7px;border-radius:50%;margin-top:5px}
+  .ins-dot.danger{background:var(--danger)}
+  .ins-dot.warn{background:#C99700}
+  .ins-dot.info{background:var(--acc)}
+  .ins-dot.good{background:#2D7D33}
+  .ins-bd{flex:1;min-width:0}
+  .ins-t{font-size:13px;color:var(--ink);letter-spacing:.01em;line-height:1.4}
+  .ins-row .ins-t b{font-family:var(--serif);font-weight:600}
+  .ins-d{font-size:10.5px;color:var(--ink3);margin-top:2px;letter-spacing:.02em;line-height:1.5}
+  .ins-arw{flex:0 0 auto;color:var(--line2);font-size:13px;margin-top:2px}
+  .ins-ok{display:flex;align-items:center;gap:10px;padding:8px 0;font-family:var(--serif);font-size:14.5px;color:#2D7D33;letter-spacing:.03em}
+
+  /* ===== 先々の埋まり (今後14日) ===== */
+  .fwd{width:100%;height:128px;display:block;margin-top:14px}
+  .fwd .fbar{fill:var(--acc);opacity:.78}
+  .fwd .fbar.today{opacity:1}
+  .fwd .fbar.wknd{fill:var(--acc2)}
+  .fwd .fprev{stroke:var(--line3);stroke-width:1.4}
+  .fwd .fax{stroke:var(--line2);stroke-width:.5}
+  .fwd text{fill:var(--ink3);font-size:8px;font-family:var(--serif);letter-spacing:.04em}
+  .fwd text.wknd{fill:var(--red);opacity:.75}
+  .fwd-legend{display:flex;justify-content:center;gap:18px;margin-top:8px;font-size:9.5px;color:var(--ink3);letter-spacing:.08em}
+  .fwd-legend .sw{display:inline-block;width:9px;height:9px;background:var(--acc);opacity:.78;vertical-align:-1px;margin-right:4px}
+  .fwd-legend .swl{display:inline-block;width:12px;height:0;border-top:1.4px solid var(--line3);vertical-align:2px;margin-right:4px}
+
+  /* ===== タップ可能な数字 (ドリルダウン遷移) ===== */
+  .tap{cursor:pointer}
+  .tap:active{opacity:.55}
+
+  /* ===== Pull to refresh ===== */
+  .ptr{position:fixed;top:env(safe-area-inset-top,0);left:50%;transform:translate(-50%,-46px);z-index:25;
+    background:var(--panel);border:1px solid var(--line2);padding:7px 16px;font-size:10px;letter-spacing:.16em;
+    color:var(--ink2);opacity:0;transition:transform .22s,opacity .22s;pointer-events:none;text-transform:uppercase;
+    box-shadow:0 4px 14px rgba(11,23,41,.10);white-space:nowrap}
+  .ptr.show{opacity:1;transform:translate(-50%,60px)}
+  .ptr.ready{color:var(--acc);border-color:var(--acc)}
 </style>
 </head>
 <body>
@@ -494,6 +535,7 @@
       <button id="hdr-reload" class="hdr-reload" type="button" aria-label="再読込">↻</button>
     </div>
   </header>
+  <div id="ptr" class="ptr"></div>
 
   <!-- ========== 今月 — これ1画面で全部わかる ========== -->
   <section id="sec-now" class="on">
@@ -502,7 +544,7 @@
     <div class="card hero">
       <!-- 当月 合算売上 (主役) -->
       <div class="lbl" style="text-align:center;margin-bottom:8px;margin-top:4px">当月 合算売上 · 税込</div>
-      <div class="big num" id="now-total" style="text-align:center">—<span class="unit">円</span></div>
+      <div class="big num tap" id="now-total" style="text-align:center" onclick="showTab('rev')">—<span class="unit">円</span></div>
       <div style="display:flex;gap:24px;margin-top:14px;align-items:baseline;justify-content:center">
         <span class="delta" id="now-mom">前月比 —</span>
         <span class="delta ink3" id="now-yoy">前年同月 —</span>
@@ -510,7 +552,7 @@
 
       <!-- 稼働率 サブダイヤル (1つに集約) -->
       <div class="subdial-row">
-        <div class="subdial-wrap">
+        <div class="subdial-wrap tap" onclick="showTab('ops')">
           <svg class="subdial" viewBox="0 0 100 100" id="sd-left">
             <circle class="sd-rim" cx="50" cy="50" r="44"/>
             <circle class="sd-face" cx="50" cy="50" r="38"/>
@@ -536,27 +578,45 @@
       </div>
     </div>
 
+    <!-- ①b 気づき (自動インサイト — 「順調か」を見に行かなくても異常が分かる・2026-06-12a) -->
+    <div class="card">
+      <div class="lbl">今月の気づき</div>
+      <div id="insights"></div>
+    </div>
+
     <!-- ② 部門別 売上 (3部門 × 当月/当年度) -->
     <div class="card">
       <div class="lbl">部門別 売上 (税込)</div>
       <div class="dept3-head">
         <span></span><span class="d3-h">当月</span><span class="d3-h">当年度</span>
       </div>
-      <div class="dept3-row">
+      <div class="dept3-row tap" onclick="showTab('rev')">
         <span class="d3-nm">レンタカー</span>
         <span class="d3-m num" id="rent-month">—</span>
         <span class="d3-y num" id="rent-year">—</span>
       </div>
-      <div class="dept3-row">
+      <div class="dept3-row tap" onclick="showTab('rev')">
         <span class="d3-nm">DETALIA</span>
         <span class="d3-m num" id="det-month">—</span>
         <span class="d3-y num" id="det-year">—</span>
       </div>
-      <div class="dept3-row">
+      <div class="dept3-row tap" onclick="showTab('rev')">
         <span class="d3-nm">電装取付</span>
         <span class="d3-m num" id="den-month">—</span>
         <span class="d3-y num" id="den-year">—</span>
       </div>
+    </div>
+
+    <!-- ②b 利益 (freee 実損益・年度累計 — 「売れているか」だけでなく「儲かっているか」・2026-06-12a) -->
+    <div class="card tap" id="profit-card" style="display:none" onclick="showTab('rev')">
+      <div class="lbl">利益 · freee 実損益 <span id="pf-fy" class="sm ink3" style="font-weight:normal;letter-spacing:.04em;text-transform:none"></span></div>
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <div class="med num" id="pf-op">—</div>
+        <span class="unit-sm">営業利益 · 年度累計</span>
+      </div>
+      <div class="sm ink3" id="pf-sub" style="margin-top:8px">—</div>
+      <div class="bar bar-ticks" style="margin-top:16px"><i id="pf-bar" style="width:0%"></i></div>
+      <div class="sm ink3" id="pf-prog" style="margin-top:6px">—</div>
     </div>
 
     <!-- ③ 12ヶ月推移 -->
@@ -632,9 +692,9 @@
     <div class="card">
       <div class="lbl">現況 · 全社</div>
       <div class="now-load">
-        <div class="nl"><div class="v num" id="cl-rental">—</div><div class="k">レンタカー稼働中</div></div>
-        <div class="nl"><div class="v num" id="cl-det">—</div><div class="k">DETALIA入庫中</div></div>
-        <div class="nl"><div class="v num" id="cl-den">—</div><div class="k">電装 進行中</div></div>
+        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-rental">—</div><div class="k">レンタカー稼働中</div></div>
+        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-det">—</div><div class="k">DETALIA入庫中</div></div>
+        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-den">—</div><div class="k">電装 進行中</div></div>
       </div>
       <div class="now-mrow" id="cl-month">当月処理 —</div>
       <div class="hr" style="margin:12px 0 4px"></div>
@@ -652,6 +712,14 @@
           <div class="duo-row"><span class="duo-l">利用終了</span><span class="duo-n num" id="duo-e-tom">—</span></div>
         </div>
       </div>
+    </div>
+
+    <!-- ⑥ 先々の埋まり (今後14日・予約実数ベース + 前年同日実績・2026-06-12a) -->
+    <div class="card">
+      <div class="lbl">先々の埋まり · 今後14日</div>
+      <svg class="fwd" id="fwd-chart" viewBox="0 0 320 128" preserveAspectRatio="none"></svg>
+      <div class="fwd-legend"><span><span class="sw"></span>予約・貸出見込み</span><span><span class="swl"></span>前年同日 実績</span></div>
+      <div class="sm ink3" id="fwd-cap" style="text-align:center;margin-top:7px">—</div>
     </div>
   </section>
 
@@ -834,7 +902,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-12';
+const APP_VERSION = '2026-06-12a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1508,6 +1576,8 @@ function renderNow(){
   $('spark-12-cap').textContent=fmtJaYM(t12.labels[0])+' 〜 '+fmtJaYM(t12.labels[t12.labels.length-1]);
 
   renderLoad();
+  try{ renderInsights(); }catch(e){ console.warn('insights failed',e); }
+  try{ renderForward(); }catch(e){ console.warn('forward failed',e); }
 }
 function fmtJaYM(k){if(!k) return '—';const [y,m]=k.split('-');return y+'年'+Number(m)+'月'}
 
@@ -1519,6 +1589,135 @@ function renderLoad(){
   $('cl-den').innerHTML=L.densoOpen+'<span class="u">件</span>';
   const m=thisMonthSummary();
   $('cl-month').innerHTML='当月処理　レンタカー <b>'+m.rentalCnt+'</b> · DETALIA <b>'+m.detaliaCnt+'</b> · 電装 <b>'+m.densoCnt+'</b> 件';
+}
+
+// ===== 気づきエンジン (自動インサイト・2026-06-12a) =====
+// 「事業が順調か」を見に行かなくても異常が分かる。既存集計の読み取りのみ・書込なし。
+// 前年同月の「同経過日」までの売上 (公平な当月ペース比較の分母)
+function monthPaceYoY(){
+  const now=new Date(); const N=now.getDate();
+  const yym=(now.getFullYear()-1)+'-'+pad2(now.getMonth()+1);
+  const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
+  const dayOf=s=>Number(String(s||'').slice(8,10))||1;
+  let t=0;
+  billableRental().forEach(c=>{ if(rentalSalesYM(c)!==yym) return; if(dayOf(c.useEnd)<=N) t+=rentalAmount(c).total; });
+  detaliaCases().forEach(c=>{ if(detaliaYM(c)!==yym) return; const d=c.delivery||c.paidDate||c.arrival; if(dayOf(d)<=N) t+=detaliaAmount(c,taxR).total; });
+  billableDenso().forEach(j=>{ if(densoSalesYM(j)!==yym) return; if(dayOf(j.workedAt||j.requestedAt)<=N) t+=densoAmount(j); });
+  return t;
+}
+function computeInsights(){
+  const out=[];
+  const today=todayISO();
+  // ① 売上ペース (当月累計 vs 前年同月の同経過日)
+  const s=thisMonthSummary();
+  const pace=monthPaceYoY();
+  if(pace>0){
+    const pct=Math.round((s.total-pace)/pace*100);
+    if(pct<=-10) out.push({sev:'warn',t:'売上ペースが前年を下回っています（'+pct+'%）',d:'当月 '+yen(s.total)+'円 ／ 前年同経過日 '+yen(pace)+'円',tab:'rev'});
+    else if(pct>=15) out.push({sev:'good',t:'売上ペースは前年より好調（+'+pct+'%）',d:'当月 '+yen(s.total)+'円 ／ 前年同経過日 '+yen(pace)+'円',tab:'rev'});
+  }
+  // ② 稼働率の急低下 (本日 vs 直近30日平均)
+  const vs=vehicleStats();
+  const todayPct=vs.tot?Math.round(vs.inUse*100/vs.tot):0;
+  if(vs.tot && vs.avg>0 && todayPct<=vs.avg-15) out.push({sev:'warn',t:'本日の稼働率が30日平均より低下',d:'本日 '+todayPct+'% ／ 30日平均 '+vs.avg+'%',tab:'ops'});
+  // ③ 回収予定日 超過 (現場の遅れ)
+  const lateRec=rentalCases().filter(c=>c.status!=='キャンセル'&&c.recoveryCalledAt&&String(c.recoveryCalledAt).slice(0,10)<today&&!c.recoveryCompleted&&['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status));
+  if(lateRec.length) out.push({sev:'danger',t:'回収予定日を過ぎた案件 '+lateRec.length+'件',d:lateRec.slice(0,3).map(c=>c.caseNo||c.driverName||'').filter(Boolean).join(' ／ ')+(lateRec.length>3?' 他':''),tab:'pipe'});
+  // ④ 返却日未定の長期貸出 (売上計上が遅れる)
+  const longOpen=rentalCases().filter(c=>isOutToday(c)&&!c.useEnd&&c.useStart<addDays(today,-30));
+  if(longOpen.length) out.push({sev:'info',t:'返却日未定の長期貸出 '+longOpen.length+'台',d:'30日以上 返却予定日が未入力 — 売上計上も遅れます',tab:'pipe'});
+  // ⑤ 車検 (切れ / 60日以内)
+  const vehs=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済');
+  const exp=[],soon=[];
+  vehs.forEach(v=>{ const i=(v.inspectionDate||'').slice(0,10); if(!i) return; if(i<today) exp.push(v); else if(daysBetween(today,i)<=60) soon.push(v); });
+  const vnm=v=>(v.name||'').trim()||_vplate(v);
+  if(exp.length) out.push({sev:'danger',t:'車検切れ '+exp.length+'台',d:exp.slice(0,3).map(vnm).join(' ／ ')+(exp.length>3?' 他':''),tab:'ops'});
+  if(soon.length) out.push({sev:'warn',t:'車検60日以内 '+soon.length+'台',d:soon.slice(0,3).map(vnm).join(' ／ ')+(soon.length>3?' 他':''),tab:'ops'});
+  // ⑥ 売掛 (請求済・入金待ち = 経営者が一番見たい「詰まり」)
+  const ar=rentalUnified().stages[3]+densoUnified().stages[3];
+  if(ar>0) out.push({sev:'info',t:'請求・入金待ち '+ar+'件',d:'レンタカー＋電装の売掛 — 案件タブで内訳',tab:'pipe'});
+  // ⑦ 遊休車 (直近30日 稼働ゼロ)
+  if(vs.idle.length) out.push({sev:'warn',t:'直近30日 稼働ゼロの車 '+vs.idle.length+'台',d:vs.idle.slice(0,3).map(r=>vnm(r.v)).join(' ／ ')+(vs.idle.length>3?' 他':''),tab:'ops'});
+  // ⑧ 受付の鈍化 (前年同期比 -20%以下)
+  const rec=receptionStats();
+  [['レンタカー',rec.rental],['DETALIA',rec.detalia],['電装',rec.denso]].forEach(([nm,g])=>{
+    if(g.prevMonthSame>0){
+      const p=Math.round((g.month-g.prevMonthSame)/g.prevMonthSame*100);
+      if(p<=-20) out.push({sev:'warn',t:nm+'の受付が鈍化（'+p+'%）',d:'今月 '+g.month+'件 ／ 前年同期 '+g.prevMonthSame+'件',tab:'now'});
+    }
+  });
+  const rank={danger:0,warn:1,info:2,good:3};
+  out.sort((a,b)=>rank[a.sev]-rank[b.sev]);
+  return out.slice(0,7);
+}
+function renderInsights(){
+  const host=$('insights'); if(!host) return;
+  const items=computeInsights();
+  const alarms=items.filter(i=>i.sev!=='good');
+  let html='';
+  if(!alarms.length) html+='<div class="ins-ok">✓ 順調 — 検知された異常はありません</div>';
+  html+=items.map(i=>
+    '<div class="ins-row" onclick="showTab(\''+i.tab+'\')">'+
+      '<span class="ins-dot '+i.sev+'"></span>'+
+      '<span class="ins-bd"><span class="ins-t">'+esc(i.t)+'</span>'+(i.d?'<div class="ins-d">'+esc(i.d)+'</div>':'')+'</span>'+
+      '<span class="ins-arw">›</span>'+
+    '</div>').join('');
+  host.innerHTML=html;
+}
+
+// ===== 先々の埋まり (今後14日・予約実数ベース・2026-06-12a) =====
+// 予測ではなく「既に入っている予約」の実数。useEnd空の稼働中=返却まで出っぱなし扱い (PC _isOutToday と同思想)。
+function _lastYearSameDate(iso){ const d=parseD(iso); if(!d) return iso; d.setFullYear(d.getFullYear()-1); return d.toISOString().slice(0,10); }
+function forwardOccupancy(){
+  const today=todayISO();
+  const tot=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済').length||1;
+  const DONE=['返却済','仮請求','請求済','入金済'];
+  const cs=rentalCases().filter(c=>c.status!=='キャンセル'&&c.useStart);
+  const effOf=c=> c.useEnd || (DONE.includes(c.status)?c.useStart:'9999-12-31');
+  const days=[],cur=[],prev=[];
+  for(let i=0;i<14;i++){
+    const d=addDays(today,i); days.push(d);
+    cur.push(cs.filter(c=>c.useStart<=d && d<=effOf(c)).length);
+    const pd=_lastYearSameDate(d);
+    prev.push(cs.filter(c=>c.useStart<=pd && c.useEnd && pd<=c.useEnd).length);
+  }
+  return {days,cur,prev,tot};
+}
+function renderForward(){
+  const svg=$('fwd-chart'); if(!svg) return;
+  const o=forwardOccupancy();
+  const W=320,H=128,L=26,R=8,T=10,B=22;
+  const w=W-L-R,h=H-T-B;
+  const n=o.days.length;
+  const slot=w/n, bw=slot*0.58;
+  const pctOf=c=>Math.min(100,c/o.tot*100);
+  const dows=['日','月','火','水','木','金','土'];
+  let bars='',marks='',lbls='';
+  o.days.forEach((d,i)=>{
+    const dt=parseD(d); const dow=dt?dt.getDay():1;
+    const wknd=(dow===0||dow===6);
+    const bh=pctOf(o.cur[i])/100*h;
+    const x=L+i*slot+(slot-bw)/2;
+    bars+='<rect class="fbar'+(i===0?' today':'')+(wknd?' wknd':'')+'" x="'+x.toFixed(1)+'" y="'+(T+h-bh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0.5,bh).toFixed(1)+'"/>';
+    const py=T+h-(pctOf(o.prev[i])/100*h);
+    marks+='<line class="fprev" x1="'+(x-1.5).toFixed(1)+'" y1="'+py.toFixed(1)+'" x2="'+(x+bw+1.5).toFixed(1)+'" y2="'+py.toFixed(1)+'"/>';
+    if(i===0||i%2===0){
+      const md=dt?(dt.getMonth()+1)+'/'+dt.getDate():'';
+      lbls+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle"'+(wknd?' class="wknd"':'')+'>'+(i===0?'今日':md)+'</text>';
+    }
+  });
+  svg.innerHTML=
+    '<line class="fax" x1="'+L+'" y1="'+(T+h)+'" x2="'+(L+w)+'" y2="'+(T+h)+'"/>'+
+    '<line class="fax" x1="'+L+'" y1="'+T+'" x2="'+(L+w)+'" y2="'+T+'" stroke-dasharray="2,3"/>'+
+    '<text x="'+(L-5)+'" y="'+(T+4)+'" text-anchor="end">100%</text>'+
+    '<text x="'+(L-5)+'" y="'+(T+h+3)+'" text-anchor="end">0</text>'+
+    bars+marks+lbls;
+  const avg7=o.cur.slice(0,7).reduce((a,b)=>a+b,0)/7;
+  const pavg7=o.prev.slice(0,7).reduce((a,b)=>a+b,0)/7;
+  const aPct=Math.round(avg7/o.tot*100), pPct=Math.round(pavg7/o.tot*100);
+  const diff=aPct-pPct;
+  $('fwd-cap').innerHTML='直近7日平均 <b class="num" style="font-size:14px">'+aPct+'%</b>（約'+Math.round(avg7)+'台）'+
+    ' ・ 前年同期 '+pPct+'% <span class="'+(diff>=0?'up':'dn')+'">'+(diff>=0?'+':'')+diff+'pt</span>';
 }
 
 function drawSpark(id,values,labels){
@@ -1555,31 +1754,84 @@ function drawSpark(id,values,labels){
 const FREEE_API_TOKEN = 'lime-freee-2026-k9Xz7Qp3Rm';
 function _currentFY(){ const d=new Date(); return (d.getMonth()+1)>=4 ? d.getFullYear() : d.getFullYear()-1; }
 function _plTotal(bal, cat){ for(const b of (bal||[])){ if(b.total_line && b.account_category_name===cat) return Number(b.closing_balance||0); } return null; }
-let _freePLfetched=null;
-function freeeFetchPL(force){
-  const host=document.getElementById('rev-freee-pl'); if(!host) return;
-  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim();
-  if(!url){ host.innerHTML='<tr><td colspan=2 class="ink3">freee API URL 未設定（PCの設定で登録）</td></tr>'; return; }
-  const fy=_currentFY();
-  const fyEl=document.getElementById('rev-freee-fy'); if(fyEl) fyEl.textContent=`第${fy-2016}期 ${fy}年度・進行中`;
-  if(_freePLfetched===fy && !force) return;
-  _freePLfetched=fy;
-  host.innerHTML='<tr><td colspan=2 class="ink3">freeeから取得中…</td></tr>';
-  const cb='freeePL_'+Date.now(); const s=document.createElement('script'); let done=false;
+let _freePLfetched=null, _freePLPrevFetched=null;
+let FREEE_PL=null, FREEE_PL_PREV=null;   // 当年度 / 前年度通期 のパース済みPL (利益カード・前年比較に共用)
+function _parsePL(res){
+  const pl=res&&res.ok&&res.report&&res.report.trial_pl; if(!pl) return null;
+  const bal=pl.balances||[];
+  const uri=_plTotal(bal,'売上高'), gp=_plTotal(bal,'売上総損益金額'), op=_plTotal(bal,'営業損益金額'), ord=_plTotal(bal,'経常損益金額'), net=_plTotal(bal,'当期純損益金額');
+  const mg=(uri&&gp!=null)?(Math.round(gp/uri*1000)/10):null;   // 粗利率
+  const om=(uri&&op!=null)?(Math.round(op/uri*1000)/10):null;   // 営業利益率
+  return {uri,gp,op,ord,net,mg,om};
+}
+function _jsonpPL(fy,onDone){
+  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url){ onDone(null); return; }
+  const cb='freeePL_'+fy+'_'+Date.now(); const s=document.createElement('script'); let done=false;
   const clean=()=>{ try{delete window[cb]}catch(_){window[cb]=undefined} if(s.parentNode)s.parentNode.removeChild(s); };
-  const tmr=setTimeout(()=>{ if(done)return; done=true; clean(); host.innerHTML='<tr><td colspan=2 class="ink3">freee応答タイムアウト</td></tr>'; },30000);
-  window[cb]=function(res){ if(done)return; done=true; clearTimeout(tmr); clean();
-    const pl=res&&res.ok&&res.report&&res.report.trial_pl;
-    if(!pl){ host.innerHTML='<tr><td colspan=2 class="ink3">freee取得失敗</td></tr>'; return; }
-    const bal=pl.balances||[];
-    const uri=_plTotal(bal,'売上高'), gp=_plTotal(bal,'売上総損益金額'), op=_plTotal(bal,'営業損益金額'), ord=_plTotal(bal,'経常損益金額'), net=_plTotal(bal,'当期純損益金額');
-    const mg=(uri&&gp!=null)?(Math.round(gp/uri*1000)/10):null;
-    const r=(k,v,b)=> v==null?'':`<tr><td>${k}</td><td class="num"${b?' style="font-weight:700;color:var(--acc)"':''}>${yen(v)} 円</td></tr>`;
-    host.innerHTML = r('売上高',uri)+r('売上総利益(粗利)',gp)+(mg!=null?`<tr><td>粗利率</td><td class="num">${mg}%</td></tr>`:'')+r('営業利益',op)+r('経常利益',ord)+r('当期純利益',net,true);
-  };
-  s.onerror=()=>{ if(done)return; done=true; clearTimeout(tmr); clean(); host.innerHTML='<tr><td colspan=2 class="ink3">freee通信エラー</td></tr>'; };
+  const tmr=setTimeout(()=>{ if(done)return; done=true; clean(); onDone(null); },30000);
+  window[cb]=function(res){ if(done)return; done=true; clearTimeout(tmr); clean(); onDone(_parsePL(res)); };
+  s.onerror=()=>{ if(done)return; done=true; clearTimeout(tmr); clean(); onDone(null); };
   s.src=url+'?action=report&type=pl&fiscal_year='+fy+'&token='+encodeURIComponent(FREEE_API_TOKEN)+'&callback='+cb;
   document.head.appendChild(s);
+}
+function freeeFetchPL(force){
+  const host=document.getElementById('rev-freee-pl'); if(!host) return;
+  const fy=_currentFY();
+  const fyEl=document.getElementById('rev-freee-fy'); if(fyEl) fyEl.textContent=`第${fy-2016}期 ${fy}年度・進行中`;
+  if(DEMO){ // デモ検証用ダミー (本番は freee GAS JSONP)
+    if(!FREEE_PL){ FREEE_PL={fy,uri:48200000,gp:30125000,op:6830000,ord:6510000,net:4480000,mg:62.5,om:14.2};
+      FREEE_PL_PREV={fy:fy-1,uri:52400000,gp:31440000,op:7460000,ord:7100000,net:4890000,mg:60.0,om:14.2}; }
+    _renderFreeePL(); renderProfitCard(); return;
+  }
+  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim();
+  if(!url){ host.innerHTML='<tr><td colspan=2 class="ink3">freee API URL 未設定（PCの設定で登録）</td></tr>'; return; }
+  if(_freePLfetched===fy && !force){ return; }
+  _freePLfetched=fy;
+  host.innerHTML='<tr><td colspan=2 class="ink3">freeeから取得中…</td></tr>';
+  _jsonpPL(fy, d=>{
+    if(!d){ host.innerHTML='<tr><td colspan=2 class="ink3">freee取得失敗</td></tr>'; _freePLfetched=null; return; }
+    FREEE_PL={fy,...d};
+    _renderFreeePL(); renderProfitCard();
+    if(_freePLPrevFetched!==fy-1){ _freePLPrevFetched=fy-1;
+      _jsonpPL(fy-1, p=>{ if(p){ FREEE_PL_PREV={fy:fy-1,...p}; _renderFreeePL(); renderProfitCard(); } });
+    }
+  });
+}
+function _renderFreeePL(){
+  const host=document.getElementById('rev-freee-pl'); if(!host||!FREEE_PL) return;
+  const c=FREEE_PL, p=FREEE_PL_PREV;
+  const r=(k,v,b)=> v==null?'':`<tr><td>${k}</td><td class="num"${b?' style="font-weight:700;color:var(--acc)"':''}>${yen(v)} 円</td></tr>`;
+  let html = r('売上高',c.uri)+r('売上総利益(粗利)',c.gp)+(c.mg!=null?`<tr><td>粗利率</td><td class="num">${c.mg}%</td></tr>`:'')+r('営業利益',c.op)+(c.om!=null?`<tr><td>営業利益率</td><td class="num">${c.om}%</td></tr>`:'')+r('経常利益',c.ord)+r('当期純利益',c.net,true);
+  if(p){
+    const prog=(p.op>0&&c.op!=null)?Math.round(c.op/p.op*100):null;
+    html += `<tr><td colspan=2 style="padding-top:14px;border-bottom:0"><span class="ink3" style="font-size:9.5px;letter-spacing:.24em;text-transform:uppercase">前年度通期 (第${p.fy-2016}期 確定)</span></td></tr>`+
+      r('売上高',p.uri)+r('営業利益',p.op)+(p.mg!=null?`<tr><td>粗利率</td><td class="num">${p.mg}%</td></tr>`:'')+r('当期純利益',p.net)+
+      (prog!=null?`<tr><td>営業利益 進捗</td><td class="num" style="color:${prog>=100?'#2D7D33':'var(--acc)'}">${prog}%</td></tr>`:'');
+  }
+  host.innerHTML=html;
+}
+// TOP 利益カード — 売上だけでなく「儲かっているか」をTOPで (2026-06-12a)
+function renderProfitCard(){
+  const card=document.getElementById('profit-card'); if(!card) return;
+  if(!FREEE_PL||FREEE_PL.op==null){ card.style.display='none'; return; }
+  card.style.display='';
+  const c=FREEE_PL, p=FREEE_PL_PREV;
+  document.getElementById('pf-fy').textContent=`第${c.fy-2016}期 ${c.fy}年度・進行中`;
+  const opEl=document.getElementById('pf-op');
+  opEl.innerHTML=yen(c.op)+'<span class="unit" style="font-size:10px">円</span>';
+  opEl.style.color = c.op>=0 ? 'var(--ink)' : '#C0392B';
+  const subs=[];
+  if(c.mg!=null) subs.push('粗利率 '+c.mg+'%');
+  if(c.om!=null) subs.push('営業利益率 '+c.om+'%');
+  if(c.ord!=null) subs.push('経常 '+yen(c.ord)+'円');
+  document.getElementById('pf-sub').textContent=subs.join(' ・ ')||'—';
+  const bar=document.getElementById('pf-bar'), prog=document.getElementById('pf-prog');
+  if(p&&p.op>0&&c.op!=null){
+    const pct=Math.round(c.op/p.op*100);
+    bar.style.width=Math.max(0,Math.min(100,pct))+'%';
+    bar.className=pct>=0?'':'danger';
+    prog.innerHTML='前年度通期 営業利益 '+yen(p.op)+'円 に対し <b class="num" style="font-size:13px;color:'+(pct>=100?'#2D7D33':'var(--acc)')+'">'+pct+'%</b> 進捗';
+  } else { bar.style.width='0%'; prog.textContent='前年度データ取得中…'; }
 }
 
 function renderRev(){
@@ -2139,6 +2391,58 @@ function setupTabs(){
     localStorage.removeItem(LS.cachedR);localStorage.removeItem(LS.cachedD);localStorage.removeItem(LS.cachedE);
     DBX_TOKEN=null;toast('連携解除しました','ok');setTimeout(()=>location.reload(),500);
   };
+  setupUX();
+}
+
+// ===== 操作性 (2026-06-12a): スワイプでタブ移動 / 引っ張って更新 / 復帰時 自動更新 =====
+const TAB_ORDER=['now','rev','ops','pipe','set'];
+function setupUX(){
+  let swX=null, swY=null;            // スワイプ判定
+  let ptrY=null, ptrReady=false;     // pull-to-refresh
+  document.addEventListener('touchstart',e=>{
+    const t=e.touches[0]; swX=t.clientX; swY=t.clientY;
+    ptrY=(window.scrollY<=0)?t.clientY:null; ptrReady=false;
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(ptrY==null) return;
+    const dy=e.touches[0].clientY-ptrY;
+    const dx=Math.abs(e.touches[0].clientX-(swX==null?e.touches[0].clientX:swX));
+    if(dy>34 && window.scrollY<=0 && dy>dx*1.5){
+      const el=$('ptr');
+      ptrReady=dy>84;
+      el.classList.add('show'); el.classList.toggle('ready',ptrReady);
+      el.textContent=ptrReady?'↻ はなして更新':'↓ 引っぱって更新';
+    }
+  },{passive:true});
+  document.addEventListener('touchend',async e=>{
+    // pull-to-refresh 確定
+    const el=$('ptr');
+    if(ptrReady){
+      ptrY=null; ptrReady=false;
+      el.textContent='↻ 更新中…';
+      try{ await loadAll(); renderAll(); toast('更新しました','ok'); }
+      catch(err){ toast(err.message,'err'); }
+      el.classList.remove('show','ready');
+      swX=null; return;
+    }
+    if(el) el.classList.remove('show','ready');
+    ptrY=null;
+    // 横スワイプでタブ移動 (Crown展開中は無効)
+    if(swX==null) return;
+    const t=e.changedTouches[0];
+    const dx=t.clientX-swX, dy=t.clientY-swY; swX=null;
+    if(Math.abs(dx)<72 || Math.abs(dx)<Math.abs(dy)*2.2) return;
+    if($('crown').classList.contains('open')) return;
+    const i=TAB_ORDER.indexOf(_currentTab)+(dx<0?1:-1);
+    if(i<0||i>=TAB_ORDER.length) return;
+    showTab(TAB_ORDER[i]);
+  },{passive:true});
+  // アプリ復帰時: 最終取得から10分超なら静かに再読込 (毎朝開いた瞬間に最新)
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState!=='visible'||DEMO||!DBX_TOKEN) return;
+    const la=Date.parse(localStorage.getItem(LS.loadedAt)||'')||0;
+    if(Date.now()-la>10*60*1000){ loadAll().then(renderAll).catch(()=>{}); }
+  });
 }
 
 // ---------- DEMO DATA ----------
