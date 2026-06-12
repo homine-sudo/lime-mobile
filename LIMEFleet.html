@@ -142,7 +142,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
     <div class="card">
       <h3>売却した車の生涯成績</h3>
       <table class="t">
-        <thead><tr><th>車両</th><th class="r">累計売上</th><th class="r">取得</th><th class="r">売却額</th><th class="r">生涯ROI</th></tr></thead>
+        <thead><tr><th>車両</th><th class="r">累計売上</th><th class="r">投下資本</th><th class="r">売却額</th><th class="r">生涯ROI</th></tr></thead>
         <tbody id="sold-rows"></tbody>
       </table>
       <div class="sm" id="sold-total" style="margin-top:8px;text-align:right;font-weight:700"></div>
@@ -184,7 +184,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
 
 <script>
 'use strict';
-const APP_VERSION='2026-06-11b';
+const APP_VERSION='2026-06-11c';
 const DBX_APP_KEY='fly154tcdbz09x9';
 const PATH_RENTAL='/ライム共有DB/システムデータ（R）/data.json';
 const PATH_FLEET ='/ライム共有DB/システムデータ車両/data.json';
@@ -461,9 +461,16 @@ function _lifeRows(){
       if(base)leaseLeft=Math.round((base.getTime()+Number(v.leasePeriod)*2629800000-Date.now())/2629800000);
     }
     const mkt=marketOf(vp,v);
+    // 満了買取シナリオ: 契約を最後まで走り残価で買い取った場合の総コスト = リース料総額(月額×契約月数) + 残価
+    let matuTotalCost=null,matuRecov=null,matuLeaseTotal=null;
+    if(isLease){
+      const lp=Number(v.leasePeriod)||0; const resid=Number(v.residualValue)||0;
+      if(lp>0){ matuLeaseTotal=Math.round(Number(v.leaseFee)*lp); matuTotalCost=matuLeaseTotal+resid; matuRecov=matuTotalCost>0?Math.round(total/matuTotalCost*100):null; }
+    }
     return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),grade:v.grade||'',cls:v.vehicleClass||'',
       total,hist,r26,extra,extraList,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,
-      isLease,leasePaid,leaseMonths,leaseFee:Number(v.leaseFee)||0,invest,mkt,yearsHeld,sold_st:v.status==='売却済'};
+      isLease,leasePaid,leaseMonths,leaseFee:Number(v.leaseFee)||0,invest,mkt,yearsHeld,
+      matuTotalCost,matuRecov,matuLeaseTotal,residual:Number(v.residualValue)||0,sold_st:v.status==='売却済'};
   }).filter(x=>x.total>0||x.price>0);
 }
 // 売り時判定 (admin と同一トリガー)
@@ -479,8 +486,11 @@ function _soldRows(){
   return Object.values(S).map(s=>{
     // revTotal = 通算売上の手動訂正 (年別内訳なし・y合計より優先)
     const total=(s.revTotal!=null)?Number(s.revTotal):((s.y2024||0)+(s.y2025||0)+(s.y2026||0));
-    const roi=total+(s.sale||0)-(s.acq||0)-(s.kinjo||0);
-    return {model:s.model||'',plate:s.plate||'',soldYM:s.soldYM||'',total,acq:s.acq||0,sale:s.sale||0,kinjo:s.kinjo||0,roi,lease:!!s.lease};
+    // 投下資本: リース買取車は A案(買取額+保有中リース料累計=investCapital)、それ以外は取得価額
+    const invest=(s.lease&&Number(s.investCapital)>0)?Number(s.investCapital):(s.acq||0);
+    const roi=total+(s.sale||0)-invest-(s.kinjo||0);
+    return {model:s.model||'',plate:s.plate||'',soldYM:s.soldYM||'',total,acq:s.acq||0,invest,sale:s.sale||0,kinjo:s.kinjo||0,roi,lease:!!s.lease,
+      buyout:Number(s.buyout)||0,leasePaid:Number(s.leasePaid)||0,investNote:s.investNote||''};
   }).sort((a,b)=>b.roi-a.roi);
 }
 
@@ -619,7 +629,19 @@ function openDetail(vp){
         <dt>回収率 (累計売上÷投資)</dt><dd class="num">${x.recov!=null?x.recov+'%':'—'}</dd>
         <dt>直近12ヶ月稼働</dt><dd class="num">${x.usedD} 日</dd>
       </dl>
+      ${x.isLease?`<div class="note" style="margin-top:4px">上は<b>実支出ベース</b>（今日までに払った金で計算）。リースは取得価額を前払いしていないため、未払いの将来リース料は投資に含めない。</div>`:''}
     </div>
+
+    ${x.isLease&&x.matuTotalCost?`<div class="card">
+      <h3>🏁 満了まで持つと（買取シナリオ）</h3>
+      <dl class="kv">
+        <dt>リース料総額 (月額×${esc(String(v.leasePeriod))}ヶ月)</dt><dd class="num">¥${yen(x.matuLeaseTotal)}</dd>
+        <dt>＋ 契約残価 (満了買取額)</dt><dd class="num">¥${yen(x.residual)}</dd>
+        <dt><b>総コスト (車1台の取得原価)</b></dt><dd class="num" style="font-weight:700">¥${yen(x.matuTotalCost)}</dd>
+        <dt>現時点 累計売上での回収率</dt><dd class="num ${x.matuRecov>=100?'pos':''}" style="font-weight:700">${x.matuRecov!=null?x.matuRecov+'%':'—'}</dd>
+      </dl>
+      <div class="note">「契約を最後まで走って残価で買い取り、1台として保有したら元が取れるか」を見る指標。${x.matuRecov>=100?'<b class="pos">既に総コストを回収済</b>＝満了買取しても黒字。':'満了買取の損益分岐は残り稼働しだい。'}実支出ベースの回収率（${x.recov!=null?x.recov+'%':'—'}）とは投資の取り方が違う。</div>
+    </div>`:''}
 
     <div class="card">
       <h3>🏷 市場価格（売れる値段）</h3>
@@ -709,18 +731,20 @@ function renderSold(){
   const host=$('sold-rows'); if(!host) return;
   const rows=_soldRows();
   if(!rows.length){host.innerHTML='<tr><td class="empty">データなし</td></tr>';$('sold-total').textContent='';return}
-  host.innerHTML=rows.map(s=>`<tr>
+  host.innerHTML=rows.map(s=>{
+    const leaseBuyout=s.lease&&s.buyout>0;
+    return `<tr>
     <td><b>${esc(s.model)}</b> <span class="xs ink3">${esc(s.plate)}</span><br><span class="xs ink3">${esc(s.soldYM)} 売却${s.lease?' ・リース':''}</span></td>
     <td class="r num">¥${yen(s.total)}</td>
-    <td class="r num">¥${yen(s.acq)}</td>
+    <td class="r num">¥${yen(s.invest)}${leaseBuyout?`<br><span class="xs ink3">買取${yen(s.buyout)}+リース${yen(s.leasePaid)}</span>`:''}</td>
     <td class="r num">¥${yen(s.sale)}</td>
     <td class="r num ${s.roi>=0?'pos':'neg'}" style="font-weight:700">${s.roi>=0?'+':''}¥${yen(s.roi)}</td>
-  </tr>`).join('');
+  </tr>`;}).join('');
   const sum=rows.reduce((a,s)=>a+s.roi,0);
-  const sumAcq=rows.reduce((a,s)=>a+s.acq,0);
-  const avgPct=sumAcq>0?Math.round(sum/sumAcq*100):null;
+  const sumInv=rows.reduce((a,s)=>a+s.invest,0);
+  const avgPct=sumInv>0?Math.round(sum/sumInv*100):null;
   $('sold-total').innerHTML=`合計 ${rows.length}台: <span class="num ${sum>=0?'pos':'neg'}">${sum>=0?'+':''}¥${yen(sum)}</span>`+
-    (avgPct!=null?` ・ 平均ROI率 <span class="num ${avgPct>=0?'pos':'neg'}">${avgPct>=0?'+':''}${avgPct}%</span> <span class="xs ink3">(ΣROI÷Σ取得)</span>`:'');
+    (avgPct!=null?` ・ 平均ROI率 <span class="num ${avgPct>=0?'pos':'neg'}">${avgPct>=0?'+':''}${avgPct}%</span> <span class="xs ink3">(ΣROI÷Σ投下資本)</span>`:'');
 }
 
 // --- 設定 ---
