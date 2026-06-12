@@ -326,6 +326,9 @@
   .dept3-row .d3-nm{font-family:var(--serif);font-size:14px;color:var(--ink);letter-spacing:.02em}
   .dept3-row .d3-m{font-family:var(--serif);font-size:19px;font-weight:500;color:var(--ink);text-align:right;line-height:1}
   .dept3-row .d3-y{font-family:var(--serif);font-size:15px;color:var(--ink2);text-align:right;line-height:1}
+  /* 電装 売上予定 (受注済み・未計上) — 実売上と混ざらないよう小さく・イタリックで区別 */
+  .dept3-plan{padding:7px 0 2px;font-size:10.5px;color:var(--ink3);letter-spacing:.04em;text-align:right;border-top:1px dotted var(--line)}
+  .dept3-plan .num{font-family:var(--serif);font-size:14px;color:var(--acc);font-weight:500}
 
   /* ===== Department card (簡素化) ===== */
   .card.dept{padding:20px 18px}
@@ -605,6 +608,8 @@
         <span class="d3-m num" id="den-month">—</span>
         <span class="d3-y num" id="den-year">—</span>
       </div>
+      <!-- 電装 売上予定 (受注済み・未作業完了 — 計上前の確定受注残・2026-06-12c) -->
+      <div class="dept3-plan" id="den-plan" style="display:none"></div>
     </div>
 
     <!-- ②b 利益 (freee 実損益・年度累計 — 「売れているか」だけでなく「儲かっているか」・2026-06-12a) -->
@@ -903,7 +908,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-12b';
+const APP_VERSION = '2026-06-12c';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1074,6 +1079,12 @@ function densoAmount(j){
 // 売上計上対象 (PC: 作業完了/報告済/請求済/入金済)
 function billableDenso(){
   return densoJobs().filter(j=>['作業完了','報告済','請求済','入金済'].includes(j.status));
+}
+// 売上予定 = 受注済みだが未作業完了 (受注/部品手配/着荷済/作業中)。billableDenso と排他＝二重計上なし (2026-06-12c)
+function densoForecast(){
+  const PEND=['受注','部品手配','着荷済','作業中'];
+  const js=densoJobs().filter(j=>PEND.includes(j.status));
+  return {count:js.length, total:js.reduce((a,j)=>a+densoAmount(j),0)};
 }
 // 売上の月帰属 = billingMonth || workedAt の YYYY-MM
 function densoSalesYM(j){ return ym(j.billingMonth) || ym(j.workedAt) || ym(j.requestedAt) }
@@ -1452,6 +1463,13 @@ function renderNow(){
   $('rent-month').textContent=yen(s.rental);
   $('det-month').textContent=yen(s.detalia);
   $('den-month').textContent=yen(s.denso);
+  // 電装 売上予定 (受注済み・未作業完了の確定受注残)
+  const dfc=densoForecast();
+  const planEl=$('den-plan');
+  if(planEl){
+    planEl.style.display=dfc.count?'':'none';
+    if(dfc.count) planEl.innerHTML='電装 売上予定（受注済み '+dfc.count+'件・未作業）　<span class="num">+'+yen(dfc.total)+'</span> 円';
+  }
 
   // 当年度(FY YTD) サマリー
   const yr=thisYearSummary();
@@ -2322,7 +2340,7 @@ function densoUnified(){
   const n=arr=>js.filter(j=>arr.includes(j.status)).length;
   return _uni([ n(['依頼','受注','部品手配','着荷済']), n(['作業中']), n(['作業完了','報告済']), n(['請求済']) ], n(['入金済']));
 }
-function _renderUniPipe(elId, u){
+function _renderUniPipe(elId, u, note){
   const tot=u.total||1;
   const rows=UNIFIED_STAGES.map((label,i)=>{
     const cnt=u.stages[i];
@@ -2335,12 +2353,15 @@ function _renderUniPipe(elId, u){
     </div>`;
   }).join('');
   const el=document.getElementById(elId); if(!el) return;
-  el.innerHTML = `<div class="pipe-head"><b>進行中 ${u.total}件</b><span class="ink3">入金済 ${u.paid}件 完了</span></div>` + rows;
+  el.innerHTML = `<div class="pipe-head"><b>進行中 ${u.total}件</b><span class="ink3">入金済 ${u.paid}件 完了</span></div>` + rows +
+    (note?`<div class="sm" style="margin-top:8px;padding-top:7px;border-top:1px dotted var(--line);text-align:right;color:var(--ink3)">${note}</div>`:'');
 }
 function renderPipe(){
   _renderUniPipe('pipe-rental', rentalUnified());
   _renderUniPipe('pipe-detalia', detaliaUnified());
-  _renderUniPipe('pipe-denso', densoUnified());
+  const dfc=densoForecast();
+  _renderUniPipe('pipe-denso', densoUnified(),
+    dfc.count?('受注済み 売上予定　<b class="num" style="font-size:14px;color:var(--acc)">+'+yen(dfc.total)+'</b> 円（'+dfc.count+'件・未作業）'):null);
 }
 
 function renderSet(){
@@ -2530,6 +2551,11 @@ function DEMO_E(){
     const iso=dt.toISOString().slice(0,10);
     jobs.push({id:'E'+i,jobNo:'D-'+(100+i),status:stat[Math.floor(Math.random()*stat.length)],requestedAt:iso,workedAt:iso,billingMonth:iso.slice(0,7),qty:1+Math.floor(Math.random()*3),unitFee:[15000,28000,42000,60000][i%4],parts:[],clientName:'工場'+i});
   }
+  // 受注済み・未作業 (売上予定の検証用)
+  const tIso=today.toISOString().slice(0,10);
+  ['受注','部品手配','作業中'].forEach((st,i)=>{
+    jobs.push({id:'EP'+i,jobNo:'D-'+(200+i),status:st,requestedAt:tIso,workedAt:'',billingMonth:'',qty:1,unitFee:[33000,52000,28000][i],parts:[],clientName:'工場P'+i});
+  });
   return {jobs,settings:{taxRate:10}};
 }
 
