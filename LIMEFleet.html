@@ -184,7 +184,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
 
 <script>
 'use strict';
-const APP_VERSION='2026-06-11d';
+const APP_VERSION='2026-06-11e';
 const DBX_APP_KEY='fly154tcdbz09x9';
 const PATH_RENTAL='/ライム共有DB/システムデータ（R）/data.json';
 const PATH_FLEET ='/ライム共有DB/システムデータ車両/data.json';
@@ -736,7 +736,7 @@ function renderSold(){
     return `<tr>
     <td><b>${esc(s.model)}</b> <span class="xs ink3">${esc(s.plate)}</span><br><span class="xs ink3">${esc(s.soldYM)} 売却${s.lease?' ・リース':''}</span></td>
     <td class="r num">¥${yen(s.total)}</td>
-    <td class="r num">¥${yen(s.invest)}${leaseBuyout?`<br><span class="xs ink3">買取${yen(s.buyout)}+リース${yen(s.leasePaid)}</span>`:''}</td>
+    <td class="r num">¥${yen(s.invest)}${leaseBuyout?`<br><span class="xs ink3">買取${yen(s.buyout)}${s.leasePaid>0?'+リース'+yen(s.leasePaid):''}</span>`:''}</td>
     <td class="r num">¥${yen(s.sale)}</td>
     <td class="r num ${s.roi>=0?'pos':'neg'}" style="font-weight:700">${s.roi>=0?'+':''}¥${yen(s.roi)}${s.invest>0?`<br><span class="xs">${s.roi>=0?'+':''}${Math.round(s.roi/s.invest*100)}%</span>`:''}</td>
   </tr>`;}).join('');
