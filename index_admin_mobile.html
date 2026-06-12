@@ -834,7 +834,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-10d';
+const APP_VERSION = '2026-06-12';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1669,7 +1669,8 @@ const VEHICLE_HIST_UNATTR = {"y2024":0,"y2025":13200};
 // 車両別 累計整備費(金城・2025-04〜2026-05)。生涯ROIの維持費に使用。keyは _vplate。
 const VEHICLE_KINJO_LIFE = {"沖縄582わ4390":31900,"沖縄582わ4391":31700,"沖縄582わ4457":33900,"沖縄582わ4422":32200,"沖縄582わ4619":37000,"沖縄506れ2657":61800,"沖縄582わ5565":11000,"沖縄302わ8959":68000,"沖縄480わ4775":22000,"沖縄506れ4057":78000,"沖縄506れ4058":77900,"沖縄582わ5893":47300,"沖縄582わ5894":22300,"沖縄506れ6611":145000,"沖縄582わ6765":48000,"沖縄506れ9005":61000,"沖縄506れ9006":61000,"沖縄582わ7095":48000,"沖縄582わ7229":57500,"沖縄506れ9538":60600,"沖縄58Aわ267":51000,"沖縄58Aわ265":49000,"沖縄303わ6857":67200,"沖縄507れ5335":24300,"沖縄58Aわ1077":11500,"沖縄480わ5523":22400,"沖縄303わ7441":72900,"沖縄303わ7659":50800,"沖縄303わ7874":82700,"沖縄58Aわ1914":23100,"沖縄507れ8153":23000,"沖縄507れ8794":51000,"沖縄58Aわ2994":11300,"沖縄304わ502":26100,"沖縄508れ586":11500,"沖縄508れ585":11900,"沖縄58Aわ4210":13200,"沖縄58Aわ4503":11000,"沖縄58Aわ4507":11300,"沖縄58Aわ4692":11700,"沖縄304わ2141":12700,"沖縄58Aわ5139":11000,"沖縄58Aわ5472":9800,"沖縄58Aわ5602":11900,"沖縄58Aわ6700":10800,"沖縄58Aわ6699":11300,"沖縄508れ6974":8800};
 // 売却車 (車両管理簿 売却・返却シート)。生涯ROI=累計売上+売却額-取得-整備。keyは _vplate。
-const VEHICLE_SOLD = {"沖縄582わ8099":{"model":"スペーシア","plate":"582 わ 8099","acq":450000,"sale":650000,"soldYM":"2024-08","lease":false,"lessor":"自社保有","y2024":92400,"y2025":0,"y2026":0,"kinjo":0},"沖縄303わ7443":{"model":"MINIクーパーS 3D","plate":"303 わ 7443","acq":2230000,"sale":2800000,"soldYM":"2024-12","lease":false,"lessor":"リコーリース","y2024":192500,"y2025":0,"y2026":0,"kinjo":0},"沖縄303れ7879":{"model":"VOXY","plate":"303 れ 7879","acq":3000000,"sale":3505349,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":400950,"y2025":0,"y2026":0,"kinjo":0},"沖縄100わ2969":{"model":"ハイラックス","plate":"100 わ 2969","acq":4300000,"sale":4500000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄507わ6903":{"model":"アクア","plate":"507 わ 6903","acq":1827950,"sale":2000000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":230450,"y2025":55000,"y2026":0,"kinjo":0},"沖縄400わ4330":{"model":"サクシード","plate":"400 わ 4330","acq":650000,"sale":150000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":149600,"y2025":288000,"y2026":0,"kinjo":0},"沖縄582わ7503":{"model":"ワゴンR","plate":"582 わ 7503","acq":340000,"sale":52000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄507れ6590":{"model":"アクア","plate":"507 れ 6590","acq":1600000,"sale":1350000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":181500,"y2025":367850,"y2026":0,"kinjo":6600},"沖縄582わ6585":{"model":"ワゴンR","plate":"582 わ 6585","acq":310000,"sale":300000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄58Aわ1172":{"model":"タント","plate":"58A わ 1172","acq":676900,"sale":490000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":18700,"y2026":0,"kinjo":0},"沖縄304わ509":{"model":"アルファード30","plate":"304 わ 509","acq":4000000,"sale":3900000,"soldYM":"2025-11","lease":false,"lessor":"自社保有","y2024":0,"y2025":928400,"y2026":0,"kinjo":32500},"沖縄303わ1634":{"model":"VOXY","plate":"303 わ 1634","acq":3485000,"sale":2864000,"soldYM":"2026-03","lease":true,"lessor":"おきぎんリース","y2024":1730200,"y2025":2298700,"y2026":500500,"kinjo":60000},"沖縄303わ1846":{"model":"ステップワゴン","plate":"303 わ 1846","acq":3236097,"sale":2900000,"soldYM":"2026-04","lease":true,"lessor":"第一総業リース","y2024":1990300,"y2025":1914300,"y2026":144300,"kinjo":73700},"沖縄582わ5563":{"model":"N-BOX","plate":"582 わ 5563","acq":1690487,"sale":1300000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":690250,"y2025":1491600,"y2026":123200,"kinjo":0},"沖縄506れ4826":{"model":"セレナ","plate":"506 れ 4826","acq":3400000,"sale":2600000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":1373700,"y2025":2110300,"y2026":488900,"kinjo":12800},"沖縄582わ6893":{"model":"N-BOX","plate":"582 わ 6893","acq":1745000,"sale":1100000,"soldYM":"2026-04","lease":false,"lessor":"第一総業リース","y2024":636150,"y2025":1173000,"y2026":132000,"kinjo":0},"沖縄582わ5564":{"model":"N-BOX","plate":"582 わ 5564","acq":1690487,"sale":1300000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":837050,"y2025":1258400,"y2026":110000,"kinjo":11300}};
+const VEHICLE_SOLD = {"沖縄582わ8099":{"model":"スペーシア","plate":"582 わ 8099","acq":450000,"sale":650000,"soldYM":"2024-08","lease":false,"lessor":"自社保有","y2024":92400,"y2025":0,"y2026":0,"kinjo":0},"沖縄303わ7443":{"model":"MINIクーパーS 3D","plate":"303 わ 7443","acq":2230000,"sale":2800000,"soldYM":"2024-12","lease":true,"lessor":"リコーリース","y2024":192500,"y2025":0,"y2026":0,"kinjo":0,"investCapital":2170620,"buyout":2170620,"leasePaid":0},"沖縄303れ7879":{"model":"VOXY","plate":"303 れ 7879","acq":3000000,"sale":3505349,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":400950,"y2025":0,"y2026":0,"kinjo":0},"沖縄100わ2969":{"model":"ハイラックス","plate":"100 わ 2969","acq":4300000,"sale":4500000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0},"沖縄507わ6903":{"model":"アクア","plate":"507 わ 6903","acq":1827950,"sale":2000000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":230450,"y2025":55000,"y2026":0,"kinjo":0},"沖縄400わ4330":{"model":"サクシード","plate":"400 わ 4330","acq":650000,"sale":150000,"soldYM":"2025-02","lease":false,"lessor":"自社保有","y2024":149600,"y2025":288000,"y2026":0,"kinjo":0},"沖縄582わ7503":{"model":"ワゴンR","plate":"582 わ 7503","acq":340000,"sale":52000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0,"revTotal":400000},"沖縄507れ6590":{"model":"アクア","plate":"507 れ 6590","acq":1600000,"sale":1350000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":181500,"y2025":367850,"y2026":0,"kinjo":6600},"沖縄582わ6585":{"model":"ワゴンR","plate":"582 わ 6585","acq":310000,"sale":300000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":0,"y2026":0,"kinjo":0,"revTotal":624000},"沖縄58Aわ1172":{"model":"タント","plate":"58A わ 1172","acq":676900,"sale":490000,"soldYM":"2025-08","lease":false,"lessor":"自社保有","y2024":0,"y2025":18700,"y2026":0,"kinjo":0,"revTotal":360000},"沖縄304わ509":{"model":"アルファード30","plate":"304 わ 509","acq":4000000,"sale":3900000,"soldYM":"2025-11","lease":false,"lessor":"自社保有","y2024":0,"y2025":928400,"y2026":0,"kinjo":32500},"沖縄303わ1634":{"model":"VOXY","plate":"303 わ 1634","acq":3485000,"sale":2949960,"soldYM":"2026-03","lease":true,"lessor":"おきぎんリース","y2024":1730200,"y2025":2298700,"y2026":500500,"kinjo":60000,"investCapital":4083230,"buyout":2177480,"leasePaid":1905750},"沖縄303わ1846":{"model":"ステップワゴン","plate":"303 わ 1846","acq":3236097,"sale":2900000,"soldYM":"2026-04","lease":true,"lessor":"第一総業リース","y2024":1990300,"y2025":1914300,"y2026":144300,"kinjo":73700,"investCapital":3784603,"buyout":1981488,"leasePaid":1803115},"沖縄582わ5563":{"model":"N-BOX","plate":"582 わ 5563","acq":1690487,"sale":1300000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":690250,"y2025":1491600,"y2026":123200,"kinjo":0},"沖縄506れ4826":{"model":"セレナ","plate":"506 れ 4826","acq":3400000,"sale":2600000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":1373700,"y2025":2110300,"y2026":488900,"kinjo":12800},"沖縄582わ6893":{"model":"N-BOX","plate":"582 わ 6893","acq":1745000,"sale":1100000,"soldYM":"2026-04","lease":true,"lessor":"第一総業リース","y2024":636150,"y2025":1173000,"y2026":132000,"kinjo":0,"investCapital":2045407,"buyout":1049665,"leasePaid":995742},"沖縄582わ5564":{"model":"N-BOX","plate":"582 わ 5564","acq":1690487,"sale":1300000,"soldYM":"2026-04","lease":false,"lessor":"自社保有","y2024":837050,"y2025":1258400,"y2026":110000,"kinjo":11300}};
+const VEHICLE_EXTRA_REV = {"沖縄302わ8959":{"y2023":726000,"y2024":1155000,"y2025":1070850,"y2026":448250,"label":"八重瀬町役場 法人レンタル（年契約・月次請求）"}};
 const DEMO_HIST = {}; // ?demo=1 用 (実車不在のため検証用に動的シード)
 
 // 維持費按分プール: 前期(確定)の 保険料(損保ジャパンpartner絞り=車両保険のみ)+租税公課+車両費総額 と 金城車両費 をfreeeから取得 (車両別データが無い保険・税は取得原価按分)。
@@ -1818,22 +1819,32 @@ function _lifeRows(){
   let poolRate=0;
   if(MAINT && priceTotal>0){ const kinjoOther=Math.max(0,(MAINT.vehicleTotal||0)-(MAINT.kinjoTotal||0)); poolRate=((MAINT.insurance||0)+(MAINT.taxDues||0)+kinjoOther)/priceTotal; }
   const KINJO = DEMO ? {} : VEHICLE_KINJO_LIFE;
+  const EXTRA = (typeof VEHICLE_EXTRA_REV!=='undefined' && !DEMO) ? VEHICLE_EXTRA_REV : {};
   return vehs.map(v=>{
     const vp=_vplate(v); const h=HIST[vp]||{y2024:0,y2025:0};
-    const hist=(h.y2024||0)+(h.y2025||0); const r26=live[v.id]||0; const total=hist+r26;
+    const hist=(h.y2024||0)+(h.y2025||0); const r26=live[v.id]||0;
+    const ex=EXTRA[vp]||{}; const extra=(ex.y2023||0)+(ex.y2024||0)+(ex.y2025||0)+(ex.y2026||0); // システム外売上(法人年契約等)
+    const total=hist+r26+extra;
     const price=Number(v.vehiclePrice)||0; const sold=Number(v.soldPrice)||0;
-    // リース車は取得価額を前払いしていない。コスト＝月額リース料×経過月数(実支出ベース・契約月数で頭打ち・売却額なし)。
+    // リース車の投下資本 = リース料総額(月額×契約月数) + 残価 (満了買取前提の総取得原価)。自社保有=取得価額と同じ土俵。
     const isLease=Number(v.leaseFee)>0;
-    let leaseMonths=0, leasePaid=0;
-    if(isLease){ const lp=Number(v.leasePeriod)||0; const lb=parseD(v.purchaseDate||v.firstRegistration); leaseMonths= lb? Math.max(1,(Date.now()-lb.getTime())/2629800000):12; if(lp>0) leaseMonths=Math.min(leaseMonths,lp); leasePaid=Math.round(Number(v.leaseFee)*leaseMonths); }
-    const invest= isLease? leasePaid : price;                               // ROIの投資額: リース=支払累計 / 保有=取得価額
+    let leaseMonths=0, leasePaid=0, leaseFeeTotal=0, leaseTotalCost=0;
+    if(isLease){
+      const lp=Number(v.leasePeriod)||0; const resid=Number(v.residualValue)||0;
+      const lb=parseD(v.purchaseDate||v.firstRegistration);
+      leaseMonths= lb? Math.max(1,(Date.now()-lb.getTime())/2629800000):12; if(lp>0) leaseMonths=Math.min(leaseMonths,lp);
+      leasePaid=Math.round(Number(v.leaseFee)*leaseMonths);                  // 実支出(参考)
+      leaseFeeTotal=lp>0?Math.round(Number(v.leaseFee)*lp):0;                 // リース料総額
+      leaseTotalCost=leaseFeeTotal>0?(leaseFeeTotal+resid):price;            // 投下資本(総額+残価・期間欠落時は車両価格代替)
+    }
+    const invest= isLease? leaseTotalCost : price;                          // 投下資本: リース=リース総額+残価 / 保有=取得価額
     const recov= invest>0? Math.round(total/invest*100): null;
     // 保有年数 (購入日〜現在。なければ1年扱い)
     let yearsHeld=1; const pd=parseD(v.purchaseDate); if(pd) yearsHeld=Math.max(0.5,(Date.now()-pd.getTime())/(365.25*864e5));
     const kinjoLife = (DEMO? Math.round(price*0.02) : ((KINJO[vp]||0) + _kinjoLive(vp))); // 累計整備費(埋込実額 + freeeタグ集計ライブ)
     const apportion = Math.round(price*poolRate*yearsHeld);                  // 保険+税+他車両費 按分(保有年数分)
     const runCost = kinjoLife + apportion;                                   // 生涯運用コスト
-    const gross= isLease? (total - leasePaid - runCost) : (total + sold - price - runCost); // 生涯ROI(リース=実支出ベース)
+    const gross= total + sold - invest - runCost; // 生涯ROI(リース/自社保有 共通・リースは sold=0)
     const usedD=used12[v.id]||0;
     const insp=(v.inspectionDate||'').slice(0,10);
     let inspDays=null; if(insp) inspDays= insp<today? -daysBetween(insp,today): daysBetween(today,insp);
@@ -1842,16 +1853,17 @@ function _lifeRows(){
       const base=parseD(v.purchaseDate||v.firstRegistration);
       if(base) leaseLeft=Math.round((base.getTime()+Number(v.leasePeriod)*2629800000 - Date.now())/2629800000);
     }
-    return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),total,hist,r26,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,lease:isLease,isLease,leasePaid,leaseMonths,leaseFee:Number(v.leaseFee)||0,invest,sold_st:v.status==='売却済'};
+    return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),total,hist,r26,extra,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,lease:isLease,isLease,leasePaid,leaseMonths,leaseFeeTotal,leaseTotalCost,residual:Number(v.residualValue)||0,leaseFee:Number(v.leaseFee)||0,invest,sold_st:v.status==='売却済'};
   }).filter(x=>x.total>0||x.price>0);
 }
 // 売却車 生涯ROI 行 (VEHICLE_SOLD)
 function _soldRows(){
   if(DEMO) return [];
   return Object.values(VEHICLE_SOLD).map(s=>{
-    const total=(s.y2024||0)+(s.y2025||0)+(s.y2026||0);
-    const roi= total + (s.sale||0) - (s.acq||0) - (s.kinjo||0);
-    return {model:s.model||'',plate:s.plate||'',soldYM:s.soldYM||'',total,acq:s.acq||0,sale:s.sale||0,kinjo:s.kinjo||0,roi,lease:!!s.lease};
+    const total=(s.revTotal!=null)?Number(s.revTotal):((s.y2024||0)+(s.y2025||0)+(s.y2026||0)); // revTotal=通算売上訂正
+    const invest=(s.lease&&Number(s.investCapital)>0)?Number(s.investCapital):(s.acq||0);        // リース買取車=投下資本(買取+リース料累計)
+    const roi= total + (s.sale||0) - invest - (s.kinjo||0);
+    return {model:s.model||'',plate:s.plate||'',soldYM:s.soldYM||'',total,acq:s.acq||0,invest,sale:s.sale||0,kinjo:s.kinjo||0,roi,lease:!!s.lease,buyout:Number(s.buyout)||0,leasePaid:Number(s.leasePaid)||0};
   }).sort((a,b)=>b.roi-a.roi);
 }
 function renderVehicleLifetime(){
@@ -1913,7 +1925,7 @@ function renderVehicleLifetime(){
     if(x.isLease) tag+=' <span class="badge" style="background:#EAF0FB;color:#1E40AF;font-size:9px;padding:1px 5px">リース</span>';
     return `<tr><td>`+
       `<b>${esc(x.name)}</b> <span class="ink3" style="font-size:10px">${esc(x.plate)}</span>${tag}`+
-      `<div class="ink3" style="font-size:10px">累計 ${f(x.total)} ／ ${x.isLease?'リース支払 '+f(x.leasePaid)+'<span style="font-size:9px">(月'+f(x.leaseFee)+'×'+Math.round(x.leaseMonths)+'ヶ月)</span>':'取得 '+(x.price?f(x.price):'—')}${x.runCost?' ／ 維持 '+f(x.runCost):''}${(!x.isLease&&x.sold)?' ／ 売却 '+f(x.sold):''}</div>`+
+      `<div class="ink3" style="font-size:10px">累計 ${f(x.total)} ／ ${x.isLease?'投下資本 '+f(x.invest)+'<span style="font-size:9px">(リース総額'+f(x.leaseFeeTotal)+'+残価'+f(x.residual)+')</span>':'取得 '+(x.price?f(x.price):'—')}${x.runCost?' ／ 維持 '+f(x.runCost):''}${(!x.isLease&&x.sold)?' ／ 売却 '+f(x.sold):''}</div>`+
       `<div class="life-bar"><div class="life-track"><i style="width:${barW}%;background:${bc}"></i></div><span style="color:${bc}">${rc}</span></div>`+
       `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.gross>=0?'var(--acc)':'#C0392B'}">${x.gross>=0?'+':''}${f(x.gross)}<div class="ink3" style="font-size:9px;font-weight:400">生涯ROI</div></td></tr>`;
   };
@@ -1945,9 +1957,9 @@ function renderVehicleLifetime(){
       soldEl.innerHTML='<div class="lbl2" style="color:#777">売却した車の生涯成績 — '+sr.length+'台 ・ 合計 <b style="color:'+(tot>=0?'#2D7D33':'#C0392B')+'">'+(tot>=0?'+':'')+f(tot)+'</b></div>'+
         sr.map(s=>{
           const rev0=s.total<=0;
-          const recovW=s.acq>0?Math.min(100,Math.max(2,Math.round(s.total/s.acq*100))):2;
+          const recovW=s.invest>0?Math.min(100,Math.max(2,Math.round(s.total/s.invest*100))):2;
           return '<div class="sc-row"><b>'+esc(s.model||s.plate)+'</b> <span class="ink3" style="font-size:10px">'+esc(s.plate)+'</span> <span class="ink3" style="font-size:9px">'+esc(s.soldYM)+'売却</span>'+(s.lease?' <span class="badge" style="font-size:9px;padding:1px 5px;background:#EEF;color:#3355AA">リース</span>':'')+
-            '<div class="ink3" style="font-size:10px">累計売上 '+f(s.total)+(rev0?' <span style="color:#C99700">(貸渡分なし=売却損益のみ)</span>':'')+' ＋売却 '+f(s.sale)+' −取得 '+f(s.acq)+(s.kinjo?' −整備 '+f(s.kinjo):'')+'</div>'+
+            '<div class="ink3" style="font-size:10px">累計売上 '+f(s.total)+(rev0?' <span style="color:#C99700">(貸渡分なし=売却損益のみ)</span>':'')+' ＋売却 '+f(s.sale)+' −投下資本 '+f(s.invest)+(s.lease&&s.buyout?'<span style="font-size:9px">(買取'+f(s.buyout)+(s.leasePaid?'+リース'+f(s.leasePaid):'')+')</span>':'')+(s.kinjo?' −整備 '+f(s.kinjo):'')+'</div>'+
             '<div class="life-bar"><div class="life-track"><i style="width:'+recovW+'%;background:#999"></i></div><span class="num" style="font-size:12px;font-weight:700;color:'+(s.roi>=0?'var(--acc)':'#C0392B')+'">'+(s.roi>=0?'+':'')+f(s.roi)+'</span></div>'+
           '</div>';
         }).join('');
