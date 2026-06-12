@@ -106,6 +106,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
   <div class="tabs">
     <button class="tab on" data-scr="vehicles" onclick="showScr('vehicles')">🚗 車両</button>
     <button class="tab" data-scr="roi" onclick="showScr('roi')">💰 生涯ROI</button>
+    <button class="tab" data-scr="analysis" onclick="showScr('analysis')">📊 分析</button>
     <button class="tab" data-scr="sold" onclick="showScr('sold')">📄 売却済</button>
     <button class="tab" data-scr="settings" onclick="showScr('settings')">⚙ 設定</button>
   </div>
@@ -134,6 +135,29 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
         <tbody id="roi-all"></tbody>
       </table>
       <div class="note" id="roi-note"></div>
+    </div>
+  </section>
+
+  <!-- ===== 分析 ===== -->
+  <section id="scr-analysis" class="screen">
+    <div class="stats" id="an-stats"></div>
+    <div class="card" style="margin-top:12px">
+      <h3>📈 回収率の分布（現役）</h3>
+      <div id="an-dist"></div>
+      <div class="note">回収率＝累計売上÷投下資本。100%超＝総取得原価（リース総額+残価／取得価額）を稼ぎ切った車。</div>
+    </div>
+    <div class="card">
+      <h3>🚙 クラス別 収益性 <span class="xs ink3">（増車・減車の判断材料）</span></h3>
+      <div style="overflow-x:auto"><table class="t" id="an-class"></table></div>
+      <div class="note">回収率の高いクラス＝1円の投資でよく稼ぐ＝増車候補。低い＝減車・入替候補。</div>
+    </div>
+    <div class="card">
+      <h3>🏢 リース会社・保有形態別</h3>
+      <div style="overflow-x:auto"><table class="t" id="an-lessor"></table></div>
+    </div>
+    <div class="card">
+      <h3>🏭 メーカー別</h3>
+      <div style="overflow-x:auto"><table class="t" id="an-maker"></table></div>
     </div>
   </section>
 
@@ -184,7 +208,7 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
 
 <script>
 'use strict';
-const APP_VERSION='2026-06-11f';
+const APP_VERSION='2026-06-11g';
 const DBX_APP_KEY='fly154tcdbz09x9';
 const PATH_RENTAL='/ライム共有DB/システムデータ（R）/data.json';
 const PATH_FLEET ='/ライム共有DB/システムデータ車両/data.json';
@@ -507,7 +531,7 @@ function showScr(name){
 }
 function renderAll(){
   _rows=DR?_lifeRows():[];
-  renderVehicles(); renderRoi(); renderSold(); renderSettings();
+  renderVehicles(); renderRoi(); renderAnalysis(); renderSold(); renderSettings();
 }
 
 // --- 車両一覧 ---
@@ -717,6 +741,78 @@ function renderRoi(){
     <td class="r num ${x.gross>=0?'pos':'neg'}" style="font-weight:700">${x.gross>=0?'+':''}¥${yen(x.gross)}${x.invest>0?`<br><span class="xs">${x.gross>=0?'+':''}${Math.round(x.gross/x.invest*100)}%</span>`:''}</td>
   </tr>`).join('');
   $('roi-note').textContent='生涯ROI=累計売上+売却額−投下資本−維持費。投下資本: リース車=リース料総額+残価(満了買取前提) / 自社保有=取得価額。現役は残価未計上=ROIは下限、回収率(累計売上÷投下資本)で見る。維持費=金城実額'+(MAINT?'+保険/税按分(freee)':'(保険/税按分はfreee未接続)')+'。2024-25売上は損保代車管理簿再集計済。';
+}
+
+// --- 分析 (現役車のクラス別/リース会社別/メーカー別 収益性) ---
+function _agg(rows,keyFn){
+  const g={};
+  rows.forEach(x=>{
+    const k=keyFn(x)||'(未分類)';
+    const o=g[k]||(g[k]={key:k,n:0,invest:0,total:0,gross:0,used:0,sell:0,paid:0});
+    o.n++; o.invest+=x.invest; o.total+=x.total; o.gross+=x.gross; o.used+=x.usedD;
+    if(sellReasons(x).length) o.sell++;
+    if(x.recov!=null&&x.recov>=100) o.paid++;
+  });
+  return Object.values(g).map(o=>({
+    ...o,
+    recov: o.invest>0?Math.round(o.total/o.invest*100):null,
+    roiPct: o.invest>0?Math.round(o.gross/o.invest*100):null,
+    avgUsed: o.n>0?Math.round(o.used/o.n):0
+  }));
+}
+function _anTable(rows,label){
+  const f=n=>yen(Math.round(n));
+  const head=`<thead><tr><th>${label}</th><th class="r">台数</th><th class="r">投下資本</th><th class="r">累計売上</th><th class="r">回収率</th><th class="r">生涯ROI</th><th class="r">平均稼働</th><th class="r">🔔</th></tr></thead>`;
+  const body=rows.map(o=>`<tr>
+    <td><b>${esc(o.key)}</b></td>
+    <td class="r num">${o.n}</td>
+    <td class="r num">¥${f(o.invest)}</td>
+    <td class="r num">¥${f(o.total)}</td>
+    <td class="r num" style="font-weight:700;color:${o.recov>=100?'var(--acc)':o.recov>=70?'var(--ink)':'var(--danger)'}">${o.recov!=null?o.recov+'%':'—'}</td>
+    <td class="r num ${o.gross>=0?'pos':'neg'}">${o.gross>=0?'+':''}¥${f(o.gross)}${o.roiPct!=null?`<br><span class="xs">${o.roiPct>=0?'+':''}${o.roiPct}%</span>`:''}</td>
+    <td class="r num">${o.avgUsed}日</td>
+    <td class="r num">${o.sell||''}</td>
+  </tr>`).join('');
+  return head+'<tbody>'+body+'</tbody>';
+}
+function renderAnalysis(){
+  const host=$('an-class'); if(!host) return;
+  const rows=_rows.filter(x=>!x.sold_st); // 現役のみ
+  if(!rows.length){ $('an-stats').innerHTML=''; host.innerHTML='<tbody><tr><td class="empty">データなし</td></tr></tbody>'; $('an-lessor').innerHTML=''; $('an-maker').innerHTML=''; $('an-dist').innerHTML=''; return; }
+  const f=n=>yen(Math.round(n));
+  const tInvest=rows.reduce((a,x)=>a+x.invest,0);
+  const tTotal=rows.reduce((a,x)=>a+x.total,0);
+  const tGross=rows.reduce((a,x)=>a+x.gross,0);
+  const tRecov=tInvest>0?Math.round(tTotal/tInvest*100):0;
+  const tRoiPct=tInvest>0?Math.round(tGross/tInvest*100):null;
+  $('an-stats').innerHTML=`
+    <div class="stat"><div class="v">${rows.length}</div><div class="l">現役台数</div></div>
+    <div class="stat"><div class="v" style="font-size:15px">¥${f(tInvest)}</div><div class="l">総投下資本</div></div>
+    <div class="stat"><div class="v" style="font-size:15px">¥${f(tTotal)}</div><div class="l">累計売上</div></div>
+    <div class="stat"><div class="v ${tRecov>=100?'pos':''}">${tRecov}%</div><div class="l">全体回収率</div></div>
+    <div class="stat"><div class="v ${tGross>=0?'pos':'neg'}" style="font-size:15px">${tGross>=0?'+':''}¥${f(tGross)}</div><div class="l">生涯ROI合計</div></div>
+    <div class="stat"><div class="v ${tRoiPct>=0?'pos':'neg'}">${tRoiPct!=null?(tRoiPct>=0?'+':'')+tRoiPct+'%':'—'}</div><div class="l">平均ROI率</div></div>`;
+  // 回収率分布
+  const b1=rows.filter(x=>x.recov!=null&&x.recov>=100).length;
+  const b2=rows.filter(x=>x.recov!=null&&x.recov>=70&&x.recov<100).length;
+  const b3=rows.filter(x=>x.recov!=null&&x.recov>=40&&x.recov<70).length;
+  const b4=rows.filter(x=>x.recov!=null&&x.recov<40).length;
+  const N=rows.length;
+  const bar=(n,c,lbl)=>`<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+    <div style="width:120px;font-size:11.5px" class="ink2">${lbl}</div>
+    <div style="flex:1;background:var(--line);border-radius:4px;height:16px;overflow:hidden"><i style="display:block;height:100%;width:${N>0?Math.round(n/N*100):0}%;background:${c}"></i></div>
+    <div style="width:48px;text-align:right;font-weight:700" class="num">${n}台</div></div>`;
+  $('an-dist').innerHTML=
+    bar(b1,'var(--acc)','✅ 100%超 (回収済)')+
+    bar(b2,'var(--lime)','70〜99%')+
+    bar(b3,'var(--warn)','40〜69%')+
+    bar(b4,'var(--danger)','40%未満');
+  // クラス別 (回収率降順)
+  host.innerHTML=_anTable(_agg(rows,x=>x.cls).sort((a,b)=>(b.recov||0)-(a.recov||0)),'クラス');
+  // リース会社・保有形態別
+  $('an-lessor').innerHTML=_anTable(_agg(rows,x=>x.isLease?(x.v.lessor||'リース(不明)'):'自社保有').sort((a,b)=>(b.recov||0)-(a.recov||0)),'区分');
+  // メーカー別
+  $('an-maker').innerHTML=_anTable(_agg(rows,x=>x.v.maker||'').sort((a,b)=>(b.recov||0)-(a.recov||0)),'メーカー');
 }
 
 // --- 売却済 ---
