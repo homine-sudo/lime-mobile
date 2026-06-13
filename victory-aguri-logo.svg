@@ -1,4 +1,4 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" width="760" height="460">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" width="760" height="460">
   <defs>
     <linearGradient id="vg" x1="190" y1="320" x2="560" y2="150" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#1E5C32"/>
@@ -14,6 +14,6 @@
   <rect x="426" y="60" width="34" height="210" rx="8" fill="#5E9E26"/>
   <path d="M150 150 L250 270 L470 90" fill="none" stroke="url(#vg)" stroke-width="56" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#vah)"/>
 
-  <text x="380" y="375" text-anchor="middle" font-family="-apple-system,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif" font-size="96" font-weight="800"><tspan fill="#1E5C32">victory</tspan><tspan fill="#F2811E"> 縺ゅ＄繧・/tspan></text>
-  <text x="380" y="425" text-anchor="middle" font-family="-apple-system,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif" font-size="27" font-weight="600" fill="#2B2A26">豐也ｸ・・逡代ｒ縲√ョ繝ｼ繧ｿ縺ｧ蜍昴■縺ｫ縺・￥縲・/text>
+  <text x="380" y="375" text-anchor="middle" font-family="-apple-system,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif" font-size="96" font-weight="800"><tspan fill="#1E5C32">victory</tspan><tspan fill="#F2811E"> あぐり</tspan></text>
+  <text x="380" y="425" text-anchor="middle" font-family="-apple-system,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif" font-size="27" font-weight="600" fill="#2B2A26">沖縄の畑を、データで勝ちにいく。</text>
 </svg>
