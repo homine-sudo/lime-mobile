@@ -252,7 +252,7 @@ body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-s
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VERSION='2026-06-13m';
+const APP_VERSION='2026-06-13n';
 /* ===== 農家プロフィール（複数農家・データ分離）=====
    外部データ(相場/気温/旧暦=コード内)は全農家共通。
    各農家の入力データは victoryagri_data_<id> に分離保存され、互いに混ざらない。 */
@@ -865,13 +865,15 @@ function buildLongTempChart(wx,yearsArg){
     <defs><linearGradient id="tgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C0492F" stop-opacity="0.20"/><stop offset="1" stop-color="#C0492F" stop-opacity="0.02"/></linearGradient></defs>${grid}${g}${ax}</svg>`;
 }
 
-let mktSel=0,mktView='long',mScreen='price',wxYear=2025,wxRange='1';
+let mktSel=0,mktView='long',mScreen='price',wxYear=2025,wxRange='1',atariScenario='hot';
 function renderMarket(){
   let h=`<div class="lh"><h2>相場と気象</h2></div>`;
   h+=`<div class="mtop">
     <button class="${mScreen==='price'?'on':''}" onclick="mScreen='price';renderMarket()">📈 相場</button>
-    <button class="${mScreen==='weather'?'on':''}" onclick="mScreen='weather';renderMarket()">🌤️ 気象</button></div>`;
+    <button class="${mScreen==='weather'?'on':''}" onclick="mScreen='weather';renderMarket()">🌤️ 気象</button>
+    <button class="${mScreen==='atari'?'on':''}" onclick="mScreen='atari';renderMarket()">🎯 当たり年</button></div>`;
   if(mScreen==='weather'){renderWeather(h);return}
+  if(mScreen==='atari'){renderAtari(h);return}
   h+=`<div class="mkt-note">沖縄県産の卸売単価から「<b>高く売れる × 量を出せる × 冬に競合が少ない</b>」品目を点数化。
     <b>🟠あなたの作物</b>は出荷の狙い目月、上位の品目は新しく作る候補です。タップで<b>過去10年の値動き</b>を表示。</div>`;
   h+=`<div class="mrank" id="mrank"></div>`;
@@ -975,6 +977,64 @@ function tempAdvice(mi,anom){
   else if(cold)s='平年より低め。生育の遅れ・着果不良に注意。保温・遅霜対策と収穫見込みの後ろ倒しを。';
   else s='ほぼ平年並み。例年どおりの管理でOK。';
   return s;
+}
+/* ===== 当たり年判定（価格×気温の傾向・過去10年） ===== */
+function _priceYears(it){const o={};if(!it.mhist)return o;Object.keys(it.mhist).forEach(y=>{const v=it.mhist[y].filter(x=>x!=null);if(v.length)o[y]=v.reduce((a,b)=>a+b,0)/v.length});return o}
+function _pearson(xs,ys){const n=xs.length;if(n<3)return 0;const mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;let sxy=0,sx=0,sy=0;for(let i=0;i<n;i++){const dx=xs[i]-mx,dy=ys[i]-my;sxy+=dx*dy;sx+=dx*dx;sy+=dy*dy}return(sx&&sy)?sxy/Math.sqrt(sx*sy):0}
+function renderAtari(h){
+  const years=Object.keys(WX_TEMP).map(Number).sort();
+  const tY={};years.forEach(y=>tY[y]=WX_TEMP[y].reduce((a,b)=>a+b,0)/12);
+  const byTemp=[...years].sort((a,b)=>tY[b]-tY[a]);
+  const hotSet=new Set(byTemp.slice(0,4)),coldSet=new Set(byTemp.slice(-4));
+  const allTavg=years.reduce((a,y)=>a+tY[y],0)/years.length;
+  const recentAvg=(tY[years[years.length-1]]+tY[years[years.length-2]])/2;
+  const rows=[];
+  MARKET.filter(it=>it.mhist).forEach(it=>{
+    const pY=_priceYears(it);const ys=years.filter(y=>pY[y]!=null);
+    if(ys.length<5)return;
+    const all=ys.reduce((a,y)=>a+pY[y],0)/ys.length;
+    const hotYs=ys.filter(y=>hotSet.has(y)),coldYs=ys.filter(y=>coldSet.has(y));
+    const avgHot=hotYs.length?hotYs.reduce((a,y)=>a+pY[y],0)/hotYs.length:all;
+    const avgCold=coldYs.length?coldYs.reduce((a,y)=>a+pY[y],0)/coldYs.length:all;
+    const r=_pearson(ys.map(y=>tY[y]),ys.map(y=>pY[y]));
+    rows.push({it,all,avgHot,avgCold,premHot:avgHot/all-1,premCold:avgCold/all-1,r});
+  });
+  const sc=atariScenario;
+  const prem=row=>sc==='hot'?row.premHot:sc==='cold'?row.premCold:0;
+  const ranked=[...rows].sort((a,b)=>prem(b)-prem(a));
+  h+=`<div class="mkt-note">気温が高い年・低い年に、各作物の卸売単価が過去どう動いたかの<b>傾向</b>です。<br>⚠️価格は天気以外（他産地の豊凶・燃料・需要）にも左右されます。<b>10年分の参考値</b>＝断定ではありません。</div>`;
+  h+=`<div style="font-size:13px;font-weight:700;margin:2px 2px 6px">今年の気候の見込みは？</div>`;
+  h+=`<div class="mseg">
+    <button class="${sc==='hot'?'on':''}" onclick="atariScenario='hot';renderMarket()">☀️ 暑い年</button>
+    <button class="${sc==='normal'?'on':''}" onclick="atariScenario='normal';renderMarket()">😐 平年並み</button>
+    <button class="${sc==='cold'?'on':''}" onclick="atariScenario='cold';renderMarket()">❄️ 寒い年</button></div>`;
+  if(recentAvg>allTavg+0.1) h+=`<div style="font-size:11.5px;color:var(--red);margin:-2px 2px 10px">📈 直近2年は平年より高温（沖縄も温暖化傾向）。「暑い年」シナリオが現実的です。</div>`;
+  if(sc==='normal'){
+    h+=`<div class="note" style="text-align:left;margin-top:4px">「☀️暑い年」か「❄️寒い年」を選ぶと、その気候で過去に高騰・下落しやすかった作物が出ます。</div>`;
+    document.getElementById('s-market').innerHTML=h;return;
+  }
+  const top=ranked[0],scl=sc==='hot'?'暑い':'寒い';
+  const tp=top?prem(top):0;
+  const tpAvg=top?(sc==='hot'?top.avgHot:top.avgCold):0;
+  const heroTitle=tp>=0.03?`🎯 高騰しやすい：${esc(top.it.name)}`:`${scl}年は全体に${sc==='hot'?'高め':'安め'}`;
+  const heroCol=tp>=0.03?'var(--green-d)':'var(--sea)';
+  h+=`<div class="card" style="border-color:#E6DEC8">
+    <div style="font-size:13px;color:var(--sub);font-weight:700">${scl}年に…</div>
+    <div style="font-size:19px;font-weight:800;color:${heroCol};margin:2px 0">${top?heroTitle:'—'}</div>
+    ${top?`<div style="font-size:12.5px;color:var(--sub)">${tp>=0.03
+      ?`過去の${scl}年は 平年比 <b style="color:var(--red)">+${Math.round(tp*100)}%</b>（¥${Math.round(top.all)}→¥${Math.round(tpAvg)}/kg）`
+      :`果菜類は${sc==='cold'?'安くなりやすい':'動きにくい'}。相対的に強い（下げが小さい）のは <b>${esc(top.it.name)}</b>（平年比 ${Math.round(tp*100)}%）`}${Math.abs(top.r)>=0.3?'':'　※気温との連動は弱め'}</div>`:''}
+  </div>`;
+  h+=`<div style="font-size:12px;color:var(--sub);margin:12px 2px 6px">${scl}年の 平年比（高い順）</div><div class="mrank">`;
+  ranked.forEach(r=>{const p=prem(r);const up=p>=0.03,dn=p<=-0.03;
+    const rb=Math.abs(r.r)>=0.45?'<span class="mtag" style="background:#FBE9E4;color:#A32D2D">気温と連動 強</span>':Math.abs(r.r)>=0.3?'<span class="mtag" style="background:#FAEEDA;color:#854F0B">やや連動</span>':'<span class="mtag" style="background:#F1EFE8;color:#5F5E5A">関係薄い</span>';
+    h+=`<div class="mrk"><div class="em">${r.it.em}</div>
+      <div class="info"><div class="nm">${esc(r.it.name)} ${rb}</div>
+      <div class="sub">${up?'🔺高騰しやすい':dn?'🔻下がりやすい':'➖横ばい'} ・ 平年 ¥${Math.round(r.all)}/kg</div></div>
+      <div class="sc" style="color:${up?'#C8492F':dn?'#2A7FB8':'var(--sub)'}">${p>=0?'+':''}${Math.round(p*100)}<span style="font-size:11px">%</span></div></div>`;});
+  h+=`</div>`;
+  h+=`<div class="note">気温＝気象庁 那覇 年平均、価格＝沖縄県産 年平均（2016-2025）。「暑い年」＝直近10年で気温上位4年、「寒い年」＝下位4年の平均。相関は10年分で弱く、傾向の目安です。</div>`;
+  document.getElementById('s-market').innerHTML=h;
 }
 function renderWeather(h){
   const years=Object.keys(WX_TEMP).map(Number).sort();
