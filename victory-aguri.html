@@ -252,7 +252,7 @@ body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-s
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VERSION='2026-06-13l';
+const APP_VERSION='2026-06-13m';
 /* ===== 農家プロフィール（複数農家・データ分離）=====
    外部データ(相場/気温/旧暦=コード内)は全農家共通。
    各農家の入力データは victoryagri_data_<id> に分離保存され、互いに混ざらない。 */
@@ -666,6 +666,18 @@ const ANNUAL10={
 const ANNUAL_Y0=2016;
 MARKET.forEach(it=>{if(ANNUAL10[it.name])it.annual=ANNUAL10[it.name]});
 
+/* ===== 過去10年・月別単価（円/kg・沖縄県産・全国卸売市場・実測 2016-2025／nullは出荷の無い月） ===== */
+const MONTHLY10={
+ 'さやいんげん':{2016:[998,1426,1204,923,479,359,null,null,1081,780,null,885],2017:[815,867,920,847,581,416,422,null,null,1086,null,1430],2018:[1060,1078,862,688,449,102,null,null,null,1015,939,869],2019:[835,880,914,893,518,339,432,null,767,837,null,886],2020:[815,867,855,857,470,464,null,null,786,673,null,901],2021:[1056,1083,808,790,553,299,null,null,858,772,null,821],2022:[836,1086,954,891,617,432,null,null,866,689,null,1090],2023:[1146,1237,988,1020,593,283,null,null,879,665,null,993],2024:[1031,1044,1184,1218,554,480,366,null,708,null,null,1489],2025:[1416,1406,1311,1001,566,393,null,null,877,null,null,947]},
+ 'きゅうり':{2016:[444,410,305,233,247,265,229,259,398,612,472,338],2017:[274,207,261,253,185,179,238,339,341,555,558,477],2018:[397,315,254,182,202,230,391,530,394,701,318,482],2019:[369,276,330,205,197,202,330,399,391,347,343,437],2020:[346,330,275,284,214,183,318,310,524,438,272,289],2021:[332,285,232,230,233,235,232,409,376,349,292,248],2022:[273,366,232,290,299,202,238,267,502,469,324,697],2023:[513,372,267,337,211,287,295,614,397,480,332,417],2024:[346,442,506,393,277,251,474,473,603,566,732,460],2025:[334,379,298,262,231,261,304,418,562,548,579,399]},
+ 'なす':{2016:[622,482,310,289,259,251,243,192,296,408,377,305],2017:[344,315,298,232,224,188,157,229,208,231,465,529],2018:[371,362,219,167,209,191,297,259,343,428,356,332],2019:[342,303,224,218,177,199,221,257,395,314,346,271],2020:[280,241,171,224,191,200,230,270,479,360,288,316],2021:[344,241,118,225,154,232,199,366,359,231,329,269],2022:[283,308,193,207,270,244,161,265,454,366,304,360],2023:[417,324,201,256,241,244,234,290,415,331,276,332],2024:[340,283,244,259,236,253,282,350,483,319,396,572],2025:[476,338,236,231,202,269,258,348,301,343,395,382]},
+ 'ミニトマト':{2016:[863,781,845,615,553,578,1152,null,1466,1418,971,null],2017:[580,621,508,456,489,578,400,748,1188,1105,null,1072],2018:[643,659,458,448,462,386,764,null,1119,1105,671,null],2019:[631,580,681,535,458,451,438,548,844,1003,1134,693],2020:[582,611,587,528,422,390,773,null,1488,926,580,null],2021:[593,533,470,408,505,474,668,903,1056,998,1014,673],2022:[604,581,560,542,506,786,1251,1503,1382,888,null,772],2023:[736,694,653,547,612,627,720,567,1880,1444,777,648],2024:[535,539,707,612,619,610,529,2142,1421,1744,null,1192],2025:[877,674,548,552,480,469,702,1395,1343,1613,null,1128]},
+ 'トマト':{2016:[430,356,462,291,213,236,767,null,669,null,549,null],2017:[272,275,225,200,160,154,432,null,434,null,585,null],2018:[308,302,191,183,139,115,487,150,498,null,340,null],2019:[263,240,292,206,151,144,514,null,323,null,null,null],2020:[247,265,284,262,188,141,382,null,339,null,null,null],2021:[282,231,230,210,197,226,605,445,367,null,null,null],2022:[282,245,259,256,230,252,463,null,356,null,null,null],2023:[313,293,288,268,243,238,1436,441,355,null,null,null],2024:[307,264,373,294,329,866,null,null,662,null,null,null],2025:[400,322,283,283,223,261,844,null,573,null,null,null]},
+ 'かぼちゃ':{2016:[345,406,458,592,351,112,40,19,27,224,372,381],2017:[387,410,498,557,418,150,50,31,54,59,222,347],2018:[364,428,452,412,305,133,37,61,91,91,304,457],2019:[422,395,407,461,309,124,51,41,60,null,350,457],2020:[353,388,403,482,413,185,109,87,66,null,344,409],2021:[408,412,474,557,356,150,87,93,null,379,null,271],2022:[348,406,440,504,350,131,58,22,40,null,335,404],2023:[410,504,672,721,496,186,219,87,505,443,279,366],2024:[431,461,492,526,408,237,240,435,648,null,687,null],2025:[483,548,597,590,403,214,220,578,null,null,354,null]},
+};
+MARKET.forEach(it=>{if(MONTHLY10[it.name])it.mhist=MONTHLY10[it.name]});
+{const _bj=MARKET.find(m=>m.name==='びっくりジャンボ');if(_bj)_bj.mhist=MONTHLY10['さやいんげん'];}
+
 /* ===== 過去10年・那覇 月平均気温（℃・気象庁 実測 2016-2025） ===== */
 const WX_TEMP={
  2016:[17.4,16.9,18.7,23.0,25.7,28.4,29.8,29.5,28.4,27.7,23.2,20.5],
@@ -809,6 +821,28 @@ function buildYearChart(annual){
     <defs><linearGradient id="pgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E7D46" stop-opacity="0.26"/><stop offset="1" stop-color="#2E7D46" stop-opacity="0.02"/></linearGradient></defs>${grid}${g}${ax}</svg>`;
 }
 
+/* 株価チャート風：過去10年の月別単価（連続折れ線・出荷の無い月で線を区切る・SVG） */
+function buildLongPriceChart(mhist){
+  const years=Object.keys(mhist).map(Number).sort();
+  const N=years.length*12;
+  const W=360,padL=8,padR=22,topP=14,base=150;
+  const xAt=i=>padL+i*((W-padL-padR)/(N-1));
+  const pts=[];let vmin=Infinity,vmax=-Infinity;
+  years.forEach((y,yi)=>mhist[y].forEach((v,mi)=>{if(v!=null){const idx=yi*12+mi;pts.push({idx,v});if(v<vmin)vmin=v;if(v>vmax)vmax=v}}));
+  if(!pts.length)return '<div class="empty">データなし</div>';
+  const span=(vmax-vmin)||1,yAt=v=>base-(v-vmin)/span*(base-topP);
+  let grid='';[vmin,(vmin+vmax)/2,vmax].forEach(v=>{const y=yAt(v);grid+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#E8E1D3"/><text x="${W-padR+1}" y="${(y+3).toFixed(1)}" font-size="8" fill="#A89F8C">¥${Math.round(v)}</text>`});
+  years.forEach((y,yi)=>{if(yi>0)grid+=`<line x1="${xAt(yi*12).toFixed(1)}" y1="${topP}" x2="${xAt(yi*12).toFixed(1)}" y2="${base}" stroke="#F2ECDC"/>`});
+  let path='',seg=[],prev=null;
+  const flush=()=>{if(seg.length>1)path+=`<path d="M${seg.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join('L')}" fill="none" stroke="#2E7D46" stroke-width="1.5" stroke-linejoin="round"/>`;seg=[]};
+  pts.forEach(p=>{if(prev!=null&&p.idx!==prev+1)flush();seg.push({x:xAt(p.idx),y:yAt(p.v)});prev=p.idx});flush();
+  const hi=pts.reduce((a,b)=>b.v>a.v?b:a),lo=pts.reduce((a,b)=>b.v<a.v?b:a);
+  let marks=`<circle cx="${xAt(hi.idx).toFixed(1)}" cy="${yAt(hi.v).toFixed(1)}" r="3.4" fill="#C8492F"/><text x="${Math.min(Math.max(xAt(hi.idx),18),W-26).toFixed(1)}" y="${(yAt(hi.v)-6).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="#C8492F">¥${hi.v}</text>`;
+  marks+=`<circle cx="${xAt(lo.idx).toFixed(1)}" cy="${yAt(lo.v).toFixed(1)}" r="3" fill="#2A7FB8"/>`;
+  let ax='';years.forEach((y,yi)=>{if(yi%2===0||yi===years.length-1)ax+=`<text x="${xAt(yi*12+6).toFixed(1)}" y="172" text-anchor="middle" font-size="8" fill="#A89F8C">${y}</text>`});
+  return `<svg viewBox="0 0 ${W} 180" width="100%" style="display:block">${grid}${path}${marks}${ax}</svg>`;
+}
+
 /* 株価チャート風：過去10年の月平均気温（120ヶ月の連続折れ線・SVG） */
 function buildLongTempChart(wx,yearsArg){
   const years=(yearsArg||Object.keys(wx).map(Number)).sort();
@@ -831,7 +865,7 @@ function buildLongTempChart(wx,yearsArg){
     <defs><linearGradient id="tgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C0492F" stop-opacity="0.20"/><stop offset="1" stop-color="#C0492F" stop-opacity="0.02"/></linearGradient></defs>${grid}${g}${ax}</svg>`;
 }
 
-let mktSel=0,mktView='year',mScreen='price',wxYear=2025,wxRange='1';
+let mktSel=0,mktView='long',mScreen='price',wxYear=2025,wxRange='1';
 function renderMarket(){
   let h=`<div class="lh"><h2>相場と気象</h2></div>`;
   h+=`<div class="mtop">
@@ -867,14 +901,14 @@ function renderMktDetail(){
   const pv=it.price.filter(x=>x!=null);const min=Math.min(...pv),max=Math.max(...pv);
   const bestM=it.price.indexOf(max),worstM=it.price.indexOf(min);
   const mine=mineMatch(it.name);
-  const hasYr=!!it.annual;
-  const view=hasYr?mktView:'month';
-  const chart=view==='year'?buildYearChart(it.annual):buildPriceChart(it);
-  const toggle=hasYr?`<div class="mseg">
-      <button class="${view==='year'?'on':''}" onclick="mktView='year';renderMktDetail()">📈 過去10年</button>
-      <button class="${view==='month'?'on':''}" onclick="mktView='month';renderMktDetail()">2025 月別</button></div>`
+  const hasHist=!!it.mhist, hasYr=!!it.annual;
+  const views=[]; if(hasHist)views.push('long'); if(hasYr)views.push('year'); views.push('month');
+  const view=views.includes(mktView)?mktView:views[0];
+  const chart=view==='long'?buildLongPriceChart(it.mhist):view==='year'?buildYearChart(it.annual):buildPriceChart(it);
+  const vLabel={long:'📈 過去の推移',year:'年平均10年',month:'2025 月別'};
+  const toggle=views.length>1?`<div class="mseg">${views.map(v=>`<button class="${v===view?'on':''}" onclick="mktView='${v}';renderMktDetail()">${vLabel[v]}</button>`).join('')}</div>`
     :`<div class="mkt-note" style="margin:0 0 8px;font-size:11.5px">この品目の過去10年データは順次取込中。まずは2025年の月別を表示。</div>`;
-  const chartTitle=view==='year'?'過去10年の年平均単価（円/kg・農水省 実測 2016-2025）':'2025年 月別の値動き（円/kg）';
+  const chartTitle=view==='long'?'過去10年の月別 値動き（円/kg・実測 2016-2025）':view==='year'?'過去10年の年平均単価（円/kg・実測 2016-2025）':'2025年 月別の値動き（円/kg）';
   const yrTrend=hasYr?(it.annual[9]-it.annual[0]):0;
   const verdict={win:'本州が作れない時期に高値を取れる主力候補。',vol:'量を出して総額で稼ぐタイプ。',niche:'単価は高いが量が出ず総額は伸びにくい。ニッチ向け。'}[it.tag];
   const pitch = it.pitch
@@ -898,7 +932,7 @@ function renderMktDetail(){
       <span><span class="sw" style="background:#2E7D46"></span>単価</span>
       <span><span class="sw" style="background:#C8492F;border-radius:50%"></span>高値</span>
       <span><span class="sw" style="background:#2A7FB8;border-radius:50%"></span>安値</span>
-      ${view==='month'?'<span><span class="sw" style="background:#9CC76B"></span>出荷量</span><span>線の切れ目＝出荷の無い月</span>':'<span>10年の推移（実測）</span>'}</div>
+      ${view==='month'?'<span><span class="sw" style="background:#9CC76B"></span>出荷量</span><span>線の切れ目＝出荷の無い月</span>':view==='long'?'<span>月別の推移・線の切れ目＝出荷の無い月</span>':'<span>10年の推移（実測）</span>'}</div>
     ${hasYr&&view==='year'?`<div class="mkt-note" style="margin:10px 0 0">${yrTrend>40?`<b style="color:var(--green-d)">この10年で年平均 ¥${it.annual[0]}→¥${it.annual[9]}/kg（+¥${yrTrend}）と上昇傾向。</b>需要が強く、作る妙味が増している。`:yrTrend<-40?`年平均は ¥${it.annual[0]}→¥${it.annual[9]}/kg と弱含み。価格より量・コストで見る品目。`:`年平均は ¥${it.annual[0]}〜¥${Math.max(...it.annual)}/kg 帯で安定。`}</div>`:''}
     <div class="mkpi">
       <div class="k"><div class="l">高値の月</div><div class="v">${bestM+1}月<span style="font-size:11px;color:var(--sub)"> ¥${max}</span></div></div>
