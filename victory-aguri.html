@@ -252,7 +252,7 @@ body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-s
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VERSION='2026-06-13k';
+const APP_VERSION='2026-06-13l';
 /* ===== 農家プロフィール（複数農家・データ分離）=====
    外部データ(相場/気温/旧暦=コード内)は全農家共通。
    各農家の入力データは victoryagri_data_<id> に分離保存され、互いに混ざらない。 */
@@ -1157,7 +1157,13 @@ function openSettings(){
   <div class="sec-t">出荷先マスタ</div>${bh}
   <button class="ghost" onclick="addBuyer()">＋ 出荷先を追加</button>
 
-  <div class="note">この農家のデータはこの端末だけに保存（他の農家からは見えません）。相場・気温などの外部データは共通。Phase2でDropbox同期に対応予定。</div>
+  <div class="sec-t">バックアップ（iCloud / ファイル）</div>
+  <div class="note" style="text-align:left;margin:0 0 8px">「書き出す」で出来たファイルを iPhoneの「ファイル」→ iCloud Drive に保存しておけば、機種変更や別の端末でも「復元」で戻せます。<b>他の人には渡らない＝あなただけのバックアップ</b>です。</div>
+  <button class="ghost" style="margin-bottom:8px" onclick="exportBackup()">📤 バックアップを書き出す（iCloud Driveへ）</button>
+  <button class="ghost" style="margin-bottom:18px" onclick="document.getElementById('bk-file').click()">📥 バックアップから復元</button>
+  <input id="bk-file" type="file" accept="application/json,.json" style="display:none" onchange="importBackup(this)">
+
+  <div class="note">この農家のデータはこの端末だけに保存（他の農家からは見えません）。相場・気温などの外部データは共通。</div>
   <button class="ghost" style="margin-bottom:8px" onclick="loadSampleData()">🧪 お試しサンプルを入れる</button>
   <button class="del" onclick="if(confirm('「${esc(ap.name)}」のデータを消して初期化しますか？（他の農家は影響なし）')){localStorage.removeItem(dataKey());DATA=load();render();closeSheet();toast('初期化しました')}">この農家のデータを初期化</button>`);
 }
@@ -1256,6 +1262,35 @@ function finishOnboard(){
 function loadSampleData(){
   if(!confirm('お試し用のサンプル記録を入れますか？（あとで「初期化」で消せます）'))return;
   seedDemo(DATA);save();render();closeSheet();toast('サンプルを入れました');
+}
+/* ===== バックアップ（iCloud Drive / ファイルへ書き出し・復元）===== */
+function exportBackup(){
+  const payload={app:'victoryagri',schema:1,version:APP_VERSION,exportedAt:todayStr(),profile:activeProfile(),data:DATA};
+  const safe=(activeProfile().name||'victoryあぐり').replace(/[\\/:*?"<>|\s]/g,'_');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+  a.download='victoryあぐり_'+safe+'_'+todayStr()+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  toast('書き出しました。「ファイル」→iCloud Drive へ保存を');
+}
+function importBackup(input){
+  const f=input.files[0];if(!f){return}
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const o=JSON.parse(e.target.result);
+      const d=(o&&o.data)?o.data:o;
+      if(!d||!Array.isArray(d.shipments)){toast('対応していないファイルです');input.value='';return}
+      if(!confirm('現在の「'+activeProfile().name+'」のデータを、このバックアップで置き換えますか？')){input.value='';return}
+      if(!d.expenses)d.expenses=[];if(!d.fields)d.fields=[];if(!d.meta)d.meta={farm:activeProfile().name,loc:'沖縄県'};
+      DATA=d;
+      if(o&&o.profile&&o.profile.name){const ps=getProfiles();const i=ps.findIndex(p=>p.id===activeId);if(i>=0){ps[i]={...ps[i],name:o.profile.name,region:o.profile.region||ps[i].region,crops:o.profile.crops||ps[i].crops,scale:o.profile.scale||ps[i].scale};setProfiles(ps);DATA.meta.farm=o.profile.name}}
+      try{localStorage.setItem(LS_SETUP,'1')}catch(err){}
+      save();render();closeSheet();toast('復元しました ✅');
+    }catch(err){toast('読み込みに失敗しました')}
+    input.value='';
+  };
+  r.readAsText(f);
 }
 function addCrop(){const n=prompt('作物名は？');if(!n)return;const k=confirm('果樹ですか？（キャンセル＝野菜）')?'果樹':'葉物';const u=prompt('単位は？（kg / 玉 / 袋 など）','kg')||'kg';
   const palette=['#F2A027','#EAB308','#2E7D46','#3B9C57','#1E5C32','#2A7FB8','#C8492F'];
