@@ -223,10 +223,6 @@ body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-s
     <span class="ver" id="ver"></span>
     <button class="gear" onclick="openSettings()">⚙️</button>
   </div>
-  <div class="pbar" onclick="openProfiles()">
-    <span>👤 <b id="who-name">農家</b> の畑</span>
-    <span class="pbar-sw">切替 ▾</span>
-  </div>
 
   <!-- HOME -->
   <div class="screen on" id="s-home"></div>
@@ -256,7 +252,7 @@ body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-s
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VERSION='2026-06-13j';
+const APP_VERSION='2026-06-13k';
 /* ===== 農家プロフィール（複数農家・データ分離）=====
    外部データ(相場/気温/旧暦=コード内)は全農家共通。
    各農家の入力データは victoryagri_data_<id> に分離保存され、互いに混ざらない。 */
@@ -325,7 +321,6 @@ function load(){
   try{const r=localStorage.getItem(dataKey());if(r){const o=JSON.parse(r);if(!o.expenses)o.expenses=[];if(!o.fields)o.fields=[];return o}}catch(e){}
   const d=JSON.parse(JSON.stringify(SEED));
   d.meta.farm=activeProfile().name;
-  seedDemo(d);
   try{localStorage.setItem(dataKey(),JSON.stringify(d))}catch(e){}
   return d;
 }
@@ -402,6 +397,7 @@ function renderHome(){
     .sort((a,b)=>b.date<a.date?-1:1).slice(0,7);
 
   let h=`
+  <div style="font-size:13px;color:var(--sub);margin:2px 2px 9px">🌱 <b style="color:var(--green-d)">${esc(activeProfile().name)}</b> さんの畑</div>
   <div class="card wcard">
     <div class="top">
       <div class="ic">☀️</div>
@@ -1150,10 +1146,7 @@ function openSettings(){
     <div style="font-weight:800;font-size:16px">👤 ${esc(ap.name)}</div>
     <div style="font-size:12.5px;color:var(--sub);margin-top:2px">${esc(ap.region||'沖縄県')}${ap.crops?' ・ '+esc(ap.crops):''}${ap.scale?' ・ '+esc(ap.scale):''}</div>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:18px">
-    <button class="ghost" style="flex:1" onclick="openProfileEdit('${activeId}')">✏️ 農家情報を編集</button>
-    <button class="ghost" style="flex:1" onclick="openProfiles()">🔄 農家を切替・追加</button>
-  </div>
+  <button class="ghost" style="margin-bottom:18px" onclick="openProfileEdit('${activeId}')">✏️ 農家情報を編集</button>
 
   <div class="sec-t">作物マスタ</div>${ch}
   <button class="ghost" style="margin-bottom:18px" onclick="addCrop()">＋ 作物を追加</button>
@@ -1164,7 +1157,8 @@ function openSettings(){
   <div class="sec-t">出荷先マスタ</div>${bh}
   <button class="ghost" onclick="addBuyer()">＋ 出荷先を追加</button>
 
-  <div class="note">この農家のデータはこの端末に保存（外部データ＝相場・気温は全農家共通）。Phase2でDropbox同期・LINE通知に対応予定。</div>
+  <div class="note">この農家のデータはこの端末だけに保存（他の農家からは見えません）。相場・気温などの外部データは共通。Phase2でDropbox同期に対応予定。</div>
+  <button class="ghost" style="margin-bottom:8px" onclick="loadSampleData()">🧪 お試しサンプルを入れる</button>
   <button class="del" onclick="if(confirm('「${esc(ap.name)}」のデータを消して初期化しますか？（他の農家は影響なし）')){localStorage.removeItem(dataKey());DATA=load();render();closeSheet();toast('初期化しました')}">この農家のデータを初期化</button>`);
 }
 function saveSettings(){DATA.meta.farm=document.getElementById('set-farm').value.trim()||'農家';DATA.meta.loc=document.getElementById('set-loc').value.trim();save();render();toast('保存しました');closeSheet()}
@@ -1232,6 +1226,37 @@ function delProfile(id){
   if(id===activeId){activeId=getProfiles()[0].id;try{localStorage.setItem(LS_ACTIVE,activeId)}catch(e){}DATA=load()}
   go('home');closeSheet();toast('削除しました');
 }
+/* ===== 初回登録（オンボーディング）===== */
+const LS_SETUP='victoryagri_setup';
+function maybeOnboard(){
+  if(localStorage.getItem(LS_SETUP))return;
+  if((DATA.shipments&&DATA.shipments.length)||(DATA.worklogs&&DATA.worklogs.length)||(DATA.expenses&&DATA.expenses.length)){
+    try{localStorage.setItem(LS_SETUP,'1')}catch(e){}return;
+  }
+  openOnboard();
+}
+function openOnboard(){
+  const p=activeProfile();
+  openSheet(`<h3>🌱 ようこそ victoryあぐり へ</h3>
+    <div class="note" style="text-align:left;margin:0 0 12px">最初に、あなたの農家情報を登録します。<br><b>データはこの端末にだけ保存され、他の農家には見えません。</b></div>
+    <div class="fld"><label>農家名・お名前 <span style="color:var(--red)">＊</span></label><input id="ob-name" value="${esc(p.name&&p.name!=='農家1'?p.name:'')}" placeholder="例：比嘉ファーム／比嘉 太郎"></div>
+    <div class="fld"><label>地域</label><input id="ob-region" value="${esc(p.region||'沖縄県')}" placeholder="沖縄県八重瀬町 など"></div>
+    <div class="fld"><label>主な作物（任意）</label><input id="ob-crops" value="${esc(p.crops||'')}" placeholder="ゴーヤー・マンゴー など"></div>
+    <button class="save" onclick="finishOnboard()">この内容で はじめる</button>`);
+}
+function finishOnboard(){
+  const name=document.getElementById('ob-name').value.trim();
+  if(!name){toast('お名前・農家名を入力してください');return}
+  const ps=getProfiles();const i=ps.findIndex(p=>p.id===activeId);
+  if(i>=0){ps[i]={...ps[i],name,region:document.getElementById('ob-region').value.trim()||'沖縄県',crops:document.getElementById('ob-crops').value.trim()};setProfiles(ps);
+    DATA.meta.farm=name;DATA.meta.loc=ps[i].region;save();}
+  try{localStorage.setItem(LS_SETUP,'1')}catch(e){}
+  closeSheet();render();toast(name+' さん、はじめましょう！🌱');
+}
+function loadSampleData(){
+  if(!confirm('お試し用のサンプル記録を入れますか？（あとで「初期化」で消せます）'))return;
+  seedDemo(DATA);save();render();closeSheet();toast('サンプルを入れました');
+}
 function addCrop(){const n=prompt('作物名は？');if(!n)return;const k=confirm('果樹ですか？（キャンセル＝野菜）')?'果樹':'葉物';const u=prompt('単位は？（kg / 玉 / 袋 など）','kg')||'kg';
   const palette=['#F2A027','#EAB308','#2E7D46','#3B9C57','#1E5C32','#2A7FB8','#C8492F'];
   DATA.crops.push({id:uid(),name:n.trim(),kind:k,unit:u.trim(),color:palette[DATA.crops.length%palette.length]});save();openSettings()}
@@ -1288,6 +1313,7 @@ let _tt;
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('on'),1900)}
 
 render();
+maybeOnboard();
 </script>
 </body>
 </html>
