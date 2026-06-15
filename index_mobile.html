@@ -1202,6 +1202,8 @@ a{color:var(--info);text-decoration:none}
 
       <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openStockSearch()"><span class="ico">🚗</span> 稼働可能な車両を探す</button>
 
+      <button class="m-btn m-btn-block" id="m-home-insp-btn" style="margin-bottom:14px;display:none;border:1px solid #E0A800;color:#7A4500;background:#FFFBF0" onclick="setVehTab('due');showScreen('vehicles')"><span class="ico">🔧</span> <span id="m-home-insp-txt">点検・車検まもなく</span></button>
+
       <div class="m-home-quick">
         <h3>⚡ クイック登録</h3>
         <div class="m-quick-row">
@@ -1371,6 +1373,7 @@ a{color:var(--info);text-decoration:none}
         <button data-veh-tab="available" onclick="setVehTab('available')">🟢 貸出可</button>
         <button data-veh-tab="active" onclick="setVehTab('active')">✅ 稼働可</button>
         <button data-veh-tab="maint" onclick="setVehTab('maint')">🛠️ 点検中</button>
+        <button data-veh-tab="due" onclick="setVehTab('due')">🔧 期日</button>
       </div>
       <div class="m-chips" id="m-veh-chips" style="margin:8px 0 4px"></div>
       <div id="m-veh-list"></div>
@@ -1862,7 +1865,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-11';
+const APP_VERSION = '2026-06-15';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2926,6 +2929,18 @@ function renderHome(){
   $('m-stat-recovery-done').textContent = '完了 ' + recDone + ' / 全' + recToday.length;
   $('m-stat-disp-plan').textContent = dispPlan;
   $('m-stat-rec-plan').textContent = recPlan;
+  // 🔧 案A: 点検・車検まもなく の気づきミニカード (件数0なら非表示)
+  const _insBtn = $('m-home-insp-btn');
+  if(_insBtn){
+    const _ins = _mVehAlerts();
+    if(_ins.length){
+      const over = _ins.filter(a => a.daysLeft < 0).length;
+      $('m-home-insp-txt').innerHTML = `点検・車検まもなく <b>${_ins.length}件</b>` + (over?` <span style="color:#A32D2D">(超過${over})</span>`:'');
+      _insBtn.style.display = '';
+    } else {
+      _insBtn.style.display = 'none';
+    }
+  }
 }
 
 // ============================================================
@@ -3339,11 +3354,18 @@ function renderInfoBox(c, hostId, kind){
   const _destContact = (_isRec && _rd.isDifferent) ? '' : (c.dispatchToContact||'');
   const _destMapBtn = _destAddr ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(_destAddr)}" target="_blank" rel="noopener">📍 地図を開く</a>` : '';
 
+  // 🔧 案C: 回収画面で、その車が車検/点検間近なら「回収後そのまま工場へ」を表示
+  const _va = (_isRec && typeof _mVehAlertForCase==='function') ? _mVehAlertForCase(c) : null;
+  const _vaRow = _va
+    ? `<div class="m-info-row" style="background:#FFF9E6;border-radius:6px;border:1px solid #F0D58A"><span class="lbl" style="color:#7A4500">🔧 点検期日</span><span class="val" style="color:#7A4500"><b>${esc(_va.kind)}</b> ${_va.daysLeft<0?`<span style="color:#A32D2D;font-weight:bold">${-_va.daysLeft}日超過</span>`:`残${_va.daysLeft}日`} <span style="color:var(--muted)">(${esc(fmtDateFull(_va.date))})</span><br><b>→ 回収後そのまま工場へ</b></span></div>`
+    : '';
+
   $(hostId).innerHTML = `
     <div class="caseno">📋 ${esc(c.caseNo||'')}</div>
     <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
     ${_staffRow}
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val strong">${kind==='recovery'?(fmtDateFull(c.recoveryCalledAt)||'<span class="empty">未設定</span>'):dispatchInfo}</span></div>
+    ${_vaRow}
     <div class="m-info-row"><span class="lbl">運転者</span><span class="val">${driver?`<b>${esc(driver)}</b>`:'<span class="empty">―</span>'} ${c.driverTel?tel(c.driverTel):''}</span></div>
     <div class="m-info-row"><span class="lbl">${_destLabel}</span><span class="val">${_destName?`<b>${esc(_destName)}</b>`:'<span class="empty">―</span>'}${_destContact?`<br>担当: ${esc(_destContact)} 様`:''}${_destTel?` ${tel(_destTel)}`:''}</span></div>
     ${_destAddr?`<div class="m-info-row"><span class="lbl">住所</span><span class="val">${esc(_destAddr)} ${_destMapBtn}</span></div>`:''}
@@ -5683,6 +5705,44 @@ function setVehTab(tab){
 }
 function setVehClass(cls){ _vehClassFilter = cls; renderVehiclesList(); }
 
+// 🔧 車検(60日以内)・点検(30日以内)が近い車両を算出 (PC vehicleAlerts と同じ閾値)。
+//   案A(ホーム気づき) / 案B(期日タブ) / 案C(回収フローの工場直行ヒント) で共用。read-only。
+function _mVehAlerts(){
+  const out = [];
+  const now = new Date();
+  (DATA?.vehicles || []).forEach(v => {
+    if(v.status === '廃車' || v.status === '売却済') return;
+    if(v.inspectionDate){ const d = parseDate(v.inspectionDate); if(d){ const dl = Math.floor((d-now)/86400000); if(dl <= 60) out.push({ vehicleId:v.id, kind:'車検満了', date:v.inspectionDate, daysLeft:dl }); } }
+    if(v.lastInspectionAt){ const d = parseDate(v.lastInspectionAt); if(d){ const dl = Math.floor((d-now)/86400000); if(dl <= 30) out.push({ vehicleId:v.id, kind:'定期点検', date:v.lastInspectionAt, daysLeft:dl }); } }
+  });
+  return out.sort((a,b) => a.daysLeft - b.daysLeft);
+}
+// vehicleId -> 最も急ぐアラート のマップ
+function _mVehAlertMap(){
+  const m = {};
+  _mVehAlerts().forEach(a => { if(!m[a.vehicleId] || a.daysLeft < m[a.vehicleId].daysLeft) m[a.vehicleId] = a; });
+  return m;
+}
+// 案件のvehicleId(無ければplateTail救済)を解決し、その車の車検/点検アラートを返す
+function _mVehAlertForCase(c){
+  if(!c) return null;
+  let vid = c.vehicleId;
+  if(!vid && c.plateTail){ const hit = (DATA?.vehicles||[]).find(v => (v.plate||{}).tail === c.plateTail); if(hit) vid = hit.id; }
+  if(!vid) return null;
+  return _mVehAlertMap()[vid] || null;
+}
+// 車検/点検期日が閾値内なら「残N日 / N日超過」バッジHTMLを返す (車両カード用)
+function _mDueBadge(dateStr, thresh){
+  if(!dateStr) return '';
+  const d = parseDate(dateStr); if(!d) return '';
+  const dl = Math.floor((d - new Date())/86400000);
+  if(dl > thresh) return '';
+  const over = dl < 0;
+  const col = over ? '#A32D2D' : (dl<=14 ? '#8a5a00' : '#7A4500');
+  const bg  = over ? '#FCEBEB' : '#FFF1CC';
+  return ` <span style="font-size:10px;font-weight:bold;color:${col};background:${bg};padding:1px 6px;border-radius:8px">${over?`${-dl}日超過`:`残${dl}日`}</span>`;
+}
+
 function getVehiclesList(){
   const tab = localStorage.getItem('limeMob_vehTab') || 'all';
   const q = ($('m-veh-search')?.value || '').trim().toLowerCase();
@@ -5690,6 +5750,11 @@ function getVehiclesList(){
   if(tab === 'active') list = list.filter(v => v.status === '稼働可' || !v.status);
   else if(tab === 'maint') list = list.filter(v => v.status === '点検入庫中' || v.status === '整備中');
   else if(tab === 'available'){ const inUse = _inUseVehicleIds(); list = list.filter(v => (v.status === '稼働可' || !v.status) && !inUse.has(v.id)); }  // 🟢 貸出可 = 稼働可かつ出払っていない
+  else if(tab === 'due'){  // 🔧 期日 = 車検60日以内 or 点検30日以内
+    const now = new Date();
+    const within = (ds,th) => { if(!ds) return false; const d=parseDate(ds); if(!d) return false; return Math.floor((d-now)/86400000) <= th; };
+    list = list.filter(v => within(v.inspectionDate,60) || within(v.lastInspectionAt,30));
+  }
   // 売却済/廃車 は通常表示しない (allタブでも除外)
   list = list.filter(v => v.status !== '売却済' && v.status !== '廃車');
   if(q){
@@ -5786,7 +5851,8 @@ function _renderVehicleCard(v){
         </div>
         <div class="v-meta">${esc(v.name||v.maker||'')}${v.class||v.vehicleClass?` ・ ${esc(v.class||v.vehicleClass)}`:''}</div>
         ${(()=>{ const mt=_vehicleLatestMeter(v.id); return mt?`<div class="v-meta" style="margin-top:3px">🛣️ 走行距離 <b>${fmtNum(mt.km)}</b> km <span style="color:var(--muted)">(返却 ${esc(mt.date)})</span></div>`:''; })()}
-        ${nextIns||shaken ? `<div class="v-meta" style="margin-top:3px">${nextIns?`📅 次回点検: ${esc(nextIns)}`:''}${nextIns&&shaken?' / ':''}${shaken?`🚨 車検: ${esc(shaken)}`:''}</div>` : ''}
+        ${shaken ? `<div class="v-meta" style="margin-top:3px">🚨 車検: ${esc(shaken)}${_mDueBadge(v.inspectionDate,60)}</div>` : ''}
+        ${nextIns ? `<div class="v-meta" style="margin-top:3px">📅 次回点検: ${esc(nextIns)}${_mDueBadge(v.lastInspectionAt,30)}</div>` : ''}
       </div>
       <div class="v-actions">${actionHtml}</div>
     </div>
