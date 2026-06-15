@@ -2825,6 +2825,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <button class="btn btn-danger btn-sm" id="gr-btn-delete" style="display:none" onclick="grDeleteCase()" title="この案件を完全に削除">🗑️ 削除</button>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-sm" id="gr-btn-return" style="display:none;background:#4F8A3E;border:1px solid #3E6E30;color:#fff;font-weight:bold" onclick="grMarkReturned()" title="車両の返却・回収が完了したら押す → 状態を「車両回収済」に進めます (返却日が空なら本日をセット)">✅ 返却・回収完了</button>
         <button class="btn btn-outline btn-sm" id="gr-btn-print" style="display:none;background:#FFF7E6;border-color:#E69E50;color:#7A4500" onclick="grPrintContract()" title="貸渡書 (表: 貸渡証+車体チェック / 裏: 約款) をA4で印刷">📜 貸渡書印刷</button>
         <button class="btn btn-outline btn-sm" id="gr-btn-invoice" style="display:none" onclick="grPrintInvoice()" title="請求書を印刷">🧾 請求書</button>
       </div>
@@ -2880,7 +2881,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-12';
+const APP_VERSION = '2026-06-15';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7066,7 +7067,12 @@ function renderDashboard(){
       // アクティブ: 配車=濃いめブルー、回収=濃いめレッド (完了との差を強調)
       const borderColor = isReturn ? '#C53030' : '#2A6FCB';
       const bgColor = isReturn ? '#FFCFCF' : '#CFE0F5';
-      const done = isReturn ? !!c.recoveryCompleted : !!c.dispatchDoneAt;
+      // 一般貸渡(category=一般)は dispatchDoneAt/recoveryCompleted フラグを使わず status で完了管理するため、
+      // status からも「完了(薄表示)」を判定する。損保フローは従来の flag ベースのまま挙動不変。
+      const _grDispatchDone = c.category==='一般' && ['配車済','利用中','返却済','仮請求','請求済','入金済'].includes(c.status);
+      const _grReturnDone   = c.category==='一般' && ['返却済','仮請求','請求済','入金済'].includes(c.status);
+      const done = isReturn ? (!!c.recoveryCompleted || _grReturnDone)
+                            : (!!c.dispatchDoneAt   || _grDispatchDone);
       // 完了カード: 配車=超薄い青、回収=超薄い赤 (アクティブと明確に差をつける)
       const doneBg = isReturn ? '#FCEDED' : '#F4F8FC';        // ほぼ白 + 薄い系統色
       const doneBorder = isReturn ? '#F0CCCC' : '#D8E5F0';   // 薄いボーダー
@@ -8211,8 +8217,8 @@ function openGeneralRentalModal(id){
   onGRPickupChange();
   updateGRPeriod();
   $('gr-modal-title').textContent = id ? `一般貸渡 編集 ${c.caseNo||''}` : '一般貸渡 新規';
-  // 削除・印刷ボタンは既存案件のみ
-  ['gr-btn-delete','gr-btn-print','gr-btn-invoice'].forEach(b=>{
+  // 削除・印刷・返却完了ボタンは既存案件のみ
+  ['gr-btn-delete','gr-btn-print','gr-btn-invoice','gr-btn-return'].forEach(b=>{
     const el = $(b); if(el) el.style.display = id ? '' : 'none';
   });
   // インジケータリセット
@@ -8324,8 +8330,8 @@ function saveGeneralRental(closeAfter){
   _grEditingId = c.id;
   editingCaseId = c.id;
   fillGRForm(c);
-  // 削除・印刷ボタン表示
-  ['gr-btn-delete','gr-btn-print','gr-btn-invoice'].forEach(b=>{
+  // 削除・印刷・返却完了ボタン表示
+  ['gr-btn-delete','gr-btn-print','gr-btn-invoice','gr-btn-return'].forEach(b=>{
     const el = $(b); if(el) el.style.display = '';
   });
   if(typeof renderCases === 'function') renderCases();
@@ -8372,6 +8378,43 @@ function grPrintInvoice(){
   if(typeof gotoInvoice === 'function'){
     editingCaseId = _grEditingId;
     gotoInvoice();
+  }
+}
+
+// 返却・回収完了 ボタン (一般貸渡)
+//   貸渡完了後に「返却・回収完了」を押すと状態を「車両回収済(返却済)」へ進める。
+//   損保モーダルの onRecoveryCompletedChange と同等の動作を GR モーダル用に提供。
+//   - 受付/配車予定/配車済/利用中 → 返却済 に進める + 返却日が空なら本日をセット
+//   - 既に 返却済 → (請求未発行なら) 利用中 に戻すか確認 (誤操作の取消用)
+//   - 請求済/入金済/キャンセル → 何もしない (誤って巻き戻さないため)
+function grMarkReturned(){
+  if(!_grEditingId){ toast('保存後に返却処理ができます','error'); return; }
+  const sel = $('gr-status'); if(!sel) return;
+  const st = sel.value || '';
+  if(['受付','配車予定','配車済','利用中'].includes(st) || !st){
+    // 返却日が空なら本日をセット
+    if($('gr-useEnd') && !$('gr-useEnd').value){
+      $('gr-useEnd').value = todayISO();
+      if(typeof updateGRPeriod === 'function') updateGRPeriod();
+    }
+    sel.value = '返却済';
+    _grDirty = true;
+    saveGeneralRental(false);   // 保存してボタン表示も維持
+    toast('✅ 返却・回収完了 → 状態を「車両回収済」にしました');
+  } else if(st === '返却済'){
+    // 請求発行前なら取消可能
+    if(!($('gr-invoiceIssuedAt')||{}).value){
+      if(confirm('既に「車両回収済」です。\n返却完了を取り消して「利用中」に戻しますか?')){
+        sel.value = '利用中';
+        _grDirty = true;
+        saveGeneralRental(false);
+        toast('返却完了を取消 → 状態を「利用中」に戻しました');
+      }
+    } else {
+      toast('既に「車両回収済」です (請求発行済のため変更しません)');
+    }
+  } else {
+    toast('現在の状態は「'+st+'」です。返却処理は不要です');
   }
 }
 
@@ -17740,6 +17783,9 @@ function runSelfTest(){
   window._lastAutoFixes = results.filter(r => r.canAutoFix && typeof r.autoFix === 'function').map(r => ({ name: r.name, autoFix: r.autoFix }));
   showSelfTestResults(results);
 }
+
+// ※ runSelfTestAutoFix / copySelfTestReport の実体はファイル下部の既存定義を使用
+//   (2026-06-15 総点検: 後勝ちで無効化されていた重複定義を削除)
 
 function showSelfTestResults(results){
   const existing = document.getElementById('selftest-dialog'); if(existing) existing.remove();
