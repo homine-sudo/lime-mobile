@@ -149,6 +149,15 @@ a{color:var(--accent-light);text-decoration:none}
 .q-amt-sub{font-size:10px;color:var(--muted);font-weight:600;margin-left:3px}
 .q-arr{color:var(--muted);font-size:18px;flex-shrink:0}
 .q-empty{font-size:12px;color:var(--muted);padding:10px 4px;text-align:center}
+/* 見積 明細エディタ */
+.q-item-head{display:flex;gap:6px;align-items:center;margin:0 2px 5px;font-size:10.5px;color:var(--muted);font-weight:700}
+.q-item-head .qh-name{flex:1}.q-item-head .qh-qty{width:54px;text-align:center}.q-item-head .qh-price{width:90px;text-align:center}.q-item-head .qh-del{width:34px}
+.q-item-row{display:flex;gap:6px;margin-bottom:7px;align-items:center}
+.q-item-row input{padding:9px 10px;border:1px solid var(--border);border-radius:9px;font-size:13px;background:var(--card);color:var(--text)}
+.q-item-row .q-it-name{flex:1;min-width:0}
+.q-item-row .q-it-qty{width:54px;text-align:center}
+.q-item-row .q-it-price{width:90px;text-align:right}
+.q-it-del{width:34px;height:36px;border:none;background:var(--card2);border-radius:9px;color:var(--muted);font-size:14px;cursor:pointer;flex-shrink:0}
 /* 作業ボード */
 .btiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
 .btile{min-width:0;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:11px 6px 10px;box-shadow:var(--shadow-sm);cursor:pointer;text-align:center}
@@ -445,7 +454,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-16c';
+const APP_VERSION = '2026-06-16d';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -457,6 +466,7 @@ let DATA = null;
 function defaultData(){
   return {
     jobs:[],
+    quotes:[],         // 独立見積(複数明細)。{id,quoteNo,quotedAt,status,clientId,clientName,endUser,title,items:[{name,qty,unitPrice}],note,approvedAt,jobIds[],deleted}
     extraCharges:[],   // 案件外の請求項目(配送費など)。{id,clientId,clientName,month,desc,qty,unitPrice,invoiceNo,invoicedAt,paid,paidAt}
 
     clients:[{id:'cl-proceed',name:'株式会社プロシード',contacts:[],tel:'',address:'',closingDay:'末',memo:'末締め・翌月末払い'}],
@@ -651,29 +661,32 @@ function adminLogout(){ localStorage.removeItem('denso_admin'); toast('管理者
 /* ───────── ホーム ───────── */
 /* ───────── 見積タブ ───────── */
 function renderQuotes(){
-  const jobs=DATA.jobs.filter(j=>j.status!=='キャンセル');
-  const pending=jobs.filter(j=>j.status==='依頼' && !j.quoteNo).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999'));
-  const issued=jobs.filter(j=>j.quoteNo && !j.quoteApprovedAt).sort((a,b)=>(b.quotedAt||'').localeCompare(a.quotedAt||''));
-  const approved=jobs.filter(j=>j.quoteApprovedAt).sort((a,b)=>(b.quoteApprovedAt||'').localeCompare(a.quoteApprovedAt||''));
-  const row=(j)=>{
-    const cl=clientById(j.clientId);
-    const who=j.endUser?esc(j.endUser)+' 様':esc(j.carModel||'(相手先未設定)');
-    const desc=(esc(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.workDesc?' ・ '+esc(j.workDesc):'')).replace(/^ ・ /,'');
-    const sub=jobSubtotal(j);
+  const qs=(DATA.quotes||[]).filter(q=>!q.deleted);
+  const draft=qs.filter(q=>!q.quoteNo && q.status!=='失注').sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const issued=qs.filter(q=>q.quoteNo && q.status==='見積中').sort((a,b)=>(b.quotedAt||'').localeCompare(a.quotedAt||''));
+  const approved=qs.filter(q=>q.status==='承認').sort((a,b)=>(b.approvedAt||'').localeCompare(a.approvedAt||''));
+  const lost=qs.filter(q=>q.status==='失注').sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const row=(q)=>{
+    const cl=clientById(q.clientId);
+    const who=q.endUser?esc(q.endUser)+' 様':(cl?esc(cl.name):'(取引先未設定)');
+    const itemSummary=(q.items||[]).map(it=>it.name).filter(Boolean).join(' ・ ')||'明細なし';
+    const sub=quoteSubtotal(q);
     const amt= sub>0?`<div class="q-amt">${yen(withTax(sub))}<span class="q-amt-sub">税込</span></div>`:'';
-    const meta= j.quoteNo
-      ? `見積 ${esc(j.quoteNo)} ・ ${fmtD(j.quotedAt)}発行${j.quoteApprovedAt?' ・ '+fmtD(j.quoteApprovedAt)+'承認':' ・ 承認待ち'}`
-      : (esc(j.jobNo||'')+(cl?' ・ '+esc(cl.name):'')+(j.deadline?' ・ 期日 '+fmtD(j.deadline):''));
-    return `<div class="q-row" onclick="openJobDetail('${j.id}')">
-      <div class="q-main"><div class="q-who">${who}</div>${desc?`<div class="q-desc">${desc}</div>`:''}<div class="q-meta">${meta}</div></div>
+    const meta= q.quoteNo
+      ? `見積 ${esc(q.quoteNo)} ・ ${fmtD(q.quotedAt)}発行${q.status==='承認'?' ・ '+fmtD(q.approvedAt)+'承認':q.status==='失注'?' ・ 失注':' ・ 返事待ち'}`
+      : '下書き'+(cl?' ・ '+esc(cl.name):'');
+    return `<div class="q-row" onclick="openQuoteEditor('${q.id}')">
+      <div class="q-main"><div class="q-who">${who}</div><div class="q-desc">${esc(itemSummary)}</div><div class="q-meta">${meta}</div></div>
       ${amt}<div class="q-arr">›</div></div>`;
   };
-  const sec=(title,arr,emptyMsg)=>`<div class="q-sec"><div class="q-sec-h">${title}<span class="q-sec-n">${arr.length}</span></div>${arr.length?arr.map(row).join(''):`<div class="q-empty">${emptyMsg}</div>`}</div>`;
+  const sec=(title,arr,emptyMsg)=> (arr.length||emptyMsg)?`<div class="q-sec"><div class="q-sec-h">${title}<span class="q-sec-n">${arr.length}</span></div>${arr.length?arr.map(row).join(''):`<div class="q-empty">${emptyMsg}</div>`}</div>`:'';
   document.getElementById('page-quotes').innerHTML=`<div class="page-h">🧾 見積</div>
-    <div style="font-size:12px;color:var(--text-dim);margin:-4px 2px 14px;line-height:1.6">取引先に出す御見積書。案件をタップ→「🧾 見積書を発行」。お客様が承認したら「受注」に進みます。</div>
-    ${sec('📝 見積を出す（依頼）',pending,'未発行の依頼はありません')}
-    ${sec('📤 発行済み・承認待ち',issued,'承認待ちの見積はありません')}
-    ${sec('✅ 承認済み',approved,'承認済みの見積はありません')}`;
+    <button class="btn btn-primary" style="width:100%;height:52px;font-size:16px;font-weight:800;margin-bottom:6px;box-shadow:0 3px 12px rgba(37,99,235,.3)" onclick="openQuoteEditor()">＋ 新規見積を作成</button>
+    <div style="font-size:11.5px;color:var(--text-dim);margin:0 2px 14px;line-height:1.6">取引先・相手先を選び、商品（取付内容）を何行でも足して御見積書を作成。承認されたら明細ごとに案件（受注）になります。</div>
+    ${sec('📝 下書き',draft,'')}
+    ${sec('📤 発行済み・返事待ち',issued,'発行済みの見積はありません')}
+    ${sec('✅ 承認済み',approved,'')}
+    ${sec('✖ 失注',lost,'')}`;
 }
 function renderHome(){
   const jobs=DATA.jobs.filter(j=>j.status!=='キャンセル');
@@ -701,12 +714,12 @@ function renderHome(){
   const billable=DATA.jobs.filter(j=>['作業完了','報告済'].includes(j.status) && billMonthOf(j)===m).length;
   const COLS=[{k:'依頼・受注',f:j=>['依頼','受注'].includes(j.status),c:'#64748B'},{k:'部品待ち',f:j=>j.status==='部品手配',c:'#D97706'},{k:'作業待ち',f:j=>j.status==='着荷済',c:'#7C3AED'},{k:'作業中',f:j=>j.status==='作業中',c:'#2563EB'},{k:'完了・報告',f:j=>['作業完了','報告済'].includes(j.status),c:'#16A34A'}];
   const inquiryCnt=jobs.filter(j=>j.status==='依頼').length;
-  const quotePending=jobs.filter(j=>j.status==='依頼' && !j.quoteNo).length;
+  const quoteOpen=(DATA.quotes||[]).filter(q=>!q.deleted && q.status==='見積中').length;
   const todo=(ic,l,n,act,tone)=> n>0?`<div class="todo-row ${tone||''}" onclick="${act}"><div class="todo-ic">${ic}</div><div class="todo-l">${l}</div><div class="todo-n">${n}件</div><div class="todo-arr">›</div></div>`:'';
   const todoRows=[
     todo('⏰','期日が近い・超過',dlAlert,"openJobsFiltered('deadline')",'red'),
-    todo('🧾','見積を出す（新規依頼）',quotePending,"openJobsFiltered('quote')",''),
-    todo('📩','受注する（見積→承認後）',inquiryCnt,"openJobsFiltered('依頼')",''),
+    todo('🧾','見積（下書き・返事待ち）',quoteOpen,"switchTab('quotes')",''),
+    todo('📩','受注する（新規依頼）',inquiryCnt,"openJobsFiltered('依頼')",''),
     todo('📦','着荷を確認する',awaiting,"openJobsFiltered('awaiting')",'amber'),
     todo('🔧','今日の作業',todayCnt,"openJobsFiltered('today')",''),
     todo('📝','作業を報告する',reportPending,"openJobsFiltered('作業完了')",''),
@@ -1116,32 +1129,6 @@ function parseRequestText(text){
   return r;
 }
 
-/* ───────── 見積カード(案件詳細・admin限定) ───────── */
-function quoteCardHtml(j,id){
-  const has=!!j.quoteNo;
-  const inner = has ? `
-    <div style="font-size:12px;color:var(--text-dim);line-height:1.8;margin-bottom:9px">
-      見積番号 <b style="color:var(--text)">${esc(j.quoteNo)}</b>　／　発行 ${fmtD(j.quotedAt)}　／　有効期限 ${fmtD(quoteValidUntil(j.quotedAt))}
-      ${j.quoteApprovedAt?`<br><span class="tag ok" style="margin-top:4px;display:inline-block">✅ ${fmtD(j.quoteApprovedAt)} お客様承認済</span>`:''}
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-secondary btn-sm" onclick="openQuoteWindow('${id}')">📄 見積書を表示</button>
-      <button class="btn btn-ghost btn-sm" onclick="issueQuote('${id}')">🔄 日付を更新して再発行</button>
-    </div>
-    ${(!j.quoteApprovedAt)?`<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm btn-full" onclick="approveQuote('${id}')">✅ お客様承認 ${j.status==='依頼'?'→ 受注にする':'を記録'}</button></div>`:''}
-  ` : `
-    <div style="font-size:10.5px;color:var(--text-dim);line-height:1.5;margin-bottom:9px">受注前に取引先へ提示する御見積書。この案件の車種・取付内容・台数・工賃から1枚で作成します。</div>
-    <button class="btn btn-primary btn-sm btn-full" onclick="issueQuote('${id}')">🧾 見積書を発行</button>
-  `;
-  return `<div style="border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:11px">
-    <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
-      <span style="font-size:13px;font-weight:800;color:var(--text)">🧾 見積（取引先へ）</span>
-      ${has?`<span class="tag ${j.quoteApprovedAt?'ok':''}" style="margin-left:auto">${j.quoteApprovedAt?'承認済':'発行済'}</span>`:''}
-    </div>
-    ${inner}
-  </div>`;
-}
-
 /* ───────── 案件詳細 ───────── */
 function openJobDetail(id){
   const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
@@ -1202,7 +1189,6 @@ function openJobDetail(id){
       <button class="btn btn-secondary btn-sm" onclick="openReportModal('${id}')">📝 報告/写真</button>
     </div>
     <div class="sec-label">📄 書類・送信</div>
-    ${quoteCardHtml(j,id)}
     <div style="border:1px solid var(--accent-border);background:var(--accent-dim);border-radius:12px;padding:12px 13px;margin-bottom:11px">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
         <span style="font-size:13px;font-weight:800;color:var(--accent-deep)">🤝 外注先へ送信</span>
@@ -1676,28 +1662,126 @@ function openInvoiceWindow(client,jobs,month,invNo,extras){
   if(!w){ toast('ポップアップを許可してください','err'); return; }
   w.document.write(html); w.document.close();
 }
-/* ───────── 見積書(受注前に取引先へ提示・案件1件から発行) ───────── */
-function issueQuote(id){
-  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
-  if(!DATA.settings.company){ toast('先に⚙️設定で自社情報を入力してください','err'); openSettings(); return; }
-  if(!num(j.unitFee) && !num(j.qty)){ toast('工賃単価が未入力です。編集で入力してください','err'); return; }
-  const reissue=!!j.quoteNo;
-  if(!j.quoteNo) j.quoteNo=genQuoteNo();
-  j.quotedAt=todayISO(); stamp(j); save();
-  openQuoteWindow(id);
-  toast('見積書 '+j.quoteNo+(reissue?' を再発行':' を発行しました'),'ok');
-  refresh(); openJobDetail(id);
+/* ───────── 見積(独立・複数明細) ───────── */
+let editingQuote=null;
+function newQuote(){ return { id:uid(), quoteNo:'', quotedAt:'', status:'見積中',
+  clientId:'', clientName:'', endUser:'', title:DATA.settings.subject||'電装品取付',
+  items:[{name:'',qty:1,unitPrice:''}], note:'', approvedAt:'', jobIds:[], deleted:false,
+  createdAt:Date.now(), updatedAt:Date.now(), updatedBy:DATA.settings.person||'' }; }
+function quoteSubtotal(q){ return (q.items||[]).reduce((s,it)=> s + (num(it.qty)||0)*num(it.unitPrice), 0); }
+function openQuoteEditor(id){
+  editingQuote = id? JSON.parse(JSON.stringify(DATA.quotes.find(q=>q.id===id))) : newQuote();
+  const q=editingQuote, isNew=!id;
+  if(!q.items || !q.items.length) q.items=[{name:'',qty:1,unitPrice:''}];
+  const clientOpts=`<option value="">— 取引先を選択 —</option>`+DATA.clients.map(c=>`<option value="${c.id}" ${q.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  const issued=!!q.quoteNo;
+  const stateBox = issued ? `<div class="sec-label">📌 この見積の状態</div>
+    <div style="border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:11px">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:9px">見積番号 <b style="color:var(--text)">${esc(q.quoteNo)}</b>　／　発行 ${fmtD(q.quotedAt)}　／　有効期限 ${fmtD(quoteValidUntil(q.quotedAt))}</div>
+      ${q.status==='承認'?`<span class="tag ok">✅ ${fmtD(q.approvedAt)} 承認済（案件 ${(q.jobIds||[]).length}件を作成）</span>`
+        : q.status==='失注'?`<span class="tag">✖ 失注</span> <button class="btn btn-ghost btn-sm" style="margin-left:8px" onclick="reopenQuote('${q.id}')">↩ 見積中に戻す</button>`
+        : `<div class="btn-row"><button class="btn btn-secondary btn-sm" onclick="openQuoteWindow('${q.id}')">📄 見積書を再表示</button></div>
+           <div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="approveQuote('${q.id}')">✅ 承認して案件化</button><button class="btn btn-ghost btn-sm" onclick="lostQuote('${q.id}')">✖ 失注</button></div>`}
+    </div>` : '';
+  const bg=document.getElementById('modal-bg'), m=document.getElementById('modal');
+  m.innerHTML=`<div class="modal-head"><h2>${isNew?'🧾 新規見積':'🧾 見積'}</h2>${q.quoteNo?`<span class="sub">${esc(q.quoteNo)}</span>`:''}<button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    ${stateBox}
+    <div class="field"><label>取引先（請求先） <span style="color:var(--red);font-weight:700">＊必須</span></label>
+      <div style="display:flex;gap:8px"><select id="q-client" style="flex:1">${clientOpts}</select><button class="btn btn-secondary btn-sm" onclick="quickAddClientForQuote()">＋新規</button></div></div>
+    <div class="field"><label>相手先様（エンド需要者・任意）</label><input id="q-enduser" value="${esc(q.endUser)}" placeholder="（記入例）NEWS / フジレンタカー"></div>
+    <div class="field"><label>件名</label><input id="q-title" value="${esc(q.title)}"></div>
+    <div class="sec-label">🛒 明細（商品・取付内容を何行でも）</div>
+    <div class="chips" style="margin-bottom:8px">${DATA.presets.map(p=>`<button class="chip" onclick="addQuoteItemPreset('${p.id}')">＋${esc(p.name)}</button>`).join('')}</div>
+    <div class="q-item-head"><span class="qh-name">品名・取付内容</span><span class="qh-qty">数量</span><span class="qh-price">単価(税抜)</span><span class="qh-del"></span></div>
+    <div id="q-items"></div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:2px" onclick="addQuoteItem()">＋ 明細を追加</button>
+    <div class="field" style="margin-top:13px"><label>備考（任意・納期や条件など）</label><textarea id="q-note" placeholder="（記入例）部品は貴社支給／作業は◯月以降">${esc(q.note)}</textarea></div>
+    <div class="money-box" id="q-total" style="margin-top:12px"></div>
+  </div>
+  <div class="modal-foot" style="flex-wrap:wrap;gap:8px">
+    ${!isNew?`<button class="btn btn-ghost btn-sm" onclick="deleteQuote('${q.id}')">🗑 削除</button>`:''}
+    <button class="btn btn-secondary" onclick="saveQuote(false)">💾 保存</button>
+    <button class="btn btn-primary" onclick="saveQuote(true)">🧾 見積書を発行</button>
+  </div>`;
+  bg.classList.add('open'); renderQuoteItems();
 }
+function renderQuoteItems(){
+  const q=editingQuote; const host=document.getElementById('q-items'); if(!host) return;
+  host.innerHTML=(q.items||[]).map((it,i)=>`<div class="q-item-row">
+    <input class="q-it-name" value="${esc(it.name)}" placeholder="例）ドラレコ前後取付" oninput="updateQuoteItem(${i},'name',this.value)">
+    <input class="q-it-qty" inputmode="numeric" value="${esc(it.qty)}" placeholder="1" oninput="updateQuoteItem(${i},'qty',this.value)">
+    <input class="q-it-price" inputmode="numeric" value="${esc(it.unitPrice)}" placeholder="25000" oninput="updateQuoteItem(${i},'unitPrice',this.value)">
+    <button class="q-it-del" onclick="removeQuoteItem(${i})">✕</button></div>`).join('');
+  renderQuoteTotal();
+}
+function updateQuoteItem(i,k,v){ if(editingQuote&&editingQuote.items[i]){ editingQuote.items[i][k]=v; renderQuoteTotal(); } }
+function addQuoteItem(){ editingQuote.items.push({name:'',qty:1,unitPrice:''}); renderQuoteItems(); }
+function addQuoteItemPreset(pid){ const p=DATA.presets.find(x=>x.id===pid); if(!p) return;
+  const empty=(editingQuote.items||[]).find(it=>!String(it.name).trim());
+  if(empty){ empty.name=p.name; if(p.price && !num(empty.unitPrice)) empty.unitPrice=p.price; }
+  else editingQuote.items.push({name:p.name,qty:1,unitPrice:p.price||''});
+  renderQuoteItems(); }
+function removeQuoteItem(i){ editingQuote.items.splice(i,1); if(!editingQuote.items.length) editingQuote.items.push({name:'',qty:1,unitPrice:''}); renderQuoteItems(); }
+function renderQuoteTotal(){ const q=editingQuote; if(!q) return; const sub=quoteSubtotal(q); const tax=Math.round(sub*taxRate()/100); const el=document.getElementById('q-total'); if(!el) return;
+  el.innerHTML=`<div class="money-row"><span>小計（税抜）</span><b>${yen(sub)}</b></div><div class="money-row" style="font-size:11px"><span>消費税（${taxRate()}%）</span><b>${yen(tax)}</b></div><div class="money-row total"><span>合計（税込）</span><b>${yen(sub+tax)}</b></div>`; }
+function saveQuote(issue){
+  const q=editingQuote;
+  q.clientId=document.getElementById('q-client').value;
+  const cl=clientById(q.clientId); q.clientName=cl?cl.name:'';
+  q.endUser=document.getElementById('q-enduser').value.trim();
+  q.title=document.getElementById('q-title').value.trim()||DATA.settings.subject||'電装品取付';
+  q.note=document.getElementById('q-note').value;
+  q.items=(q.items||[]).filter(it=>String(it.name).trim()!=='' || num(it.unitPrice)>0);
+  if(!q.items.length){ toast('明細を1行以上入力してください','err'); return; }
+  if(!q.clientId && !q.clientName){ toast('取引先を選択してください','err'); return; }
+  if(issue && !DATA.settings.company){ toast('先に⚙️設定で自社情報を入力してください','err'); openSettings(); return; }
+  if(issue){ if(!q.quoteNo) q.quoteNo=genQuoteNo(); if(!q.quotedAt) q.quotedAt=todayISO(); }
+  q.updatedAt=Date.now(); q.updatedBy=DATA.settings.person||'';
+  const existing=DATA.quotes.find(x=>x.id===q.id);
+  if(existing) Object.assign(existing,q); else DATA.quotes.push(q);
+  save();
+  if(issue){ openQuoteWindow(q.id); toast('見積書 '+q.quoteNo+' を発行','ok'); openQuoteEditor(q.id); }
+  else { toast('保存しました','ok'); closeModal(); }
+  if(curTab==='quotes') renderQuotes();
+}
+async function approveQuote(id){
+  const q=DATA.quotes.find(x=>x.id===id); if(!q) return;
+  if(!await confirmModal('この見積をお客様が承認しました。\n明細ごとに案件（受注）を作成しますか？',{okText:'承認して案件化'})) return;
+  q.status='承認'; q.approvedAt=todayISO(); q.jobIds=q.jobIds||[];
+  let made=0;
+  (q.items||[]).forEach(it=>{ if(!String(it.name).trim() && !num(it.unitPrice)) return;
+    const job=newJob(); job.clientId=q.clientId; job.clientName=q.clientName; job.endUser=q.endUser;
+    job.workDesc=it.name; job.qty=num(it.qty)||1; job.unitFee=String(num(it.unitPrice)||''); job.status='受注';
+    job.jobNo=genJobNo(); job.createdAt=Date.now(); job.quoteId=q.id; job.quoteNo=q.quoteNo;
+    DATA.jobs.push(job); q.jobIds.push(job.id); made++; });
+  q.updatedAt=Date.now(); save();
+  closeModal(); toast('承認 → '+made+'件の案件（受注）を作成','ok');
+  if(curTab==='quotes') renderQuotes(); else switchTab('jobs');
+}
+async function lostQuote(id){ const q=DATA.quotes.find(x=>x.id===id); if(!q) return;
+  if(!await confirmModal('この見積を「失注」にしますか？',{okText:'失注にする'})) return;
+  q.status='失注'; q.updatedAt=Date.now(); save(); closeModal(); toast('失注にしました'); if(curTab==='quotes') renderQuotes(); }
+function reopenQuote(id){ const q=DATA.quotes.find(x=>x.id===id); if(!q) return; q.status='見積中'; q.updatedAt=Date.now(); save(); openQuoteEditor(id); }
+async function deleteQuote(id){ const q=DATA.quotes.find(x=>x.id===id); if(!q) return;
+  if(!await confirmModal('この見積を削除しますか？',{danger:true,okText:'削除する'})) return;
+  q.deleted=true; q.updatedAt=Date.now(); save(); closeModal(); toast('削除しました'); if(curTab==='quotes') renderQuotes(); }
+function quickAddClientForQuote(){ promptModal('取引先名(法人名)を入力').then(name=>{ if(!name) return;
+  const c={id:uid(),name:name.trim(),contacts:[],tel:'',address:'',closingDay:'',memo:''}; DATA.clients.push(c); save();
+  const sel=document.getElementById('q-client'); if(sel){ sel.innerHTML=`<option value="">— 取引先を選択 —</option>`+DATA.clients.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''); sel.value=c.id; }
+  if(editingQuote) editingQuote.clientId=c.id; toast('取引先を追加しました','ok'); }); }
 function openQuoteWindow(id){
-  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
-  const st=DATA.settings; const cl=clientById(j.clientId);
-  const clientName=cl?cl.name:(j.clientName||'');
-  const sub=jobSubtotal(j); const tax=Math.round(sub*taxRate()/100), total=sub+tax;
-  const quotedAt=j.quotedAt||todayISO(); const validUntil=quoteValidUntil(quotedAt);
-  const quoteNo=j.quoteNo||('Q-'+String(num(st.nextQuoteNo)||1).padStart(6,'0'));
+  const q=DATA.quotes.find(x=>x.id===id); if(!q) return;
+  const st=DATA.settings; const cl=clientById(q.clientId);
+  const clientName=cl?cl.name:(q.clientName||'');
+  const sub=quoteSubtotal(q); const tax=Math.round(sub*taxRate()/100), total=sub+tax;
+  const quotedAt=q.quotedAt||todayISO(); const validUntil=quoteValidUntil(quotedAt);
+  const quoteNo=q.quoteNo||('Q-'+String(num(st.nextQuoteNo)||1).padStart(6,'0'));
+  const subjectTxt=(q.title||st.subject||'')+(q.endUser?'（'+q.endUser+' 様）':'');
   const ymd=s=>esc(String(s||'').replace(/-/g,'/'));
-  const dataRow=`<tr><td>${invoiceDescHtml(j)}</td><td class="c">${num(j.qty)||1} 台</td><td class="r">${num(j.unitFee).toLocaleString('ja-JP')}</td><td class="r">${sub.toLocaleString('ja-JP')}</td></tr>`;
-  const minRows=9; let fillerRows=''; for(let i=1;i<minRows;i++) fillerRows+=`<tr class="empty"><td>&nbsp;</td><td></td><td></td><td></td></tr>`;
+  const items=(q.items||[]).filter(it=>String(it.name).trim()!=='' || num(it.unitPrice)>0);
+  const dataRow=items.map(it=>{ const amt=(num(it.qty)||0)*num(it.unitPrice); return `<tr><td><div class="d-main">${esc(it.name)}</div></td><td class="c">${num(it.qty)||1}</td><td class="r">${num(it.unitPrice).toLocaleString('ja-JP')}</td><td class="r">${amt.toLocaleString('ja-JP')}</td></tr>`; }).join('');
+  const minRows=9; let fillerRows=''; for(let i=items.length;i<minRows;i++) fillerRows+=`<tr class="empty"><td>&nbsp;</td><td></td><td></td><td></td></tr>`;
   const logoImg=st.logo?`<img src="${st.logo}" style="max-height:58px;max-width:150px;margin-top:8px">`:'';
   const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>御見積書 ${esc(quoteNo)}</title>
   <style>
@@ -1763,7 +1847,7 @@ function openQuoteWindow(id){
         ${logoImg}
       </div>
     </div>
-    <div class="subject"><span class="l">件名</span><b>${esc(st.subject||'')}</b></div>
+    <div class="subject"><span class="l">件名</span><b>${esc(subjectTxt)}</b></div>
     <table class="detail"><thead><tr><th>摘要</th><th style="width:58px">数量</th><th style="width:78px">単価</th><th style="width:96px">金額</th></tr></thead>
       <tbody>${dataRow}${fillerRows}</tbody></table>
     <div class="foot">
@@ -1784,17 +1868,6 @@ function openQuoteWindow(id){
   const w=window.open('','_blank');
   if(!w){ toast('ポップアップを許可してください','err'); return; }
   w.document.write(html); w.document.close();
-}
-async function approveQuote(id){
-  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
-  const willAdvance = j.status==='依頼';
-  const msg = willAdvance ? 'この見積をお客様が承認しました。\n案件を「受注」に進めますか？' : 'この見積をお客様が承認したことを記録します。';
-  if(!await confirmModal(msg,{okText:'承認を記録'})) return;
-  j.quoteApprovedAt=todayISO();
-  if(willAdvance) j.status='受注';
-  stamp(j); save();
-  toast(willAdvance?'承認 → 受注にしました':'承認を記録しました','ok');
-  refresh(); openJobDetail(id);
 }
 async function markPaid(key,month){
   const js=groupJobs(key,month); const ex=groupExtras(key,month);
@@ -2345,7 +2418,7 @@ const DBX_APP_KEY='fly154tcdbz09x9';
 const DBX_DATA_PATH='/ライム共有DB/システムデータ電装/data.json';
 const DBX_LS={token:'denso_dbx_token',refresh:'denso_dbx_refresh',verifier:'denso_dbx_verifier',cachedRev:'denso_dbx_rev',cachedSnap:'denso_dbx_snap'};
 let DBX_TOKEN=null, DBX_REFRESH=null, _lastDbxRev=null, _lastSyncSnapshot=null, _isSyncing=false, _saveTail=null, _saveFollow=null, _syncTimer=null, _lastTokenRefresh=Date.now();
-const _SYNC_COLS=['jobs','clients','subcontractors','presets','extraCharges'];
+const _SYNC_COLS=['jobs','quotes','clients','subcontractors','presets','extraCharges'];
 function _asciiSafeJson(obj){ return JSON.stringify(obj).replace(/[\x7F-￿]/g, c=>'\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4)); }
 function _genVerifier(){ const a=new Uint8Array(48); crypto.getRandomValues(a); return btoa(String.fromCharCode.apply(null,a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 async function _sha256b64u(s){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return btoa(String.fromCharCode.apply(null,new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
