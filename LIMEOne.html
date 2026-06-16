@@ -2881,7 +2881,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-16';
+const APP_VERSION = '2026-06-16a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -14509,7 +14509,7 @@ function _buildLineMessage(c, eventType){
     const st = c.status || '';
     let head = '🔄 配車日時変更';
     if(st === '配車済') head = '🚗 配車完了';
-    else if(st === '返却済') head = '🚛 回収完了';
+    else if(st === '返却済') head = '✅ 回収完了';
     else if(st === '手配書FAX済') head = '📠 手配書FAX送付済';
     else if(st === 'キャンセル') head = '❌ 案件キャンセル';
     return [
@@ -14533,7 +14533,7 @@ function _buildLineMessage(c, eventType){
       ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '') + (rd.tel ? ' / ' + rd.tel : '')
       : (c.dispatchToName ? '配車先工場: ' + c.dispatchToName + (c.dispatchToAddress ? ' / ' + c.dispatchToAddress : '') : '');
     return [
-      '🚛 回収予定日 登録',
+      '📅 回収予定日 登録',
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収予定: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
@@ -14573,7 +14573,7 @@ function _buildLineMessage(c, eventType){
       ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '')
       : (c.dispatchToName ? '回収元: ' + c.dispatchToName + (c.dispatchToAddress ? ' / ' + c.dispatchToAddress : '') : '');
     return [
-      '🚛 回収完了',
+      '✅ 回収完了',
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',

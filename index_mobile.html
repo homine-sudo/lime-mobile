@@ -1865,7 +1865,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-15';
+const APP_VERSION = '2026-06-15a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5431,7 +5431,7 @@ function _buildLineMessage(c, eventType){
     const st = c.status || '';
     let head = '🔄 配車日時変更';
     if(st === '配車済') head = '🚗 配車完了';
-    else if(st === '返却済') head = '🚛 回収完了';
+    else if(st === '返却済') head = '✅ 回収完了';
     else if(st === '手配書FAX済') head = '📠 手配書FAX送付済';
     else if(st === 'キャンセル') head = '❌ 案件キャンセル';
     return [
@@ -5455,7 +5455,7 @@ function _buildLineMessage(c, eventType){
       ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '') + (rd.tel ? ' / ' + rd.tel : '')
       : (c.dispatchToName ? '配車先工場: ' + c.dispatchToName + (c.dispatchToAddress ? ' / ' + c.dispatchToAddress : '') : '');
     return [
-      '🚛 回収予定日 登録',
+      '📅 回収予定日 登録',
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収予定: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
@@ -5495,7 +5495,7 @@ function _buildLineMessage(c, eventType){
       ? '🏁 回収先(配車先と別!): ' + rd.name + (rd.address ? ' / ' + rd.address : '')
       : (c.dispatchToName ? '回収元: ' + c.dispatchToName + (c.dispatchToAddress ? ' / ' + c.dispatchToAddress : '') : '');
     return [
-      '🚛 回収完了',
+      '✅ 回収完了',
       '受付No: ' + (c.caseNo||''),
       c.recoveryCalledAt ? '回収日: ' + c.recoveryCalledAt : '',
       driver ? '運転者: ' + driver : '',
