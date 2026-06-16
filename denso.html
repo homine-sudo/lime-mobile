@@ -429,7 +429,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-16a';
+const APP_VERSION = '2026-06-16b';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -659,10 +659,12 @@ function renderHome(){
   const billable=DATA.jobs.filter(j=>['作業完了','報告済'].includes(j.status) && billMonthOf(j)===m).length;
   const COLS=[{k:'依頼・受注',f:j=>['依頼','受注'].includes(j.status),c:'#64748B'},{k:'部品待ち',f:j=>j.status==='部品手配',c:'#D97706'},{k:'作業待ち',f:j=>j.status==='着荷済',c:'#7C3AED'},{k:'作業中',f:j=>j.status==='作業中',c:'#2563EB'},{k:'完了・報告',f:j=>['作業完了','報告済'].includes(j.status),c:'#16A34A'}];
   const inquiryCnt=jobs.filter(j=>j.status==='依頼').length;
+  const quotePending=jobs.filter(j=>j.status==='依頼' && !j.quoteNo).length;
   const todo=(ic,l,n,act,tone)=> n>0?`<div class="todo-row ${tone||''}" onclick="${act}"><div class="todo-ic">${ic}</div><div class="todo-l">${l}</div><div class="todo-n">${n}件</div><div class="todo-arr">›</div></div>`:'';
   const todoRows=[
     todo('⏰','期日が近い・超過',dlAlert,"openJobsFiltered('deadline')",'red'),
-    todo('📩','受注する（新規依頼）',inquiryCnt,"openJobsFiltered('依頼')",''),
+    todo('🧾','見積を出す（新規依頼）',quotePending,"openJobsFiltered('quote')",''),
+    todo('📩','受注する（見積→承認後）',inquiryCnt,"openJobsFiltered('依頼')",''),
     todo('📦','着荷を確認する',awaiting,"openJobsFiltered('awaiting')",'amber'),
     todo('🔧','今日の作業',todayCnt,"openJobsFiltered('today')",''),
     todo('📝','作業を報告する',reportPending,"openJobsFiltered('作業完了')",''),
@@ -722,6 +724,7 @@ let jobFilter='active', jobSearch='';
 function jobsFiltered(){
   let jobs=DATA.jobs.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   if(jobFilter==='active') jobs=jobs.filter(j=>!['請求済','入金済','キャンセル'].includes(j.status));
+  else if(jobFilter==='quote') jobs=jobs.filter(j=>j.status==='依頼' && !j.quoteNo);
   else if(jobFilter==='inquiry') jobs=jobs.filter(j=>['依頼','受注'].includes(j.status));
   else if(jobFilter==='awaiting') jobs=jobs.filter(j=>j.status!=='キャンセル'&&_isAwaitingParts(j));
   else if(jobFilter==='today') jobs=jobs.filter(_isToday);
