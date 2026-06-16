@@ -802,14 +802,8 @@
       <div class="cls-util" id="ops-class"></div>
     </div>
 
-    <!-- ③ 車両別 採算 (freee固定資産台帳の減価償却 × 稼働売上) -->
-    <div class="card">
-      <div class="lbl">車両別 採算 <span class="sm ink3" style="font-weight:normal">直近12ヶ月 売上 − 年間費用</span></div>
-      <table class="kv" id="ops-vehicle-roi"></table>
-      <div class="sm ink3" style="margin-top:4px">費用＝freee固定資産台帳の年間減価償却（保有車）／リース料×12（リース車）。償却済の古い車は費用ゼロ＝採算良。<br>採算率＝ROI÷売上 ／ 日あたり＝ROI÷稼働日数 ／ 車検は期限60日以内を警告。<br>データ正本: <span id="ops-roi-src">—</span></div>
-    </div>
-
     <!-- ④ 生涯ROI 戦略判断 (2026-06-10) — 累計売上(2024〜)÷取得価額・売却候補・クラス別もうけ -->
+    <!-- 2026-06-13: 生涯ROIを採算より上に移動 (稼働タブでROIを先に・目立たせる) -->
     <div class="card">
       <div class="lbl">生涯ROI <span class="sm ink3" style="font-weight:normal">購入〜現在の累計売上 ÷ 取得価額</span></div>
       <div id="life-summary" class="life-sum"></div>
@@ -833,6 +827,13 @@
       <div class="lbl">クラス別 もうけ <span class="sm ink3" style="font-weight:normal">取得額あたりの累計売上（投資回収率）</span></div>
       <div class="cls-util" id="life-class"></div>
       <div class="sm ink3" style="margin-top:4px">投資回収率＝そのクラスの累計売上 ÷ 取得額合計。高い＝1円の投資でよく稼ぐクラス＝増車候補。</div>
+    </div>
+
+    <!-- ③ 車両別 採算 (freee固定資産台帳の減価償却 × 稼働売上) — 2026-06-13: 生涯ROIの下に移動 -->
+    <div class="card">
+      <div class="lbl">車両別 採算 <span class="sm ink3" style="font-weight:normal">直近12ヶ月 売上 − 年間費用</span></div>
+      <table class="kv" id="ops-vehicle-roi"></table>
+      <div class="sm ink3" style="margin-top:4px">費用＝freee固定資産台帳の年間減価償却（保有車）／リース料×12（リース車）。償却済の古い車は費用ゼロ＝採算良。<br>採算率＝ROI÷売上 ／ 日あたり＝ROI÷稼働日数 ／ 車検は期限60日以内を警告。<br>データ正本: <span id="ops-roi-src">—</span></div>
     </div>
   </section>
 
@@ -925,7 +926,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-12f';
+const APP_VERSION = '2026-06-13';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
