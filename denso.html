@@ -135,6 +135,20 @@ a{color:var(--accent-light);text-decoration:none}
 .todo-n{font-size:15px;font-weight:800;color:var(--accent)}
 .todo-row.amber .todo-n{color:var(--orange)}.todo-row.red .todo-n{color:var(--red)}.todo-row.green .todo-n{color:var(--green)}
 .todo-arr{color:var(--muted);font-size:20px;font-weight:700}
+/* 見積タブ */
+.q-sec{margin-bottom:18px}
+.q-sec-h{font-size:13px;font-weight:800;color:var(--text);margin:0 2px 8px;display:flex;align-items:center;gap:8px}
+.q-sec-n{background:var(--card2);color:var(--text-dim);font-size:11px;font-weight:700;border-radius:10px;padding:1px 9px}
+.q-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer}
+.q-row:active{background:var(--card2)}
+.q-main{flex:1;min-width:0}
+.q-who{font-size:14.5px;font-weight:700;color:var(--text)}
+.q-desc{font-size:12px;color:var(--text-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.q-amt{font-size:15px;font-weight:800;color:var(--accent);text-align:right;white-space:nowrap}
+.q-amt-sub{font-size:10px;color:var(--muted);font-weight:600;margin-left:3px}
+.q-arr{color:var(--muted);font-size:18px;flex-shrink:0}
+.q-empty{font-size:12px;color:var(--muted);padding:10px 4px;text-align:center}
 /* 作業ボード */
 .btiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
 .btile{min-width:0;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:11px 6px 10px;box-shadow:var(--shadow-sm);cursor:pointer;text-align:center}
@@ -414,12 +428,14 @@ a{color:var(--accent-light);text-decoration:none}
   <main class="m-main">
     <section class="page active" id="page-home"></section>
     <section class="page" id="page-jobs"></section>
+    <section class="page" id="page-quotes"></section>
     <section class="page" id="page-billing"></section>
     <section class="page" id="page-master"></section>
   </main>
   <nav class="m-bottomnav">
     <button class="m-tab active" data-tab="home" onclick="switchTab('home')"><span class="icon">🏠</span><span class="label">ホーム</span></button>
     <button class="m-tab" data-tab="jobs" onclick="switchTab('jobs')"><span class="icon">📋</span><span class="label">案件</span></button>
+    <button class="m-tab" data-tab="quotes" onclick="switchTab('quotes')"><span class="icon">🧾</span><span class="label">見積</span></button>
     <button class="m-tab" data-tab="billing" onclick="switchTab('billing')"><span class="icon">💴</span><span class="label">請求</span></button>
     <button class="m-tab" data-tab="master" onclick="switchTab('master')"><span class="icon">🗂️</span><span class="label">マスタ</span></button>
   </nav>
@@ -429,7 +445,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-16b';
+const APP_VERSION = '2026-06-16c';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -598,12 +614,12 @@ function switchTab(t){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+t).classList.add('active');
   var _fab=document.getElementById('fab'); if(_fab) _fab.style.display = (t==='home'||t==='jobs')?'flex':'none';
-  if(t==='home') renderHome(); else if(t==='jobs') renderJobs(); else if(t==='billing') renderBilling(); else if(t==='master') renderMaster();
+  if(t==='home') renderHome(); else if(t==='jobs') renderJobs(); else if(t==='quotes') renderQuotes(); else if(t==='billing') renderBilling(); else if(t==='master') renderMaster();
   document.querySelector('.m-main').scrollTop=0;
   // 開いた瞬間に最新取得(端末間のステータスズレ防止)。データ系タブのみ・rev変化時のみ実取得(_autoPull内で同期中/編集中/非表示はスキップ)
-  if(typeof DBX_TOKEN!=='undefined' && DBX_TOKEN && (t==='home'||t==='jobs'||t==='billing')){ try{ _autoPull(); }catch(e){} }
+  if(typeof DBX_TOKEN!=='undefined' && DBX_TOKEN && (t==='home'||t==='jobs'||t==='quotes'||t==='billing')){ try{ _autoPull(); }catch(e){} }
 }
-function refresh(){ if(curTab==='home')renderHome(); else if(curTab==='jobs')renderJobsList(); else if(curTab==='billing')renderBilling(); else if(curTab==='master')renderMaster(); }
+function refresh(){ if(curTab==='home')renderHome(); else if(curTab==='jobs')renderJobsList(); else if(curTab==='quotes')renderQuotes(); else if(curTab==='billing')renderBilling(); else if(curTab==='master')renderMaster(); }
 function stamp(j){ j.updatedAt=Date.now(); j.updatedBy=DATA.settings.person||'—'; }
 function _isAwaitingParts(j){ return j.status==='部品手配' || ((j.parts||[]).some(p=>!p.arrived) && ['受注','部品手配'].includes(j.status)); }
 function _isToday(j){ if(isWorkDone(j)) return false; const t=todayISO(); if(j.scheduledAt===t) return true; if(j.scheduledAt&&j.scheduledEndAt&&j.scheduledAt<=t&&t<=j.scheduledEndAt) return true; return false; }
@@ -633,6 +649,32 @@ async function adminLogin(){
 function adminLogout(){ localStorage.removeItem('denso_admin'); toast('管理者モードを解除しました'); openSettings(); applyRole(); }
 
 /* ───────── ホーム ───────── */
+/* ───────── 見積タブ ───────── */
+function renderQuotes(){
+  const jobs=DATA.jobs.filter(j=>j.status!=='キャンセル');
+  const pending=jobs.filter(j=>j.status==='依頼' && !j.quoteNo).sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999'));
+  const issued=jobs.filter(j=>j.quoteNo && !j.quoteApprovedAt).sort((a,b)=>(b.quotedAt||'').localeCompare(a.quotedAt||''));
+  const approved=jobs.filter(j=>j.quoteApprovedAt).sort((a,b)=>(b.quoteApprovedAt||'').localeCompare(a.quoteApprovedAt||''));
+  const row=(j)=>{
+    const cl=clientById(j.clientId);
+    const who=j.endUser?esc(j.endUser)+' 様':esc(j.carModel||'(相手先未設定)');
+    const desc=(esc(j.carModel||'')+(num(j.qty)>1?' ×'+num(j.qty)+'台':'')+(j.workDesc?' ・ '+esc(j.workDesc):'')).replace(/^ ・ /,'');
+    const sub=jobSubtotal(j);
+    const amt= sub>0?`<div class="q-amt">${yen(withTax(sub))}<span class="q-amt-sub">税込</span></div>`:'';
+    const meta= j.quoteNo
+      ? `見積 ${esc(j.quoteNo)} ・ ${fmtD(j.quotedAt)}発行${j.quoteApprovedAt?' ・ '+fmtD(j.quoteApprovedAt)+'承認':' ・ 承認待ち'}`
+      : (esc(j.jobNo||'')+(cl?' ・ '+esc(cl.name):'')+(j.deadline?' ・ 期日 '+fmtD(j.deadline):''));
+    return `<div class="q-row" onclick="openJobDetail('${j.id}')">
+      <div class="q-main"><div class="q-who">${who}</div>${desc?`<div class="q-desc">${desc}</div>`:''}<div class="q-meta">${meta}</div></div>
+      ${amt}<div class="q-arr">›</div></div>`;
+  };
+  const sec=(title,arr,emptyMsg)=>`<div class="q-sec"><div class="q-sec-h">${title}<span class="q-sec-n">${arr.length}</span></div>${arr.length?arr.map(row).join(''):`<div class="q-empty">${emptyMsg}</div>`}</div>`;
+  document.getElementById('page-quotes').innerHTML=`<div class="page-h">🧾 見積</div>
+    <div style="font-size:12px;color:var(--text-dim);margin:-4px 2px 14px;line-height:1.6">取引先に出す御見積書。案件をタップ→「🧾 見積書を発行」。お客様が承認したら「受注」に進みます。</div>
+    ${sec('📝 見積を出す（依頼）',pending,'未発行の依頼はありません')}
+    ${sec('📤 発行済み・承認待ち',issued,'承認待ちの見積はありません')}
+    ${sec('✅ 承認済み',approved,'承認済みの見積はありません')}`;
+}
 function renderHome(){
   const jobs=DATA.jobs.filter(j=>j.status!=='キャンセル');
   if(jobs.length===0){
