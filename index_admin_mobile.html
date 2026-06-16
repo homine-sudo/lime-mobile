@@ -144,6 +144,10 @@
   .bar-ticks::before,.bar-ticks::after{content:'';position:absolute;top:-2px;width:1px;height:5px;background:var(--line2);opacity:.5}
   .bar-ticks::before{left:75%}
   .bar-ticks::after{left:100%}
+  /* 損益分岐点 3段階レジェンド */
+  .be-tiers{font-size:11.5px;line-height:1.75;color:var(--ink2)}
+  .be-tiers > div{display:flex;align-items:baseline;gap:5px}
+  .be-tiers .dot{font-size:10px;line-height:1}
   /* grid */
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -619,21 +623,11 @@
       <div class="dept3-plan" id="den-plan" style="display:none"></div>
     </div>
 
-    <!-- ②b 利益 (freee 実損益・年度累計 — 「売れているか」だけでなく「儲かっているか」・2026-06-12a) -->
-    <div class="card tap" id="profit-card" style="display:none" onclick="showTab('rev')">
-      <div class="lbl">利益 · freee 実損益 <span id="pf-fy" class="sm ink3" style="font-weight:normal;letter-spacing:.04em;text-transform:none"></span></div>
-      <div style="display:flex;align-items:baseline;gap:10px">
-        <div class="med num" id="pf-op">—</div>
-        <span class="unit-sm">営業利益 · 4月〜当月</span>
-      </div>
-      <div class="sm ink3" id="pf-sub" style="margin-top:8px">—</div>
-      <div class="bar bar-ticks" style="margin-top:16px"><i id="pf-bar" style="width:0%"></i></div>
-      <div class="sm ink3" id="pf-prog" style="margin-top:6px">—</div>
-    </div>
+    <!-- 2026-06-13 整理: TOPの利益(freee)カードは売上タブの「freee 実損益」(フルPL・前年度進捗%付き)と重複のため撤去。renderProfitCard は #profit-card 不在で no-op (害なし・呼出は温存)。 -->
 
-    <!-- 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値 月610万/日20万) — 2026-06-13 -->
+    <!-- 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値) — 2026-06-16 3段階化 -->
     <div class="card" id="be-card">
-      <div class="lbl">損益分岐点 · 全社 <span class="sm ink3" style="font-weight:normal">月 610万円 ／ 日 20万円</span></div>
+      <div class="lbl">損益分岐点 · 全社 <span class="sm ink3" style="font-weight:normal">3段階で監視</span></div>
       <div style="display:flex;align-items:baseline;gap:10px">
         <div class="med num" id="be-daily">—<span class="unit">円</span></div>
         <span class="unit-sm">当月の日商 · 売上 ÷ 経過日数</span>
@@ -641,14 +635,12 @@
       <div class="sm" id="be-verdict" style="margin-top:6px">—</div>
       <div class="bar bar-ticks" style="margin-top:14px"><i id="be-bar" style="width:0%"></i></div>
       <div class="sm ink3" id="be-sub" style="margin-top:6px">—</div>
-      <div class="sm ink3" id="be-note" style="margin-top:8px">固定費 約545万 ÷ 限界利益率 89.4%（FY2026確定・暦日ベース・年1回見直し）</div>
-    </div>
-
-    <!-- ③ 12ヶ月推移 -->
-    <div class="card">
-      <div class="lbl">12ヶ月推移 (税込)</div>
-      <svg class="spark" id="spark-12" viewBox="0 0 320 80" preserveAspectRatio="none"></svg>
-      <div class="sm ink3" id="spark-12-cap" style="text-align:center">— 月 〜 — 月</div>
+      <div class="be-tiers" id="be-tiers" style="margin-top:11px">
+        <div><span class="dot" style="color:var(--acc)">●</span><span>黒字 <b class="num">610万</b>/月（日20万・レンタカー稼働率50%）</span></div>
+        <div><span class="dot" style="color:var(--warn)">●</span><span>会計トントン <b class="num">470万</b>/月（絶対固定費のみ・日15.5万）</span></div>
+        <div><span class="dot" style="color:var(--danger)">●</span><span>現金下限 <b class="num">425万</b>/月（借入元金74万込み・日14万）</span></div>
+      </div>
+      <div class="sm ink3" id="be-note" style="margin-top:9px">固定費 約545万 ÷ 限界利益率 89.4%（FY2026確定・暦日ベース・年1回見直し）</div>
     </div>
 
     <!-- ④ 受付件数 (レンタカー + DETALIA 統合 — 旧2カードを1枚に集約) -->
@@ -777,6 +769,13 @@
       <table class="kv" id="rev-monthly"></table>
     </div>
 
+    <!-- 12ヶ月推移 (ローリング12ヶ月・2026-06-13 TOPから移動) -->
+    <div class="card">
+      <div class="lbl">12ヶ月推移 (税込)</div>
+      <svg class="spark" id="spark-12" viewBox="0 0 320 80" preserveAspectRatio="none"></svg>
+      <div class="sm ink3" id="spark-12-cap" style="text-align:center">— 月 〜 — 月</div>
+    </div>
+
     <div class="card">
       <div class="lbl">カテゴリ別 (当期)</div>
       <table class="kv" id="rev-cat"></table>
@@ -792,6 +791,8 @@
           <!-- 文字盤 -->
           <circle class="ng-face" cx="50" cy="50" r="47"/>
           <circle class="ng-ring" cx="50" cy="50" r="47"/>
+          <!-- 損益分岐点ゾーン色帯 (JS生成: 赤0-35% / 黄35-50% / 青50-100%) -->
+          <g id="ng-bands"></g>
           <!-- 目盛 (JS生成) -->
           <g id="ng-scale"></g>
           <!-- 値まで塗る弧 (JS生成) -->
@@ -806,6 +807,8 @@
           <text class="ng-pct" id="ng-pct" x="50" y="78" text-anchor="middle">—</text>
         </svg>
         <div class="ng-cap" id="ng-cap">— / — 台 稼働中 · 空き —</div>
+        <div class="sm" id="ng-verdict" style="text-align:center;margin-top:5px">—</div>
+        <div class="sm ink3" style="text-align:center;margin-top:2px">🟦 50%↑ 損益分岐点 ・ 🟨 35–50% 要注意 ・ 🟥 35%↓ 現金下限割れ</div>
       </div>
     </div>
 
@@ -939,7 +942,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-13a';
+const APP_VERSION = '2026-06-16';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1483,7 +1486,12 @@ function dayActivity(dateISO){
 // ---------- RENDER ----------
 // 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値) — memory project-lime-break-even / 損益分岐点分析_2026-06-16.md
 // 固定費 約545万/月 ÷ 限界利益率 89.4% = 月約610万・暦日ベース 日約20万。freee実額ベースの静的値=年1回見直し。
-const BREAK_EVEN = { monthly: 6100000, daily: 200000 };
+// 3段階: 通常(全固定費545万)610万 / 限界(絶対固定費418万)470万 / 真の現金下限(元金返済74万込)425万
+const BREAK_EVEN = {
+  monthly: 6100000, daily: 200000,        // 損益分岐点 (利益が出る)
+  limit:   4700000, limitDaily: 154000,   // 会計トントン (絶対固定費のみ)
+  cash:    4250000, cashDaily: 140000      // 現金下限 (借入元金返済込み)
+};
 function renderBreakEven(){
   const card=document.getElementById('be-card'); if(!card) return;
   const s=thisMonthSummary();
@@ -1491,18 +1499,21 @@ function renderBreakEven(){
   const td=parseD(todayISO());
   const elapsed=(td?td.getDate():1)||1;                 // 当月の経過暦日 (今日を含む)
   const daily=Math.round(mtd/elapsed);
-  const diff=daily-BREAK_EVEN.daily;
-  const pct=BREAK_EVEN.daily>0?Math.round(Math.abs(diff)/BREAK_EVEN.daily*100):0;
-  const ok=daily>=BREAK_EVEN.daily;
+  // ゾーン判定 (日商ベース)
+  let txt,col,barCls;
+  if(daily>=BREAK_EVEN.daily){ txt='🟢 黒字ペース'; col='var(--acc)'; barCls=''; }
+  else if(daily>=BREAK_EVEN.limitDaily){ txt='🟡 会計赤字ペース ・ 経費を絞れば黒字圏'; col='var(--warn)'; barCls='warn'; }
+  else if(daily>=BREAK_EVEN.cashDaily){ txt='🟠 現金は回るが会計赤字 ・ 要経費圧縮'; col='var(--warn)'; barCls='warn'; }
+  else { txt='🔴 危険水準 ・ 借入返済も厳しい'; col='var(--danger)'; barCls='danger'; }
   document.getElementById('be-daily').innerHTML=yen(daily)+'<span class="unit">円</span>';
+  const diff=daily-BREAK_EVEN.daily;
   const vEl=document.getElementById('be-verdict');
-  vEl.className='sm '+(ok?'up':'dn');
-  vEl.innerHTML=ok ? ('黒字ペース ↑ 損益分岐点を +'+pct+'%（+'+yen(diff)+'円/日）')
-                   : ('赤字ペース ↓ 損益分岐点まで '+yen(-diff)+'円/日 不足（−'+pct+'%）');
+  vEl.className='sm'; vEl.style.color=col;
+  vEl.innerHTML=txt+' <span class="ink3" style="font-weight:normal">（損益分岐点 '+(diff>=0?'+':'−')+yen(Math.abs(diff))+'円/日）</span>';
   const prog=Math.min(100, Math.round(mtd/BREAK_EVEN.monthly*100));
-  document.getElementById('be-bar').style.width=prog+'%';
+  const bar=document.getElementById('be-bar'); bar.style.width=prog+'%'; bar.className=barCls;
   const rest=Math.max(0, BREAK_EVEN.monthly-mtd);
-  document.getElementById('be-sub').innerHTML='当月売上 <b class="num">'+yen(mtd)+'</b>円 ／ 月次損益分岐点 6,100,000円'+(rest>0?'（あと '+yen(rest)+'円）':'（達成 ✓）');
+  document.getElementById('be-sub').innerHTML='当月売上 <b class="num">'+yen(mtd)+'</b>円 ／ 損益分岐点 6,100,000円'+(rest>0?'（あと '+yen(rest)+'円）':'（達成 ✓）');
 }
 function renderNow(){
   const s=thisMonthSummary();
@@ -1990,6 +2001,13 @@ function utilColor(rate){
 }
 // メーター角度: 0%→-135°(左下) 〜 100%→+135°(右下) の 270°スイープ
 function gaugeAngle(pct){ return -135 + Math.max(0,Math.min(100,pct))/100*270; }
+// 損益分岐点ゾーンの色帯アーク (稼働率 50%=損益分岐点 / 35%=現金下限)
+function gaugeBand(p0,p1,col){
+  const a0=gaugeAngle(p0), a1=gaugeAngle(p1);
+  const [sx,sy]=polar(50,50,47,a0), [ex,ey]=polar(50,50,47,a1);
+  const large=(a1-a0)>180?1:0;
+  return `<path d="M ${sx.toFixed(1)} ${sy.toFixed(1)} A 47 47 0 ${large} 1 ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${col}" stroke-width="3" opacity="0.34" stroke-linecap="butt"/>`;
+}
 function polar(cx,cy,r,deg){ const a=(deg-90)*Math.PI/180; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; }
 // ===== ③ 車両別 採算 (freee固定資産台帳の年間減価償却 × 直近12ヶ月売上) 2026-06-05 =====
 // ナンバー→年間減価償却(本年分の償却費合計)。freee固定資産台帳CSV(FY2026)由来・年1回CSVで更新。0=償却済の古い車。
@@ -2345,6 +2363,11 @@ function renderOps(){
     });
     scaleEl.innerHTML=ticks;
   }
+  // 損益分岐点ゾーン色帯 (一度だけ): 赤 0-35% / 黄 35-50% / 青 50-100%
+  const bandsEl=document.getElementById('ng-bands');
+  if(bandsEl && !bandsEl.children.length){
+    bandsEl.innerHTML = gaugeBand(0,35,'var(--danger)') + gaugeBand(35,50,'var(--warn)') + gaugeBand(50,100,'var(--acc)');
+  }
   // 値まで塗る弧 (0% 始点 → 現在値)
   const arcEl=document.getElementById('ng-arc');
   if(arcEl){
@@ -2358,6 +2381,15 @@ function renderOps(){
   if(nd) nd.setAttribute('transform','rotate('+gaugeAngle(pct).toFixed(1)+' 50 50)');
   $('ng-pct').textContent = pct+'%';
   $('ng-cap').textContent = s.inUse+' / '+s.tot+' 台 稼働中 · 空き '+s.free;
+  // 損益分岐点ゾーン判定 (稼働率 50%=損益分岐点 / 35%=現金下限)
+  const vEl=document.getElementById('ng-verdict');
+  if(vEl){
+    let vt,vc;
+    if(pct>=50){ vt='🟢 損益分岐点クリア（稼働率50%↑）'; vc='var(--acc)'; }
+    else if(pct>=35){ vt='🟡 現金は回るが損益分岐点まであと'+(50-pct)+'pt'; vc='var(--warn)'; }
+    else { vt='🔴 現金下限割れ（稼働率35%未満）'; vc='var(--danger)'; }
+    vEl.textContent=vt; vEl.style.color=vc;
+  }
 
   // クラスグループ別 稼働率 (稼働順ソート + 稼働度カラー)
   const cg=classGroupUtil(s.rows, s.span);
