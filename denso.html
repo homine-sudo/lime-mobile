@@ -429,7 +429,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-08e';
+const APP_VERSION = '2026-06-16a';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -458,7 +458,8 @@ function defaultData(){
       bank:'沖縄海邦銀行（0596）八重瀬支店（058）\n普通0003911\nカ）ハリテラス',
       subject:'電装品取付',
       note:'恐れ入りますが、お振込にかかる手数料はご負担頂きますよう宜しくお願い致します。',
-      taxRate:TAX_DEFAULT, person:'', logo:'', nextInvoiceNo:205, etcSetupFee:1800
+      taxRate:TAX_DEFAULT, person:'', logo:'', nextInvoiceNo:205, etcSetupFee:1800,
+      nextQuoteNo:1, quoteValidDays:30
     },
     seq:{}
   };
@@ -480,7 +481,7 @@ function _migrate(D){
     if(j.qty===undefined) j.qty=1;
     if(j.unitFee===undefined) j.unitFee='';
     if(j.workDesc===undefined) j.workDesc='';
-    ['endUser','workPlace','siteContact','siteTel','partsEta','workableFrom','deadline','billingDesc','scheduledEndAt','workEndAt'].forEach(f=>{ if(j[f]===undefined) j[f]=''; });
+    ['endUser','workPlace','siteContact','siteTel','partsEta','workableFrom','deadline','billingDesc','scheduledEndAt','workEndAt','quoteNo','quotedAt','quoteApprovedAt'].forEach(f=>{ if(j[f]===undefined) j[f]=''; });
     if(j.etc===undefined) j.etc={used:false,count:'',unit:''};
     if(j.partsDest===undefined) j.partsDest='当社';
     if(SEED_JOBNO[j.id]) j.jobNo=SEED_JOBNO[j.id]; // 既存データも一貫連番(D-000N)に揃える
@@ -522,6 +523,8 @@ function endOfNextMonth(m){ const p=m.split('-'); const e=new Date(+p[0],+p[1]+1
 function num(v){ const n=Number(String(v==null?'':v).replace(/[,¥\s]/g,'')); return isNaN(n)?0:n; }
 function nextSeq(month){ DATA.seq[month]=(DATA.seq[month]||0)+1; return DATA.seq[month]; }
 function genJobNo(){ DATA.seq.jobGlobal=(Number(DATA.seq.jobGlobal)||0)+1; return 'D-'+String(DATA.seq.jobGlobal).padStart(4,'0'); }
+function genQuoteNo(){ const n=Number(DATA.settings.nextQuoteNo)||1; DATA.settings.nextQuoteNo=n+1; DATA.settings._updatedAt=Date.now(); return 'Q-'+String(n).padStart(6,'0'); }
+function quoteValidUntil(dateStr){ const base=parseISO(dateStr); if(!base) return ''; const days=num(DATA.settings.quoteValidDays)||30; const d=new Date(base.getTime()+days*86400000); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
 const SEED_JOBNO={'j-2604-1':'D-0001','j-2604-2':'D-0002','j-2604-3':'D-0003','j-2605-1':'D-0004','j-2605-2':'D-0005','j-2605-3':'D-0006','j-2605-4':'D-0007','j-2605-5':'D-0008','j-req-haiace':'D-0009','j-req-yaris':'D-0010','j-2606-1':'D-0011','j-2606-2':'D-0012','j-2606-3':'D-0013'};
 function clientById(id){ return DATA.clients.find(c=>c.id===id); }
 
@@ -1068,6 +1071,32 @@ function parseRequestText(text){
   return r;
 }
 
+/* ───────── 見積カード(案件詳細・admin限定) ───────── */
+function quoteCardHtml(j,id){
+  const has=!!j.quoteNo;
+  const inner = has ? `
+    <div style="font-size:12px;color:var(--text-dim);line-height:1.8;margin-bottom:9px">
+      見積番号 <b style="color:var(--text)">${esc(j.quoteNo)}</b>　／　発行 ${fmtD(j.quotedAt)}　／　有効期限 ${fmtD(quoteValidUntil(j.quotedAt))}
+      ${j.quoteApprovedAt?`<br><span class="tag ok" style="margin-top:4px;display:inline-block">✅ ${fmtD(j.quoteApprovedAt)} お客様承認済</span>`:''}
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary btn-sm" onclick="openQuoteWindow('${id}')">📄 見積書を表示</button>
+      <button class="btn btn-ghost btn-sm" onclick="issueQuote('${id}')">🔄 日付を更新して再発行</button>
+    </div>
+    ${(!j.quoteApprovedAt)?`<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm btn-full" onclick="approveQuote('${id}')">✅ お客様承認 ${j.status==='依頼'?'→ 受注にする':'を記録'}</button></div>`:''}
+  ` : `
+    <div style="font-size:10.5px;color:var(--text-dim);line-height:1.5;margin-bottom:9px">受注前に取引先へ提示する御見積書。この案件の車種・取付内容・台数・工賃から1枚で作成します。</div>
+    <button class="btn btn-primary btn-sm btn-full" onclick="issueQuote('${id}')">🧾 見積書を発行</button>
+  `;
+  return `<div style="border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:11px">
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+      <span style="font-size:13px;font-weight:800;color:var(--text)">🧾 見積（取引先へ）</span>
+      ${has?`<span class="tag ${j.quoteApprovedAt?'ok':''}" style="margin-left:auto">${j.quoteApprovedAt?'承認済':'発行済'}</span>`:''}
+    </div>
+    ${inner}
+  </div>`;
+}
+
 /* ───────── 案件詳細 ───────── */
 function openJobDetail(id){
   const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
@@ -1128,6 +1157,7 @@ function openJobDetail(id){
       <button class="btn btn-secondary btn-sm" onclick="openReportModal('${id}')">📝 報告/写真</button>
     </div>
     <div class="sec-label">📄 書類・送信</div>
+    ${quoteCardHtml(j,id)}
     <div style="border:1px solid var(--accent-border);background:var(--accent-dim);border-radius:12px;padding:12px 13px;margin-bottom:11px">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
         <span style="font-size:13px;font-weight:800;color:var(--accent-deep)">🤝 外注先へ送信</span>
@@ -1601,6 +1631,126 @@ function openInvoiceWindow(client,jobs,month,invNo,extras){
   if(!w){ toast('ポップアップを許可してください','err'); return; }
   w.document.write(html); w.document.close();
 }
+/* ───────── 見積書(受注前に取引先へ提示・案件1件から発行) ───────── */
+function issueQuote(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  if(!DATA.settings.company){ toast('先に⚙️設定で自社情報を入力してください','err'); openSettings(); return; }
+  if(!num(j.unitFee) && !num(j.qty)){ toast('工賃単価が未入力です。編集で入力してください','err'); return; }
+  const reissue=!!j.quoteNo;
+  if(!j.quoteNo) j.quoteNo=genQuoteNo();
+  j.quotedAt=todayISO(); stamp(j); save();
+  openQuoteWindow(id);
+  toast('見積書 '+j.quoteNo+(reissue?' を再発行':' を発行しました'),'ok');
+  refresh(); openJobDetail(id);
+}
+function openQuoteWindow(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const st=DATA.settings; const cl=clientById(j.clientId);
+  const clientName=cl?cl.name:(j.clientName||'');
+  const sub=jobSubtotal(j); const tax=Math.round(sub*taxRate()/100), total=sub+tax;
+  const quotedAt=j.quotedAt||todayISO(); const validUntil=quoteValidUntil(quotedAt);
+  const quoteNo=j.quoteNo||('Q-'+String(num(st.nextQuoteNo)||1).padStart(6,'0'));
+  const ymd=s=>esc(String(s||'').replace(/-/g,'/'));
+  const dataRow=`<tr><td>${invoiceDescHtml(j)}</td><td class="c">${num(j.qty)||1} 台</td><td class="r">${num(j.unitFee).toLocaleString('ja-JP')}</td><td class="r">${sub.toLocaleString('ja-JP')}</td></tr>`;
+  const minRows=9; let fillerRows=''; for(let i=1;i<minRows;i++) fillerRows+=`<tr class="empty"><td>&nbsp;</td><td></td><td></td><td></td></tr>`;
+  const logoImg=st.logo?`<img src="${st.logo}" style="max-height:58px;max-width:150px;margin-top:8px">`:'';
+  const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>御見積書 ${esc(quoteNo)}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    @page{size:A4 portrait;margin:0}
+    body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;color:#1f2937;padding:16mm 15mm;font-size:11.5px;line-height:1.6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .title{text-align:center;font-size:25px;letter-spacing:11px;font-weight:700;color:#0f172a;padding-left:11px}
+    .title-rule{width:118px;height:2px;background:#334155;margin:7px auto 22px}
+    .head{display:flex;justify-content:space-between;align-items:flex-start;gap:26px;margin-bottom:18px}
+    .to-name{font-size:19px;font-weight:700;color:#0f172a;border-bottom:1.5px solid #334155;padding:0 18px 5px 2px;display:inline-block;min-width:230px}
+    .to-name .ochu{font-size:13px;font-weight:600;margin-left:10px}
+    .to-amount{margin-top:18px}
+    .to-amount .lbl{font-size:10.5px;color:#64748b;margin-bottom:2px}
+    .to-amount .amt{font-size:23px;font-weight:800;color:#0f172a;border-bottom:2px solid #334155;display:inline-block;padding:0 10px 3px 4px;letter-spacing:.5px}
+    .from{font-size:11px;line-height:1.7;min-width:236px}
+    .from .meta{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;margin-bottom:11px}
+    .from .meta .l{color:#64748b}.from .meta .v{text-align:right;font-weight:600}
+    .from .name{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:1px}
+    .lead{font-size:11.5px;margin:14px 0 12px}
+    .subject{font-size:12px;margin-bottom:13px;padding:8px 13px;background:#f1f5f9;border-left:3px solid #334155}
+    .subject .l{color:#64748b}.subject b{font-size:14px;margin-left:11px;color:#0f172a}
+    table{width:100%;border-collapse:collapse}
+    .detail{margin-bottom:15px}
+    .detail th{background:#334155;color:#fff;font-weight:600;font-size:11px;padding:8px 9px;text-align:center;letter-spacing:.5px}
+    .detail td{border:1px solid #d7dde5;padding:7px 10px;font-size:11.5px;vertical-align:top}
+    .detail tbody tr:nth-child(even){background:#f8fafc}
+    .detail tr.empty td{height:26px}
+    .detail td.r{text-align:right}.detail td.c{text-align:center;white-space:nowrap;color:#475569}
+    .detail .d-main{font-weight:600;color:#1f2937}
+    .detail .d-sub{font-size:10px;color:#64748b;margin-top:3px}
+    .foot{display:flex;justify-content:space-between;gap:22px;align-items:flex-start}
+    .bank{flex:1;font-size:11px;max-width:340px}
+    .bank .h{font-weight:700;margin-bottom:5px;color:#334155;font-size:11.5px}
+    .bank .box{border:1px solid #d7dde5;background:#fafbfc;padding:9px 12px;line-height:1.75}
+    .bank .due{margin-top:9px;font-size:11.5px}.bank .due b{color:#b91c1c;font-size:12.5px}
+    .breakdown{width:252px}
+    .breakdown td{border:1px solid #d7dde5;padding:7px 12px;font-size:11.5px}
+    .breakdown td.lbl{color:#475569}.breakdown td.r{text-align:right;font-weight:600}
+    .breakdown tr.small td{font-size:10.5px;color:#64748b;font-weight:400;padding:5px 12px}
+    .breakdown tr.total td{background:#334155;color:#fff;font-weight:700;font-size:14px;border-color:#334155}
+    .note{margin-top:14px;font-size:10.5px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:9px;line-height:1.6}
+    @media print{.noprint{display:none}}
+    .noprint{text-align:center;margin-top:24px}
+    .noprint button{padding:12px 28px;font-size:15px;background:#2563EB;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}
+  </style></head><body>
+    <div class="noprint" style="position:sticky;top:0;margin:-16mm -15mm 16px;padding:9px 14px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;justify-content:space-between;z-index:30"><button onclick="window.close()" style="padding:10px 16px;border:none;border-radius:9px;background:#e5e7eb;font-weight:700;font-size:14px;cursor:pointer">✕ 閉じる</button><button onclick="window.print()" style="padding:10px 16px;border:none;border-radius:9px;background:#2563EB;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🖨 印刷 / PDF保存</button></div>
+    <div class="title">御見積書</div><div class="title-rule"></div>
+    <div class="head">
+      <div>
+        <div class="to-name">${esc(clientName)}<span class="ochu">御中</span></div>
+        <div class="to-amount"><div class="lbl">お見積金額（税込）</div><div class="amt">¥${total.toLocaleString('ja-JP')}</div></div>
+        <div class="lead">下記の通りお見積申し上げます。</div>
+      </div>
+      <div class="from">
+        <div class="meta"><span class="l">見積日</span><span class="v">${ymd(quotedAt)}</span>
+          <span class="l">見積番号</span><span class="v">${esc(quoteNo)}</span>
+          <span class="l">登録番号</span><span class="v">${esc(st.regNo||'')}</span></div>
+        <div class="name">${esc(st.company||'')}</div>
+        ${st.company2?`<div>${esc(st.company2)}</div>`:''}
+        <div style="margin-top:6px">${st.zip?'〒'+esc(st.zip):''}</div>
+        <div>${esc(st.address||'')}</div>
+        <div>TEL ${esc(st.tel||'')}${st.fax?'　FAX '+esc(st.fax):''}</div>
+        ${logoImg}
+      </div>
+    </div>
+    <div class="subject"><span class="l">件名</span><b>${esc(st.subject||'')}</b></div>
+    <table class="detail"><thead><tr><th>摘要</th><th style="width:58px">数量</th><th style="width:78px">単価</th><th style="width:96px">金額</th></tr></thead>
+      <tbody>${dataRow}${fillerRows}</tbody></table>
+    <div class="foot">
+      <div class="bank">
+        <div class="h">お見積有効期限</div>
+        <div class="box">${validUntil?ymd(validUntil)+' まで':'—'}</div>
+        <div class="due" style="color:#475569">上記金額は税込です。ご用命賜りますようお願い申し上げます。</div>
+      </div>
+      <table class="breakdown">
+        <tr><td class="lbl">小計（税抜）</td><td class="r">¥${sub.toLocaleString('ja-JP')}</td></tr>
+        <tr class="small"><td>消費税（${taxRate()}%）</td><td class="r">¥${tax.toLocaleString('ja-JP')}</td></tr>
+        <tr class="total"><td>合計</td><td class="r">¥${total.toLocaleString('ja-JP')}</td></tr>
+      </table>
+    </div>
+    ${st.note?`<div class="note">${esc(st.note)}</div>`:''}
+    <div class="noprint"><button onclick="window.print()">🖨 印刷 / PDF保存</button></div>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){ toast('ポップアップを許可してください','err'); return; }
+  w.document.write(html); w.document.close();
+}
+async function approveQuote(id){
+  const j=DATA.jobs.find(x=>x.id===id); if(!j) return;
+  const willAdvance = j.status==='依頼';
+  const msg = willAdvance ? 'この見積をお客様が承認しました。\n案件を「受注」に進めますか？' : 'この見積をお客様が承認したことを記録します。';
+  if(!await confirmModal(msg,{okText:'承認を記録'})) return;
+  j.quoteApprovedAt=todayISO();
+  if(willAdvance) j.status='受注';
+  stamp(j); save();
+  toast(willAdvance?'承認 → 受注にしました':'承認を記録しました','ok');
+  refresh(); openJobDetail(id);
+}
 async function markPaid(key,month){
   const js=groupJobs(key,month); const ex=groupExtras(key,month);
   const cl=clientById((js[0]||{}).clientId||(ex[0]||{}).clientId); const nm=cl?cl.name:((js[0]||{}).clientName||(ex[0]||{}).clientName)||'この取引先';
@@ -2054,6 +2204,8 @@ function openSettings(){
     <div class="field"><label>ETCセットアップ単価(1台・既定)</label><input id="st-etcfee" inputmode="numeric" value="${esc(s.etcSetupFee)}"><div class="hint">部品は取引先支給が基本。ETCセットアップのみ当社負担＝新規案件で使う既定単価</div></div>
     <div class="field"><label>備考(請求書下部)</label><textarea id="st-note">${esc(s.note)}</textarea></div>
     <div class="field"><label>次の請求書番号</label><input id="st-invno" inputmode="numeric" value="${esc(s.nextInvoiceNo)}"><div class="hint">INV-0000000000 形式(10桁)で発行。例: 205 → INV-0000000205</div></div>
+    <div class="field-row"><div class="field"><label>次の見積番号</label><input id="st-quoteno" inputmode="numeric" value="${esc(s.nextQuoteNo)}"><div class="hint">Q-000000 形式(6桁)。例: 1 → Q-000001</div></div>
+    <div class="field" style="flex:0 0 140px"><label>見積有効期限(日数)</label><input id="st-quotevalid" inputmode="numeric" value="${esc(s.quoteValidDays)}"></div></div>
     <div class="field"><label>ロゴ(請求書右上・任意)</label>
       <div class="btn-row"><button class="btn btn-secondary btn-sm" onclick="document.getElementById('logo-file').click()">画像を選ぶ</button>${s.logo?'<button class="btn btn-ghost btn-sm" onclick="DATA.settings.logo=\'\';save();openSettings()">削除</button>':''}</div>
       <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="onLogoPick(this)">
@@ -2085,7 +2237,7 @@ function saveSettings(){
     company:g('st-company').trim(), company2:g('st-company2').trim(), zip:g('st-zip').trim(),
     address:g('st-address').trim(), tel:g('st-tel').trim(), fax:g('st-fax').trim(),
     regNo:g('st-reg').trim(), bank:g('st-bank'), subject:g('st-subject').trim(),
-    note:g('st-note'), taxRate:num(g('st-tax')), nextInvoiceNo:num(g('st-invno'))||1, etcSetupFee:num(g('st-etcfee'))||1800, person:g('st-person').trim(), _updatedAt:Date.now()
+    note:g('st-note'), taxRate:num(g('st-tax')), nextInvoiceNo:num(g('st-invno'))||1, etcSetupFee:num(g('st-etcfee'))||1800, nextQuoteNo:num(g('st-quoteno'))||1, quoteValidDays:num(g('st-quotevalid'))||30, person:g('st-person').trim(), _updatedAt:Date.now()
   });
   save(); closeModal(); toast('設定を保存','ok'); refresh();
 }
