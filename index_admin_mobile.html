@@ -631,6 +631,19 @@
       <div class="sm ink3" id="pf-prog" style="margin-top:6px">—</div>
     </div>
 
+    <!-- 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値 月610万/日20万) — 2026-06-13 -->
+    <div class="card" id="be-card">
+      <div class="lbl">損益分岐点 · 全社 <span class="sm ink3" style="font-weight:normal">月 610万円 ／ 日 20万円</span></div>
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <div class="med num" id="be-daily">—<span class="unit">円</span></div>
+        <span class="unit-sm">当月の日商 · 売上 ÷ 経過日数</span>
+      </div>
+      <div class="sm" id="be-verdict" style="margin-top:6px">—</div>
+      <div class="bar bar-ticks" style="margin-top:14px"><i id="be-bar" style="width:0%"></i></div>
+      <div class="sm ink3" id="be-sub" style="margin-top:6px">—</div>
+      <div class="sm ink3" id="be-note" style="margin-top:8px">固定費 約545万 ÷ 限界利益率 89.4%（FY2026確定・暦日ベース・年1回見直し）</div>
+    </div>
+
     <!-- ③ 12ヶ月推移 -->
     <div class="card">
       <div class="lbl">12ヶ月推移 (税込)</div>
@@ -926,7 +939,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-13';
+const APP_VERSION = '2026-06-13a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1468,9 +1481,33 @@ function dayActivity(dateISO){
 }
 
 // ---------- RENDER ----------
+// 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値) — memory project-lime-break-even / 損益分岐点分析_2026-06-16.md
+// 固定費 約545万/月 ÷ 限界利益率 89.4% = 月約610万・暦日ベース 日約20万。freee実額ベースの静的値=年1回見直し。
+const BREAK_EVEN = { monthly: 6100000, daily: 200000 };
+function renderBreakEven(){
+  const card=document.getElementById('be-card'); if(!card) return;
+  const s=thisMonthSummary();
+  const mtd=Math.max(0, Number(s.total)||0);
+  const td=parseD(todayISO());
+  const elapsed=(td?td.getDate():1)||1;                 // 当月の経過暦日 (今日を含む)
+  const daily=Math.round(mtd/elapsed);
+  const diff=daily-BREAK_EVEN.daily;
+  const pct=BREAK_EVEN.daily>0?Math.round(Math.abs(diff)/BREAK_EVEN.daily*100):0;
+  const ok=daily>=BREAK_EVEN.daily;
+  document.getElementById('be-daily').innerHTML=yen(daily)+'<span class="unit">円</span>';
+  const vEl=document.getElementById('be-verdict');
+  vEl.className='sm '+(ok?'up':'dn');
+  vEl.innerHTML=ok ? ('黒字ペース ↑ 損益分岐点を +'+pct+'%（+'+yen(diff)+'円/日）')
+                   : ('赤字ペース ↓ 損益分岐点まで '+yen(-diff)+'円/日 不足（−'+pct+'%）');
+  const prog=Math.min(100, Math.round(mtd/BREAK_EVEN.monthly*100));
+  document.getElementById('be-bar').style.width=prog+'%';
+  const rest=Math.max(0, BREAK_EVEN.monthly-mtd);
+  document.getElementById('be-sub').innerHTML='当月売上 <b class="num">'+yen(mtd)+'</b>円 ／ 月次損益分岐点 6,100,000円'+(rest>0?'（あと '+yen(rest)+'円）':'（達成 ✓）');
+}
 function renderNow(){
   const s=thisMonthSummary();
   $('now-total').innerHTML = yen(s.total)+'<span class="unit">円</span>';
+  try{ renderBreakEven(); }catch(e){ console.warn('renderBreakEven', e); }
   const mom=s.prev?Math.round((s.total-s.prev)/s.prev*100):null;
   const yoy=s.yoy?Math.round((s.total-s.yoy)/s.yoy*100):null;
   $('now-mom').className='delta '+(mom==null?'ink3':(mom>=0?'up':'dn'));
