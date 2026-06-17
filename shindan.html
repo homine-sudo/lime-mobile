@@ -432,8 +432,9 @@ const BODY={
 };
 const MAINT={SS:18700,S:19800,M:22000,L:24200,LL:25300,XL:27500};
 const NEWF=[0.93,0.92,0.90,0.92,0.90,0.885];
-/* オプションまとめ割：選んだ有料オプション数で割引（要調整・正直な割引のみ） */
-const BUNDLE=[{n:4,rate:0.15},{n:3,rate:0.10},{n:2,rate:0.05}];
+/* オプション割引＝コーティングをした人の特典：1個目から10%OFF・数が増えるほどUP（3点12%／4点〜15%）。
+   単品メニュー（コーティングなし）は対象外＝定価。bundleRate はコーティング結果でのみ使用。 */
+const BUNDLE=[{n:4,rate:0.15},{n:3,rate:0.12},{n:1,rate:0.10}];
 function bundleRate(c){for(const b of BUNDLE)if(c>=b.n)return b.rate;return 0;}
 /* 2026-06-16 改訂：2ブランド×年数のフルグリッド（6プラン）。診断で brand×年数 を自動推薦。
    ★店の実取扱＝FEYNLAB は CERAMICシリーズ（The Original 1年 / CERAMIC V3 3年 / ULTRA V3 5年）。
@@ -540,7 +541,7 @@ function summaryHTML(){
   const planName=PLANS[(ST.selPlan==null?recommendPlan():ST.selPlan)].label;
   let rows='<div class="sm-row"><span>'+planName+'（コーティング'+(ST.cond==='new'?'・新車':'')+'）</span><b>'+yen(c.planPrice)+'</b></div>';
   TOPS.forEach(t=>{if(ST.cart[t.key]){const p=topPrice(t,os);rows+='<div class="sm-row"><span>＋ '+t.name+'</span><b>'+(p==null?'<span class="sm-ask">応相談</span>':yen(p))+'</b></div>';}});
-  if(c.disc)rows+='<div class="sm-row disc"><span>オプションまとめ割（'+c.cnt+'点）</span><b>−'+yen(c.disc)+'</b></div>';
+  if(c.disc)rows+='<div class="sm-row disc"><span>オプション割引（'+c.cnt+'点・コーティング特典）</span><b>−'+yen(c.disc)+'</b></div>';
   return '<div class="summary">'+rows+'<div class="sm-total"><span>合計（税込）'+(c.hasAsk?'<small> ＋応相談あり</small>':'')+'</span><b>'+yen(c.total)+'</b></div></div>';
 }
 function _planLabelNow(){return PLANS[(ST.selPlan==null?recommendPlan():ST.selPlan)].label;}
@@ -563,8 +564,7 @@ function quoteText(){
     const mz=ST.menuSize,os=optSize(mz);let sub=0,cnt=0,hasAsk=false;
     if(mz)L.push('サイズ：'+(SIZE_LBL[mz]||mz));
     TOPS.forEach(t=>{if(ST.cart[t.key]){const p=topPrice(t,os);if(p){sub+=p;cnt++;}else hasAsk=true;L.push('＋ '+t.name+'　'+(p==null?'応相談':yen(p)));}});
-    const disc=roundClean(sub*bundleRate(cnt));
-    if(disc)L.push('まとめ割（'+cnt+'点）　−'+yen(disc));
+    const disc=0; // 単品メニューは割引なし（定価）。割引はコーティングをした人の特典。
     L.push('──────────');
     L.push('合計（税込）：'+yen(sub-disc)+(hasAsk?'（＋応相談あり）':''));
   }else{
@@ -574,7 +574,7 @@ function quoteText(){
     L.push('お車：'+carName+'（'+SIZE_LBL[ST.size]+'・'+(ST.cond==='new'?'新車':'経年車')+'）');
     L.push('コーティング：'+_planLabelNow()+'　'+yen(c.planPrice));
     TOPS.forEach(t=>{if(ST.cart[t.key]){const p=topPrice(t,os);L.push('＋ '+t.name+'　'+(p==null?'応相談':yen(p)));}});
-    if(c.disc)L.push('まとめ割（'+c.cnt+'点）　−'+yen(c.disc));
+    if(c.disc)L.push('オプション割引（'+c.cnt+'点）　−'+yen(c.disc));
     L.push('──────────');
     L.push('合計（税込）：'+yen(c.total)+(c.hasAsk?'（＋応相談あり）':''));
   }
@@ -607,11 +607,10 @@ function brandPickHTML(){
 /* アップセル導線：まとめ割の進捗ナッジ（正直） */
 function bundleNudgeHTML(){
   let cnt=0;TOPS.forEach(t=>{if(ST.cart[t.key]&&topPrice(t,optSize(ST.size)))cnt++;});
-  if(cnt===0)return '<div class="nudge">オプションを<b>2点以上</b>でまとめ割（2点5%／3点10%／4点〜15%）。</div>';
-  if(cnt===1)return '<div class="nudge on">'+SVG.spark+' あと<b>1点</b>追加で<b>5%OFF</b>になります！</div>';
-  if(cnt===2)return '<div class="nudge on">'+SVG.spark+' 5%OFF適用中。あと<b>1点</b>で<b>10%OFF</b>に！</div>';
-  if(cnt===3)return '<div class="nudge on">'+SVG.spark+' 10%OFF適用中。あと<b>1点</b>で最大<b>15%OFF</b>！</div>';
-  return '<div class="nudge on">'+SVG.spark+' <b>最大15%OFF適用中</b>！まとめてお得です。</div>';
+  if(cnt===0)return '<div class="nudge">コーティング特典で、オプションは<b>1個目から10%OFF</b>（3点12%／4点〜15%）。</div>';
+  if(cnt===1||cnt===2)return '<div class="nudge on">'+SVG.spark+' <b>10%OFF適用中</b>。あと'+(3-cnt)+'点で<b>12%OFF</b>に！</div>';
+  if(cnt===3)return '<div class="nudge on">'+SVG.spark+' 12%OFF適用中。あと<b>1点</b>で最大<b>15%OFF</b>！</div>';
+  return '<div class="nudge on">'+SVG.spark+' <b>最大15%OFF適用中</b>！</div>';
 }
 /* オプション1枚（.top カード・全オプション共通の見た目とタップ操作）。featured=イチオシ(光触媒)は控えめなピル＋細い枠だけ */
 function optCardHTML(t,featured){
@@ -792,7 +791,7 @@ function renderFoot(){
   if(s==='sc-welcome'){f.innerHTML='<button class="btn primary" onclick="show(\'sc-mode\')">はじめる '+SVG.chev+'</button>';return;}
   if(s==='sc-mode'||s==='sc-reveal'){f.innerHTML='';return;}
   if(s==='sc-result'){const c=resultCalc();
-    f.innerHTML='<div class="foottot"><div class="ft-l">合計（税込）'+(c.disc?'<span class="ft-d">まとめ割 −'+yen(c.disc)+'</span>':'')+'</div><div class="ft-v">'+yen(c.total)+(c.hasAsk?'<small> ＋応相談</small>':'')+'</div></div>'+
+    f.innerHTML='<div class="foottot"><div class="ft-l">合計（税込）'+(c.disc?'<span class="ft-d">オプション割引 −'+yen(c.disc)+'</span>':'')+'</div><div class="ft-v">'+yen(c.total)+(c.hasAsk?'<small> ＋応相談</small>':'')+'</div></div>'+
       '<a class="btn line" href="'+LINE_URL+'" target="_blank" rel="noopener" onclick="copyQuoteToLINE()">この内容でLINE相談</a>';return;}
   if(s==='sc-menu'){const n=Object.values(ST.cart).filter(Boolean).length;
     f.innerHTML='<a class="btn line" href="'+LINE_URL+'" target="_blank" rel="noopener" onclick="copyQuoteToLINE()">この内容でLINE相談'+(n?'（'+n+'点）':'')+'</a><button class="btn ghost" onclick="show(\'sc-mode\')">戻る</button>';return;}
@@ -955,7 +954,7 @@ function renderResult(first){
     '<div class="brandhd">FEYNLAB <small>米・世界初・高耐久</small></div>'+feynCards+
     '<div class="note" style="margin:9px 2px 0;text-align:left">全プラン 年1回メンテ（'+yen(roundClean(MAINT[size]))+'〜）で保証を継続できます。</div>'+
     '<div class="sec-t">オプションを追加</div>'+
-    '<div class="opt-sub">気になるものを<b>タップ</b>で追加。<b>2点以上でまとめ割</b>（2点5%／3点10%／4点〜15%）。</div>'+
+    '<div class="opt-sub">気になるものを<b>タップ</b>で追加。コーティング特典で<b>1個目から10%OFF</b>（3点12%／4点〜15%）。</div>'+
     featuredHTML()+sugCards+optExpandHTML(shownOpt)+bundleNudgeHTML()+
     '<div class="sec-t">お見積りサマリー</div>'+summaryHTML()+
     '<div class="sec-t">安心してまかせられる理由</div>'+credHTML()+
@@ -972,7 +971,7 @@ function renderMenu(){
   let html='<div class="qt">単品メニュー</div><div class="qs">気になるものを選んで、まとめてLINEで相談できます。</div>';
   html+='<div class="catlabel">お車のサイズ</div><div class="sizegrid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px">'+szbtns+'</div>';
   html+='<div class="totbar"><span class="tl">選択中の合計（税込・目安）<span id="cartDisc" style="color:var(--acc);font-weight:600"></span></span><span class="tv" id="cartTotal">¥0</span></div>';
-  html+='<div class="note" style="margin:0 2px 14px;text-align:left">オプションは2点以上で「まとめ割」（2点 5%／3点 10%／4点〜 15%）。</div>';
+  html+='<div class="note" style="margin:0 2px 14px;text-align:left">オプションは単品価格です。<b>コーティングと一緒なら1個目から10%OFF</b>（数が増えるほどお得）。</div>';
   cats.forEach(c=>{html+='<div class="catlabel">'+c+'</div>';
     TOPS.filter(t=>t.cat===c).forEach(t=>{const on=!!ST.cart[t.key];const p=topPrice(t,os);
       html+='<div class="top'+(on?' sel':'')+'" onclick="toggleCart(\''+t.key+'\',this)"><div style="flex:1"><div class="tn">'+t.name+'</div><div class="td">'+t.desc+'</div><div class="tp'+(p==null?' ask':'')+'">'+(p==null?'応相談':'＋'+yen(p))+'</div></div><span class="tck">'+SVG.check+'</span></div>';});});
@@ -985,7 +984,7 @@ function toggleCart(key,node){ST.cart[key]=!ST.cart[key];if(node)node.classList.
 function updateCartUI(){
   let sub=0,cnt=0,names=[],hasAsk=false;const os=optSize(ST.menuSize);
   TOPS.forEach(t=>{if(ST.cart[t.key]){const p=topPrice(t,os);if(p){sub+=p;cnt++;}else hasAsk=true;names.push(t.name+(p==null?'（応相談）':' '+yen(p)));}});
-  const disc=Math.round(sub*bundleRate(cnt)),total=sub-disc;
+  const disc=0,total=sub; // 単品メニューは割引なし（定価）
   const tot=el('cartTotal');if(tot)tot.innerHTML=yen(total)+(hasAsk?'<small style="font-size:11px;color:var(--mut);font-weight:500"> ＋応相談</small>':'');
   const dl=el('cartDisc');if(dl)dl.innerHTML=disc?'　まとめ割 −'+yen(disc):'';
   const list=el('cartList');if(list){if(names.length){list.style.display='block';list.innerHTML='<b>選択中（'+names.length+'点）</b><br>'+names.map(n=>'・'+n).join('<br>')+(disc?'<br>まとめ割 −'+yen(disc):'')+'<br><br>この内容をLINEでお送りください。';}else list.style.display='none';}
