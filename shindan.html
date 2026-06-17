@@ -278,7 +278,8 @@
   .wd-pane{position:relative;height:128px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
   .wd-pane.light{background:linear-gradient(158deg,#eef1f5,#c9d0d8)}
   .wd-pane.dark{background:linear-gradient(158deg,#262b32,#0b0d10)}
-  .wd-pane::after{content:"";position:absolute;inset:0;background:linear-gradient(118deg,transparent 0 8%,rgba(255,255,255,.30) 16%,transparent 32%);background-size:240% 100%;animation:sheen 4.6s ease-in-out infinite;pointer-events:none}
+  .wd-pane::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(118deg,transparent 0 8%,rgba(255,255,255,.30) 16%,transparent 32%);background-size:240% 100%;animation:sheen 4.6s ease-in-out infinite;pointer-events:none}
+  .wd-pane canvas{position:absolute;inset:0;z-index:1}
   @keyframes sheen{0%{background-position:135% 0}58%,100%{background-position:-45% 0}}
   .wd-cell.on .wd-pane{box-shadow:0 0 0 2px var(--acc),0 8px 22px rgba(168,232,76,.16)}
   .wd-badge{position:absolute;top:8px;left:8px;z-index:6;background:var(--acc);color:#0b0d10;font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
@@ -672,27 +673,93 @@ function waterDemoHTML(p){
     '<div style="text-align:center;margin-top:11px"><button class="btn ghost" style="padding:9px 20px" onclick="pourWater()">'+SVG.drop+' 水をかけてみる</button></div>'+
   '</div>';
 }
-function pourWater(){
+/* ── Canvas 水の挙動エンジン（描画 drawDroplet は ChatGPT 生成のレンズ表現をそのまま採用） ──
+   bead=撥水（小さな水玉がバラけてコロコロ・転がりながら合体して加速）／sheet=疎水（大きな塊がほぼ同時にベタッと一気に流れる）。
+   依存なし・DPR対応・画面外は IntersectionObserver で停止。API＝initWaterDemo(container,{type,surface}) → {pour,pause,resume,destroy}。 */
+class WaterDemo{
+  constructor(container,opts){
+    this.container=container;this.type=(opts&&opts.type)||'bead';
+    this.cv=document.createElement('canvas');this.container.appendChild(this.cv);
+    this.ctx=this.cv.getContext('2d');this.parts=[];this.last=0;this.running=true;this.visible=true;
+    this.resize();
+    this._ro=('ResizeObserver'in window)?new ResizeObserver(()=>this.resize()):null;if(this._ro)this._ro.observe(container);
+    this._io=('IntersectionObserver'in window)?new IntersectionObserver(es=>{this.visible=es[0].isIntersecting;this.last=0;}):null;if(this._io)this._io.observe(container);
+    this.seed(true);this._tick=t=>this.tick(t);this.raf=requestAnimationFrame(this._tick);
+  }
+  rnd(a,b){return a+Math.random()*(b-a);}
+  resize(){const dpr=Math.min(2,window.devicePixelRatio||1);const r=this.container.getBoundingClientRect();
+    this.W=Math.max(40,r.width);this.H=Math.max(40,r.height);
+    this.cv.width=Math.round(this.W*dpr);this.cv.height=Math.round(this.H*dpr);
+    this.cv.style.width=this.W+'px';this.cv.style.height=this.H+'px';this.ctx.setTransform(dpr,0,0,dpr,0,0);}
+  target(){const bead=this.type==='bead';return bead?Math.max(14,Math.round(this.W/12)):Math.max(5,Math.round(this.W/34));}
+  spawn(){const bead=this.type==='bead';const r=bead?this.rnd(3,7):this.rnd(14,26);
+    return {x:this.rnd(r+2,this.W-r-2),y:-r,r:r,vy:bead?this.rnd(0,20):this.rnd(40,90),vx:0,wob:Math.random()*6.28};}
+  seed(scatter){this.parts=[];const n=this.target();for(let i=0;i<n;i++){const p=this.spawn();
+    p.y=scatter?this.rnd(-this.H*0.3,this.H*0.95):this.rnd(-this.H*0.55,-p.r);this.parts.push(p);}}
+  step(dt){const bead=this.type==='bead';const g=bead?900:1500;
+    for(const p of this.parts){const mob=bead?Math.min(1,(p.r-3)/9):1; // 撥水：小さい水玉はピン留めで動かない／大きいほど滑る
+      p.vy+=g*mob*dt;
+      if(bead){p.wob+=dt*6;p.vx=Math.sin(p.wob)*p.r*0.6*mob;} // 蛇行＝コロコロ感
+      p.y+=p.vy*dt;p.x+=p.vx*dt;if(p.x<p.r)p.x=p.r;if(p.x>this.W-p.r)p.x=this.W-p.r;}
+    // 合体（衝突した水玉は面積を合わせて1つに＝転がりながら成長／面を覆う）
+    for(let i=0;i<this.parts.length;i++)for(let j=i+1;j<this.parts.length;j++){const a=this.parts[i],b=this.parts[j];if(!a||!b)continue;
+      if(Math.hypot(a.x-b.x,a.y-b.y)<(a.r+b.r)*0.72){const nr=Math.min(Math.sqrt(a.r*a.r+b.r*b.r),bead?16:46);
+        const big=a.r>=b.r?a:b,small=a.r>=b.r?b:a;big.r=nr;big.x=(a.x*a.r+b.x*b.r)/(a.r+b.r);big.y=Math.max(a.y,b.y);big.vy=Math.max(a.vy,b.vy);
+        this.parts.splice(this.parts.indexOf(small),1);j--;}}
+    for(let i=this.parts.length-1;i>=0;i--)if(this.parts[i].y-this.parts[i].r>this.H+4)this.parts.splice(i,1);
+    while(this.parts.length<this.target())this.parts.push(this.spawn());}
+  draw(){this.ctx.clearRect(0,0,this.W,this.H);for(const p of this.parts)this.drawDroplet(p);}
+  tick(t){if(!this.running)return;this.raf=requestAnimationFrame(this._tick);if(!this.last)this.last=t;let dt=(t-this.last)/1000;this.last=t;if(dt>0.05)dt=0.05;if(this.visible){this.step(dt);this.draw();}}
+  pour(){this.seed(false);}
+  pause(){this.running=false;}
+  resume(){if(!this.running){this.running=true;this.last=0;this.raf=requestAnimationFrame(this._tick);}}
+  destroy(){this.running=false;cancelAnimationFrame(this.raf);if(this._ro)this._ro.disconnect();if(this._io)this._io.disconnect();if(this.cv&&this.cv.parentNode)this.cv.parentNode.removeChild(this.cv);}
+  drawDroplet(p){
+    const c=this.ctx;const r=p.r;const speed=Math.min(1,p.vy/520);const squash=speed*.18;
+    // 走行後の薄い水跡
+    c.save();c.globalAlpha=.12*speed;c.fillStyle="rgba(210,245,255,.7)";c.beginPath();
+    c.ellipse(p.x,p.y-r*1.1,r*.35,r*(1.8+speed*2.2),0,0,Math.PI*2);c.fill();c.restore();
+    // 濃い接触影
+    c.save();c.globalAlpha=.28;const sg=c.createRadialGradient(p.x,p.y+r*.72,1,p.x,p.y+r*.72,r*1.5);
+    sg.addColorStop(0,"rgba(0,0,0,.48)");sg.addColorStop(.55,"rgba(0,0,0,.22)");sg.addColorStop(1,"rgba(0,0,0,0)");
+    c.fillStyle=sg;c.beginPath();c.ellipse(p.x,p.y+r*.78,r*1.25,r*.48,0,0,Math.PI*2);c.fill();c.restore();
+    c.save();c.translate(p.x,p.y);c.scale(1+squash*.18,1-squash);
+    // 水滴本体：透明レンズ
+    const body=c.createRadialGradient(-r*.35,-r*.48,r*.05,0,0,r*1.18);
+    body.addColorStop(0.00,"rgba(255,255,255,.96)");body.addColorStop(0.12,"rgba(235,252,255,.66)");
+    body.addColorStop(0.34,"rgba(170,225,245,.26)");body.addColorStop(0.58,"rgba(80,145,185,.20)");
+    body.addColorStop(0.78,"rgba(10,35,55,.34)");body.addColorStop(1.00,"rgba(255,255,255,.22)");
+    c.fillStyle=body;c.beginPath();c.arc(0,0,r,0,Math.PI*2);c.fill();
+    // 内側の反射ライン
+    c.globalAlpha=.42;c.strokeStyle="rgba(255,255,255,.72)";c.lineWidth=Math.max(1,r*.08);
+    c.beginPath();c.arc(-r*.12,-r*.18,r*.58,Math.PI*1.08,Math.PI*1.72);c.stroke();
+    // 下側の屈折リム
+    c.globalAlpha=.36;c.strokeStyle="rgba(0,18,32,.58)";c.lineWidth=Math.max(1.2,r*.16);
+    c.beginPath();c.arc(0,r*.08,r*.78,Math.PI*.16,Math.PI*.86);c.stroke();
+    // 輪郭のにじみ
+    c.globalAlpha=.55;c.strokeStyle="rgba(220,250,255,.46)";c.lineWidth=Math.max(1,r*.075);
+    c.beginPath();c.arc(0,0,r,0,Math.PI*2);c.stroke();
+    // 強いスペキュラ
+    c.globalAlpha=.95;c.fillStyle="rgba(255,255,255,.95)";c.beginPath();
+    c.ellipse(-r*.35,-r*.43,r*.24,r*.105,-0.55,0,Math.PI*2);c.fill();
+    // 小さい二次反射
+    c.globalAlpha=.52;c.fillStyle="rgba(255,255,255,.8)";c.beginPath();c.arc(r*.28,-r*.22,r*.075,0,Math.PI*2);c.fill();
+    // ライム反射は極薄
+    c.globalAlpha=.09;c.fillStyle="#A8E84C";c.beginPath();c.ellipse(r*.28,r*.18,r*.35,r*.12,-0.25,0,Math.PI*2);c.fill();
+    c.restore();
+  }
+}
+function initWaterDemo(container,opts){return new WaterDemo(container,opts);}
+function mountWaterDemos(){
+  if(window._waterCtrls)window._waterCtrls.forEach(c=>{try{c.destroy();}catch(e){}});
+  window._waterCtrls=[];
   document.querySelectorAll('.wd-pane').forEach(pane=>{
-    const type=pane.getAttribute('data-wd');
-    pane.querySelectorAll('.drop').forEach(d=>d.remove());
-    const W=Math.max(40,pane.clientWidth),n=(type==='bead')?20:4;
-    for(let i=0;i<n;i++){
-      const d=document.createElement('div');d.className='drop';
-      if(type==='bead'){
-        // 撥水：小さな水玉が散らばってコロコロ転がる（落下方向に個別のドリフト）
-        const s=6+Math.random()*12,x=6+Math.random()*(W-18);
-        d.style.setProperty('--dx',(Math.random()*44-12).toFixed(0)+'px');
-        d.style.cssText+='left:'+x+'px;top:7px;width:'+s+'px;height:'+s+'px;animation:beadRoll '+(1.5+Math.random()*1.1).toFixed(2)+'s cubic-bezier(.55,.05,.7,.6) '+(Math.random()*1.0).toFixed(2)+'s infinite';
-      } else {
-        // 疎水：大きな塊がほぼ同時に一気に滑り落ちる（幅広・スタッガー最小＝"ベタッと"）
-        const w=Math.round(W*(0.42+Math.random()*0.34)),x=4+Math.random()*Math.max(2,W-w-8);
-        d.style.cssText+='left:'+x+'px;top:-8px;width:'+w+'px;height:'+Math.round(w*0.6)+'px;border-radius:46%;animation:sheetSlide '+(1.15+Math.random()*0.35).toFixed(2)+'s ease-in '+(Math.random()*0.18).toFixed(2)+'s infinite';
-      }
-      pane.appendChild(d);
-    }
+    const type=pane.getAttribute('data-wd')||'bead';
+    const surface=pane.classList.contains('dark')?'dark':'light';
+    window._waterCtrls.push(initWaterDemo(pane,{type,surface}));
   });
 }
+function pourWater(){if(!window._waterCtrls||!window._waterCtrls.length)mountWaterDemos();window._waterCtrls.forEach(c=>{try{c.pour();}catch(e){}});}
 
 function renderOptScreens(){
   Object.keys(QOPTS).forEach(k=>{
@@ -891,7 +958,7 @@ function renderResult(first){
     '<div class="note">保証書を発行。年1回のメンテで保証を継続できます。表示は税込・目安価格です。お気軽にLINEでご相談ください。</div>'+
     '<div style="text-align:center;margin-top:4px"><button class="btn ghost" onclick="restart()">もう一度診断する</button></div>';
   const pn=el('rprice');if(pn&&first){pn.innerHTML='<span id="rpnum">¥0</span><small> 税込</small>';setTimeout(()=>{const num=el('rpnum');if(num)countUp(num,rp);},250);}
-  setTimeout(pourWater,first?420:60); // 水の挙動アニメを起動（レイアウト確定後）
+  setTimeout(mountWaterDemos,first?420:60); // Canvas水デモを起動（レイアウト確定後・旧コントローラは破棄して再生成）
   renderFoot();
 }
 function openMenu(){renderMenu();show('sc-menu');}
