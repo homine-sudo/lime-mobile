@@ -184,6 +184,12 @@
   .top .tck .i{font-size:13px;opacity:0;transition:.15s}
   .top.sel .tck{border-color:var(--acc);background:var(--acc);animation:checkpop .32s cubic-bezier(.2,.7,.3,1.4)}
   .top.sel .tck .i{opacity:1}
+  .top.ichi{border-color:var(--acc-line)}
+  .ichioshi{display:inline-flex;align-items:center;font-size:9.5px;font-weight:700;color:#0F140A;background:var(--acc);padding:1px 8px;border-radius:20px;margin-right:7px;vertical-align:1.5px}
+  .opt-sub{font-size:12px;color:var(--ink2);margin:-2px 2px 12px;line-height:1.6}
+  .opt-sub b{color:var(--ink);font-weight:600}
+  .opt-more{text-align:center;padding:12px;margin:2px 0 11px;border:1px dashed var(--line2);border-radius:var(--r);color:var(--acc);font-weight:600;font-size:13px;cursor:pointer;transition:.15s}
+  .opt-more:active{transform:scale(.99)}
   .note{font-size:11.5px;color:var(--mut);text-align:center;margin:18px 6px;line-height:1.75}
   .shot{border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);margin:14px 0 2px;position:relative}
   .shot img{width:100%;display:block}
@@ -441,7 +447,7 @@ const DETAIL_COURSES=[
   {key:'full',name:'フルレストア',base:null,tag:'とことん・現車を見てフルオーダー',inc:['徹底磨き上げ＋革シートケア','ペイント補修 等も対応','内容に応じてお見積り']}
 ];
 const DIAG_STEPS=['sc-q1','sc-q2','sc-q3','sc-q4','sc-q5','sc-q6'];
-const ST={screen:'sc-welcome',maker:'',model:'',size:'',cond:'',color:'',park:'',keep:'',priority:'',selPlan:null,menuSize:'M',cart:{},detailSize:'M',detailPick:null};
+const ST={screen:'sc-welcome',maker:'',model:'',size:'',cond:'',color:'',park:'',keep:'',priority:'',selPlan:null,menuSize:'M',cart:{},detailSize:'M',detailPick:null,optExpand:false};
 function el(id){return document.getElementById(id);}
 function yen(n){return '¥'+Math.round(n).toLocaleString('ja-JP');}
 function price(idx,size,cond){let p=BODY[idx][size]||0;if(cond==='new')p=Math.round(p*NEWF[idx]);return Math.round(p*1.1);}
@@ -533,18 +539,25 @@ function bundleNudgeHTML(){
   if(cnt===3)return '<div class="nudge on">'+SVG.spark+' 10%OFF適用中。あと<b>1点</b>で最大<b>15%OFF</b>！</div>';
   return '<div class="nudge on">'+SVG.spark+' <b>最大15%OFF適用中</b>！まとめてお得です。</div>';
 }
-/* イチオシ＝光触媒コーティング(NANOZONE COAT)のプッシュ枠 */
+/* オプション1枚（.top カード・全オプション共通の見た目とタップ操作）。featured=イチオシ(光触媒)は控えめなピル＋細い枠だけ */
+function optCardHTML(t,featured){
+  const on=!!ST.cart[t.key];const p=topPrice(t,optSize(ST.size));
+  return '<div class="top'+(on?' sel':'')+(featured?' ichi':'')+'" onclick="toggleCart(\''+t.key+'\',this)"><div style="flex:1"><div class="tn">'+(featured?'<span class="ichioshi">イチオシ</span>':'')+t.name+'</div><div class="td">'+t.desc+'</div><div class="tp'+(p==null?' ask':'')+'">'+(p==null?'応相談':'＋'+yen(p))+'</div></div><span class="tck">'+SVG.check+'</span></div>';
+}
+/* イチオシ＝光触媒コーティング(NANOZONE COAT)。控えめに先頭表示（巨大な発光枠は廃止） */
 function featuredHTML(){
   const t=TOPS.find(x=>x.key==='photocat');if(!t)return'';
-  const p=topPrice(t,optSize(ST.size));const on=!!ST.cart.photocat;
-  return '<div class="feat'+(on?' on':'')+'">'+
-    '<div class="feat-tag">'+SVG.spark+' イチオシ</div>'+
-    '<div class="feat-t">光触媒コーティング <span>NANOZONE COAT</span></div>'+
-    '<div class="feat-s">光が当たるたび、車内の<b>菌・ウイルス・ニオイを分解</b>（抗菌＋8）。乗るたび、きれいが続く。<b>赤ちゃん・ペットも安心</b>、膜を作らず質感そのまま。</div>'+
-    '<div class="feat-cert">'+SVG.shield+' NANOZONE COAT 公認施工店が正規施工</div>'+
-    '<div class="feat-row"><span class="feat-p">＋'+yen(p)+'<small> 税込</small></span>'+
-    '<button class="feat-btn'+(on?' added':'')+'" onclick="toggleCart(\'photocat\',null)">'+(on?'追加済み '+SVG.check:'追加する')+'</button></div></div>';
+  return optCardHTML(t,true);
 }
+/* 「他のオプションも見る」：表示済み以外の全TOPSをその場で展開（結果画面から全オプションへ到達できる導線） */
+function optExpandHTML(shown){
+  const rest=TOPS.filter(t=>shown.indexOf(t.key)<0);
+  if(!rest.length)return '';
+  let h='<div class="opt-more" onclick="toggleOptExpand()">'+(ST.optExpand?'閉じる ▲':'＋ 他のオプションも見る（窓・室内・ヘッドライト 等 '+rest.length+'件）')+'</div>';
+  if(ST.optExpand)h+=rest.map(t=>optCardHTML(t,false)).join('');
+  return h;
+}
+function toggleOptExpand(){ST.optExpand=!ST.optExpand;rerenderResult();}
 
 function renderOptScreens(){
   Object.keys(QOPTS).forEach(k=>{
@@ -688,8 +701,8 @@ function renderResult(first){
   const sug=[];
   if(ST.cond==='new'){sug.push('glassA');sug.push('moleN');}
   else{sug.push('inHotL');sug.push('glassA');sug.push('hl');}
-  const sugCards=sug.map(k=>{const t=TOPS.find(x=>x.key===k);if(!t)return'';const on=!!ST.cart[t.key];const p=topPrice(t,os);
-    return '<div class="top'+(on?' sel':'')+'" onclick="toggleCart(\''+t.key+'\',this)"><div style="flex:1"><div class="tn">'+t.name+'</div><div class="td">'+t.desc+'</div><div class="tp'+(p==null?' ask':'')+'">'+(p==null?'応相談':'＋'+yen(p))+'</div></div><span class="tck">'+SVG.check+'</span></div>';}).join('');
+  const sugCards=sug.map(k=>{const t=TOPS.find(x=>x.key===k);return t?optCardHTML(t,false):'';}).join('');
+  const shownOpt=['photocat'].concat(sug);
   const ulgoCards=PLANS.map((p,i)=>p.brand==='ULGO'?planCard(i,sp,rec,bestIdx,size,cond):'').join('');
   const feynCards=PLANS.map((p,i)=>p.brand==='FEYNLAB'?planCard(i,sp,rec,bestIdx,size,cond):'').join('');
   const _pk=(selP.brand==='ULGO'?'ulgo':'feynlab')+selP.years;
@@ -713,7 +726,9 @@ function renderResult(first){
     '<div class="brandhd">ULGO <small>国産・防汚・手頃</small></div>'+ulgoCards+
     '<div class="brandhd">FEYNLAB <small>米・世界初・高耐久</small></div>'+feynCards+
     '<div class="note" style="margin:9px 2px 0;text-align:left">全プラン 年1回メンテ（'+yen(MAINT[size])+'〜）で保証を継続できます。</div>'+
-    '<div class="sec-t">オプションを追加（2点以上でまとめ割）</div>'+featuredHTML()+sugCards+bundleNudgeHTML()+
+    '<div class="sec-t">オプションを追加</div>'+
+    '<div class="opt-sub">気になるものを<b>タップ</b>で追加。<b>2点以上でまとめ割</b>（2点5%／3点10%／4点〜15%）。</div>'+
+    featuredHTML()+sugCards+optExpandHTML(shownOpt)+bundleNudgeHTML()+
     '<div class="sec-t">お見積りサマリー</div>'+summaryHTML()+
     '<div class="sec-t">安心してまかせられる理由</div>'+credHTML()+
     '<div class="note">保証書を発行。年1回のメンテで保証を継続できます。表示は税込・目安価格です。お気軽にLINEでご相談ください。</div>'+
