@@ -380,12 +380,12 @@ function bundleRate(c){for(const b of BUNDLE)if(c>=b.n)return b.rate;return 0;}
    自己修復HEAL系・7年は非取扱のため削除済。特性は配布PDF(製品概要)準拠。
    brand=ULGO(国産・防汚・手頃)/FEYNLAB(米・世界初・高耐久)。ULGOの硬度等は公式非公開のため数値で断定しない。 */
 const PLANS=[
-  {label:'ULGO ワン',brand:'ULGO',years:1,product:'Ceramic One',heal:false,dur:'1年もち',tags:['国産','撥水'],why:'まずは手頃に。国産ULGOの防汚セラミックで、必要十分の保護を。',pitch:'日本発ULGOのセラミック（1年）。鉄粉除去・徹底洗車・下地研磨込み。ツヤと撥水を1年キープ。'},
-  {label:'ULGO スリー',brand:'ULGO',years:3,product:'Ceramic Three（ハイブリッド）',heal:false,dur:'3年もち',tags:['防汚に強い','国産','人気'],why:'価格と持ちのバランス最良。汚れの落ちやすさを重視するならこれ。',pitch:'2種のセラミックを配合したハイブリッド（3年）。自社工場の一貫生産で汚れに強く、1年あたりがお得。'},
-  {label:'ULGO ファイブ',brand:'ULGO',years:5,product:'Ceramic Five（フッ素防汚）',heal:false,dur:'5年もち',tags:['長期','フッ素防汚','国産'],why:'国産で長くラクに。フッ素防汚で5年、洗車の手間をぐっと軽く。',pitch:'ナノ防汚フッ素を配合した長期タイプ（5年）。国産で手頃に、防汚と撥水を長くキープ。'},
-  {label:'FEYNLAB オリジナル',brand:'FEYNLAB',years:1,product:'THE ORIGINAL CERAMIC',heal:false,dur:'1年もち',tags:['世界ブランド','疎水','滑らか'],why:'世界ブランドを手頃に1年。滑らかな手触りと光沢・疎水を高バランスで。',pitch:'FEYNLAB創業者が生んだ原点のセラミック（1年）。経済的で、超滑らかな肌触り・光沢・疎水の優れたコンビネーション。'},
-  {label:'FEYNLAB セラミックV3',brand:'FEYNLAB',years:3,product:'CERAMIC V3',heal:false,dur:'3年もち',tags:['超疎水','セルフクリーニング','深いツヤ'],why:'超疎水＆セルフクリーニングで洗車がぐっとラク。厚い被膜の深いツヤを3年。',pitch:'シリカ・窒化/炭化ケイ素の格子構造で耐スクラッチ・耐UV・耐薬品（3年）。高膜厚の深いツヤと、驚異のセルフクリーニング。'},
-  {label:'FEYNLAB ウルトラV3',brand:'FEYNLAB',years:5,product:'ULTRA V3（特許出願中）',heal:false,dur:'5年・最上位',tags:['二相技術','極撥水','最上位'],why:'最高峰の二相技術。極めて高い撥水とセルフクリーニングで、深い艶を5年。',pitch:'特許出願中の二相技術でベース＋トップコートを統合（5年）。極めて高い撥水・セルフクリーニング・深い艶で長期保護する最上位。'}
+  {label:'ULGO ワン',brand:'ULGO',years:1,product:'Ceramic One',heal:false,dur:'1年耐久',tags:['国産','撥水'],why:'まずは手頃に。国産ULGOの防汚セラミックで、必要十分の保護を。',pitch:'日本発ULGOのセラミック（1年）。鉄粉除去・徹底洗車・下地研磨込み。ツヤと撥水を1年キープ。'},
+  {label:'ULGO スリー',brand:'ULGO',years:3,product:'Ceramic Three（ハイブリッド）',heal:false,dur:'3年耐久',tags:['防汚に強い','国産','人気'],why:'価格と持ちのバランス最良。汚れの落ちやすさを重視するならこれ。',pitch:'2種のセラミックを配合したハイブリッド（3年）。自社工場の一貫生産で汚れに強く、1年あたりがお得。'},
+  {label:'ULGO ファイブ',brand:'ULGO',years:5,product:'Ceramic Five（フッ素防汚）',heal:false,dur:'5年耐久',tags:['長期','フッ素防汚','国産'],why:'国産で長くラクに。フッ素防汚で5年、洗車の手間をぐっと軽く。',pitch:'ナノ防汚フッ素を配合した長期タイプ（5年）。国産で手頃に、防汚と撥水を長くキープ。'},
+  {label:'FEYNLAB オリジナル',brand:'FEYNLAB',years:1,product:'THE ORIGINAL CERAMIC',heal:false,dur:'1年耐久',tags:['世界ブランド','疎水','滑らか'],why:'世界ブランドを手頃に1年。滑らかな手触りと光沢・疎水を高バランスで。',pitch:'FEYNLAB創業者が生んだ原点のセラミック（1年）。経済的で、超滑らかな肌触り・光沢・疎水の優れたコンビネーション。'},
+  {label:'FEYNLAB セラミックV3',brand:'FEYNLAB',years:3,product:'CERAMIC V3',heal:false,dur:'3年耐久',tags:['超疎水','セルフクリーニング','深いツヤ'],why:'超疎水＆セルフクリーニングで洗車がぐっとラク。厚い被膜の深いツヤを3年。',pitch:'シリカ・窒化/炭化ケイ素の格子構造で耐スクラッチ・耐UV・耐薬品（3年）。高膜厚の深いツヤと、驚異のセルフクリーニング。'},
+  {label:'FEYNLAB ウルトラV3',brand:'FEYNLAB',years:5,product:'ULTRA V3（特許出願中）',heal:false,dur:'5年耐久・最上位',tags:['二相技術','極撥水','最上位'],why:'最高峰の二相技術。極めて高い撥水とセルフクリーニングで、深い艶を5年。',pitch:'特許出願中の二相技術でベース＋トップコートを統合（5年）。極めて高い撥水・セルフクリーニング・深い艶で長期保護する最上位。'}
 ];
 const SIZE_LBL={SS:'軽自動車',S:'小型',M:'普通車',L:'大型・SUV',LL:'大型ミニバン',XL:'特大'};
 /* 社会的証明は実在・確認済みのものだけ（FEYNLAB/ULGO認定店ではない＝主張しない。NANOZONE公認は確認済み） */
@@ -625,7 +625,7 @@ function recommendPlan(){
 function recReason(p){
   const ky={short:'2年ほどで乗り換え',mid:'3〜4年',long:'5〜7年',forever:'8年以上ずっと'}[ST.keep];
   const r=[];
-  if(ky)r.push('あと'+ky+'お乗りとのことなので、'+p.years+'年もちの「'+p.label+'」');
+  if(ky)r.push('あと'+ky+'お乗りとのことなので、'+p.years+'年耐久の「'+p.label+'」');
   if(p.brand==='FEYNLAB'){
     if(p.years>=5)r.push('世界初のセラミックFEYNLABの最上位ULTRA V3。特許の二相技術で極めて高い撥水とセルフクリーニング、深い艶を長く');
     else if(p.years>=3)r.push('FEYNLAB CERAMIC V3は超疎水＋セルフクリーニングで洗車がラク、耐スクラッチ・耐薬品も強い');
