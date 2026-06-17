@@ -727,10 +727,9 @@ function renderResult(first){
   const oneYr=price(0,size,cond),repeat=oneYr*selP.years,save=repeat-rp;
   const advice=(sp===rec)?recReason(selP):selP.why; // 推薦プラン表示中は診断理由、手動変更時はプラン説明
   const os=optSize(size);
-  // 新車は室内クリーニング不要→外装オプション中心(窓・樹脂モール新車)。経年は車内クリーニングも提案。
-  const sug=[];
-  if(ST.cond==='new'){sug.push('glassA');sug.push('moleN');}
-  else{sug.push('inHotL');sug.push('glassA');sug.push('hl');}
+  // コーティングする車は比較的キレイな前提＝「汚れを取る」より「キレイを保つ・守る」オプションを提案。
+  // 温水クリーニング・ヘッドライト磨き等の“直す/汚れ取り”系は「他のオプションを見る」に格納（必要な人は開いて選べる）。
+  const sug=['glassA','moleN','wheel'];
   const sugCards=sug.map(k=>{const t=TOPS.find(x=>x.key===k);return t?optCardHTML(t,false):'';}).join('');
   const shownOpt=['photocat'].concat(sug);
   const ulgoCards=PLANS.map((p,i)=>p.brand==='ULGO'?planCard(i,sp,rec,bestIdx,size,cond):'').join('');
