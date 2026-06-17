@@ -85,6 +85,8 @@
   .prodcard .pc-n{font-size:15px;font-weight:700;color:#16181c;margin-top:3px;line-height:1.35}
   .prodcard .pc-s{font-size:11.5px;color:#6a6f6a;margin-top:2px}
   .res-banner .bcap{position:absolute;left:0;right:0;bottom:0;padding:22px 16px 13px;background:linear-gradient(transparent,rgba(14,16,20,.92))}
+  .res-banner .bcap-row{display:flex;align-items:center;gap:11px}
+  .res-banner .bcap-prod{width:48px;height:48px;object-fit:contain;background:rgba(255,255,255,.95);border-radius:8px;padding:3px;flex-shrink:0}
   .res-banner .bcl{font-size:20px;font-weight:800;color:#fff;letter-spacing:.5px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
   .res-banner .bcp{font-size:11.5px;color:var(--acc-d);font-weight:600;margin-top:2px;letter-spacing:.3px}
   /* options */
@@ -623,13 +625,13 @@ function recReason(p){
 function planCard(i,sp,rec,bestIdx,size,cond){
   const p=PLANS[i],pr=price(i,size,cond),py=Math.round(pr/p.years);
   const isSel=i===sp,isRec=i===rec,isBestY=i===bestIdx;
-  const tags=(p.tags||[]).map(t=>'<span class="tag">'+t+'</span>').join('');
+  const tags=(p.tags||[]).slice(0,2).map(t=>'<span class="tag">'+t+'</span>').join('');
   return '<div class="pcard'+(isSel?' rec':'')+'" style="cursor:pointer" onclick="selectPlan('+i+')">'+
     (isRec?'<span class="rb">ぴったり</span>':'')+(isSel&&!isRec?'<span class="rb" style="left:auto;right:15px;background:var(--gold);box-shadow:none">選択中</span>':'')+
     '<div class="ph"><div><div class="pl">'+p.label+(p.heal?' <span class="healb">自己修復</span>':'')+'</div><div class="pdur">'+p.product+' ／ '+p.dur+'</div></div>'+
     '<div class="pr"><b>'+yen(pr)+'</b><small>税込</small></div></div>'+
-    '<div class="meta"><span class="tag'+(isBestY?' best':'')+'">1年あたり '+yen(py)+(isBestY?'・最安':'')+'</span>'+tags+'<span class="tag">メンテ '+yen(MAINT[size])+'</span></div>'+
-    '<div class="pp2">'+p.pitch+'</div></div>';
+    '<div class="meta"><span class="tag'+(isBestY?' best':'')+'">1年 '+yen(py)+(isBestY?'・最安':'')+'</span>'+tags+'</div>'+
+    (isSel?'<div class="pp2">'+p.pitch+'</div>':'')+'</div>';
 }
 /* ヒーロー画像の解決：サイズ群×色×ブランド → 無ければ 色×ブランド → ブランド単独 にフォールバック。
    画像を1枚足すごとに HERO に key を追加すれば自動で細かく出し分く（無い組合せは粗い画像に落ちる）。
@@ -688,25 +690,23 @@ function renderResult(first){
   const ulgoCards=PLANS.map((p,i)=>p.brand==='ULGO'?planCard(i,sp,rec,bestIdx,size,cond):'').join('');
   const feynCards=PLANS.map((p,i)=>p.brand==='FEYNLAB'?planCard(i,sp,rec,bestIdx,size,cond):'').join('');
   const hImg=resolveHero(ST.size,ST.color,selP.brand);
-  const bannerHTML=(hImg.indexOf('data:')===0)?'<div class="res-banner"><img src="'+hImg+'" alt="'+selP.label+'"><div class="bcap"><div class="bcl">'+selP.label+'</div><div class="bcp">'+selP.product+' ／ '+selP.dur+'</div></div></div>':'';
   const pImg=PRODUCT[(selP.brand==='ULGO'?'ulgo':'feynlab')+selP.years]||'';
-  const prodHTML=(pImg.indexOf('data:')===0)?'<div class="prodcard"><img src="'+pImg+'" alt="'+selP.product+'"><div><div class="pc-l">ご提案の商品</div><div class="pc-n">'+selP.product+'</div><div class="pc-s">'+selP.label+' ／ '+selP.dur+'</div></div></div>':'';
+  const prodChip=(pImg.indexOf('data:')===0)?'<img class="bcap-prod" src="'+pImg+'" alt="'+selP.product+'">':'';
+  const bannerHTML=(hImg.indexOf('data:')===0)?'<div class="res-banner"><img src="'+hImg+'" alt="'+selP.label+'"><div class="bcap"><div class="bcap-row">'+prodChip+'<div><div class="bcl">'+selP.label+'</div><div class="bcp">'+selP.product+' ／ '+selP.dur+'</div></div></div></div></div>':'';
   el('sc-result').innerHTML=
     campaignHTML()+
     '<div class="reb">診断結果</div>'+bannerHTML+
     '<div class="res-hero"><div class="car">'+carName+'（'+SIZE_LBL[size]+'・'+condLbl+'）</div>'+
       '<div class="pn">'+selP.label+(selP.heal?' <span class="healb">自己修復</span>':'')+'</div>'+
       '<div class="pp" id="rprice">'+yen(rp)+'<small> 税込</small></div>'+
-      '<div class="py">'+selP.product+' ／ '+selP.dur+' ／ 1年あたり '+yen(Math.round(rp/selP.years))+'</div>'+
+      '<div class="py">'+selP.dur+' ／ 1年あたり '+yen(Math.round(rp/selP.years))+'</div>'+
       '<div class="why">'+advice+'</div></div>'+
-    prodHTML+
-    photoHTML()+
     (save>0&&selP.years>1?'<div class="callout">'+SVG.coin+'<div>1年プランを毎年やり直すと'+selP.years+'年で'+yen(repeat)+'。<b>'+selP.label+'なら'+yen(rp)+'＝約'+yen(save)+'おトクです。</b></div></div>':'')+
-    '<div class="callout">'+SVG.spark+'<div>コーティング後は<b>水洗いだけでOK</b>。ワックスがけの手間も費用もいりません。</div></div>'+
-    '<div class="trust" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 2px">'+trustHTML()+'</div>'+
+    '<div class="trust" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 2px"><span class="pill">'+SVG.spark+'水洗いだけでOK</span>'+trustHTML()+'</div>'+
     '<div class="sec-t">プランを選ぶ（タップで変更できます）</div>'+
     '<div class="brandhd">ULGO <small>国産・防汚・手頃</small></div>'+ulgoCards+
     '<div class="brandhd">FEYNLAB <small>米・世界初・高耐久</small></div>'+feynCards+
+    '<div class="note" style="margin:9px 2px 0;text-align:left">全プラン 年1回メンテ（'+yen(MAINT[size])+'〜）で保証を継続できます。</div>'+
     '<div class="sec-t">オプションを追加（2点以上でまとめ割）</div>'+featuredHTML()+sugCards+bundleNudgeHTML()+
     '<div class="sec-t">お見積りサマリー</div>'+summaryHTML()+
     '<div class="sec-t">安心してまかせられる理由</div>'+credHTML()+
