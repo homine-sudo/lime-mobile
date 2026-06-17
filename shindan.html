@@ -261,6 +261,33 @@
   .foottot .ft-d{font-size:11px;color:var(--acc);font-weight:600}
   .foottot .ft-v{font-size:23px;font-weight:700;color:var(--ink);letter-spacing:-.3px}
   .foottot .ft-v small{font-size:10.5px;color:var(--mut);font-weight:500}
+  /* 金額の物語（行動経済学：時間割引＝1日あたり / 損失回避＝やり直しより安い / 全部込み＝透明性） */
+  .pstory{margin-top:12px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+  .pstory .ps-day{font-size:13px;color:var(--ink);font-weight:600;display:flex;align-items:baseline;gap:7px}
+  .pstory .ps-day b{font-size:20px;color:var(--acc-d);font-weight:800;letter-spacing:-.3px}
+  .pstory .ps-note{font-size:12px;color:var(--ink2);line-height:1.6;margin-top:6px}
+  .pstory .ps-incl{font-size:11.5px;color:var(--acc);line-height:1.55;margin-top:9px;display:flex;gap:6px;align-items:flex-start}
+  .pstory .ps-incl .i{margin-top:2px}
+  /* 水の挙動デモ（行動経済学：具体性効果・処理流暢性／IKEA効果＝タップで体感） */
+  .wd{margin:16px 0 4px;border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;background:var(--card)}
+  .wd-h{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;color:var(--ink)}
+  .wd-h .i{color:var(--acc)}
+  .wd-sub{font-size:12px;color:var(--mut);margin:3px 0 12px}
+  .wd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .wd-cell{position:relative}
+  .wd-pane{position:relative;height:128px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+  .wd-pane.light{background:linear-gradient(158deg,#eef1f5,#c9d0d8)}
+  .wd-pane.dark{background:linear-gradient(158deg,#262b32,#0b0d10)}
+  .wd-pane::after{content:"";position:absolute;inset:0;background:linear-gradient(118deg,transparent 0 8%,rgba(255,255,255,.30) 16%,transparent 32%);background-size:240% 100%;animation:sheen 4.6s ease-in-out infinite;pointer-events:none}
+  @keyframes sheen{0%{background-position:135% 0}58%,100%{background-position:-45% 0}}
+  .wd-cell.on .wd-pane{box-shadow:0 0 0 2px var(--acc),0 8px 22px rgba(168,232,76,.16)}
+  .wd-badge{position:absolute;top:8px;left:8px;z-index:6;background:var(--acc);color:#0b0d10;font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  .wd-cap{margin-top:8px;font-size:11.5px;line-height:1.55;color:var(--ink2)}
+  .wd-cap b{color:var(--ink);font-size:13px}
+  .wd-cap .hl{color:var(--acc)}
+  .drop{position:absolute;border-radius:50%;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.92),rgba(196,224,255,.55) 42%,rgba(120,160,210,.32) 72%);box-shadow:inset 0 -2px 5px rgba(0,0,0,.22),0 1px 3px rgba(0,0,0,.3);pointer-events:none}
+  @keyframes beadRoll{0%{transform:translate(0,0);opacity:0}9%{opacity:1}26%{transform:translate(calc(var(--dx,30px)*.18),16px)}74%{opacity:1}100%{transform:translate(var(--dx,30px),152px);opacity:0}}
+  @keyframes sheetSlide{0%{transform:translateY(-14px) scaleY(.5);opacity:0}16%{opacity:.96}100%{transform:translateY(150px) scaleY(1.25);opacity:0}}
 </style>
 </head>
 <body>
@@ -292,7 +319,7 @@
   </div>
 
   <div class="scr" id="sc-q1">
-    <div class="qn">Question 1 / 6</div>
+    <div class="qn">Question 1 / 7</div>
     <div class="qt">お車を教えてください</div>
     <div class="qs">サイズによって料金が変わります。メーカーと車種を選ぶと自動で判定します。</div>
     <div class="sel-row">
@@ -312,31 +339,37 @@
   </div>
 
   <div class="scr" id="sc-q2">
-    <div class="qn">Question 2 / 6</div>
+    <div class="qn">Question 2 / 7</div>
     <div class="qt">新車ですか</div>
     <div class="qs">新車は下地が良い状態のため、少しお得な価格でご案内できます。</div>
     <div class="opts" id="op-cond"></div>
   </div>
   <div class="scr" id="sc-q3">
-    <div class="qn">Question 3 / 6</div>
+    <div class="qn">Question 3 / 7</div>
     <div class="qt">ボディの色は</div>
     <div class="qs">色によって、お手入れで気をつけるポイントが変わります。</div>
     <div class="opts" id="op-color"></div>
   </div>
   <div class="scr" id="sc-q4">
-    <div class="qn">Question 4 / 6</div>
+    <div class="qn">Question 4 / 7</div>
     <div class="qt">普段の駐車環境は</div>
     <div class="qs">沖縄の強い日差し・潮風はコーティングの大敵。環境で最適なプランが変わります。</div>
     <div class="opts" id="op-park"></div>
   </div>
   <div class="scr" id="sc-q5">
-    <div class="qn">Question 5 / 6</div>
+    <div class="qn">Question 5 / 7</div>
     <div class="qt">あと何年くらい乗りますか</div>
     <div class="qs">保有予定の長さから、ちょうど良い耐久年数をご提案します。</div>
     <div class="opts" id="op-keep"></div>
   </div>
+  <div class="scr" id="sc-qg">
+    <div class="qn">Question 6 / 7</div>
+    <div class="qt">どんな艶がお好みですか</div>
+    <div class="qs">仕上がりの艶イメージから、被膜の厚み・下地の仕上げ方をご提案します。</div>
+    <div class="opts" id="op-gloss"></div>
+  </div>
   <div class="scr" id="sc-q6">
-    <div class="qn">Question 6 / 6</div>
+    <div class="qn">Question 7 / 7</div>
     <div class="qt">いちばん大事なのは？</div>
     <div class="qs">重視ポイントから、ぴったりのブランド・コーティングを選びます。</div>
     <div class="opts" id="op-priority"></div>
@@ -375,7 +408,8 @@ const SVG={
   globe:'<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>',
   chart:'<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16M8 16v-3M12 16V8M16 16v-5"/></svg>',
   spark:'<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6z"/></svg>',
-  coin:'<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M9.3 9.3h4a1.7 1.7 0 010 3.4h-4M9.3 12.7h4a1.7 1.7 0 010 3.4h-4"/></svg>'
+  coin:'<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M9.3 9.3h4a1.7 1.7 0 010 3.4h-4M9.3 12.7h4a1.7 1.7 0 010 3.4h-4"/></svg>',
+  drop:'<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c3.5 4.2 6 7.1 6 10.2A6 6 0 016 13.7c0-3.1 2.5-6 6-10.2z"/></svg>'
 };
 /* サイズ統一 S/M/L/XL（室内容積基準・規格外は要相談）。S=軽・小型 / M=普通車 / L=大型・SUV / XL=特大。本体=ZAPSミラー税抜・経年を4サイズに集約 */
 const SIZES=['SS','S','M','L','LL','XL'];
@@ -450,7 +484,8 @@ const QOPTS={
   color:[{v:'white',t:'白・シルバー系',d:'鉄粉・水アカが付きやすい色'},{v:'dark',t:'黒・濃い色系',d:'キズ・スリ傷が目立ちやすい色'}],
   park:[{v:'out',t:'屋外（青空駐車）',d:'日差し・潮風・雨ざらし。しっかり保護を'},{v:'roof',t:'屋根あり・カーポート',d:'日差しが少しやわらぐ環境'},{v:'garage',t:'屋内ガレージ',d:'いちばん良い保管環境'}],
   keep:[{v:'short',t:'〜2年（乗り換え予定）',d:'短めなら手頃な短期プランで'},{v:'mid',t:'3〜4年',d:'価格と持ちのバランス重視',rec:'人気'},{v:'long',t:'5〜7年',d:'長く乗るなら長期保護がお得'},{v:'forever',t:'8年以上・ずっと',d:'とことん守りたい'}],
-  priority:[{v:'cost',t:'費用を抑えたい',d:'まずは手頃にコーティング'},{v:'clean',t:'洗車をラクにしたい',d:'汚れにくさ・撥水を重視'},{v:'scratch',t:'キズ・スリ傷を防ぎたい',d:'濃色の線キズが気になる方に'},{v:'best',t:'とことん最高の仕上がり',d:'妥協なく愛車を守りたい'}]
+  priority:[{v:'cost',t:'費用を抑えたい',d:'まずは手頃にコーティング'},{v:'clean',t:'洗車をラクにしたい',d:'汚れにくさ・撥水を重視'},{v:'scratch',t:'キズ・スリ傷を防ぎたい',d:'濃色の線キズが気になる方に'},{v:'best',t:'とことん最高の仕上がり',d:'妥協なく愛車を守りたい'}],
+  gloss:[{v:'wet',t:'濡れたような深い艶',d:'ぬめっと吸い込まれる、奥行きのある艶'},{v:'glass',t:'硬質なガラスの艶',d:'パキッと澄んだ、ガラスのような艶'},{v:'natural',t:'自然で上品なツヤ',d:'やりすぎない、きれいな範囲で'},{v:'max',t:'とにかく最高の艶',d:'妥協なく、最高の仕上がりに',rec:'こだわり'}]
 };
 const CARS={
 'トヨタ':[['アルファード','LL'],['ヴェルファイア','LL'],['ノア','LL'],['ヴォクシー','LL'],['ハイエース','XL'],['ランドクルーザー','XL'],['プラド','LL'],['ハリアー','LL'],['RAV4','LL'],['クラウン','L'],['カムリ','L'],['プリウス','M'],['カローラ','M'],['シエンタ','M'],['ルーミー','M'],['ライズ','M'],['アクア','S'],['ヤリス','S'],['ヴィッツ','S'],['パッソ','S'],['ピクシス','SS']],
@@ -479,16 +514,18 @@ const DETAIL_COURSES=[
   {key:'premium',name:'プレミアムディテール',base:130000,tag:'新車以上の仕上がりへ',inc:['鏡面2工程研磨で深いツヤ','エンジンルーム洗浄','窓ガラス全面 撥水コート','樹脂モール コーティング']},
   {key:'full',name:'フルレストア',base:null,tag:'とことん・現車を見てフルオーダー',inc:['徹底磨き上げ＋革シートケア','ペイント補修 等も対応','内容に応じてお見積り']}
 ];
-const DIAG_STEPS=['sc-q1','sc-q2','sc-q3','sc-q4','sc-q5','sc-q6'];
-const ST={screen:'sc-welcome',maker:'',model:'',size:'',cond:'',color:'',park:'',keep:'',priority:'',selPlan:null,menuSize:'M',cart:{},detailSize:'M',detailPick:null,optExpand:false};
+const DIAG_STEPS=['sc-q1','sc-q2','sc-q3','sc-q4','sc-q5','sc-qg','sc-q6'];
+const ST={screen:'sc-welcome',maker:'',model:'',size:'',cond:'',color:'',park:'',keep:'',gloss:'',priority:'',selPlan:null,menuSize:'M',cart:{},detailSize:'M',detailPick:null,optExpand:false};
 function el(id){return document.getElementById(id);}
 function yen(n){return '¥'+Math.round(n).toLocaleString('ja-JP');}
-function price(idx,size,cond){let p=BODY[idx][size]||0;if(cond==='new')p=Math.round(p*NEWF[idx]);return Math.round(p*1.1);}
+/* 表示価格は「切れがいい数字」＝千円単位に丸める（ZAPS+10%の元データBODY/TOPSは保持し、最終表示だけ丸め）。 */
+function roundClean(n){return Math.round(n/1000)*1000;}
+function price(idx,size,cond){let p=BODY[idx][size]||0;if(cond==='new')p=Math.round(p*NEWF[idx]);return roundClean(p*1.1);}
 /* コーティングサイズ(SS〜3L) → オプションサイズ(S/M/L/XL・室内容積) */
 function optSize(s){return (s==='SS'||s==='S')?'S':(s==='M')?'M':(s==='L')?'L':'XL';}
 /* オプション価格：sz別あればそのサイズの値、固定priceあればそれ、無ければnull(応相談) */
 /* オプションは店メニューが税抜→お客様向けは税込表示。×1.1して返す（未設定サイズはnull=応相談） */
-function topPrice(t,os){if(t.sz){const v=t.sz[os];return v?Math.round(v*1.1):null;} if(typeof t.price==='number')return Math.round(t.price*1.1); return null;}
+function topPrice(t,os){if(t.sz){const v=t.sz[os];return v?roundClean(v*1.1):null;} if(typeof t.price==='number')return roundClean(t.price*1.1); return null;}
 function diagIdx(){return DIAG_STEPS.indexOf(ST.screen);}
 function credHTML(){return CREDS.map(c=>'<div class="cred"><span class="ci">'+SVG[c.ic]+'</span><div><div class="ct">'+c.t+'</div><div class="cs">'+c.s+'</div></div></div>').join('');}
 function campaignHTML(){return CAMPAIGN?'<div class="campaign">'+CAMPAIGN+'</div>':'';}
@@ -522,7 +559,7 @@ function quoteText(){
     const mz=ST.menuSize,os=optSize(mz);let sub=0,cnt=0,hasAsk=false;
     if(mz)L.push('サイズ：'+(SIZE_LBL[mz]||mz));
     TOPS.forEach(t=>{if(ST.cart[t.key]){const p=topPrice(t,os);if(p){sub+=p;cnt++;}else hasAsk=true;L.push('＋ '+t.name+'　'+(p==null?'応相談':yen(p)));}});
-    const disc=Math.round(sub*bundleRate(cnt));
+    const disc=roundClean(sub*bundleRate(cnt));
     if(disc)L.push('まとめ割（'+cnt+'点）　−'+yen(disc));
     L.push('──────────');
     L.push('合計（税込）：'+yen(sub-disc)+(hasAsk?'（＋応相談あり）':''));
@@ -603,6 +640,59 @@ function featuresHTML(plan){
   return '<div class="infosec"><div class="infosec-h"><span class="i">'+SVG.spark+'</span>'+plan.product+' の特長</div>'+
     f.map(x=>'<div class="featrow"><span class="fdot"></span><span>'+x+'</span></div>').join('')+'</div>';
 }
+/* 金額の物語：①1日あたり（時間割引・少額化）②損失回避（やり直しの効かない塗装を今守る）③全部込み（透明性＝隠れ料金なし）。
+   いずれも誇張なし＝正直なフレーミングのみ（メモリ：信頼>利益）。 */
+function priceStoryHTML(p,rp){
+  const perDay=Math.round(rp/(p.years*365));
+  return '<div class="pstory">'+
+    '<div class="ps-day"><span>'+p.years+'年でならすと</span><b>1日 約'+perDay+'円</b></div>'+
+    '<div class="ps-note">毎日の出費ではなく<b>一度の備え</b>。塗装はやり直しの効かない車の"顔"。きれいなうちに守るのが、結局いちばん安く済みます。</div>'+
+    '<div class="ps-incl">'+SVG.check+'<span>鉄粉除去・徹底洗車・下地研磨・本施工・保証書まで<b>すべて込み（追加料金なし）</b></span></div>'+
+  '</div>';
+}
+/* 水の挙動：ULGO=撥水（水玉コロコロ）／FEYNLAB Original=疎水・V3=超疎水（ベタッと一気に流れる）／Ultra=極撥水。
+   デモは撥水/疎水の2families（bead/sheet）で見せ、おすすめ商品の側にバッジ。 */
+function waterBehavior(p){
+  if(p.brand==='ULGO')return 'bead';   // 撥水
+  if(p.years>=5)return 'bead';         // FEYNLAB Ultra=極撥水
+  return 'sheet';                      // FEYNLAB Original=疎水 / V3=超疎水
+}
+function waterDemoHTML(p){
+  const mine=waterBehavior(p),dark=ST.color==='dark',pc=dark?'dark':'light';
+  const cell=(type,badge,title,sub)=>'<div class="wd-cell'+(mine===type?' on':'')+'">'+(mine===type?'<span class="wd-badge">あなたの艶</span>':'')+
+    '<div class="wd-pane '+pc+'" data-wd="'+type+'"></div>'+
+    '<div class="wd-cap"><b>'+title+'</b><br>'+sub+'</div></div>';
+  return '<div class="wd">'+
+    '<div class="wd-h">'+SVG.drop+'水を弾く力を、見てみる</div>'+
+    '<div class="wd-sub">コーティングで、雨や汚れの流れ方が変わります。タップでもう一度ながせます。</div>'+
+    '<div class="wd-grid">'+
+      cell('bead','','撥水（水玉でコロコロ）','水が玉になって弾き、転がりながら<span class="hl">汚れも一緒に</span>連れ去ります。')+
+      cell('sheet','','疎水（ベタッと流れる）','水が大きな塊で一気に滑り落ち、<span class="hl">水玉が残りにくい＝シミ（ウォータースポット）になりにくい</span>。')+
+    '</div>'+
+    '<div style="text-align:center;margin-top:11px"><button class="btn ghost" style="padding:9px 20px" onclick="pourWater()">'+SVG.drop+' 水をかけてみる</button></div>'+
+  '</div>';
+}
+function pourWater(){
+  document.querySelectorAll('.wd-pane').forEach(pane=>{
+    const type=pane.getAttribute('data-wd');
+    pane.querySelectorAll('.drop').forEach(d=>d.remove());
+    const W=Math.max(40,pane.clientWidth),n=(type==='bead')?20:4;
+    for(let i=0;i<n;i++){
+      const d=document.createElement('div');d.className='drop';
+      if(type==='bead'){
+        // 撥水：小さな水玉が散らばってコロコロ転がる（落下方向に個別のドリフト）
+        const s=6+Math.random()*12,x=6+Math.random()*(W-18);
+        d.style.setProperty('--dx',(Math.random()*44-12).toFixed(0)+'px');
+        d.style.cssText+='left:'+x+'px;top:7px;width:'+s+'px;height:'+s+'px;animation:beadRoll '+(1.5+Math.random()*1.1).toFixed(2)+'s cubic-bezier(.55,.05,.7,.6) '+(Math.random()*1.0).toFixed(2)+'s infinite';
+      } else {
+        // 疎水：大きな塊がほぼ同時に一気に滑り落ちる（幅広・スタッガー最小＝"ベタッと"）
+        const w=Math.round(W*(0.42+Math.random()*0.34)),x=4+Math.random()*Math.max(2,W-w-8);
+        d.style.cssText+='left:'+x+'px;top:-8px;width:'+w+'px;height:'+Math.round(w*0.6)+'px;border-radius:46%;animation:sheetSlide '+(1.15+Math.random()*0.35).toFixed(2)+'s ease-in '+(Math.random()*0.18).toFixed(2)+'s infinite';
+      }
+      pane.appendChild(d);
+    }
+  });
+}
 
 function renderOptScreens(){
   Object.keys(QOPTS).forEach(k=>{
@@ -643,7 +733,7 @@ function renderFoot(){
   const di=diagIdx();const last=di===DIAG_STEPS.length-1;const ok=diagReady(di);
   f.innerHTML='<button class="btn primary" '+(ok?'':'disabled')+' onclick="diagNext()">'+(last?'結果を見る':'次へ')+' '+SVG.chev+'</button>';
 }
-function diagReady(di){return [!!ST.size,!!ST.cond,!!ST.color,!!ST.park,!!ST.keep,!!ST.priority][di];}
+function diagReady(di){return [!!ST.size,!!ST.cond,!!ST.color,!!ST.park,!!ST.keep,!!ST.gloss,!!ST.priority][di];}
 function startDiag(){show('sc-q1');}
 function diagNext(){const di=diagIdx();if(!diagReady(di))return;
   if(di<DIAG_STEPS.length-1)show(DIAG_STEPS[di+1]);
@@ -657,30 +747,50 @@ function goBack(){const s=ST.screen;const di=diagIdx();
   show('sc-welcome');}
 function pickOpt(key,val,opt){ST[key]=val;opt.parentElement.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel'));opt.classList.add('sel');renderFoot();
   if(diagIdx()>=0){clearTimeout(window._adv);window._adv=setTimeout(()=>{if(diagReady(diagIdx())&&diagIdx()>=0)diagNext();},430);}}
-/* 診断ロジック：答え（保有年数×重視点×色×駐車）から brand×年数 を導きプラン番号を返す */
+/* 診断ロジック：答え（保有年数×重視点×艶の好み×色×駐車）から brand×年数 を導きプラン番号を返す。
+   ★艶の好みは「両方」方針＝膜厚クラス/ブランドを“過剰でない範囲”で軽く動かす（主効果は下地提案＋結果の物語）。 */
 function recommendPlan(){
   if(!ST.keep||!ST.priority)return 1; // 未完了時の安全既定（ULGO スリー）
   const km={short:1,mid:3,long:5,forever:5};
   let yr=km[ST.keep]||3;
   if(ST.priority==='scratch'||ST.priority==='best')yr=Math.max(yr,3); // 保護重視は最低3年
-  const ulgo=(ST.priority==='cost'||ST.priority==='clean'); // コスト/防汚ラク=ULGO、キズ/とことん=FEYNLAB
+  const g=ST.gloss;
+  if(g==='max'){ yr=Math.max(yr,3); return yr<=3?4:5; } // とことん最高の艶＝FEYNLABの高膜厚（V3/ULTRA）
+  // 深い艶/硬質な艶は膜厚が要る → 費用最優先でなければ3年クラス以上へ
+  if((g==='wet'||g==='glass')&&ST.priority!=='cost') yr=Math.max(yr,3);
+  let ulgo=(ST.priority==='cost'||ST.priority==='clean'); // コスト/防汚ラク=ULGO、キズ/とことん=FEYNLAB
+  if(g==='glass'&&ST.priority!=='cost') ulgo=false;       // ガラスのような硬質な艶はFEYNLAB寄り
   if(ulgo)return yr<=1?0:(yr<=3?1:2);            // ULGO: One / Three / Five
   return yr<=1?3:(yr<=3?4:5);                    // FEYNLAB: The Original / CERAMIC V3 / ULTRA V3
 }
-/* 推薦理由（答え＋商品特性を引用） */
+/* 推薦理由＝「欲しい艶 → そのための剤＋下地 → ○年キープ」の物語（答え＋商品特性を引用）。
+   ★艶は被膜の質に加え“下地研磨”で大きく決まる＝そこを正直に橋渡しする（過剰な銘柄差訴求はしない）。 */
 function recReason(p){
   const ky={short:'2年ほどで乗り換え',mid:'3〜4年',long:'5〜7年',forever:'8年以上ずっと'}[ST.keep];
+  const gl={wet:'濡れたような深い艶',glass:'硬質なガラスの艶',natural:'自然で上品なツヤ',max:'妥協のない最高の艶'}[ST.gloss];
   const r=[];
-  if(ky)r.push('あと'+ky+'お乗りとのことなので、'+p.years+'年耐久の「'+p.label+'」');
-  if(p.brand==='FEYNLAB'){
-    if(p.years>=5)r.push('世界初のセラミックFEYNLABの最上位ULTRA V3。特許の二相技術で極めて高い撥水とセルフクリーニング、深い艶を長く');
-    else if(p.years>=3)r.push('FEYNLAB CERAMIC V3は超疎水＋セルフクリーニングで洗車がラク、耐スクラッチ・耐薬品も強い');
-    else r.push('世界ブランドFEYNLABを手頃に。滑らかな手触りと光沢・疎水のバランス');
-  } else r.push('国産ULGOの防汚セラミックで、手頃に・洗車もラクに');
+  // 1. 欲しい艶 → その艶を出す商品
+  if(gl){
+    if(p.brand==='FEYNLAB'&&p.years>=5)r.push('「'+gl+'」をご希望なので、特許の二相技術で極めて高い撥水と深みを出す最上位「'+p.label+'」');
+    else if(p.brand==='FEYNLAB'&&p.years>=3)r.push('「'+gl+'」をご希望なので、高膜厚で奥行きが出る「'+p.label+'」（超疎水＆セルフクリーニングで洗車もラク）');
+    else if(p.brand==='FEYNLAB')r.push('「'+gl+'」をご希望なので、滑らかな手触りと光沢・疎水のバランスが良い世界ブランド「'+p.label+'」');
+    else if(p.years>=5)r.push('「'+gl+'」をご希望なので、フッ素防汚で深いツヤを長く保つ国産「'+p.label+'」');
+    else if(p.years>=3)r.push('「'+gl+'」をご希望なので、2種のセラミックで深い艶を出す人気の国産「'+p.label+'」');
+    else r.push('「'+gl+'」をご希望なので、国産ULGOの防汚セラミック「'+p.label+'」');
+  } else if(ky){
+    r.push('あと'+ky+'お乗りとのことなので、'+p.years+'年耐久の「'+p.label+'」');
+  }
+  // 2. 下地（艶の本当のレバー）を正直に橋渡し
+  if(ST.gloss==='max'||ST.gloss==='wet'){
+    r.push('その艶を最大限に引き出すため、下地研磨をしっかりかけて仕上げます'+(ST.color==='dark'?'（濃色のお車は特に効果が出ます）':''));
+  } else if(ST.color==='dark'){
+    r.push('濃色は下地で艶が決まるので、研磨で線キズ・くすみを丁寧に取ってから施工します');
+  }
+  // 3. この仕上がりを○年キープ
+  if(ky&&gl)r.push('この仕上がりを約'+p.years+'年キープできます');
   let s=r.join('。')+'。';
   if(ST.cond==='new')s+=' 新車のキレイなうちが、いちばん効果的です。';
   if(ST.park==='out')s+=' 屋外駐車で日差し・潮風にさらされるので、しっかり保護を。';
-  if(ST.color==='dark'&&p.brand==='ULGO')s+=' 濃色は線キズが目立つので、硬く緻密な被膜のFEYNLABもおすすめです。';
   return s;
 }
 /* プランカード1枚（タップで選択） */
@@ -713,7 +823,7 @@ function resultCalc(){
   const os=optSize(ST.size);
   let sub=0,cnt=0,hasAsk=false;
   TOPS.forEach(t=>{if(ST.cart[t.key]){const p=topPrice(t,os);if(p){sub+=p;cnt++;}else hasAsk=true;}});
-  const disc=Math.round(sub*bundleRate(cnt));
+  const disc=roundClean(sub*bundleRate(cnt));
   return {planPrice,sub,cnt,disc,total:planPrice+sub-disc,hasAsk};
 }
 function selectPlan(i){ST.selPlan=i;const y=window.scrollY;renderResult(false);window.scrollTo(0,y);}
@@ -763,15 +873,16 @@ function renderResult(first){
     '<div class="res-hero"><div class="car">'+carName+'（'+SIZE_LBL[size]+'・'+condLbl+'）</div>'+
       '<div class="pn">'+selP.label+(selP.heal?' <span class="healb">自己修復</span>':'')+'</div>'+
       '<div class="pp" id="rprice">'+yen(rp)+'<small> 税込</small></div>'+
-      '<div class="py">'+selP.dur+' ／ 1年あたり '+yen(Math.round(rp/selP.years))+'（1日約'+Math.round(rp/(selP.years*365))+'円）</div>'+
+      '<div class="py">'+selP.dur+' ／ 1年あたり '+yen(Math.round(rp/selP.years))+'</div>'+
       '<div class="why">'+advice+'</div></div>'+
-    includesHTML()+featuresHTML(selP)+
+    priceStoryHTML(selP,rp)+
+    includesHTML()+featuresHTML(selP)+waterDemoHTML(selP)+
     (save>0&&selP.years>1?'<div class="callout">'+SVG.coin+'<div>1年プランを毎年やり直すと'+selP.years+'年で'+yen(repeat)+'。<b>'+selP.label+'なら'+yen(rp)+'＝約'+yen(save)+'おトクです。</b></div></div>':'')+
     '<div class="trust" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 2px"><span class="pill">'+SVG.spark+'水洗いだけでOK</span>'+trustHTML()+'</div>'+
     '<div class="sec-t">プランを選ぶ（タップで変更できます）</div>'+
     '<div class="brandhd">ULGO <small>国産・防汚・手頃</small></div>'+ulgoCards+
     '<div class="brandhd">FEYNLAB <small>米・世界初・高耐久</small></div>'+feynCards+
-    '<div class="note" style="margin:9px 2px 0;text-align:left">全プラン 年1回メンテ（'+yen(MAINT[size])+'〜）で保証を継続できます。</div>'+
+    '<div class="note" style="margin:9px 2px 0;text-align:left">全プラン 年1回メンテ（'+yen(roundClean(MAINT[size]))+'〜）で保証を継続できます。</div>'+
     '<div class="sec-t">オプションを追加</div>'+
     '<div class="opt-sub">気になるものを<b>タップ</b>で追加。<b>2点以上でまとめ割</b>（2点5%／3点10%／4点〜15%）。</div>'+
     featuredHTML()+sugCards+optExpandHTML(shownOpt)+bundleNudgeHTML()+
@@ -780,6 +891,7 @@ function renderResult(first){
     '<div class="note">保証書を発行。年1回のメンテで保証を継続できます。表示は税込・目安価格です。お気軽にLINEでご相談ください。</div>'+
     '<div style="text-align:center;margin-top:4px"><button class="btn ghost" onclick="restart()">もう一度診断する</button></div>';
   const pn=el('rprice');if(pn&&first){pn.innerHTML='<span id="rpnum">¥0</span><small> 税込</small>';setTimeout(()=>{const num=el('rpnum');if(num)countUp(num,rp);},250);}
+  setTimeout(pourWater,first?420:60); // 水の挙動アニメを起動（レイアウト確定後）
   renderFoot();
 }
 function openMenu(){renderMenu();show('sc-menu');}
