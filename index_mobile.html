@@ -1015,6 +1015,10 @@ a{color:var(--info);text-decoration:none}
 .m-veh-card .v-action.act-edit{
   background:#fff;color:var(--deep);border:1.5px solid #C8D6BB;
 }
+.m-veh-card .v-action.act-hist{
+  background:linear-gradient(180deg,#5C7CB0,#3F5E8C);color:#fff;
+  box-shadow:0 2px 6px rgba(63,94,140,.30);
+}
 
 /* === VEHICLE PICKER === */
 .m-vehicle-item{
@@ -1854,6 +1858,16 @@ a{color:var(--info);text-decoration:none}
     </div>
   </div>
 </div>
+<div class="m-modal" id="m-veh-hist-modal">
+  <div class="m-modal-body" style="max-height:88%">
+    <h2 id="m-vh-title">📋 貸出履歴</h2>
+    <div id="m-vh-sub" style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px"></div>
+    <div id="m-vh-list" style="max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="m-modal-actions" style="margin-top:14px">
+      <button class="m-btn m-btn-outline" style="flex:1" onclick="closeVehHist()">閉じる</button>
+    </div>
+  </div>
+</div>
 <div id="m-fax-host" aria-hidden="true"></div>
 
 <script>
@@ -1865,7 +1879,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-15a';
+const APP_VERSION = '2026-06-19';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5799,6 +5813,64 @@ function _vehicleLatestMeter(vid){
   });
   return best;
 }
+
+// その車両の貸出履歴 (キャンセル除外・新しい順) を返す ── 読み取りのみ
+function _vehicleRentalHistory(vid){
+  if(!vid) return [];
+  return (DATA?.cases || [])
+    .filter(c => c.vehicleId === vid && _isActive(c))
+    .map(c => {
+      // 並び替え用キー: 利用開始 → 配車予定 → 受付日 の順で拾える日付
+      const key = (c.useStart || c.dispatchAt || c.recoveryCalledAt || c.receivedAt || c.createdAt || '').slice(0,10);
+      return { c, key };
+    })
+    .sort((a,b) => (b.key||'').localeCompare(a.key||''))
+    .map(x => x.c);
+}
+
+// 📋 貸出履歴モーダルを開く
+function openVehicleHistory(vid){
+  const v = (DATA?.vehicles || []).find(x => x.id === vid);
+  if(!v){ toast('車両が見つかりません', 'error'); return; }
+  const pl = v.plate || {};
+  const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ') || v.plateDisplay || '(ナンバー未設定)';
+  $('m-vh-title').innerHTML = `📋 ${esc(v.name||v.maker||'車両')} の貸出履歴`;
+  const list = _vehicleRentalHistory(vid);
+  $('m-vh-sub').textContent = `${plate} ・ 全 ${list.length} 件`;
+  if(list.length === 0){
+    $('m-vh-list').innerHTML = '<div class="m-empty" style="padding:24px 10px"><div class="ico">📭</div><div class="ttl">この車両の貸出履歴はありません</div></div>';
+  } else {
+    $('m-vh-list').innerHTML = list.map(c => {
+      const cust = c.driverName || c.contractorName || '';
+      const ins  = (findInsurer(c.insurerId) || {}).name || c.insurerName || '';
+      const dispTo = c.dispatchToName || '';
+      // 利用期間
+      const start = c.useStart ? fmtDateFull(c.useStart) : (c.dispatchAt ? fmtDateFull(c.dispatchAt) : '');
+      const end   = c.useEnd ? fmtDateFull(c.useEnd) : '';
+      const inUse = !c.recoveryCompleted && ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status);
+      const period = start ? `${start} 〜 ${end || (inUse ? '<span style="color:var(--info)">利用中</span>' : '未定')}` : '<span class="empty">―</span>';
+      // 走行距離 (返却 or 貸出メーター)
+      const _md = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? Number(c.meterAtDispatch) : null;
+      const _mr = (c.meterAtReturn != null && c.meterAtReturn !== '') ? Number(c.meterAtReturn) : null;
+      const meterStr = (_md != null && _mr != null && _mr >= _md)
+        ? `${fmtNum(_md)}→${fmtNum(_mr)} km (${fmtNum(_mr-_md)} km)`
+        : (_mr != null ? `返却 ${fmtNum(_mr)} km` : '');
+      const sub = [ins, cust && `運転者: ${cust}`, dispTo && `配車先: ${dispTo}`].filter(Boolean).join(' ・ ');
+      return `
+        <div class="m-vehicle-item" onclick="closeVehHist();openCaseDetail('${esc(c.id)}')" style="cursor:pointer">
+          <div class="v-ico">🗓️</div>
+          <div class="v-body">
+            <div class="v-name">${period}</div>
+            <div class="v-meta">${esc(c.caseNo||'')}${sub?' ・ '+esc(sub):''}</div>
+            ${meterStr ? `<div class="v-meta" style="margin-top:2px">🛣️ ${esc(meterStr)}</div>` : ''}
+          </div>
+          <div class="v-status" style="background:none;color:var(--muted)">${esc(c.status||'')}</div>
+        </div>`;
+    }).join('');
+  }
+  $('m-veh-hist-modal').classList.add('active');
+}
+function closeVehHist(){ $('m-veh-hist-modal').classList.remove('active'); }
 function renderVehiclesList(){
   if(!DATA){ $('m-veh-list').innerHTML = '<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; if($('m-veh-chips')) $('m-veh-chips').innerHTML = ''; return; }
   const tab = localStorage.getItem('limeMob_vehTab') || 'all';
@@ -5834,11 +5906,12 @@ function _renderVehicleCard(v){
   const nextIns = v.lastInspectionAt ? fmtDate(v.lastInspectionAt) : '';
   const shaken = v.inspectionDate ? fmtDate(v.inspectionDate) : '';
   // アクションボタン
-  let actionHtml = '';
+  const histBtn = `<button class="v-action act-hist" onclick="openVehicleHistory('${esc(v.id)}')" title="この車両の貸出履歴">📋 履歴</button>`;
+  let actionHtml = histBtn;
   if(isMaint){
-    actionHtml = `<button class="v-action act-restore" onclick="openVehicleRestoreModal('${esc(v.id)}')">✅ 復帰</button>`;
+    actionHtml += `<button class="v-action act-restore" onclick="openVehicleRestoreModal('${esc(v.id)}')">✅ 復帰</button>`;
   } else if(!isSold && !isScrap){
-    actionHtml = `<button class="v-action act-maint" onclick="confirmVehicleMaintenance('${esc(v.id)}')">🛠️ 点検入庫</button>`
+    actionHtml += `<button class="v-action act-maint" onclick="confirmVehicleMaintenance('${esc(v.id)}')">🛠️ 点検入庫</button>`
       + `<button class="v-action act-edit" onclick="openVehicleRestoreModal('${esc(v.id)}', true)" title="点検日・車検満了日の入力ミスを修正">✏️ 点検日修正</button>`;
   }
   return `
