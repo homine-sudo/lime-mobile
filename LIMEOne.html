@@ -2895,7 +2895,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-19b';
+const APP_VERSION = '2026-06-19c';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -2991,6 +2991,18 @@ function statusPill(st, c){
   return html;
 }
 function statusRowClass(st){ const s=STATUS_STYLE[st]; return s? `row-status ${s.row}` : ''; }
+// 表示用の実効ステータス: 「配車完了(配車済)」でも利用開始日を過ぎ未回収なら「利用中」とみなす。
+//   ★データ(c.status)は一切書き換えない＝日付からの導出のみ(同期マージ・通知に影響なし)。
+//   ダッシュボードの利用中KPI(_isOutToday)が既に同方針で日付ベース判定しているのに合わせ、
+//   一覧バッジ/絞り込みだけが生status由来で「配車完了」のまま残るズレを解消する。
+function effectiveStatus(c){
+  if(!c) return '';
+  if(c.status==='配車済' && !c.recoveryCompleted){
+    const us = (c.useStart||'').slice(0,10);
+    if(us && us <= todayISO()) return '利用中';
+  }
+  return c.status;
+}
 // クラスコード別バッジ色: まずマスタの color フィールド、無ければホワイトボード配色ヒューリスティック
 // マスタに ['yellow','red','blue','green','purple','orange','pink','navy','black','gray'] を入れることで柔軟設定
 // 旧コード → 新コードのマイグレーションマップ (v24h)
@@ -6900,7 +6912,7 @@ function renderDashboard(){
   if(pipeEl){
     const pipeStatuses = STATUSES.filter(s => s !== '入金済' && s !== 'キャンセル');
     const byStatus = {};
-    cases.forEach(c => { byStatus[c.status] = (byStatus[c.status]||0) + 1; });
+    cases.forEach(c => { const es = effectiveStatus(c); byStatus[es] = (byStatus[es]||0) + 1; });  // 絞り込みと一致させる(配車完了→開始済は利用中で集計)
     pipeEl.innerHTML = pipeStatuses.map((st,i) => {
       const n = byStatus[st]||0;
       const on = n > 0;
@@ -6941,7 +6953,7 @@ function renderDashboard(){
     const recent = [...cases].sort((a,b)=> (b.receivedAt||'').localeCompare(a.receivedAt||'')).slice(0,10);
     recentEl.innerHTML = recent.length? `<table><thead><tr><th>受付No</th><th>受付日</th><th>保険会社</th><th>契約者</th><th>状態</th><th>請求額</th></tr></thead><tbody>${recent.map(c=>{
       const amt = calcAmounts(c).total;
-      return `<tr onclick="openCaseModal('${c.id}')"><td>${esc(c.caseNo||'')}</td><td>${fmtDate(c.receivedAt)}</td><td class="left">${esc(insurerLabel(findInsurer(c.insurerId)))}</td><td class="left">${esc(c.contractorName||'')}</td><td>${statusPill(c.status, c)}</td><td class="money">${yen(amt)}</td></tr>`;
+      return `<tr onclick="openCaseModal('${c.id}')"><td>${esc(c.caseNo||'')}</td><td>${fmtDate(c.receivedAt)}</td><td class="left">${esc(insurerLabel(findInsurer(c.insurerId)))}</td><td class="left">${esc(c.contractorName||'')}</td><td>${statusPill(effectiveStatus(c), c)}</td><td class="money">${yen(amt)}</td></tr>`;
     }).join('')}</tbody></table>` : '<div class="empty-state">案件がありません</div>';
   }
 
@@ -7481,7 +7493,7 @@ function renderCases(){
   }
   if(fm) rows = rows.filter(c=>(c.receivedAt||'').startsWith(fm));
   if(fi) rows = rows.filter(c=>c.insurerId===fi);
-  if(fs) rows = rows.filter(c=>c.status===fs);
+  if(fs) rows = rows.filter(c=>effectiveStatus(c)===fs);  // 配車完了でも開始済は「利用中」として絞り込む
   if(fst) rows = rows.filter(c=>c.staff===fst);
   // 履歴データはデフォルト非表示 (トグルON時のみ表示)
   const showHist = ($('filter-historical')||{}).checked;
@@ -7495,7 +7507,8 @@ function renderCases(){
     const amt = calcAmounts(c);
     const period = (c.useStart||c.useEnd)? `${fmtDate(c.useStart)||'―'}〜${fmtDate(c.useEnd)||'―'}`:'';
     const dt = (s)=>{ if(!s) return ''; const d=parseDate(s); if(!d) return ''; const date=`${pad2(d.getMonth()+1)}/${pad2(d.getDate())}`; return String(s).includes('T')? `${date} ${pad2(d.getHours())}:${pad2(d.getMinutes())}` : date; };
-    const rowCls = statusRowClass(c.status);
+    const effSt = effectiveStatus(c);
+    const rowCls = statusRowClass(effSt);
     return `<tr class="${rowCls}" onclick="openCaseModal('${c.id}')">
       <td><b>${esc(c.caseNo||'')}</b></td>
       <td>${fmtDate(c.receivedAt)}</td>
@@ -7511,7 +7524,7 @@ function renderCases(){
       <td>${amt.days||''}${renderCaseWarningFlags(c, amt)}</td>
       <td class="money admin-only">${amt.total?yen(amt.total):''}</td>
       <td>${renderProgressMini(c.checks)}</td>
-      <td onclick="event.stopPropagation();showInlineStatusEditor(event,'${c.id}')" title="クリックで状態変更" style="cursor:pointer">${statusPill(c.status, c)}</td>
+      <td onclick="event.stopPropagation();showInlineStatusEditor(event,'${c.id}')" title="クリックで状態変更" style="cursor:pointer">${statusPill(effSt, c)}</td>
     </tr>`;
   }).join('');
 }
@@ -13168,7 +13181,7 @@ function renderReservations(){
       <td class="left">${esc(c.dispatchToName||'')}</td>
       <td class="text-sm" style="white-space:nowrap"><b>${planDisp}</b></td>
       <td class="left text-sm" style="max-width:240px;color:#C53030">${memo ? esc(memo) : '<span class="text-muted" style="color:var(--muted)">―</span>'}</td>
-      <td>${statusPill(c.status, c)}</td>
+      <td>${statusPill(effectiveStatus(c), c)}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="11" class="empty-state">該当する予約はありません</td></tr>';
 
