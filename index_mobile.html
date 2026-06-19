@@ -1879,7 +1879,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-19b';
+const APP_VERSION = '2026-06-19c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5758,8 +5758,9 @@ function _mVehAlerts(){
   const now = new Date();
   (DATA?.vehicles || []).forEach(v => {
     if(v.status === '廃車' || v.status === '売却済') return;
-    if(v.inspectionDate){ const d = parseDate(v.inspectionDate); if(d){ const dl = Math.floor((d-now)/86400000); if(dl <= 60) out.push({ vehicleId:v.id, kind:'車検満了', date:v.inspectionDate, daysLeft:dl }); } }
-    if(v.lastInspectionAt){ const d = parseDate(v.lastInspectionAt); if(d){ const dl = Math.floor((d-now)/86400000); if(dl <= 30) out.push({ vehicleId:v.id, kind:'定期点検', date:v.lastInspectionAt, daysLeft:dl }); } }
+    let _shakenDate = '';  // 車検満了アラートを出した日付 (同日の点検は出さない=車検のみ表示)
+    if(v.inspectionDate){ const d = parseDate(v.inspectionDate); if(d){ const dl = Math.floor((d-now)/86400000); if(dl <= 60){ out.push({ vehicleId:v.id, kind:'車検満了', date:v.inspectionDate, daysLeft:dl }); _shakenDate = (v.inspectionDate||'').slice(0,10); } } }
+    if(v.lastInspectionAt && (v.lastInspectionAt||'').slice(0,10) !== _shakenDate){ const d = parseDate(v.lastInspectionAt); if(d){ const dl = Math.floor((d-now)/86400000); if(dl <= 30) out.push({ vehicleId:v.id, kind:'定期点検', date:v.lastInspectionAt, daysLeft:dl }); } }
   });
   return out.sort((a,b) => a.daysLeft - b.daysLeft);
 }
@@ -5935,8 +5936,10 @@ function _renderVehicleCard(v){
   const cls = isMaint ? 'maint' : isSold ? 'sold' : isScrap ? 'scrap' : '';
   const statusLbl = isMaint ? '🛠️ 点検入庫中' : (v.status || '稼働可');
   // 次回点検日 (lastInspectionAt として保存されている) と車検満了日
-  const nextIns = v.lastInspectionAt ? fmtDate(v.lastInspectionAt) : '';
   const shaken = v.inspectionDate ? fmtDate(v.inspectionDate) : '';
+  // 車検満了日と次回点検予定日が同一日付なら点検行は出さない (車検のみ表示・重複表示しない)
+  const _insSameAsShaken = v.inspectionDate && v.lastInspectionAt && (v.inspectionDate||'').slice(0,10) === (v.lastInspectionAt||'').slice(0,10);
+  const nextIns = (v.lastInspectionAt && !_insSameAsShaken) ? fmtDate(v.lastInspectionAt) : '';
   // アクションボタン
   const histBtn = `<button class="v-action act-hist" onclick="openVehicleHistory('${esc(v.id)}')" title="この車両の貸出履歴">📋 履歴</button>`;
   let actionHtml = histBtn;
