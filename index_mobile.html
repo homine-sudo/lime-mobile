@@ -1879,7 +1879,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-19a';
+const APP_VERSION = '2026-06-19b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2839,13 +2839,35 @@ function confirmPdfBeforeSend(meta){
         ? `<div style="border:1px solid #999;border-radius:6px;overflow:auto;max-height:56vh;background:#fff"><img src="${img}" style="width:100%;display:block" alt="送信PDFプレビュー"></div>`
         : `<div style="border:1px solid #C53030;border-radius:6px;padding:14px;background:#FEF2F2;color:#C53030;font-size:12.5px;text-align:center">プレビュー画像を生成できませんでした。<br>不安な場合は中止して、Dropboxに保存されたPDFを確認してください。</div>`}`;
     const acts = $('m-modal-actions'); acts.innerHTML = '';
+    // ボタンを縦積みにし、確認スクロール領域から離す (取引先送信前の最重要確認＝誤タップで即閉じ/即送信を防ぐ)
+    acts.classList.add('m-actions-2row');
     const cancel = document.createElement('button');
     cancel.className = 'm-btn m-btn-outline'; cancel.textContent = '✕ 中止';
-    cancel.onclick = () => { $('m-modal').classList.remove('active'); resolve(false); };
+    cancel.onclick = () => { if(cancel.disabled) return; $('m-modal').classList.remove('active'); acts.classList.remove('m-actions-2row'); resolve(false); };
     const ok = document.createElement('button');
-    ok.className = 'm-btn m-btn-success'; ok.textContent = '✅ この内容で送信';
-    ok.onclick = () => { $('m-modal').classList.remove('active'); resolve(true); };
-    acts.appendChild(cancel); acts.appendChild(ok);
+    ok.className = 'm-btn m-btn-success';
+    const okLabel = '✅ この内容で送信';
+    ok.onclick = () => { if(ok.disabled) return; $('m-modal').classList.remove('active'); acts.classList.remove('m-actions-2row'); resolve(true); };
+    acts.appendChild(ok); acts.appendChild(cancel);  // 送信を上・中止を下に (押し間違い時の被害が軽い順)
+    // ★誤タップ防止ガード (2026-06-19): 表示直後の一定時間は両ボタンをロックする。
+    //   PDF生成スピナー中の連打が確認表示の瞬間に貫通する「タップスルー」や、
+    //   下部シートがせり上がる瞬間の親指の置きタップで、確認が即閉じる/即送信される事故を防ぐ。
+    //   ※生成ロジック・送信処理・確認ステップ自体には一切触れていない (鉄則=この確認を必ず送信前に残す)。
+    const GUARD_MS = 1200;
+    cancel.disabled = true; ok.disabled = true;
+    cancel.style.opacity = '0.45'; ok.style.opacity = '0.45';
+    let remain = Math.ceil(GUARD_MS/1000);
+    ok.textContent = `${okLabel}（確認中… ${remain}）`;
+    const _tick = setInterval(() => {
+      remain--;
+      if(remain > 0) ok.textContent = `${okLabel}（確認中… ${remain}）`;
+    }, 1000);
+    setTimeout(() => {
+      clearInterval(_tick);
+      cancel.disabled = false; ok.disabled = false;
+      cancel.style.opacity = ''; ok.style.opacity = '';
+      ok.textContent = okLabel;
+    }, GUARD_MS);
     $('m-modal').classList.add('active');
     // ★2026-05-21d 取引先送信前の人間最終確認＝重み付け強化 (送信動作には触れない・視覚以外の追加チャネル)
     haptic('warn');
