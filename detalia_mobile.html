@@ -832,9 +832,13 @@ function fmtDate(d){
   const m=d.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m?`${m[1].slice(2)}/${m[2]}/${m[3]}`:d;
 }
+// 案件を一覧・集計から隠すべきか(削除済み or キャンセル)。
+// ※パラメータ名は x(_caseHidden(c) の一括置換と衝突させないため)。デスクトップ _caseHidden と一致。
+function _caseHidden(x){ return !!(x && (x.deleted || x.cancelled)); }
 // ★ステータス判定はデスクトップ(ディテーリング管理システム.html caseStatus)と完全一致させる。
 //   両方を変える時は必ず揃える(同じ案件が両画面で違うステータスに見えるのを防ぐ)。
 function caseStatus(c){
+  if(c.cancelled) return 'キャンセル';
   if(c.paidDate) return '入金済';
   if(c.delivery) return '納車済';
   const wc=(c.workChecks||[]).filter(it=>typeof it==='object'&&it.selected);
@@ -877,10 +881,10 @@ function renderHome(){
   const _dEl=document.getElementById('home-date'); if(_dEl) _dEl.textContent=_dStr;
   const _gEl=document.getElementById('home-day'); if(_gEl) _gEl.textContent=_dayStr;
   const _subEl=document.getElementById('home-month-sub'); if(_subEl) _subEl.textContent='税抜 ／ '+(_nowD.getMonth()+1)+'月実績';
-  const todayIn=cases.filter(c=>!c.deleted&&(c.arrival||'').slice(0,10)===today).length;
-  const waitDlv=cases.filter(c=>!c.deleted&&c.deliveryPlan&&!c.delivery).length;
-  const monthDlv=cases.filter(c=>!c.deleted&&c.delivery&&c.delivery.slice(0,7)===today.slice(0,7)).length;
-  const monthRev=cases.filter(c=>!c.deleted&&c.delivery&&c.delivery.slice(0,7)===today.slice(0,7))
+  const todayIn=cases.filter(c=>!_caseHidden(c)&&(c.arrival||'').slice(0,10)===today).length;
+  const waitDlv=cases.filter(c=>!_caseHidden(c)&&c.deliveryPlan&&!c.delivery).length;
+  const monthDlv=cases.filter(c=>!_caseHidden(c)&&c.delivery&&c.delivery.slice(0,7)===today.slice(0,7)).length;
+  const monthRev=cases.filter(c=>!_caseHidden(c)&&c.delivery&&c.delivery.slice(0,7)===today.slice(0,7))
                        .reduce((s,c)=>s+totalAmount(c),0);
   document.getElementById('kpi-today-in').textContent=todayIn;
   document.getElementById('kpi-wait-dlv').textContent=waitDlv;
@@ -919,7 +923,7 @@ function renderHome(){
     {k:'作業完了'},
     {k:'納車済'},   // 未入金=入金待ち
   ];
-  const actCases=cases.filter(c=>!c.deleted && c.category!=='見積');
+  const actCases=cases.filter(c=>!_caseHidden(c) && c.category!=='見積');
   let anyBoard=false;
   const boardHtml=boardCols.map(col=>{
     const cs=actCases.filter(c=>caseStatus(c)===col.k)
@@ -939,7 +943,7 @@ function renderHome(){
   const upcomingDate=new Date(todayD); upcomingDate.setDate(upcomingDate.getDate()+30);
   const recentlyPast=new Date(todayD); recentlyPast.setDate(recentlyPast.getDate()-30);
   const upcoming = cases.filter(c=>{
-    if(c.deleted || !c.nextMaintenance) return false;
+    if(_caseHidden(c) || !c.nextMaintenance) return false;
     const m = new Date(c.nextMaintenance);
     return !isNaN(m.getTime()) && m >= recentlyPast && m <= upcomingDate;
   }).sort((a,b)=>(a.nextMaintenance||'').localeCompare(b.nextMaintenance||''));
@@ -1012,9 +1016,9 @@ function caseCardHtml(c){
 // 📋 案件一覧
 // ─────────────────────────────────────────────
 function renderSnsHub(){
-  const pending = cases.filter(c=>!c.deleted && c.snsPermitted && (c.photos?.after||[]).length>0 && !c.reel?.instagramPosted);
-  const posted  = cases.filter(c=>!c.deleted && c.reel?.instagramPosted);
-  const noPermit= cases.filter(c=>!c.deleted && !c.snsPermitted && c.delivery);
+  const pending = cases.filter(c=>!_caseHidden(c) && c.snsPermitted && (c.photos?.after||[]).length>0 && !c.reel?.instagramPosted);
+  const posted  = cases.filter(c=>!_caseHidden(c) && c.reel?.instagramPosted);
+  const noPermit= cases.filter(c=>!_caseHidden(c) && !c.snsPermitted && c.delivery);
   const pendingEl = document.getElementById('sns-pending-list');
   if(pendingEl){
     pendingEl.innerHTML = `
@@ -1058,7 +1062,7 @@ function renderSnsHub(){
 function renderCaseList(){
   const q=(document.getElementById('case-search')?.value||'').toLowerCase().trim();
   const filtered=cases.filter(c=>{
-    if(c.deleted) return false;
+    if(_caseHidden(c)) return false;
     if(!q) return true;
     return (c.customer||'').toLowerCase().includes(q)
         || (c.carModel||'').toLowerCase().includes(q)

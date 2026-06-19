@@ -942,7 +942,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-16';
+const APP_VERSION = '2026-06-19';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1090,7 +1090,7 @@ function rentalSalesYM(c){return ym(c.useEnd)}
 function detaliaYM(c){return ym(c.delivery)||ym(c.paidDate)||ym(c.arrival)}
 
 function rentalCases(){return (DR&&DR.cases)||[]}
-function detaliaCases(){return ((DD&&DD.cases)||[]).filter(c=>!c.deleted)}
+function detaliaCases(){return ((DD&&DD.cases)||[]).filter(c=>!c.deleted&&!c.cancelled)}
 // 売上集計対象: キャンセル除外 + useEnd必須 + 一般貸渡は status ゲート (PC freeeExportTargets と同条件)
 function billableRental(){
   return rentalCases().filter(c=>{
