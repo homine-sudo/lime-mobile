@@ -1879,7 +1879,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-19';
+const APP_VERSION = '2026-06-19a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4577,16 +4577,26 @@ function renderMncContactPickerList(){
     return;
   }
   const q = (($('m-cp-search')?.value)||'').trim().toLowerCase();
-  const filtered = q
+  // この保険会社での担当者ごとの案件数を集計 (多い順に並べる)
+  const caseCnt = {};
+  (DATA?.cases||[]).forEach(cs2 => {
+    if(cs2.insurerId===id && cs2.insurerContact){
+      caseCnt[cs2.insurerContact] = (caseCnt[cs2.insurerContact]||0) + 1;
+    }
+  });
+  const ccOf = c => caseCnt[c.name||''] || 0;
+  const filtered = (q
     ? cs.map((c,idx)=>({c,idx})).filter(({c}) =>
         (((c.name||'')+' '+(c.tel||'')+' '+(c.dept||'')).toLowerCase()).includes(q))
-    : cs.map((c,idx)=>({c,idx}));
+    : cs.map((c,idx)=>({c,idx})));
+  // 案件数の多い担当者を上位に (同数は既定→元の順)
+  filtered.sort((a,b) => (ccOf(b.c)-ccOf(a.c)) || ((b.c.isDefault?1:0)-(a.c.isDefault?1:0)));
   if(!filtered.length){
     host.innerHTML = '<div class="m-pick-empty">該当する担当者なし</div>';
     return;
   }
   host.innerHTML = filtered.map(({c,idx})=>`<div class="m-pick-row" onclick="pickMncContact(${idx})">
-    <div class="pr-ttl">${esc(c.name||'(名称未設定)')}${c.isDefault?' <span style="font-size:10px;color:var(--green)">既定</span>':''}</div>
+    <div class="pr-ttl">${esc(c.name||'(名称未設定)')}${c.isDefault?' <span style="font-size:10px;color:var(--green)">既定</span>':''}${ccOf(c)?` <span style="font-size:11px;color:var(--muted,#888)">案件${ccOf(c)}件</span>`:''}</div>
     <div class="pr-sub">${c.tel?`TEL ${esc(c.tel)}`:''}${c.fax?` ／ FAX ${esc(c.fax)}`:''}${c.dept?` ／ ${esc(c.dept)}`:''}</div>
   </div>`).join('');
 }

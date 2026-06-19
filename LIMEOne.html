@@ -1368,8 +1368,6 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <div class="form-grid cols1" style="margin-top:8px">
         <div class="form-group"><label class="form-label" style="color:var(--orange)">🔧 修復歴内容</label><textarea class="form-control" id="vm-repairHistory" rows="2" placeholder="例: 2024/03 前バンパー交換 (軽微な損傷のため修理) / 2023/10 左ドア板金"></textarea></div>
       </div>
-      <div class="form-section" id="vm-history-section" style="display:none">📋 貸出履歴 <span class="text-muted text-sm" id="vm-history-count"></span></div>
-      <div id="vm-history" style="display:none"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary btn-sm" onclick="closeVehicleModal()">キャンセル</button>
@@ -1377,6 +1375,20 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <button class="btn btn-outline btn-sm admin-only" id="vm-sell" style="display:none;color:#B45309;border-color:#E6C54C" onclick="openSellDialog()">💸 売却</button>
       <button class="btn btn-danger btn-sm" id="vm-delete" style="display:none" onclick="deleteVehicle()">🗑️ 削除</button>
       <button class="btn btn-primary" onclick="saveVehicle()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📋 貸出履歴 (車両管理の一覧から開く閲覧専用ビュー) -->
+<div class="modal-overlay" id="veh-hist-modal">
+  <div class="modal" style="max-width:780px">
+    <div class="modal-header">
+      <span class="modal-title" id="vh-title">📋 貸出履歴</span>
+      <button class="modal-close" title="閉じる" onclick="closeVehHistModal()">✕</button>
+    </div>
+    <div class="modal-body" id="vh-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeVehHistModal()">閉じる</button>
     </div>
   </div>
 </div>
@@ -2883,7 +2895,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-19';
+const APP_VERSION = '2026-06-19b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -8787,9 +8799,19 @@ function renderContactPicker(){
   const ins = findInsurer(insId);
   const contacts = ins ? (ins.contacts||[]) : [];
   const q = ($('cp-search').value||'').trim().toLowerCase();
-  const filtered = q
+  // この保険会社での担当者ごとの案件数を集計 (多い順に並べるため)
+  const caseCnt = {};
+  (DATA.cases||[]).forEach(cs => {
+    if(cs.insurerId===insId && cs.insurerContact){
+      caseCnt[cs.insurerContact] = (caseCnt[cs.insurerContact]||0) + 1;
+    }
+  });
+  const ccOf = c => caseCnt[c.name||''] || 0;
+  const filtered = (q
     ? contacts.filter(c => ((c.name||'')+' '+(c.tel||'')+' '+(c.dept||'')+' '+(c.role||'')).toLowerCase().includes(q))
-    : contacts.slice();
+    : contacts.slice());
+  // 案件数の多い担当者を上位に (同数は既定→元の順)
+  filtered.sort((a,b) => (ccOf(b)-ccOf(a)) || ((b.isDefault?1:0)-(a.isDefault?1:0)));
   $('cp-count').textContent = filtered.length + '件 / 全' + contacts.length + '件';
   const empty = $('cp-empty-note');
   if(empty) empty.style.display = contacts.length===0 ? 'block' : 'none';
@@ -8797,7 +8819,7 @@ function renderContactPicker(){
   if(!tb) return;
   tb.innerHTML = filtered.map(c => `
     <tr style="cursor:pointer" title="クリックで選択" onclick="pickContactFromPicker(${JSON.stringify(c.name||'').replace(/"/g,'&quot;')})">
-      <td><b>${esc(c.name||'')}</b>${c.isDefault?' <span class="badge" style="background:#d0e7ff;color:#0b5cad;font-size:11px">既定</span>':''}${c.dept?`<br><span class="text-sm text-muted">${esc(c.dept)}</span>`:''}</td>
+      <td><b>${esc(c.name||'')}</b>${c.isDefault?' <span class="badge" style="background:#d0e7ff;color:#0b5cad;font-size:11px">既定</span>':''}${ccOf(c)?` <span class="text-sm text-muted">案件${ccOf(c)}件</span>`:''}${c.dept?`<br><span class="text-sm text-muted">${esc(c.dept)}</span>`:''}</td>
       <td class="text-sm">${esc(c.tel||'-')}</td>
       <td class="text-sm">${esc(c.fax||'-')}</td>
     </tr>`).join('');
@@ -13231,7 +13253,7 @@ function renderVehicles(){
       <td>${fmtDate(v.lastInspectionAt)||'<span class="text-muted">―</span>'}</td>
       <td class="right admin-only">${v.vehiclePrice? '¥'+Number(v.vehiclePrice).toLocaleString():''}</td>
       <td class="left text-sm">${esc(v.lessor||'')}${v.dealer?`<div class="text-muted text-sm">${esc(v.dealer)}</div>`:''}</td>
-      <td onclick="event.stopPropagation()" class="nowrap">${maintBtn} <button class="btn btn-xs btn-outline" onclick="openVehicleModal('${v.id}')">編集</button></td>
+      <td onclick="event.stopPropagation()" class="nowrap">${maintBtn} <button class="btn btn-xs btn-outline" onclick="openVehicleHistoryModal('${v.id}')" title="この車両の貸出履歴">📋 履歴</button> <button class="btn btn-xs btn-outline" onclick="openVehicleModal('${v.id}')">編集</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="14" class="empty-state">車両が未登録です。「＋ 車両を追加」から登録してください。</td></tr>';
 
@@ -13366,14 +13388,11 @@ function vehicleAlerts(){
   return out.sort((a,b)=> a.daysLeft-b.daysLeft);
 }
 
-// 📋 その車両の貸出履歴を車両モーダルに表示 (読み取りのみ・キャンセル除外・新しい順)
-function renderVehicleHistory(vid){
-  const sec = $('vm-history-section'), host = $('vm-history'), cnt = $('vm-history-count');
-  if(!host || !sec) return;
-  if(!vid){ sec.style.display='none'; host.style.display='none'; host.innerHTML=''; return; }
+// 📋 その車両の貸出履歴 (読み取りのみ・キャンセル除外・新しい順) を返す
+function _vehicleHistoryRows(vid){
   const v = DATA.vehicles.find(x=>x.id===vid);
   const tail = v && (v.plate||{}).tail;
-  const rows = DATA.cases.filter(c=>{
+  return DATA.cases.filter(c=>{
     if(c.status==='キャンセル' || c.isCancelled || c.isDeleted) return false;
     if(c.vehicleId===vid) return true;
     if(!c.vehicleId && tail && c.plateTail===tail) return true;  // 旧データ救済(vehicleId未設定は4桁番号で紐付け)
@@ -13382,33 +13401,43 @@ function renderVehicleHistory(vid){
     const key = (c.useStart || c.dispatchAt || c.recoveryCalledAt || c.receivedAt || c.createdAt || '').slice(0,10);
     return {c, key};
   }).sort((a,b)=>(b.key||'').localeCompare(a.key||'')).map(x=>x.c);
-
-  sec.style.display=''; host.style.display='';
-  cnt.textContent = `全 ${rows.length} 件`;
-  if(rows.length===0){ host.innerHTML='<div class="text-muted text-sm" style="padding:10px 4px">この車両の貸出履歴はありません。</div>'; return; }
-  host.innerHTML = `<div class="tbl-wrap" style="max-height:300px;overflow:auto">
-    <table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>
-      <th class="left">受付No</th><th class="left">利用期間</th><th class="left">取引先 / 運転者</th><th class="left">配車先</th><th class="right">走行(km)</th><th>状態</th>
-    </tr></thead><tbody>` + rows.map(c=>{
-      const ins = (findInsurer(c.insurerId)||{}).name || c.insurerName || '';
-      const cust = c.driverName || c.contractorName || '';
-      const start = c.useStart? fmtDate(c.useStart) : (c.dispatchAt? fmtDate(c.dispatchAt) : '');
-      const inUse = !c.recoveryCompleted && ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status);
-      const end = c.useEnd? fmtDate(c.useEnd) : (inUse? '<span style="color:var(--navy)">利用中</span>' : '<span class="text-muted">未定</span>');
-      const period = start? `${start} 〜 ${end}` : '<span class="text-muted">―</span>';
-      const _md=(c.meterAtDispatch!=null&&c.meterAtDispatch!=='')?Number(c.meterAtDispatch):null;
-      const _mr=(c.meterAtReturn!=null&&c.meterAtReturn!=='')?Number(c.meterAtReturn):null;
-      const meter=(_md!=null&&_mr!=null&&_mr>=_md)? `${_mr.toLocaleString()}<div class="text-muted" style="font-size:10px">利用${(_mr-_md).toLocaleString()}</div>` : (_mr!=null? _mr.toLocaleString() : '<span class="text-muted">―</span>');
-      return `<tr style="cursor:pointer" title="クリックで案件を開く" onclick="closeVehicleModal();openCaseModal('${escJs(c.id)}')">
-        <td class="left nowrap"><b>${esc(c.caseNo||'')}</b></td>
-        <td class="left nowrap">${period}</td>
-        <td class="left text-sm">${esc(ins)}${cust?`<div class="text-muted">${esc(cust)}</div>`:''}</td>
-        <td class="left text-sm">${esc(c.dispatchToName||'')}</td>
-        <td class="right">${meter}</td>
-        <td>${esc(c.status||'')}</td>
-      </tr>`;
-    }).join('') + '</tbody></table></div>';
 }
+// 📋 貸出履歴モーダルを車両管理の一覧から開く (車両編集とは別の閲覧専用ビュー)
+function openVehicleHistoryModal(vid){
+  const v = DATA.vehicles.find(x=>x.id===vid);
+  if(!v){ toast('車両が見つかりません','error'); return; }
+  const rows = _vehicleHistoryRows(vid);
+  const plate = v.plateDisplay || plateString(v.plate) || '';
+  $('vh-title').innerHTML = `📋 ${esc(v.name||v.maker||'車両')} <span class="text-muted text-sm">${esc(plate)}</span> の貸出履歴 <span class="text-muted text-sm">全 ${rows.length} 件</span>`;
+  if(rows.length===0){
+    $('vh-body').innerHTML = '<div class="text-muted" style="padding:24px;text-align:center">この車両の貸出履歴はありません。</div>';
+  } else {
+    $('vh-body').innerHTML = `<div class="tbl-wrap" style="max-height:60vh;overflow:auto">
+      <table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>
+        <th class="left">受付No</th><th class="left">利用期間</th><th class="left">取引先 / 運転者</th><th class="left">配車先</th><th class="right">走行(km)</th><th>状態</th>
+      </tr></thead><tbody>` + rows.map(c=>{
+        const ins = (findInsurer(c.insurerId)||{}).name || c.insurerName || '';
+        const cust = c.driverName || c.contractorName || '';
+        const start = c.useStart? fmtDate(c.useStart) : (c.dispatchAt? fmtDate(c.dispatchAt) : '');
+        const inUse = !c.recoveryCompleted && ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status);
+        const end = c.useEnd? fmtDate(c.useEnd) : (inUse? '<span style="color:var(--navy)">利用中</span>' : '<span class="text-muted">未定</span>');
+        const period = start? `${start} 〜 ${end}` : '<span class="text-muted">―</span>';
+        const _md=(c.meterAtDispatch!=null&&c.meterAtDispatch!=='')?Number(c.meterAtDispatch):null;
+        const _mr=(c.meterAtReturn!=null&&c.meterAtReturn!=='')?Number(c.meterAtReturn):null;
+        const meter=(_md!=null&&_mr!=null&&_mr>=_md)? `${_mr.toLocaleString()}<div class="text-muted" style="font-size:10px">利用${(_mr-_md).toLocaleString()}</div>` : (_mr!=null? _mr.toLocaleString() : '<span class="text-muted">―</span>');
+        return `<tr>
+          <td class="left nowrap"><b>${esc(c.caseNo||'')}</b></td>
+          <td class="left nowrap">${period}</td>
+          <td class="left text-sm">${esc(ins)}${cust?`<div class="text-muted">${esc(cust)}</div>`:''}</td>
+          <td class="left text-sm">${esc(c.dispatchToName||'')}</td>
+          <td class="right">${meter}</td>
+          <td>${esc(c.status||'')}</td>
+        </tr>`;
+      }).join('') + '</tbody></table></div>';
+  }
+  $('veh-hist-modal').classList.add('open');
+}
+function closeVehHistModal(){ $('veh-hist-modal').classList.remove('open'); }
 function openVehicleModal(id){
   editingVehicleId = id || null;
   $('vm-class').innerHTML = '<option value="">― クラス未設定 ―</option>' + buildClassOptions();
@@ -13442,7 +13471,6 @@ function openVehicleModal(id){
   if(sellBtn){
     sellBtn.style.display = (id && v.status !== '売却済' && v.status !== '廃車') ? '' : 'none';
   }
-  renderVehicleHistory(id);  // 📋 既存車両は貸出履歴を表示 (新規登録時は非表示)
   $('vehicle-modal').classList.add('open');
 }
 // 💸 売却ダイアログを開く: 売却日・価格・売却先を入力して保存 → 状態を「売却済」へ
