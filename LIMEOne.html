@@ -1611,8 +1611,16 @@ tr.veh-maint-row:hover{background:#FFECD6}
     </div>
   </div>
 
+  <!-- ==== 🩺 経営ヘルスチェック (今どうか一望・前年同期比) ==== -->
+  <div class="bi-section-header">🩺 経営ヘルスチェック <span style="font-size:11px;color:#888;font-weight:normal">今どうか / 前年同期比</span></div>
+  <div id="bi-healthboard" style="margin-bottom:12px"></div>
+
+  <!-- ==== 💡 いま打つべき手 (で、どうする) ==== -->
+  <div class="bi-section-header">💡 いま打つべき手 <span style="font-size:11px;color:#888;font-weight:normal">指標の異常から打ち手を自動抽出</span></div>
+  <div id="bi-insights" style="margin-bottom:14px"></div>
+
   <!-- ==== ② 主要KPI ==== -->
-  <div class="bi-section-header">💹 主要指標</div>
+  <div class="bi-section-header">💹 主要指標 <span style="font-size:11px;color:#888;font-weight:normal">詳細KPI</span></div>
   <div class="bi-hero-grid" id="bi-hero-grid"></div>
   <!-- 補助指標 (折りたたみ) -->
   <details style="margin-bottom:10px">
@@ -2813,10 +2821,10 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <div class="form-section">💴 請求・入金</div>
       <div class="form-grid cols3">
         <div class="form-group"><label class="form-label">請求No <span class="text-muted text-sm">空欄=受付Noを使用</span></label><input class="form-control" id="gr-invoiceNo" placeholder="空欄で受付Noを使用"></div>
-        <div class="form-group"><label class="form-label">請求日数</label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="自動算出可"></div>
-        <div class="form-group"><label class="form-label">請求単価 <span class="text-muted text-sm">空欄=貸渡料金</span></label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄で1日税込を使用"></div>
-        <div class="form-group"><label class="form-label">値引額</label><input class="form-control" id="gr-discount" type="number" min="0" value="0"></div>
-        <div class="form-group"><label class="form-label">値引日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0"></div>
+        <div class="form-group"><label class="form-label">請求日数</label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="自動算出可" oninput="updateGRPeriod()"></div>
+        <div class="form-group"><label class="form-label">請求単価 <span class="text-muted text-sm">空欄=貸渡料金</span></label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄で1日税込を使用" oninput="updateGRPeriod()"></div>
+        <div class="form-group"><label class="form-label">値引額</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
+        <div class="form-group"><label class="form-label">値引日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
         <div class="form-group"><label class="form-label">支払方法</label>
           <select class="form-control" id="gr-paymentMethod"><option value="">―</option><option>現金</option><option>カード</option><option>振込</option><option>その他</option></select>
         </div>
@@ -2895,7 +2903,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-19d';
+const APP_VERSION = '2026-06-22a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5528,10 +5536,18 @@ function renderBI(){
   if(utilLbl) utilLbl.textContent = `📅 ${fmtDate(utilFrom)} 〜 ${fmtDate(utilTo)} (${util.periodDays}日間)`;
   // 比較期間
   let kpiPrev = null;
+  let prevUtilOverall = null;
   if(range.compare){
     const casesPrev = biFilterCases(range.compare.from, range.compare.to);
     kpiPrev = biCalcKpis(casesPrev, range.compare);
+    // 前年同期の稼働率 (ヘルスボードの±pt用・比較側も本日でキャップして公平比較)
+    let pTo = range.compare.to; if(pTo > todayD) pTo = todayD;
+    prevUtilOverall = biCalcUtilization(range.compare.from, pTo).overall;
   }
+
+  // 🩺 第1層 経営ヘルスチェック + 💡 第3層 いま打つべき手 (今どうか→で、どうする)
+  renderBiHealthboard(range, cases, kpi, kpiPrev, util, prevUtilOverall);
+  renderBiInsights(computeBiInsights(range, cases, kpi, kpiPrev, util));
 
   renderBIKpis(kpi, kpiPrev, util);
   renderBIChartTrend();
@@ -5859,6 +5875,97 @@ function _bi12MonthSparkData(){
     data.paidRate.push(k ? (k.paidRate||0) : 0);
   }
   return data;
+}
+
+// ============================================================
+// 🩺 経営ヘルスチェック (第1層) + 💡 いま打つべき手 (第3層)
+//   設計: 「処方箋型」3階層BI ─ 今どうか→なぜか→何をするか
+//   ★既存ヘルパーのみ流用 (biCalcKpis/biCalcUtilization/calcAmounts/findInsurer/
+//     overdueDays/vehicleAlerts)。新規集計は HHI(集中度) のみ。データは書き換えない。
+// ============================================================
+function _biPctDelta(cur, prev){ if(prev==null||prev===0) return null; const d=(cur-prev)/prev*100; return isFinite(d)?d:null; }
+function _biDeltaTag(d){
+  if(d==null) return '<span style="color:#9aa;font-size:11px">前年データなし</span>';
+  const up = d>=0;
+  return `<span style="color:${up?'#1D9E75':'#C53030'};font-weight:700">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span> <span style="color:#999;font-size:11px">前年同期</span>`;
+}
+// 取引先集中度: HHI(=Σシェア²) と 最大依存先
+function _biChannelStats(cases){
+  const byIns={}; let total=0;
+  (cases||[]).forEach(c=>{ const a=calcAmounts(c); const s=a.total||0; if(s<=0) return; const k=c.insurerId||'(未設定)'; byIns[k]=(byIns[k]||0)+s; total+=s; });
+  const arr=Object.entries(byIns).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+  if(!total||!arr.length) return { hhi:0, maxShare:0, maxName:'―', count:0, total:0 };
+  let hhi=0; arr.forEach(x=>{ const sh=x.v/total; hhi+=sh*sh; });
+  return { hhi, maxShare: arr[0].v/total*100, maxName:(findInsurer(arr[0].k)||{}).name||'(未設定)', count:arr.length, total };
+}
+function renderBiHealthboard(range, cases, kpi, kpiPrev, util, prevUtilOverall){
+  const host=$('bi-healthboard'); if(!host) return;
+  const ch=_biChannelStats(cases);
+  const salesDelta=_biPctDelta(kpi.totalSales, kpiPrev?.totalSales);
+  const utilPt=(prevUtilOverall!=null)?(util.overall-prevUtilOverall):null;
+  const concSev = ch.hhi>=0.25?'danger':(ch.hhi>=0.18?'warn':'good');
+  const concColor = concSev==='danger'?'#C53030':concSev==='warn'?'#B7791F':'#1D9E75';
+  const concWord = concSev==='danger'?'⚠ 集中が高い':concSev==='warn'?'やや集中':'分散良好';
+  const sd = salesDelta==null?'―':(salesDelta>=0?'＋':'−')+Math.abs(salesDelta).toFixed(1)+'%';
+  const ud = utilPt==null?'―':(utilPt>=0?'＋':'−')+Math.abs(utilPt).toFixed(1)+'pt';
+  const verdict = `当期 売上 <b>¥${Math.round(kpi.totalSales).toLocaleString()}</b>（前年同期 ${sd}） ／ 稼働率 <b>${util.overall.toFixed(1)}%</b>（${ud}） ／ 最大依存先 <b>${esc(ch.maxName)} ${ch.maxShare.toFixed(0)}%</b>（集中度 ${ch.hhi.toFixed(2)}${ch.hhi>=0.25?' ⚠分散検討':''}）`;
+  const cmp = range.compare
+    ? `比較対象: ${esc(range.compare.label)}（${fmtDate(range.compare.from)}〜${fmtDate(range.compare.to)}）`
+    : '比較対象なし（この期間は前年同期と比較できません）';
+  const tile=(label,value,foot,note)=>`<div style="flex:1;min-width:170px;background:#fff;border:1px solid #E2E6EE;border-radius:8px;padding:11px 14px">
+     <div style="font-size:11.5px;color:#5b6472;font-weight:700;letter-spacing:.02em">${label}</div>
+     <div style="font-size:23px;font-weight:800;color:#1E3A5F;margin:3px 0 5px;font-feature-settings:'tnum'">${value}</div>
+     <div style="font-size:12px">${foot}</div>${note?`<div style="font-size:10.5px;color:#99a;margin-top:3px">${note}</div>`:''}</div>`;
+  host.innerHTML = `
+    <div style="background:#F7F9FC;border:1px solid #E2E6EE;border-left:4px solid #1E40AF;border-radius:8px;padding:11px 15px;margin-bottom:9px">
+      <div style="font-size:13.5px;line-height:1.75;color:#22303f">${verdict}</div>
+      <div style="margin-top:4px;font-size:11px;color:#8893a3">${cmp}</div>
+    </div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      ${tile('💴 売上ヘルス','¥'+Math.round(kpi.totalSales).toLocaleString(), _biDeltaTag(salesDelta), `平均単価 ¥${Math.round(kpi.avgUnit).toLocaleString()}・${kpi.caseCount}件`)}
+      ${tile('🚗 稼働ヘルス', util.overall.toFixed(1)+'%', utilPt==null?'<span style="color:#9aa;font-size:11px">前年データなし</span>':`<span style="color:${utilPt>=0?'#1D9E75':'#C53030'};font-weight:700">${utilPt>=0?'▲':'▼'} ${Math.abs(utilPt).toFixed(1)}pt</span> <span style="color:#999;font-size:11px">前年同期</span>`, `対象期間 ${util.periodDays}日・損益分岐の目安 約50%`)}
+      ${tile('🏢 取引先集中', ch.maxShare.toFixed(0)+'%', `<span style="color:${concColor};font-weight:700">${concWord}</span>`, `最大: ${esc(ch.maxName)}・集中度(HHI) ${ch.hhi.toFixed(2)}・取引先 ${ch.count}社`)}
+    </div>`;
+}
+// 💡 いま打つべき手 (気づきエンジン): 既存集計の合成で異常を抽出
+function computeBiInsights(range, cases, kpi, kpiPrev, util){
+  const out=[]; const push=(sev,title,detail)=>out.push({sev,title,detail});
+  const sd=_biPctDelta(kpi.totalSales, kpiPrev?.totalSales);
+  if(sd!=null && sd<=-10) push('danger','売上が前年同期を下回っています', `当期 ¥${Math.round(kpi.totalSales).toLocaleString()}（前年比 ▼${Math.abs(sd).toFixed(1)}%）。受注の鈍化・単価低下・稼働低下のどれかを確認。`);
+  else if(sd!=null && sd>=15) push('good','売上が好調です', `前年同期比 ▲${sd.toFixed(1)}%。供給(稼働余力)が足りているか確認を。`);
+  if(util.overall < 40) push('warn','稼働率が低めです', `期間平均 ${util.overall.toFixed(1)}%。遊休車の活用・販促・減車を検討（損益分岐の目安は約50%）。`);
+  const idle=(util.perVeh||[]).filter(p=>p.rate<20);
+  if(idle.length) push('warn',`遊休車が ${idle.length}台あります`, `稼働率20%未満: ${idle.slice(0,3).map(p=>esc(p.v.plateDisplay||p.v.name||'')).join('・')}${idle.length>3?' ほか':''}。売却 or リース終了の候補。`);
+  const ch=_biChannelStats(cases);
+  if(ch.hhi>=0.25) push('warn','特定取引先への依存が高い', `最大依存先 ${esc(ch.maxName)} が ${ch.maxShare.toFixed(0)}%（集中度 ${ch.hhi.toFixed(2)}）。新規チャネル開拓でリスク分散を。`);
+  const today=todayISO();
+  const longOut=(DATA.cases||[]).filter(c=>{
+    if(c.status==='キャンセル'||c.recoveryCompleted) return false;
+    if(!['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)) return false;
+    if(c.useEnd||!c.useStart) return false;
+    const d=parseDate(c.useStart); if(!d) return false;
+    return Math.floor((parseDate(today)-d)/86400000) > 30;
+  });
+  if(longOut.length) push('warn',`長期貸出（返却予定 未定）が ${longOut.length}件`, `利用開始から30日超で返却予定日が未入力。回収予定の確認・売上計上漏れ防止を。`);
+  const overdue=(DATA.cases||[]).filter(c=>overdueDays(c)>0);
+  if(overdue.length) push('warn',`入金遅延が ${overdue.length}件`, `支払期日を超過。督促・入金確認を（入金管理タブ）。`);
+  if(typeof vehicleAlerts==='function'){ const exp=vehicleAlerts().filter(a=>a.kind==='車検満了'); if(exp.length) push('info',`車検が近い車両 ${exp.length}台`, `60日以内に車検満了。入庫の段取りを（車両管理）。`); }
+  if(!out.length) push('good','大きな問題は見当たりません', '主要指標は健全です。攻めの一手（増車・販促）を検討できます。');
+  const order={danger:0,warn:1,info:2,good:3};
+  return out.sort((a,b)=>order[a.sev]-order[b.sev]);
+}
+function renderBiInsights(list){
+  const host=$('bi-insights'); if(!host) return;
+  const dot={danger:'#C53030',warn:'#B7791F',info:'#1E40AF',good:'#1D9E75'};
+  const bg={danger:'#FEF4F4',warn:'#FFFaf2',info:'#F4F7FE',good:'#F3FAF5'};
+  host.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px">` + (list||[]).map(x=>`
+    <div style="display:flex;gap:10px;align-items:flex-start;background:${bg[x.sev]||'#fff'};border:1px solid #E2E6EE;border-radius:8px;padding:9px 13px">
+      <span style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:${dot[x.sev]||'#999'};margin-top:5px"></span>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px;color:#22303f">${esc(x.title)}</div>
+        <div style="font-size:12px;color:#566370;margin-top:1px">${x.detail}</div>
+      </div>
+    </div>`).join('') + `</div>`;
 }
 
 function renderBIChartTrend(){
@@ -8212,6 +8319,7 @@ function onGRPickupChange(){
 }
 
 // 利用期間表示 (X泊Y日 / Z時間) を更新
+let _grAutoDays = 0;  // 直近に自動算出した貸渡日数 (請求日数の自動追従判定用)
 function updateGRPeriod(){
   const us = ($('gr-useStart')||{}).value || '';
   const ut = ($('gr-useStartTime')||{}).value || '';
@@ -8219,7 +8327,7 @@ function updateGRPeriod(){
   const et = ($('gr-useEndTime')||{}).value || '';
   const disp = $('gr-period-display');
   if(!disp) return;
-  if(!us || !ee){ disp.textContent = '貸出日と返却日を入力すると期間が表示されます'; disp.style.color='#888'; return; }
+  if(!us || !ee){ disp.textContent = '貸出日と返却日を入力すると期間・料金が表示されます'; disp.style.color='#888'; return; }
   // 日数計算
   const sd = new Date(us + (ut?('T'+ut+':00'):'T10:00:00'));
   const ed = new Date(ee + (et?('T'+et+':00'):'T10:00:00'));
@@ -8233,20 +8341,55 @@ function updateGRPeriod(){
   // 貸渡日数 (Japanese レンタカー慣行): 24h以内=1日、翌日以降は X泊X+1日 を基本。
   //   旧式 `Math.ceil(ms/86400000)` だと 2泊3日(48h丁度) が 2日になり、表示「2泊3日」と料金計算が食い違っていた。
   //   返却が翌日の予定時刻を大幅超過する場合は超過分を上乗せ (1日相当=24h単位)。
-  const days = (hours <= 24) ? 1 : Math.max(nights + 1, Math.ceil(hours / 24));
-  let txt = `📅 ${nights}泊${nights+1}日 / ${hours}時間`;
-  if(hours <= 24) txt = `📅 ${hours}時間 (1日)`;
-  // 概算金額
-  const up = Number(($('gr-unitPrice')||{}).value||0);
-  if(up && days){
-    const total = up * days;
-    txt += `　💴 概算: ${days}日 × ${up.toLocaleString()}円 = ${total.toLocaleString()}円`;
-  }
-  disp.textContent = txt;
-  disp.style.color = 'var(--navy)';
-  // 利用日数も自動セット
+  const autoDays = (hours <= 24) ? 1 : Math.max(nights + 1, Math.ceil(hours / 24));
+  // 請求日数の自動補完: 空 or 前回の自動値のままなら期間に追従させる (手動上書きは尊重)
   const idDays = $('gr-invoiceDays');
-  if(idDays && !idDays.value) idDays.value = days;
+  if(idDays){
+    if(!idDays.value || Number(idDays.value) === _grAutoDays) idDays.value = autoDays;
+  }
+  _grAutoDays = autoDays;
+
+  // ── 料金内訳 (貸渡証/請求書と同じ計算で表示) ──
+  //   1日料金 = 請求単価(あれば) || 貸渡料金(1日税込)
+  //   日数    = 請求日数(あれば) || 自動日数
+  //   合計    = 1日料金 × 日数 − 値引額 − (値引日数 × 1日料金)
+  const baseUnit = Number(($('gr-unitPrice')||{}).value||0);
+  const invUnit  = Number(($('gr-invoiceUnitPrice')||{}).value||0);
+  const rate = invUnit || baseUnit;
+  const billDays = Number((idDays||{}).value||0) || autoDays;
+  const discount = Number(($('gr-discount')||{}).value||0);
+  const discDays = Number(($('gr-discountDays')||{}).value||0);
+  const discTotal = discount + discDays * rate;
+  const total = Math.max(0, rate * billDays - discTotal);
+  const yen = n => '¥' + (Number(n)||0).toLocaleString();
+  const periodTxt = (hours <= 24) ? `${hours}時間（1日）` : `${nights}泊${nights+1}日（${hours}時間）`;
+
+  if(!rate){
+    // 料金未入力: 期間のみ表示 + 案内
+    disp.innerHTML = `<div style="font-size:13px">📅 利用期間: <b>${periodTxt}</b></div>`
+      + `<div style="margin-top:6px;font-size:12px;color:#888;font-weight:normal">「貸渡料金 (1日 税込)」を入力すると合計が表示されます</div>`;
+    disp.style.color = 'var(--navy)';
+    return;
+  }
+  const rows = [];
+  rows.push(`<div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:#555">1日料金（税込）${invUnit?' <span style="color:#888;font-size:11px">※請求単価</span>':''}</span><b>${yen(rate)}</b></div>`);
+  rows.push(`<div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:#555">日数</span><b>${billDays} 日</b></div>`);
+  if(discTotal > 0){
+    let dlbl = '値引';
+    if(discDays>0 && discount>0) dlbl = `値引（${discDays}日分 ＋ 値引額）`;
+    else if(discDays>0) dlbl = `値引（${discDays}日分）`;
+    rows.push(`<div style="display:flex;justify-content:space-between;padding:2px 0;color:#C05621"><span>${dlbl}</span><b>− ${yen(discTotal)}</b></div>`);
+  }
+  disp.innerHTML =
+    `<div style="font-size:13px">📅 利用期間: <b>${periodTxt}</b></div>`
+    + `<div style="margin-top:8px;max-width:360px;font-weight:normal;font-size:13px">`
+    +   rows.join('')
+    +   `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:5px;border-top:2px solid #4F8A3E;padding-top:6px">`
+    +     `<span style="font-size:14px;font-weight:bold;color:var(--navy)">貸渡料金 合計（税込）</span>`
+    +     `<b style="font-size:22px;color:#2C5282">${yen(total)}</b>`
+    +   `</div>`
+    + `</div>`;
+  disp.style.color = 'var(--navy)';
 }
 
 // 借受人情報を運転者にコピー
@@ -8285,6 +8428,7 @@ function openGeneralRentalModal(id){
   fillGRForm(c);
   grRenderAssignedVehicleChip();
   onGRPickupChange();
+  _grAutoDays = 0;  // 案件切替時に自動日数追従をリセット (保存済み請求日数を尊重)
   updateGRPeriod();
   $('gr-modal-title').textContent = id ? `一般貸渡 編集 ${c.caseNo||''}` : '一般貸渡 新規';
   // 削除・印刷・返却完了ボタンは既存案件のみ
