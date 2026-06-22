@@ -2971,7 +2971,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-22e';
+const APP_VERSION = '2026-06-22f';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5535,7 +5535,7 @@ function biCalcKpis(cases, range){
 function biCalcUtilization(from, to){
   const fromD = parseDate(from), toD = parseDate(to);
   const periodDays = fromD && toD ? Math.max(1, Math.floor((toD - fromD) / 86400000) + 1) : 30;
-  const vehicles = (DATA.vehicles||[]).filter(v => v.status!=='売却済' && v.status!=='廃車');
+  const vehicles = (DATA.vehicles||[]).filter(v => v.status!=='売却済' && v.status!=='廃車' && v.status!=='納車待ち');
   const vehUsage = {};
   vehicles.forEach(v => { vehUsage[v.id] = { days:0, sales:0 }; });
   // 全案件をスキャンし、利用期間と集計期間の重複日数を加算
@@ -7117,7 +7117,7 @@ function renderDashboard(){
   // 🚗 本日 瞬間稼働率 (2026-05-25e: 期間平均→瞬間値・2026-05-28b: 利用中と同一述語に統一)
   //   保有 = 廃車/売却済を除外。点検入庫中は分母には入れる(=潜在稼働可能の母数)
   //   月平均稼働率は経営分析タブに残存 (別の経営指標として有用)
-  const vehAll = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='売却済');
+  const vehAll = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち');
   const _vehIdSet = new Set(vehAll.map(v=>v.id));
   const _activeVehIds = new Set();
   inUse.forEach(c=>{ if(_vehIdSet.has(c.vehicleId)) _activeVehIds.add(c.vehicleId); });
@@ -13443,7 +13443,7 @@ function renderUtilization(year){
   const now = new Date();
   const yEndDate = new Date(now.getFullYear()===Number(year)? now : new Date(Number(year)+1, 0, 0));
   const yEnd = fmtDateISO(yEndDate);
-  const vehicles = DATA.vehicles.filter(v=>v.status!=='廃車');
+  const vehicles = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='納車待ち');
   const rows = vehicles.map(v=>{
     const start = (v.purchaseDate && v.purchaseDate>yStart)? v.purchaseDate : yStart;
     const availDays = Math.max(0, daysBetween(start, yEnd));
