@@ -251,6 +251,23 @@ tr.veh-maint-row:hover{background:#FFECD6}
 .sec-jump-bar{position:sticky;top:0;z-index:6;display:flex;gap:5px;flex-wrap:wrap;background:rgba(255,255,255,.97);padding:6px 0;margin:4px 0 2px;border-bottom:1px solid var(--border)}
 .sec-jump-chip{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:12px;background:#F7FBEF;color:var(--deep);cursor:pointer;white-space:nowrap;line-height:1.4}
 .sec-jump-chip:hover{background:#EAF5DC;border-color:var(--lime)}
+/* 一般貸渡(GR) ステップUI (2026-06-22d 初心者向け再設計) */
+.gr-stat{font-size:11px;margin-right:1px;font-weight:bold}
+.gr-step-card{background:#fff;border:1px solid #ECECEC;border-radius:12px;padding:18px 22px;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .3s,border-color .3s}
+.gr-step-card.sec-highlight-pulse{border-color:#E69E50!important;box-shadow:0 0 0 3px rgba(230,158,80,.28)!important}
+.gr-step-head{display:flex;align-items:center;gap:11px;margin-bottom:2px}
+.gr-step-num{width:30px;height:30px;border-radius:50%;background:#FFF3E6;color:#7A4500;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:bold;flex:0 0 auto}
+.gr-step-title{font-size:16px;font-weight:bold;color:var(--navy);letter-spacing:.02em}
+.gr-step-micro{font-size:12.5px;color:#66686C;line-height:1.7;margin:8px 0 16px}
+.gr-det{border:1px solid #EAEAEA;border-radius:8px;background:#FBFAF7;margin-top:14px}
+.gr-det>summary{list-style:none;cursor:pointer;padding:10px 14px;font-size:13px;color:#7A4500;font-weight:bold;display:flex;align-items:center;gap:7px;user-select:none}
+.gr-det>summary::-webkit-details-marker{display:none}
+.gr-det>summary::before{content:'\25B8';display:inline-block;transition:transform .2s;color:#B5895A}
+.gr-det[open]>summary::before{transform:rotate(90deg)}
+.gr-det-badge{margin-left:auto;font-size:11px;font-weight:normal;color:#888;background:#fff;border:1px solid #E6E6E6;border-radius:10px;padding:2px 9px}
+.gr-det-body{padding:6px 14px 14px}
+.gr-total-card{background:#FFF7E6;border:1px solid #E69E50;border-radius:10px;padding:12px 18px;margin:12px 0}
+.gr-nights{margin-top:12px;font-size:15px;font-weight:bold;color:var(--navy);min-height:20px}
 /* ナビ横スクロールの気づきインジケータ (2026-06-10b): タブが右に隠れている時だけ表示 */
 #nav-scroll-hint{position:fixed;top:0;right:0;width:34px;display:none;align-items:center;justify-content:center;background:linear-gradient(90deg,rgba(30,58,43,0),var(--deep) 55%);color:#fff;font-weight:bold;font-size:16px;z-index:60;cursor:pointer;user-select:none}
 /* MODAL */
@@ -2683,193 +2700,209 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <button class="modal-close" title="閉じる" onclick="closeGeneralRentalModal()">✕</button>
     </div>
     <div class="modal-body">
-      <!-- ステップ導線: 予約 → 料金 → 貸渡 → 支払 → 返却 -->
+      <!-- 進捗ステッパー (導線): お客様 → 期間 → 車両 → 料金 → 仕上げ -->
       <div class="sec-jump-bar">
-        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-yoyaku')">① 予約</button>
-        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-ryokin')">② 料金</button>
-        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-kashiwatashi')">③ 貸渡</button>
-        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-shiharai')">④ 支払</button>
-        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-henkyaku')">⑤ 返却</button>
+        <button type="button" class="sec-jump-chip" id="gr-chip-customer" onclick="grJumpSection('gr-step-customer')"><span class="gr-stat" id="gr-stat-customer"></span>1 お客様</button>
+        <button type="button" class="sec-jump-chip" id="gr-chip-period" onclick="grJumpSection('gr-step-period')"><span class="gr-stat" id="gr-stat-period"></span>2 期間</button>
+        <button type="button" class="sec-jump-chip" id="gr-chip-vehicle" onclick="grJumpSection('gr-step-vehicle')"><span class="gr-stat" id="gr-stat-vehicle"></span>3 車両</button>
+        <button type="button" class="sec-jump-chip" id="gr-chip-price" onclick="grJumpSection('gr-step-price')"><span class="gr-stat" id="gr-stat-price"></span>4 料金</button>
+        <button type="button" class="sec-jump-chip" id="gr-chip-finish" onclick="grJumpSection('gr-step-finish')"><span class="gr-stat" id="gr-stat-finish"></span>5 仕上げ</button>
       </div>
-      <div style="background:#FFF7E6;border:2px solid #E69E50;border-radius:6px;padding:8px 14px;margin:6px 0;font-size:13px;color:#7A4500">
-        📜 <b>一般貸渡モード</b> — 顧客への直接貸渡。保険会社・工場関連は不要です。
-        <span id="gr-save-indicator" style="color:#888;font-size:11px;margin-left:12px;font-weight:normal"></span>
-      </div>
-
-      <!-- ====== ① 予約 (受付 / 借受人 / 免許 / 受取返却 / 利用期間) ====== -->
-      <div class="form-section" id="gr-step-yoyaku">① 予約　｜　📋 受付情報</div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label">受付No <span class="text-muted text-sm">空欄で自動採番</span></label><input class="form-control" id="gr-caseNo" placeholder="空欄で自動採番"></div>
-        <div class="form-group"><label class="form-label req">受付日</label><input class="form-control" id="gr-receivedAt" type="date"></div>
-        <div class="form-group"><label class="form-label warn">受付担当</label>
-          <select class="form-control" id="gr-staff"><option value="">―</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">状態</label>
-          <select class="form-control" id="gr-status">
-            <option value="受付">受付</option>
-            <option value="配車予定">配車予定</option>
-            <option value="配車済">配車完了</option>
-            <option value="利用中">利用中</option>
-            <option value="返却済">車両回収済</option>
-            <option value="仮請求">仮請求</option>
-            <option value="請求済">請求済</option>
-            <option value="入金済">入金済</option>
-            <option value="キャンセル">キャンセル</option>
-          </select>
-        </div>
+      <div style="background:#FFF7E6;border:1px solid #E69E50;border-radius:8px;padding:9px 14px;margin:8px 0;font-size:12px;color:#7A4500;line-height:1.6">
+        📜 <b>一般貸渡</b> — 上から順に読むだけで登録できます。<span style="color:#C53030">※必須</span>だけ埋めれば保存OK。専門項目は「詳細」を開いた時だけ表示されます。
+        <span id="gr-save-indicator" style="color:#888;font-size:11px;margin-left:10px;font-weight:normal"></span>
       </div>
 
-      <!-- ② 借受人・運転者 -->
-      <div class="form-section">👤 借受人・運転者</div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label req">借受人 氏名</label><input class="form-control" id="gr-contractorName" placeholder="山田 太郎"></div>
-        <div class="form-group" style="grid-column:span 2"><label class="form-label">借受人 住所</label><input class="form-control" id="gr-borrowerAddress" placeholder="沖縄県那覇市..."></div>
-        <div class="form-group"><label class="form-label">借受人 電話 <span class="text-muted text-sm">緊急連絡先</span></label><input class="form-control" id="gr-driverTel" placeholder="090-xxxx-xxxx"></div>
-        <div class="form-group" style="grid-column:span 2"></div>
-        <div class="form-group">
-          <label class="form-label">運転者 氏名 <button type="button" class="btn btn-outline btn-xs" style="margin-left:6px;font-size:10px" onclick="grCopyContractorToDriver()" title="借受人と同じ場合">借受人と同じ</button></label>
-          <input class="form-control" id="gr-driverName" placeholder="借受人と同じなら空欄可">
+      <!-- ====== ① お客様 ====== -->
+      <div class="gr-step-card" id="gr-step-customer">
+        <div class="gr-step-head"><span class="gr-step-num">1</span><span class="gr-step-title">だれに貸す ― お客様</span></div>
+        <div class="gr-step-micro">契約する人と、ハンドルを握る人を登録します。</div>
+        <div class="form-grid cols3">
+          <div class="form-group"><label class="form-label req">借受人 氏名</label><input class="form-control" id="gr-contractorName" placeholder="山田 太郎"><div style="font-size:11px;color:#999;margin-top:3px">請求書・貸渡証に出る名前です</div></div>
+          <div class="form-group"><label class="form-label">連絡のつく電話 <span class="text-muted text-sm">緊急連絡先</span></label><input class="form-control" id="gr-driverTel" placeholder="090-1234-5678"></div>
+          <div class="form-group">
+            <label class="form-label">運転する人 <button type="button" class="btn btn-outline btn-xs" style="margin-left:6px;font-size:10px" onclick="grCopyContractorToDriver()" title="借受人と同じ場合">借受人と同じ</button></label>
+            <input class="form-control" id="gr-driverName" placeholder="借受人と同じなら空欄でOK">
+          </div>
         </div>
-        <div class="form-group" style="grid-column:span 2"><label class="form-label">運転者 住所 <span class="text-muted text-sm">借受人と同じなら空欄</span></label><input class="form-control" id="gr-driverAddress" placeholder="借受人と同じ場合は空欄"></div>
+        <details class="gr-det" id="gr-det-customer"><summary>住所・運転免許を入力（任意・貸渡証用）<span class="gr-det-badge" id="gr-badge-customer"></span></summary>
+          <div class="gr-det-body">
+            <div style="font-size:11px;color:#999;margin-bottom:10px">自旅138号の必須項目です。空でも保存できますが、貸渡証の発行前に入力を。</div>
+            <div class="form-grid cols3">
+              <div class="form-group" style="grid-column:span 2"><label class="form-label">借受人 住所</label><input class="form-control" id="gr-borrowerAddress" placeholder="沖縄県那覇市..."></div>
+              <div class="form-group" style="grid-column:span 2"><label class="form-label">運転者 住所 <span class="text-muted text-sm">借受人と同じなら空欄</span></label><input class="form-control" id="gr-driverAddress" placeholder="借受人と同じ場合は空欄"></div>
+              <div class="form-group"><label class="form-label">生年月日</label><input class="form-control" id="gr-driverBirthDate" type="date"></div>
+              <div class="form-group"><label class="form-label">免許種類</label>
+                <select class="form-control" id="gr-driverLicenseType"><option value="">―</option><option>普通</option><option>普通(AT限定)</option><option>準中型</option><option>中型</option><option>中型(8t限定)</option><option>大型</option><option>その他</option></select>
+              </div>
+              <div class="form-group"><label class="form-label">免許証番号</label><input class="form-control" id="gr-driverLicenseNo" placeholder="第123456789012号"></div>
+              <div class="form-group"><label class="form-label">有効期限 <span class="text-muted text-sm">期限切れ事故防止</span></label><input class="form-control" id="gr-driverLicenseExpiry" type="date"></div>
+              <div class="form-group"><label class="form-label">取得日</label><input class="form-control" id="gr-driverLicenseAcquired" type="date"></div>
+            </div>
+          </div>
+        </details>
       </div>
 
-      <!-- ③ 運転免許 -->
-      <div class="form-section">🪪 運転免許 <span style="font-size:11px;color:#666;font-weight:normal">(自旅138号 必須項目)</span></div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label">生年月日</label><input class="form-control" id="gr-driverBirthDate" type="date"></div>
-        <div class="form-group"><label class="form-label">免許種類</label>
-          <select class="form-control" id="gr-driverLicenseType"><option value="">―</option><option>普通</option><option>普通(AT限定)</option><option>準中型</option><option>中型</option><option>中型(8t限定)</option><option>大型</option><option>その他</option></select>
+      <!-- ====== ② 期間 ====== -->
+      <div class="gr-step-card" id="gr-step-period">
+        <div class="gr-step-head"><span class="gr-step-num">2</span><span class="gr-step-title">いつ借りて、いつ返す ― 期間</span></div>
+        <div class="gr-step-micro">貸す日と返す日を選ぶと、泊数と請求日数が自動で計算されます。</div>
+        <div class="form-grid cols3">
+          <div class="form-group"><label class="form-label req">貸出日</label><input class="form-control" id="gr-useStart" type="date" onchange="updateGRPeriod()"></div>
+          <div class="form-group"><label class="form-label">貸出時刻</label>
+            <select class="form-control" id="gr-useStartTime" onchange="updateGRPeriod()"></select>
+          </div>
+          <div class="form-group"></div>
+          <div class="form-group"><label class="form-label req">返却日</label><input class="form-control" id="gr-useEnd" type="date" onchange="updateGRPeriod()"></div>
+          <div class="form-group"><label class="form-label">返却時刻</label>
+            <select class="form-control" id="gr-useEndTime" onchange="updateGRPeriod()"></select>
+          </div>
+          <div class="form-group"></div>
         </div>
-        <div class="form-group"><label class="form-label">免許証番号</label><input class="form-control" id="gr-driverLicenseNo" placeholder="第123456789012号"></div>
-        <div class="form-group"><label class="form-label">有効期限 <span class="text-muted text-sm">期限切れ事故防止</span></label><input class="form-control" id="gr-driverLicenseExpiry" type="date"></div>
-        <div class="form-group"><label class="form-label">取得日</label><input class="form-control" id="gr-driverLicenseAcquired" type="date"></div>
+        <div class="gr-nights" id="gr-nights-hint"></div>
       </div>
 
-      <!-- ④ 受取・返却 -->
-      <div class="form-section">📍 受取・返却</div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label">受取場所</label>
-          <select class="form-control" id="gr-pickupLocation" onchange="onGRPickupChange()">
-            <option value="">―</option>
-            <option>店頭</option>
-            <option>那覇空港 送迎</option>
-            <option>ホテル</option>
-            <option>その他</option>
-          </select>
+      <!-- ====== ③ 車両 ====== -->
+      <div class="gr-step-card" id="gr-step-vehicle">
+        <div class="gr-step-head"><span class="gr-step-num">3</span><span class="gr-step-title">どの車を貸す ― 車両</span></div>
+        <div class="gr-step-micro">「車両一覧から選ぶ」を押すだけ。ナンバー・クラス・1日料金まで自動で入ります。</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <input type="hidden" id="gr-vehicleId">
+          <button type="button" class="btn btn-primary" onclick="openVehiclePickerForGR()" style="font-weight:bold;background:#4F8A3E;border-color:#4F8A3E"><span style="font-size:14px">🔍 車両一覧から選ぶ</span></button>
+          <span class="text-muted text-sm">車両マスタから割当 (4桁ナンバーでも検索可)</span>
         </div>
-        <div class="form-group" style="grid-column:span 2"><label class="form-label" id="gr-pickupDetail-label">受取詳細</label><input class="form-control" id="gr-pickupDetail" placeholder="ホテル名 等"></div>
-        <div class="form-group"><label class="form-label">那覇着便 <span class="text-muted text-sm">到着便</span></label><input class="form-control" id="gr-arrivalFlight" placeholder="例: JAL905 14:30着"></div>
-        <div class="form-group"><label class="form-label">帰り便 <span class="text-muted text-sm">出発便/空港返却時</span></label><input class="form-control" id="gr-departureFlight" placeholder="例: ANA456 18:00発"></div>
-        <div class="form-group"><label class="form-label">ご利用人数</label><input class="form-control" id="gr-guestCount" type="number" min="1" placeholder="人"></div>
-        <div class="form-group"><label class="form-label">ご使用目的</label>
-          <select class="form-control" id="gr-usagePurpose"><option value="">―</option><option>観光</option><option>出張</option><option>帰省</option><option>送迎</option><option>その他</option></select>
+        <div id="gr-vehicle-picked" style="display:none;background:#E8F5E9;border:1px solid #4F8A3E;border-radius:6px;padding:8px 12px;align-items:center;gap:8px;margin-bottom:10px"></div>
+        <div class="form-grid cols3">
+          <div class="form-group"><label class="form-label">クラス</label>
+            <select class="form-control" id="gr-vehicleClass"></select>
+          </div>
+          <div class="form-group" style="grid-column:span 2"><label class="form-label">車種</label><input class="form-control" id="gr-vehicleName" placeholder="ヤリス / N-BOX など"></div>
         </div>
-        <div class="form-group" style="grid-column:span 2"><label class="form-label">行先・周遊エリア</label><input class="form-control" id="gr-destination" placeholder="例: 本島北部 / 美ら海水族館 / 那覇市内"></div>
+        <details class="gr-det" id="gr-det-plate"><summary>ナンバーを手で直す<span class="gr-det-badge" id="gr-badge-plate">自動入力</span></summary>
+          <div class="gr-det-body">
+            <div class="form-grid cols3">
+              <div class="form-group"><label class="form-label">ナンバー (地名)</label><input class="form-control" id="gr-plateArea" placeholder="沖縄"></div>
+              <div class="form-group"><label class="form-label">分類番号</label><input class="form-control" id="gr-plateNo" placeholder="500"></div>
+              <div class="form-group"><label class="form-label">かな</label><input class="form-control" id="gr-plateKana" placeholder="わ"></div>
+              <div class="form-group"><label class="form-label">4桁番号</label><input class="form-control" id="gr-plateTail" placeholder="1234"></div>
+            </div>
+          </div>
+        </details>
+        <details class="gr-det" id="gr-det-option"><summary>補償・お客様の希望（任意）<span class="gr-det-badge" id="gr-badge-option"></span></summary>
+          <div class="gr-det-body">
+            <div class="form-grid cols3">
+              <div class="form-group"><label class="form-label">免責補償</label>
+                <label style="display:flex;align-items:center;gap:6px;padding:8px 0;font-size:13px"><input type="checkbox" id="gr-hasCDW" style="width:16px;height:16px"> 免責補償 (CDW) を付帯</label>
+              </div>
+              <div class="form-group"><label class="form-label">ワイド補償</label>
+                <label style="display:flex;align-items:center;gap:6px;padding:8px 0;font-size:13px"><input type="checkbox" id="gr-hasWide" style="width:16px;height:16px"> ワイド補償 を付帯</label>
+              </div>
+              <div class="form-group"></div>
+              <div class="form-group"><label class="form-label">喫煙</label>
+                <select class="form-control" id="gr-preferSmoke"><option value="">指定なし</option><option>禁煙車</option><option>喫煙可</option></select>
+              </div>
+              <div class="form-group"><label class="form-label">AT/MT</label>
+                <select class="form-control" id="gr-preferAT"><option value="">指定なし</option><option>AT</option><option>MT</option></select>
+              </div>
+              <div class="form-group"></div>
+              <div class="form-group" style="grid-column:span 3"><label class="form-label">特記事項・備考</label>
+                <textarea class="form-control" id="gr-rentalNote" rows="2" placeholder="チャイルドシート希望 / 追加運転者あり など"></textarea>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
 
-      <!-- 予約: 利用期間 (貸出/返却の日時) -->
-      <div class="form-section">⏱ 利用期間</div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label req">貸出日</label><input class="form-control" id="gr-useStart" type="date" onchange="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">貸出時刻</label>
-          <select class="form-control" id="gr-useStartTime" onchange="updateGRPeriod()"></select>
+      <!-- ====== ④ 料金 ====== -->
+      <div class="gr-step-card" id="gr-step-price">
+        <div class="gr-step-head"><span class="gr-step-num">4</span><span class="gr-step-title">いくら ― 料金</span></div>
+        <div class="gr-step-micro">1日の料金を入れると、②の期間から合計を自動で計算します。</div>
+        <div class="form-grid cols3">
+          <div class="form-group"><label class="form-label">1日の料金 (税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="8,800" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">車を選ぶと自動で入ります</div></div>
+          <div class="form-group"><label class="form-label">値引額</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
+          <div class="form-group"></div>
         </div>
-        <div class="form-group"></div>
-        <div class="form-group"><label class="form-label req">返却日</label><input class="form-control" id="gr-useEnd" type="date" onchange="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">返却時刻</label>
-          <select class="form-control" id="gr-useEndTime" onchange="updateGRPeriod()"></select>
-        </div>
-        <div class="form-group"></div>
+        <div id="gr-period-display" class="gr-total-card"></div>
+        <details class="gr-det" id="gr-det-billing"><summary>請求の調整（普段は不要）<span class="gr-det-badge" id="gr-badge-billadj"></span></summary>
+          <div class="gr-det-body">
+            <div class="form-grid cols3">
+              <div class="form-group"><label class="form-label">請求だけ別単価</label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄=1日料金" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">キャンペーン等で請求額だけ変える時</div></div>
+              <div class="form-group"><label class="form-label">請求日数を手で固定</label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="空欄=期間から自動" oninput="updateGRPeriod()"></div>
+              <div class="form-group"><label class="form-label">無料サービス日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">例: 1日サービスなら 1</div></div>
+            </div>
+          </div>
+        </details>
       </div>
 
-      <!-- ====== ② 料金 (貸渡料金・日数・値引・合計を1か所に集約) ====== -->
-      <div class="form-section" id="gr-step-ryokin">② 料金　｜　💴 貸渡料金・値引</div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label">1日料金 (税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="円" oninput="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">請求日数 <span class="text-muted text-sm">空欄=期間から自動</span></label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="自動算出可" oninput="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">請求単価 <span class="text-muted text-sm">空欄=1日料金</span></label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄で1日料金を使用" oninput="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">値引額</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">値引日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
-        <div class="form-group"></div>
-      </div>
-      <div id="gr-period-display" style="background:#F8FAFC;border:1px solid #E0E6F0;border-radius:6px;padding:10px 14px;margin:6px 0;font-size:13px;color:var(--navy);font-weight:bold"></div>
-
-      <!-- ====== ③ 貸渡 (車両 / 補償・希望) ====== -->
-      <div class="form-section" id="gr-step-kashiwatashi">③ 貸渡　｜　🚗 車両</div>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-        <input type="hidden" id="gr-vehicleId">
-        <button type="button" class="btn btn-primary" onclick="openVehiclePickerForGR()" style="font-weight:bold;background:#4F8A3E;border-color:#4F8A3E"><span style="font-size:14px">🔍 車両一覧から選ぶ</span></button>
-        <span class="text-muted text-sm">車両マスタから割当 (4桁ナンバーでも検索可)</span>
-      </div>
-      <div id="gr-vehicle-picked" style="display:none;background:#E8F5E9;border:1px solid #4F8A3E;border-radius:6px;padding:8px 12px;align-items:center;gap:8px;margin-bottom:10px"></div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label">クラス</label>
-          <select class="form-control" id="gr-vehicleClass"></select>
+      <!-- ====== ⑤ 仕上げ ====== -->
+      <div class="gr-step-card" id="gr-step-finish">
+        <div class="gr-step-head"><span class="gr-step-num">5</span><span class="gr-step-title">受付・支払・返却 ― 仕上げ</span></div>
+        <div class="gr-step-micro">受付の記録と、入金などの後処理。今すぐ全部埋めなくて大丈夫です。</div>
+        <div class="form-grid cols3">
+          <div class="form-group"><label class="form-label req">受付日</label><input class="form-control" id="gr-receivedAt" type="date"><div style="font-size:11px;color:#999;margin-top:3px">本日が自動で入っています</div></div>
+          <div class="form-group"><label class="form-label warn">受付担当 <span class="text-muted text-sm">あなた</span></label>
+            <select class="form-control" id="gr-staff"><option value="">―</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">この案件の状態</label>
+            <select class="form-control" id="gr-status">
+              <option value="受付">受付</option>
+              <option value="配車予定">配車予定</option>
+              <option value="配車済">配車完了</option>
+              <option value="利用中">利用中</option>
+              <option value="返却済">車両回収済</option>
+              <option value="仮請求">仮請求</option>
+              <option value="請求済">請求済</option>
+              <option value="入金済">入金済</option>
+              <option value="キャンセル">キャンセル</option>
+            </select>
+            <div style="font-size:11px;color:#999;margin-top:3px">車を選ぶと自動で進みます</div>
+          </div>
         </div>
-        <div class="form-group" style="grid-column:span 2"><label class="form-label">車種</label><input class="form-control" id="gr-vehicleName" placeholder="ヤリス / N-BOX など"></div>
-        <div class="form-group"><label class="form-label">ナンバー (地名)</label><input class="form-control" id="gr-plateArea" placeholder="沖縄"></div>
-        <div class="form-group"><label class="form-label">分類番号</label><input class="form-control" id="gr-plateNo" placeholder="500"></div>
-        <div class="form-group"><label class="form-label">かな</label><input class="form-control" id="gr-plateKana" placeholder="わ"></div>
-        <div class="form-group"><label class="form-label">4桁番号</label><input class="form-control" id="gr-plateTail" placeholder="1234"></div>
-        <div class="form-group" style="grid-column:span 2;align-self:end"><div style="font-size:11px;color:#888;padding:8px 0">料金は「② 料金」で入力します（割当時にクラス代表単価を自動提案）</div></div>
-      </div>
-
-      <!-- ⑦ 補償・希望 -->
-      <div class="form-section">🛡 補償・希望</div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label">免責補償</label>
-          <label style="display:flex;align-items:center;gap:6px;padding:8px 0;font-size:13px">
-            <input type="checkbox" id="gr-hasCDW" style="width:16px;height:16px"> 免責補償 (CDW) を付帯
-          </label>
+        <details class="gr-det" id="gr-det-pickup"><summary>受け取り・お客様情報（空港送迎・ホテルなど）<span class="gr-det-badge" id="gr-badge-pickup"></span></summary>
+          <div class="gr-det-body">
+            <div class="form-grid cols3">
+              <div class="form-group"><label class="form-label">受取場所</label>
+                <select class="form-control" id="gr-pickupLocation" onchange="onGRPickupChange()">
+                  <option value="">―</option>
+                  <option>店頭</option>
+                  <option>那覇空港 送迎</option>
+                  <option>ホテル</option>
+                  <option>その他</option>
+                </select>
+              </div>
+              <div class="form-group" style="grid-column:span 2"><label class="form-label" id="gr-pickupDetail-label">受取詳細</label><input class="form-control" id="gr-pickupDetail" placeholder="ホテル名 等"></div>
+              <div class="form-group"><label class="form-label">那覇着便 <span class="text-muted text-sm">到着便</span></label><input class="form-control" id="gr-arrivalFlight" placeholder="例: JAL905 14:30着"></div>
+              <div class="form-group"><label class="form-label">帰り便 <span class="text-muted text-sm">出発便/空港返却時</span></label><input class="form-control" id="gr-departureFlight" placeholder="例: ANA456 18:00発"></div>
+              <div class="form-group"><label class="form-label">ご利用人数</label><input class="form-control" id="gr-guestCount" type="number" min="1" placeholder="人"></div>
+              <div class="form-group"><label class="form-label">ご使用目的</label>
+                <select class="form-control" id="gr-usagePurpose"><option value="">―</option><option>観光</option><option>出張</option><option>帰省</option><option>送迎</option><option>その他</option></select>
+              </div>
+              <div class="form-group" style="grid-column:span 2"><label class="form-label">行先・周遊エリア</label><input class="form-control" id="gr-destination" placeholder="例: 本島北部 / 美ら海水族館 / 那覇市内"></div>
+            </div>
+          </div>
+        </details>
+        <details class="gr-det" id="gr-det-pay"><summary>請求・入金の記録（返却後でOK）<span class="gr-det-badge" id="gr-badge-pay"></span></summary>
+          <div class="gr-det-body">
+            <div class="form-grid cols3">
+              <div class="form-group"><label class="form-label">受付No <span class="text-muted text-sm">空欄で自動採番</span></label><input class="form-control" id="gr-caseNo" placeholder="空欄で自動採番"></div>
+              <div class="form-group"><label class="form-label">請求No <span class="text-muted text-sm">空欄なら受付Noを使用</span></label><input class="form-control" id="gr-invoiceNo" placeholder="空欄で受付Noを使用"></div>
+              <div class="form-group"><label class="form-label">支払方法</label>
+                <select class="form-control" id="gr-paymentMethod"><option value="">―</option><option>現金</option><option>カード</option><option>振込</option><option>その他</option></select>
+              </div>
+              <div class="form-group"><label class="form-label">請求発行日</label><input class="form-control" id="gr-invoiceIssuedAt" type="date"></div>
+              <div class="form-group"><label class="form-label">入金日</label><input class="form-control" id="gr-paidAt" type="date"></div>
+              <div class="form-group"><label class="form-label">入金額</label><input class="form-control" id="gr-paidAmount" type="number" min="0"></div>
+            </div>
+          </div>
+        </details>
+        <div class="form-group" style="margin-top:14px">
+          <label class="form-label">社内メモ <span class="text-muted text-sm">スタッフ間の申し送り</span></label>
+          <textarea class="form-control" id="gr-internalMemo" rows="2" placeholder="特殊条件・注意事項など"></textarea>
         </div>
-        <div class="form-group"><label class="form-label">ワイド補償</label>
-          <label style="display:flex;align-items:center;gap:6px;padding:8px 0;font-size:13px">
-            <input type="checkbox" id="gr-hasWide" style="width:16px;height:16px"> ワイド補償 を付帯
-          </label>
+        <div style="margin-top:16px;border-top:1px solid #ECECEC;padding-top:14px">
+          <button class="btn btn-sm" id="gr-btn-return-step" style="display:none;background:#4F8A3E;border:1px solid #3E6E30;color:#fff;font-weight:bold;font-size:14px;padding:10px 20px" onclick="grMarkReturned()" title="車両の返却・回収が完了したら押す → 状態を「車両回収済」に進めます (返却日が空なら本日をセット)">✅ 返却・回収完了</button>
+          <div style="font-size:11px;color:#999;margin-top:6px">状態を「車両回収済」へ進めます。返却日が空なら本日を入れます（保存済みの案件で表示）。</div>
         </div>
-        <div class="form-group"></div>
-        <div class="form-group"><label class="form-label">喫煙</label>
-          <select class="form-control" id="gr-preferSmoke"><option value="">指定なし</option><option>禁煙車</option><option>喫煙可</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">AT/MT</label>
-          <select class="form-control" id="gr-preferAT"><option value="">指定なし</option><option>AT</option><option>MT</option></select>
-        </div>
-        <div class="form-group"></div>
-        <div class="form-group" style="grid-column:span 3"><label class="form-label">特記事項・備考</label>
-          <textarea class="form-control" id="gr-rentalNote" rows="2" placeholder="チャイルドシート希望 / 追加運転者あり など"></textarea>
-        </div>
-      </div>
-
-      <!-- ====== ④ 支払 (請求・入金) ====== -->
-      <div class="form-section" id="gr-step-shiharai">④ 支払　｜　💴 請求・入金</div>
-      <div style="font-size:11px;color:#888;margin:0 0 6px">料金の単価・日数・値引は「② 料金」で入力します。ここでは請求書番号と入金を管理します。</div>
-      <div class="form-grid cols3">
-        <div class="form-group"><label class="form-label">請求No <span class="text-muted text-sm">空欄=受付Noを使用</span></label><input class="form-control" id="gr-invoiceNo" placeholder="空欄で受付Noを使用"></div>
-        <div class="form-group"><label class="form-label">支払方法</label>
-          <select class="form-control" id="gr-paymentMethod"><option value="">―</option><option>現金</option><option>カード</option><option>振込</option><option>その他</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">請求発行日</label><input class="form-control" id="gr-invoiceIssuedAt" type="date"></div>
-        <div class="form-group"><label class="form-label">入金日</label><input class="form-control" id="gr-paidAt" type="date"></div>
-        <div class="form-group"><label class="form-label">入金額</label><input class="form-control" id="gr-paidAmount" type="number" min="0"></div>
-        <div class="form-group"></div>
-      </div>
-
-      <!-- ====== ⑤ 返却 (返却・回収完了) ====== -->
-      <div class="form-section" id="gr-step-henkyaku">⑤ 返却　｜　✅ 返却・回収</div>
-      <div style="background:#F1F8EE;border:1px solid #BFE0AE;border-radius:6px;padding:10px 14px;margin:6px 0;font-size:13px;color:#2E5A1F;line-height:1.7">
-        車両の<b>返却・回収が完了</b>したら、下のボタンを押してください。<br>
-        状態が「車両回収済」に進み、<b>返却日が空欄なら本日</b>が入ります。請求・入金は「④ 支払」で記録します。
-        <div style="margin-top:10px">
-          <button class="btn btn-sm" id="gr-btn-return-step" style="display:none;background:#4F8A3E;border:1px solid #3E6E30;color:#fff;font-weight:bold" onclick="grMarkReturned()" title="車両の返却・回収が完了したら押す → 状態を「車両回収済」に進めます (返却日が空なら本日をセット)">✅ 返却・回収完了</button>
-          <span class="text-muted text-sm" style="margin-left:8px">※ 画面下部の同じボタンからも実行できます（保存済みの案件で表示）</span>
-        </div>
-      </div>
-
-      <!-- 内部メモ -->
-      <div class="form-section">📝 内部メモ</div>
-      <div class="form-group">
-        <label class="form-label">社内メモ <span class="text-muted text-sm">スタッフ間共有用</span></label>
-        <textarea class="form-control" id="gr-internalMemo" rows="2" placeholder="特殊条件・注意事項など"></textarea>
       </div>
     </div>
 
@@ -2935,7 +2968,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-22c';
+const APP_VERSION = '2026-06-22d';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -8423,12 +8456,14 @@ function updateGRPeriod(){
   const et = ($('gr-useEndTime')||{}).value || '';
   const disp = $('gr-period-display');
   if(!disp) return;
-  if(!us || !ee){ disp.textContent = '貸出日と返却日を入力すると期間・料金が表示されます'; disp.style.color='#888'; return; }
+  const _nh = $('gr-nights-hint');
+  const setNH = (t,warn)=>{ if(_nh){ _nh.textContent = t||''; _nh.style.color = warn?'#C53030':'var(--navy)'; } };
+  if(!us || !ee){ disp.textContent = '貸出日と返却日を入力すると期間・料金が表示されます'; disp.style.color='#888'; setNH(''); return; }
   // 日数計算
   const sd = new Date(us + (ut?('T'+ut+':00'):'T10:00:00'));
   const ed = new Date(ee + (et?('T'+et+':00'):'T10:00:00'));
-  if(isNaN(sd) || isNaN(ed)){ disp.textContent='日付形式エラー'; disp.style.color='#C53030'; return; }
-  if(ed <= sd){ disp.textContent='⚠️ 返却日時が貸出日時より前か同じです'; disp.style.color='#C53030'; return; }
+  if(isNaN(sd) || isNaN(ed)){ disp.textContent='日付形式エラー'; disp.style.color='#C53030'; setNH(''); return; }
+  if(ed <= sd){ disp.textContent='⚠️ 返却日時が貸出日時より前か同じです'; disp.style.color='#C53030'; setNH('返却日が貸出日より前か同じです', true); return; }
   const ms = ed - sd;
   const hours = Math.floor(ms / 3600000);
   // 泊数 = 日付差
@@ -8459,6 +8494,7 @@ function updateGRPeriod(){
   const total = Math.max(0, rate * billDays - discTotal);
   const yen = n => '¥' + (Number(n)||0).toLocaleString();
   const periodTxt = (hours <= 24) ? `${hours}時間（1日）` : `${nights}泊${nights+1}日（${hours}時間）`;
+  setNH((hours <= 24 ? `${hours}時間` : `${nights}泊${nights+1}日`) + `（請求${billDays}日）`);
 
   if(!rate){
     // 料金未入力: 期間のみ表示 + 案内
@@ -8486,6 +8522,45 @@ function updateGRPeriod(){
     +   `</div>`
     + `</div>`;
   disp.style.color = 'var(--navy)';
+}
+
+// ステップ導線UI: 進捗ステッパー(✓/●)・折りたたみ充足バッジ・編集時の自動展開 (2026-06-22d 初心者向け再設計)
+function _grVal(k){ const e=$('gr-'+k); return e ? String(e.value||'').trim() : ''; }
+function _grCountFilled(keys){ return keys.reduce((n,k)=>{ const e=$('gr-'+k); if(!e) return n; if(e.type==='checkbox') return n+(e.checked?1:0); const v=String(e.value||'').trim(); return n+((v!=='' && v!=='0')?1:0); },0); }
+function grUpdateStepper(){
+  const set=(id,state)=>{ const e=$('gr-stat-'+id); if(!e) return;
+    if(state==='done'){ e.textContent='✓'; e.style.color='#2E7D32'; }
+    else if(state==='req'){ e.textContent='●'; e.style.color='#C53030'; }
+    else { e.textContent=''; } };
+  const veh = _grVal('vehicleId') || _grVal('plateTail');
+  set('customer', _grVal('contractorName') ? 'done' : 'req');
+  set('period', (_grVal('useStart') && _grVal('useEnd')) ? 'done' : 'todo');
+  set('vehicle', veh ? 'done' : 'todo');
+  set('price', (Number(_grVal('unitPrice'))>0) ? 'done' : 'todo');
+  set('finish', _grVal('receivedAt') ? 'done' : 'req');
+}
+function grUpdateDetailBadges(){
+  const setB=(id,txt)=>{ const e=$('gr-badge-'+id); if(e) e.textContent=txt; };
+  const lic=['borrowerAddress','driverAddress','driverBirthDate','driverLicenseType','driverLicenseNo','driverLicenseExpiry','driverLicenseAcquired'];
+  setB('customer', _grCountFilled(lic)+'/'+lic.length+' 入力済');
+  const opt=_grCountFilled(['hasCDW','hasWide','preferSmoke','preferAT','rentalNote']);
+  setB('option', opt? opt+' 件':'なし');
+  const adjOn = _grVal('invoiceUnitPrice')!=='' || _grVal('invoiceDays')!=='' || Number(_grVal('discountDays'))>0;
+  setB('billadj', adjOn? '調整あり':'なし');
+  setB('pickup', _grVal('pickupLocation')||'未設定');
+  const pay=_grCountFilled(['invoiceNo','paymentMethod','invoiceIssuedAt','paidAt','paidAmount']);
+  setB('pay', pay? pay+' 件記録':'未入力');
+}
+function grRefreshUI(){ try{ grUpdateStepper(); grUpdateDetailBadges(); }catch(e){} }
+function grAutoExpandDetails(){
+  document.querySelectorAll('#gr-modal details.gr-det').forEach(d=>{
+    let has=false;
+    d.querySelectorAll('input,select,textarea').forEach(el=>{
+      if(el.type==='checkbox'){ if(el.checked) has=true; }
+      else { const v=String(el.value||'').trim(); if(v!=='' && v!=='0') has=true; }
+    });
+    if(has) d.open=true;
+  });
 }
 
 // 借受人情報を運転者にコピー
@@ -8524,9 +8599,19 @@ function openGeneralRentalModal(id){
   fillGRForm(c);
   grRenderAssignedVehicleChip();
   onGRPickupChange();
+  // 新規時のみスマート既定値 (編集時は既存値を尊重・上書き禁止)
+  if(!id){
+    if($('gr-receivedAt') && !$('gr-receivedAt').value) $('gr-receivedAt').value = todayISO();
+    if($('gr-useStartTime') && !$('gr-useStartTime').value) $('gr-useStartTime').value = '10:00';
+    if($('gr-useEndTime') && !$('gr-useEndTime').value) $('gr-useEndTime').value = '10:00';
+    if($('gr-status') && !$('gr-status').value) $('gr-status').value = '受付';
+  } else {
+    grAutoExpandDetails();  // 編集時: 値の入っている任意セクションを自動展開
+  }
   _grAutoDays = 0;  // 案件切替時に自動日数追従をリセット (保存済み請求日数を尊重)
   updateGRPeriod();
-  // ステップ導線: 開いたら先頭(① 予約)から見せる
+  grRefreshUI();    // 進捗ステッパー✓/● ・折りたたみ充足バッジを更新
+  // ステップ導線: 開いたら先頭(① お客様)から見せる
   const _grBody = document.querySelector('#gr-modal .modal-body'); if(_grBody) _grBody.scrollTo({top:0});
   $('gr-modal-title').textContent = id ? `一般貸渡 編集 ${c.caseNo||''}` : '一般貸渡 新規';
   // 削除・印刷・返却完了ボタンは既存案件のみ
@@ -8742,6 +8827,7 @@ let _grDirty = false;
         _grDirty = true;
         const ind = $('gr-save-indicator');
         if(ind){ ind.textContent='⚠️ 未保存の変更があります'; ind.style.color='#C53030'; }
+        if(typeof grRefreshUI==='function') grRefreshUI();
       }
     };
     modal.addEventListener('input', onAny);
