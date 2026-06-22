@@ -1611,13 +1611,17 @@ tr.veh-maint-row:hover{background:#FFECD6}
     </div>
   </div>
 
-  <!-- ==== 🩺 経営ヘルスチェック (今どうか一望・前年同期比) ==== -->
-  <div class="bi-section-header">🩺 経営ヘルスチェック <span style="font-size:11px;color:#888;font-weight:normal">今どうか / 前年同期比</span></div>
-  <div id="bi-healthboard" style="margin-bottom:12px"></div>
+  <!-- ==== 📊 現状把握 (いま・主要指標を一望) ==== -->
+  <div class="bi-section-header">📊 現状把握 <span style="font-size:11px;color:#888;font-weight:normal">いま / 前年同期比</span></div>
+  <div id="bi-healthboard" style="margin-bottom:14px"></div>
 
-  <!-- ==== 💡 いま打つべき手 (で、どうする) ==== -->
-  <div class="bi-section-header">💡 いま打つべき手 <span style="font-size:11px;color:#888;font-weight:normal">指標の異常から打ち手を自動抽出</span></div>
-  <div id="bi-insights" style="margin-bottom:14px"></div>
+  <!-- ==== 📈 過去との比較 (当期 vs 前年同期) ==== -->
+  <div class="bi-section-header">📈 過去との比較 <span style="font-size:11px;color:#888;font-weight:normal">当期 vs 前年同期</span></div>
+  <div id="bi-compare" style="margin-bottom:14px"></div>
+
+  <!-- ==== 🔮 予測 (年度着地・月次の見込み) ==== -->
+  <div class="bi-section-header">🔮 予測 <span style="font-size:11px;color:#888;font-weight:normal">年度着地・月次の見込み</span></div>
+  <div id="bi-outlook" style="margin-bottom:14px"></div>
 
   <!-- ==== ② 主要KPI ==== -->
   <div class="bi-section-header">💹 主要指標 <span style="font-size:11px;color:#888;font-weight:normal">詳細KPI</span></div>
@@ -2679,13 +2683,21 @@ tr.veh-maint-row:hover{background:#FFECD6}
       <button class="modal-close" title="閉じる" onclick="closeGeneralRentalModal()">✕</button>
     </div>
     <div class="modal-body">
+      <!-- ステップ導線: 予約 → 料金 → 貸渡 → 支払 → 返却 -->
+      <div class="sec-jump-bar">
+        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-yoyaku')">① 予約</button>
+        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-ryokin')">② 料金</button>
+        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-kashiwatashi')">③ 貸渡</button>
+        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-shiharai')">④ 支払</button>
+        <button type="button" class="sec-jump-chip" onclick="grJumpSection('gr-step-henkyaku')">⑤ 返却</button>
+      </div>
       <div style="background:#FFF7E6;border:2px solid #E69E50;border-radius:6px;padding:8px 14px;margin:6px 0;font-size:13px;color:#7A4500">
         📜 <b>一般貸渡モード</b> — 顧客への直接貸渡。保険会社・工場関連は不要です。
         <span id="gr-save-indicator" style="color:#888;font-size:11px;margin-left:12px;font-weight:normal"></span>
       </div>
 
-      <!-- ① 受付 -->
-      <div class="form-section">📋 受付情報</div>
+      <!-- ====== ① 予約 (受付 / 借受人 / 免許 / 受取返却 / 利用期間) ====== -->
+      <div class="form-section" id="gr-step-yoyaku">① 予約　｜　📋 受付情報</div>
       <div class="form-grid cols3">
         <div class="form-group"><label class="form-label">受付No <span class="text-muted text-sm">空欄で自動採番</span></label><input class="form-control" id="gr-caseNo" placeholder="空欄で自動採番"></div>
         <div class="form-group"><label class="form-label req">受付日</label><input class="form-control" id="gr-receivedAt" type="date"></div>
@@ -2755,7 +2767,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <div class="form-group" style="grid-column:span 2"><label class="form-label">行先・周遊エリア</label><input class="form-control" id="gr-destination" placeholder="例: 本島北部 / 美ら海水族館 / 那覇市内"></div>
       </div>
 
-      <!-- ⑤ 利用期間 -->
+      <!-- 予約: 利用期間 (貸出/返却の日時) -->
       <div class="form-section">⏱ 利用期間</div>
       <div class="form-grid cols3">
         <div class="form-group"><label class="form-label req">貸出日</label><input class="form-control" id="gr-useStart" type="date" onchange="updateGRPeriod()"></div>
@@ -2769,10 +2781,21 @@ tr.veh-maint-row:hover{background:#FFECD6}
         </div>
         <div class="form-group"></div>
       </div>
+
+      <!-- ====== ② 料金 (貸渡料金・日数・値引・合計を1か所に集約) ====== -->
+      <div class="form-section" id="gr-step-ryokin">② 料金　｜　💴 貸渡料金・値引</div>
+      <div class="form-grid cols3">
+        <div class="form-group"><label class="form-label">1日料金 (税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="円" oninput="updateGRPeriod()"></div>
+        <div class="form-group"><label class="form-label">請求日数 <span class="text-muted text-sm">空欄=期間から自動</span></label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="自動算出可" oninput="updateGRPeriod()"></div>
+        <div class="form-group"><label class="form-label">請求単価 <span class="text-muted text-sm">空欄=1日料金</span></label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄で1日料金を使用" oninput="updateGRPeriod()"></div>
+        <div class="form-group"><label class="form-label">値引額</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
+        <div class="form-group"><label class="form-label">値引日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
+        <div class="form-group"></div>
+      </div>
       <div id="gr-period-display" style="background:#F8FAFC;border:1px solid #E0E6F0;border-radius:6px;padding:10px 14px;margin:6px 0;font-size:13px;color:var(--navy);font-weight:bold"></div>
 
-      <!-- ⑥ 車両 -->
-      <div class="form-section">🚗 車両</div>
+      <!-- ====== ③ 貸渡 (車両 / 補償・希望) ====== -->
+      <div class="form-section" id="gr-step-kashiwatashi">③ 貸渡　｜　🚗 車両</div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
         <input type="hidden" id="gr-vehicleId">
         <button type="button" class="btn btn-primary" onclick="openVehiclePickerForGR()" style="font-weight:bold;background:#4F8A3E;border-color:#4F8A3E"><span style="font-size:14px">🔍 車両一覧から選ぶ</span></button>
@@ -2788,7 +2811,7 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <div class="form-group"><label class="form-label">分類番号</label><input class="form-control" id="gr-plateNo" placeholder="500"></div>
         <div class="form-group"><label class="form-label">かな</label><input class="form-control" id="gr-plateKana" placeholder="わ"></div>
         <div class="form-group"><label class="form-label">4桁番号</label><input class="form-control" id="gr-plateTail" placeholder="1234"></div>
-        <div class="form-group" style="grid-column:span 2"><label class="form-label">貸渡料金 (1日 税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="円" oninput="updateGRPeriod()"></div>
+        <div class="form-group" style="grid-column:span 2;align-self:end"><div style="font-size:11px;color:#888;padding:8px 0">料金は「② 料金」で入力します（割当時にクラス代表単価を自動提案）</div></div>
       </div>
 
       <!-- ⑦ 補償・希望 -->
@@ -2817,23 +2840,32 @@ tr.veh-maint-row:hover{background:#FFECD6}
         </div>
       </div>
 
-      <!-- ⑧ 請求・入金 -->
-      <div class="form-section">💴 請求・入金</div>
+      <!-- ====== ④ 支払 (請求・入金) ====== -->
+      <div class="form-section" id="gr-step-shiharai">④ 支払　｜　💴 請求・入金</div>
+      <div style="font-size:11px;color:#888;margin:0 0 6px">料金の単価・日数・値引は「② 料金」で入力します。ここでは請求書番号と入金を管理します。</div>
       <div class="form-grid cols3">
         <div class="form-group"><label class="form-label">請求No <span class="text-muted text-sm">空欄=受付Noを使用</span></label><input class="form-control" id="gr-invoiceNo" placeholder="空欄で受付Noを使用"></div>
-        <div class="form-group"><label class="form-label">請求日数</label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="自動算出可" oninput="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">請求単価 <span class="text-muted text-sm">空欄=貸渡料金</span></label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄で1日税込を使用" oninput="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">値引額</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
-        <div class="form-group"><label class="form-label">値引日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
         <div class="form-group"><label class="form-label">支払方法</label>
           <select class="form-control" id="gr-paymentMethod"><option value="">―</option><option>現金</option><option>カード</option><option>振込</option><option>その他</option></select>
         </div>
         <div class="form-group"><label class="form-label">請求発行日</label><input class="form-control" id="gr-invoiceIssuedAt" type="date"></div>
         <div class="form-group"><label class="form-label">入金日</label><input class="form-control" id="gr-paidAt" type="date"></div>
         <div class="form-group"><label class="form-label">入金額</label><input class="form-control" id="gr-paidAmount" type="number" min="0"></div>
+        <div class="form-group"></div>
       </div>
 
-      <!-- ⑨ 内部メモ -->
+      <!-- ====== ⑤ 返却 (返却・回収完了) ====== -->
+      <div class="form-section" id="gr-step-henkyaku">⑤ 返却　｜　✅ 返却・回収</div>
+      <div style="background:#F1F8EE;border:1px solid #BFE0AE;border-radius:6px;padding:10px 14px;margin:6px 0;font-size:13px;color:#2E5A1F;line-height:1.7">
+        車両の<b>返却・回収が完了</b>したら、下のボタンを押してください。<br>
+        状態が「車両回収済」に進み、<b>返却日が空欄なら本日</b>が入ります。請求・入金は「④ 支払」で記録します。
+        <div style="margin-top:10px">
+          <button class="btn btn-sm" id="gr-btn-return" style="display:none;background:#4F8A3E;border:1px solid #3E6E30;color:#fff;font-weight:bold" onclick="grMarkReturned()" title="車両の返却・回収が完了したら押す → 状態を「車両回収済」に進めます (返却日が空なら本日をセット)">✅ 返却・回収完了</button>
+          <span class="text-muted text-sm" style="margin-left:8px">※ 保存済みの案件で表示されます</span>
+        </div>
+      </div>
+
+      <!-- 内部メモ -->
       <div class="form-section">📝 内部メモ</div>
       <div class="form-group">
         <label class="form-label">社内メモ <span class="text-muted text-sm">スタッフ間共有用</span></label>
@@ -2847,7 +2879,6 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <button class="btn btn-danger btn-sm" id="gr-btn-delete" style="display:none" onclick="grDeleteCase()" title="この案件を完全に削除">🗑️ 削除</button>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn btn-sm" id="gr-btn-return" style="display:none;background:#4F8A3E;border:1px solid #3E6E30;color:#fff;font-weight:bold" onclick="grMarkReturned()" title="車両の返却・回収が完了したら押す → 状態を「車両回収済」に進めます (返却日が空なら本日をセット)">✅ 返却・回収完了</button>
         <button class="btn btn-outline btn-sm" id="gr-btn-print" style="display:none;background:#FFF7E6;border-color:#E69E50;color:#7A4500" onclick="grPrintContract()" title="貸渡書 (表: 貸渡証+車体チェック / 裏: 約款) をA4で印刷">📜 貸渡書印刷</button>
         <button class="btn btn-outline btn-sm" id="gr-btn-invoice" style="display:none" onclick="grPrintInvoice()" title="請求書を印刷">🧾 請求書</button>
       </div>
@@ -2903,7 +2934,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-22a';
+const APP_VERSION = '2026-06-22b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5545,9 +5576,10 @@ function renderBI(){
     prevUtilOverall = biCalcUtilization(range.compare.from, pTo).overall;
   }
 
-  // 🩺 第1層 経営ヘルスチェック + 💡 第3層 いま打つべき手 (今どうか→で、どうする)
+  // 📊 現状把握 → 📈 過去との比較 → 🔮 予測
   renderBiHealthboard(range, cases, kpi, kpiPrev, util, prevUtilOverall);
-  renderBiInsights(computeBiInsights(range, cases, kpi, kpiPrev, util));
+  renderBiCompare(kpi, kpiPrev, util, prevUtilOverall, range);
+  renderBiOutlook();
 
   renderBIKpis(kpi, kpiPrev, util);
   renderBIChartTrend();
@@ -5927,45 +5959,94 @@ function renderBiHealthboard(range, cases, kpi, kpiPrev, util, prevUtilOverall){
       ${tile('🏢 取引先集中', ch.maxShare.toFixed(0)+'%', `<span style="color:${concColor};font-weight:700">${concWord}</span>`, `最大: ${esc(ch.maxName)}・集中度(HHI) ${ch.hhi.toFixed(2)}・取引先 ${ch.count}社`)}
     </div>`;
 }
-// 💡 いま打つべき手 (気づきエンジン): 既存集計の合成で異常を抽出
-function computeBiInsights(range, cases, kpi, kpiPrev, util){
-  const out=[]; const push=(sev,title,detail)=>out.push({sev,title,detail});
-  const sd=_biPctDelta(kpi.totalSales, kpiPrev?.totalSales);
-  if(sd!=null && sd<=-10) push('danger','売上が前年同期を下回っています', `当期 ¥${Math.round(kpi.totalSales).toLocaleString()}（前年比 ▼${Math.abs(sd).toFixed(1)}%）。受注の鈍化・単価低下・稼働低下のどれかを確認。`);
-  else if(sd!=null && sd>=15) push('good','売上が好調です', `前年同期比 ▲${sd.toFixed(1)}%。供給(稼働余力)が足りているか確認を。`);
-  if(util.overall < 40) push('warn','稼働率が低めです', `期間平均 ${util.overall.toFixed(1)}%。遊休車の活用・販促・減車を検討（損益分岐の目安は約50%）。`);
-  const idle=(util.perVeh||[]).filter(p=>p.rate<20);
-  if(idle.length) push('warn',`遊休車が ${idle.length}台あります`, `稼働率20%未満: ${idle.slice(0,3).map(p=>esc(p.v.plateDisplay||p.v.name||'')).join('・')}${idle.length>3?' ほか':''}。売却 or リース終了の候補。`);
-  const ch=_biChannelStats(cases);
-  if(ch.hhi>=0.25) push('warn','特定取引先への依存が高い', `最大依存先 ${esc(ch.maxName)} が ${ch.maxShare.toFixed(0)}%（集中度 ${ch.hhi.toFixed(2)}）。新規チャネル開拓でリスク分散を。`);
-  const today=todayISO();
-  const longOut=(DATA.cases||[]).filter(c=>{
-    if(c.status==='キャンセル'||c.recoveryCompleted) return false;
-    if(!['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)) return false;
-    if(c.useEnd||!c.useStart) return false;
-    const d=parseDate(c.useStart); if(!d) return false;
-    return Math.floor((parseDate(today)-d)/86400000) > 30;
-  });
-  if(longOut.length) push('warn',`長期貸出（返却予定 未定）が ${longOut.length}件`, `利用開始から30日超で返却予定日が未入力。回収予定の確認・売上計上漏れ防止を。`);
-  const overdue=(DATA.cases||[]).filter(c=>overdueDays(c)>0);
-  if(overdue.length) push('warn',`入金遅延が ${overdue.length}件`, `支払期日を超過。督促・入金確認を（入金管理タブ）。`);
-  if(typeof vehicleAlerts==='function'){ const exp=vehicleAlerts().filter(a=>a.kind==='車検満了'); if(exp.length) push('info',`車検が近い車両 ${exp.length}台`, `60日以内に車検満了。入庫の段取りを（車両管理）。`); }
-  if(!out.length) push('good','大きな問題は見当たりません', '主要指標は健全です。攻めの一手（増車・販促）を検討できます。');
-  const order={danger:0,warn:1,info:2,good:3};
-  return out.sort((a,b)=>order[a.sev]-order[b.sev]);
+// 📈 過去との比較 (第2層): 当期 vs 前年同期 を主要指標で一覧
+function renderBiCompare(kpi, kpiPrev, util, prevUtilOverall, range){
+  const host=$('bi-compare'); if(!host) return;
+  if(!kpiPrev || !range.compare){
+    host.innerHTML = `<div style="font-size:12px;color:#8893a3;background:#fff;border:1px solid #E2E6EE;border-radius:8px;padding:12px">この期間は前年同期との比較ができません。期間セレクタで「今年度」「今月」「年度比較」などを選ぶと前年同期比が表示されます。</div>`;
+    return;
+  }
+  const yenF=n=>'¥'+Math.round(n).toLocaleString();
+  const row=(label,cur,prev,fmt,isPt)=>{
+    const d = isPt ? ((cur!=null&&prev!=null)?(cur-prev):null) : _biPctDelta(cur,prev);
+    const up = d!=null && d>=0;
+    const dStr = d==null?'―':(isPt?(up?'＋':'−')+Math.abs(d).toFixed(1)+'pt':(up?'▲':'▼')+' '+Math.abs(d).toFixed(1)+'%');
+    const col = d==null?'#999':(up?'#1D9E75':'#C53030');
+    return `<tr><td class="left">${label}</td><td class="money">${fmt(cur)}</td><td class="money" style="color:#8893a3">${fmt(prev)}</td><td style="text-align:right;color:${col};font-weight:700">${dStr}</td></tr>`;
+  };
+  host.innerHTML = `<div class="tbl-wrap" style="background:#fff;border:1px solid #E2E6EE;border-radius:8px">
+    <table style="width:100%;font-size:12.5px">
+      <thead><tr><th class="left">指標</th><th class="money">当期</th><th class="money">前年同期</th><th style="text-align:right">前年比</th></tr></thead>
+      <tbody>
+        ${row('💴 売上(税込)', kpi.totalSales, kpiPrev.totalSales, yenF)}
+        ${row('📊 案件数', kpi.caseCount, kpiPrev.caseCount, n=>Math.round(n).toLocaleString()+'件')}
+        ${row('💰 平均単価', kpi.avgUnit, kpiPrev.avgUnit, yenF)}
+        ${row('📅 平均利用日数', kpi.avgDays, kpiPrev.avgDays, n=>n.toFixed(1)+'日')}
+        ${row('💳 入金率', kpi.paidRate, kpiPrev.paidRate, n=>n.toFixed(1)+'%', true)}
+        ${prevUtilOverall!=null ? row('🚗 稼働率', util.overall, prevUtilOverall, n=>n.toFixed(1)+'%', true) : ''}
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:#8893a3;padding:6px 10px">比較対象: ${esc(range.compare.label)}（${fmtDate(range.compare.from)}〜${fmtDate(range.compare.to)}）</div>
+  </div>`;
 }
-function renderBiInsights(list){
-  const host=$('bi-insights'); if(!host) return;
-  const dot={danger:'#C53030',warn:'#B7791F',info:'#1E40AF',good:'#1D9E75'};
-  const bg={danger:'#FEF4F4',warn:'#FFFaf2',info:'#F4F7FE',good:'#F3FAF5'};
-  host.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px">` + (list||[]).map(x=>`
-    <div style="display:flex;gap:10px;align-items:flex-start;background:${bg[x.sev]||'#fff'};border:1px solid #E2E6EE;border-radius:8px;padding:9px 13px">
-      <span style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:${dot[x.sev]||'#999'};margin-top:5px"></span>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:13px;color:#22303f">${esc(x.title)}</div>
-        <div style="font-size:12px;color:#566370;margin-top:1px">${x.detail}</div>
-      </div>
-    </div>`).join('') + `</div>`;
+
+// 🔮 予測 (第2層): 年度着地見込み + 月次見込み。期間セレクタに依らず常に年度ベース。
+//   方式=前年度の季節パターン × 今年度の伸び率で延伸 (実績ベースの簡易見込み・嘘の数字を出さない)
+function computeBiFyOutlook(){
+  const now=new Date(); const fy=getNendo(now); const today=todayISO();
+  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const monthBounds=(y,idx)=>{ const mo=(3+idx)%12; const yr=(3+idx)<=11?y:y+1; const s=new Date(yr,mo,1), e=new Date(yr,mo+1,0); return {from:iso(s),to:iso(e),y:yr,m:mo+1,dim:e.getDate()}; };
+  const sumMonth=(from,to)=> biFilterCases(from,to).reduce((s,c)=>s+((calcAmounts(c).total)||0),0);
+  const cur=[],prev=[]; for(let i=0;i<12;i++){ cur.push(monthBounds(fy,i)); prev.push(monthBounds(fy-1,i)); }
+  const prevSales=prev.map(b=>sumMonth(b.from,b.to));
+  const curSales=cur.map(b=> (b.from<=today) ? sumMonth(b.from, (b.to<=today?b.to:today)) : 0 );
+  const curToDate=curSales.reduce((a,b)=>a+b,0);
+  const prevFull=prevSales.reduce((a,b)=>a+b,0);
+  let curMonthIdx=cur.findIndex(b=> today>=b.from && today<=b.to); if(curMonthIdx<0) curMonthIdx=11;
+  // 前年同期(同じ暦日まで) = 前年度を「昨年の同月同日」まで集計 (線形按分を避け、年度比較と同一の考え方)
+  const td=parseDate(today);
+  const prevEquiv=`${td.getFullYear()-1}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+  const prevSamePeriod=sumMonth(prev[0].from, prevEquiv);
+  let landing, growth, method;
+  if(prevSamePeriod>0){ growth=curToDate/prevSamePeriod; landing=prevFull*growth; method='seasonal'; }
+  else { // 前年度データ不足 → 年度経過率でランレート概算
+    const fyStart=cur[0].from; const elapsed=Math.max(1,Math.floor((parseDate(today)-parseDate(fyStart))/86400000)+1);
+    landing=curToDate*(365/elapsed); growth=null; method='runrate';
+  }
+  return {fy,cur,prev,curSales,prevSales,curToDate,prevFull,prevSamePeriod,curMonthIdx,landing,growth,method};
+}
+function renderBiOutlook(){
+  const host=$('bi-outlook'); if(!host) return;
+  const o=computeBiFyOutlook();
+  const yenF=n=>'¥'+Math.round(n).toLocaleString();
+  if(o.curToDate<=0 && o.prevFull<=0){ host.innerHTML=`<div style="font-size:12px;color:#8893a3;background:#fff;border:1px solid #E2E6EE;border-radius:8px;padding:12px">予測に必要な売上データ（当年度・前年度）が不足しています。</div>`; return; }
+  const landDelta=o.prevFull>0?(o.landing-o.prevFull)/o.prevFull*100:null;
+  const prog=o.landing>0?Math.min(100,o.curToDate/o.landing*100):0;
+  const ld=landDelta==null?'―':(landDelta>=0?'▲':'▼')+' '+Math.abs(landDelta).toFixed(1)+'%';
+  const ldCol=landDelta==null?'#999':(landDelta>=0?'#1D9E75':'#C53030');
+  // 向こう3ヶ月(当月の着地＋翌2ヶ月)の見込み
+  const up=[];
+  for(let i=o.curMonthIdx;i<12 && up.length<3;i++){
+    const proj = (o.growth!=null) ? o.prevSales[i]*o.growth : (o.method==='runrate' && o.curMonthIdx>0 ? o.curToDate/(o.curMonthIdx+1) : null);
+    if(proj==null) continue;
+    up.push({label:`${o.cur[i].y}/${o.cur[i].m}`, val:proj, partial:i===o.curMonthIdx});
+  }
+  const growthTxt = o.growth!=null ? (o.growth>=1?'＋':'−')+Math.abs((o.growth-1)*100).toFixed(0)+'%' : '―';
+  host.innerHTML = `
+    <div style="background:#fff;border:1px solid #E2E6EE;border-left:4px solid #1E40AF;border-radius:8px;padding:12px 15px;margin-bottom:9px">
+      <div style="font-size:11.5px;color:#5b6472;font-weight:700">${o.fy}年度 着地見込み <span style="color:#9aa;font-weight:normal">（このペースで進んだ場合）</span></div>
+      <div style="font-size:26px;font-weight:800;color:#1E3A5F;margin:3px 0 3px;font-feature-settings:'tnum'">${yenF(o.landing)}</div>
+      <div style="font-size:12px">前年度実績 ${yenF(o.prevFull)} ／ 前年比見込み <span style="color:${ldCol};font-weight:700">${ld}</span></div>
+      <div style="margin-top:8px;background:#EEF2F9;border-radius:6px;height:10px;overflow:hidden"><div style="height:100%;width:${prog}%;background:#1E40AF"></div></div>
+      <div style="font-size:11px;color:#8893a3;margin-top:4px">実績(到達) ${yenF(o.curToDate)}（進捗 ${prog.toFixed(0)}%） ・ 残り見込み ${yenF(Math.max(0,o.landing-o.curToDate))}</div>
+    </div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      ${up.map(u=>`<div style="flex:1;min-width:140px;background:#fff;border:1px solid #E2E6EE;border-radius:8px;padding:10px 13px">
+        <div style="font-size:11px;color:#5b6472;font-weight:700">🔮 ${u.label}月 ${u.partial?'着地見込み':'予測'}</div>
+        <div style="font-size:20px;font-weight:800;color:#1E3A5F;margin-top:3px;font-feature-settings:'tnum'">${yenF(u.val)}</div>
+      </div>`).join('')||'<div style="font-size:12px;color:#8893a3">月次見込みを算出できる十分な前年度データがありません。</div>'}
+    </div>
+    <div style="font-size:11px;color:#8893a3;margin-top:6px">※ 前年度の季節パターン × 今年度の伸び率（${growthTxt}）で延伸した実績ベースの簡易見込み。${o.method==='runrate'?'前年度データが不足のため経過ペースで概算しています。':''}</div>`;
 }
 
 function renderBIChartTrend(){
@@ -7836,6 +7917,20 @@ function jumpCaseSection(cls){
   sec.classList.add('sec-highlight-pulse');
   setTimeout(()=> sec.classList.remove('sec-highlight-pulse'), 1800);
 }
+// 一般貸渡モーダルのステップ導線ジャンプ (2026-06-22b): jumpCaseSection の GR 版 (id で対象ステップへスクロール+パルス)
+function grJumpSection(id){
+  const body = document.querySelector('#gr-modal .modal-body');
+  const sec = document.getElementById(id);
+  if(!body || !sec) return;
+  const bar = document.querySelector('#gr-modal .sec-jump-bar');
+  const barH = bar ? bar.getBoundingClientRect().height : 0;
+  const rect = sec.getBoundingClientRect();
+  const bodyRect = body.getBoundingClientRect();
+  const offset = rect.top - bodyRect.top + body.scrollTop - barH - 10;
+  body.scrollTo({top: Math.max(0, offset), behavior:'smooth'});
+  sec.classList.add('sec-highlight-pulse');
+  setTimeout(()=> sec.classList.remove('sec-highlight-pulse'), 1800);
+}
 // ナビ横スクロールの気づき (2026-06-10b): タブが右に隠れている時だけ「»」を右端に表示
 function _updateNavScrollHint(){
   const nav = document.querySelector('.nav');
@@ -8430,6 +8525,8 @@ function openGeneralRentalModal(id){
   onGRPickupChange();
   _grAutoDays = 0;  // 案件切替時に自動日数追従をリセット (保存済み請求日数を尊重)
   updateGRPeriod();
+  // ステップ導線: 開いたら先頭(① 予約)から見せる
+  const _grBody = document.querySelector('#gr-modal .modal-body'); if(_grBody) _grBody.scrollTo({top:0});
   $('gr-modal-title').textContent = id ? `一般貸渡 編集 ${c.caseNo||''}` : '一般貸渡 新規';
   // 削除・印刷・返却完了ボタンは既存案件のみ
   ['gr-btn-delete','gr-btn-print','gr-btn-invoice','gr-btn-return'].forEach(b=>{
