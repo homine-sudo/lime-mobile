@@ -333,6 +333,8 @@
   .dept3-row .d3-nm{font-family:var(--serif);font-size:14px;color:var(--ink);letter-spacing:.02em}
   .dept3-row .d3-m{font-family:var(--serif);font-size:19px;font-weight:500;color:var(--ink);text-align:right;line-height:1}
   .dept3-row .d3-y{font-family:var(--serif);font-size:15px;color:var(--ink2);text-align:right;line-height:1}
+  /* 当月の下に出す 前年同月比 (色は .up/.dn/.ink3) */
+  .dept3-row .d3-m .d3-yoy{display:block;font-family:var(--sans);font-size:9.5px;font-weight:600;letter-spacing:.02em;line-height:1.2;margin-top:3px}
   /* 電装 売上予定 (受注済み・未計上) — 実売上と混ざらないよう小さく・イタリックで区別 */
   .dept3-plan{padding:7px 0 2px;font-size:10.5px;color:var(--ink3);letter-spacing:.04em;text-align:right;border-top:1px dotted var(--line)}
   .dept3-plan .num{font-family:var(--serif);font-size:14px;color:var(--acc);font-weight:500}
@@ -613,17 +615,17 @@
       </div>
       <div class="dept3-row tap" onclick="showTab('rev')">
         <span class="d3-nm">レンタカー</span>
-        <span class="d3-m num" id="rent-month">—</span>
+        <span class="d3-m"><span class="num" id="rent-month">—</span><span class="d3-yoy" id="rent-yoy"></span></span>
         <span class="d3-y num" id="rent-year">—</span>
       </div>
       <div class="dept3-row tap" onclick="showTab('rev')">
         <span class="d3-nm">DETALIA</span>
-        <span class="d3-m num" id="det-month">—</span>
+        <span class="d3-m"><span class="num" id="det-month">—</span><span class="d3-yoy" id="det-yoy"></span></span>
         <span class="d3-y num" id="det-year">—</span>
       </div>
       <div class="dept3-row tap" onclick="showTab('rev')">
         <span class="d3-nm">電装取付</span>
-        <span class="d3-m num" id="den-month">—</span>
+        <span class="d3-m"><span class="num" id="den-month">—</span><span class="d3-yoy" id="den-yoy"></span></span>
         <span class="d3-y num" id="den-year">—</span>
       </div>
       <!-- 電装 売上予定 (受注済み・未作業完了 — 計上前の確定受注残・2026-06-12c) -->
@@ -948,7 +950,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-22';
+const APP_VERSION = '2026-06-22a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1351,7 +1353,10 @@ function thisMonthSummary(){
     else if(k===pm&&le(dd)) ePrev+=a;
     else if(k===yym&&le(dd)) eYoy+=a;
   });
-  return {tm,total:r+d+e,rental:r,detalia:d,denso:e,rentalCnt:rc,detaliaCnt:dc,densoCnt:ec,prev:rPrev+dPrev+ePrev,yoy:rYoy+dYoy+eYoy};
+  return {tm,total:r+d+e,rental:r,detalia:d,denso:e,rentalCnt:rc,detaliaCnt:dc,densoCnt:ec,
+    prev:rPrev+dPrev+ePrev,yoy:rYoy+dYoy+eYoy,
+    rentalPrev:rPrev,detaliaPrev:dPrev,densoPrev:ePrev,           // 部門別 前月(同経過日まで)
+    rentalYoy:rYoy,detaliaYoy:dYoy,densoYoy:eYoy};                // 部門別 前年同月(同経過日まで)
 }
 
 // ===== 現況 — 全社の「今 動いている」案件ボリューム (2026-06-07) =====
@@ -1561,6 +1566,17 @@ function renderNow(){
   $('rent-month').textContent=yen(s.rental);
   $('det-month').textContent=yen(s.detalia);
   $('den-month').textContent=yen(s.denso);
+  // 部門別 前年同月比 (当月の下に小さく・同経過日まで=MTD公平比較。0%は横ばい/前年実績なしはグレー)
+  const setDeptYoy=(id,cur,prevY)=>{
+    const el=$(id); if(!el) return;
+    if(!prevY||prevY<=0){ el.className='d3-yoy ink3'; el.textContent='前年実績なし'; return; }
+    const p=Math.round((cur-prevY)/prevY*100);
+    el.className='d3-yoy '+(p===0?'ink3':(p>0?'up':'dn'));
+    el.textContent='前年同月 '+(p>0?'+':'')+p+'%';
+  };
+  setDeptYoy('rent-yoy', s.rental, s.rentalYoy);
+  setDeptYoy('det-yoy', s.detalia, s.detaliaYoy);
+  setDeptYoy('den-yoy', s.denso, s.densoYoy);
   // 電装 売上予定 (受注済み・未作業完了の確定受注残)
   const dfc=densoForecast();
   const planEl=$('den-plan');
