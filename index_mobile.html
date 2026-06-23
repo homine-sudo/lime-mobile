@@ -213,19 +213,18 @@ a{color:var(--info);text-decoration:none}
 /* === BOTTOM NAV === */
 .m-bottom-nav{
   height:56px;
-  background:rgba(255,255,255,.92);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border-top:1px solid rgba(212,222,202,.6);
+  background:#1E3A2B;
+  border-top:1px solid rgba(255,255,255,.08);
   display:flex;flex-shrink:0;
   box-shadow:0 -2px 12px rgba(30,58,43,.06);
 }
 .m-bottom-nav button{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:2px;color:var(--muted);font-size:10px;font-weight:600;
+  gap:2px;color:rgba(255,255,255,.6);font-size:10px;font-weight:600;
   transition:color .15s,transform .08s;position:relative;
 }
 .m-bottom-nav button:active{transform:scale(.93)}
-.m-bottom-nav button.active{color:var(--green)}
+.m-bottom-nav button.active{color:var(--lime)}
 .m-bottom-nav button.active::before{
   content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
   width:28px;height:3px;border-radius:0 0 3px 3px;
@@ -638,6 +637,18 @@ a{color:var(--info);text-decoration:none}
 .m-stat-card .num{font-size:27px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-.02em}
 .m-stat-card .lbl{font-size:10.5px;color:var(--muted);margin-top:6px;font-weight:600;letter-spacing:.02em}
 .m-stat-card .sub{font-size:10px;margin-top:4px;font-weight:700;color:var(--green)}
+/* 案B 大判KPI (2026-06-23) */
+.m-stat-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.m-stat-big{background:#fff;border-radius:14px;padding:13px 14px;border-left:6px solid #3D7DC5;box-shadow:var(--shadow-card);transition:transform .12s,box-shadow .15s}
+.m-stat-big:active{transform:scale(.97);box-shadow:var(--shadow-sm)}
+.m-stat-big.rec{border-left-color:var(--red)}
+.m-stat-big .bl{font-size:12px;color:#5F6B58;font-weight:600;display:flex;align-items:center;gap:5px}
+.m-stat-big .num{font-size:40px;font-weight:800;color:var(--navy);line-height:1;margin-top:5px;letter-spacing:-.02em}
+.m-stat-big .sub{font-size:11px;color:var(--muted);margin-top:3px;font-weight:600}
+.m-stat-plan{background:#fff;border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:13px;color:#5F6B58;font-weight:600;box-shadow:var(--shadow-sm)}
+.m-stat-plan .pp{display:inline-flex;align-items:center;gap:5px}
+.m-stat-plan .pp b{font-size:18px;color:var(--navy);font-weight:800}
+.m-svg{display:inline-block;vertical-align:-.14em;flex-shrink:0}
 .m-stat-duo{display:flex;justify-content:center;gap:12px;align-items:flex-end;min-height:30px}
 .m-stat-duo .dcol{display:flex;flex-direction:column;align-items:center}
 .m-stat-duo .dnum{font-size:24px;font-weight:800;line-height:1;letter-spacing:-.02em}
@@ -1184,24 +1195,22 @@ a{color:var(--info);text-decoration:none}
       </div>
       <div id="m-home-search-results"></div>
 
-      <div class="m-stat-grid">
-        <div class="m-stat-card" onclick="showScreen('dispatch')">
+      <div class="m-stat-grid2">
+        <div class="m-stat-big" onclick="showScreen('dispatch')">
+          <div class="bl"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3D7DC5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17"/><path d="M8 7h9v9"/></svg>今日の配車 残り</div>
           <div class="num" id="m-stat-dispatch">0</div>
-          <div class="lbl">🚙 今日の配車</div>
           <div class="sub" id="m-stat-dispatch-done">完了 0</div>
         </div>
-        <div class="m-stat-card green" onclick="showScreen('recovery')">
+        <div class="m-stat-big rec" onclick="showScreen('recovery')">
+          <div class="bl"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#C53030" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10"/><path d="M16 17H7V8"/></svg>今日の回収 残り</div>
           <div class="num" id="m-stat-recovery">0</div>
-          <div class="lbl">🛻 今日の回収</div>
           <div class="sub" id="m-stat-recovery-done">完了 0</div>
         </div>
-        <div class="m-stat-card orange">
-          <div class="m-stat-duo">
-            <div class="dcol" onclick="showScreen('dispatch')"><div class="dnum" id="m-stat-disp-plan" style="color:var(--navy)">0</div><div class="dlbl">🚙 配車</div></div>
-            <div class="dcol" onclick="showScreen('recovery')"><div class="dnum" id="m-stat-rec-plan" style="color:var(--green)">0</div><div class="dlbl">🛻 回収</div></div>
-          </div>
-          <div class="lbl">📅 予定</div>
-        </div>
+      </div>
+      <div class="m-stat-plan">
+        <svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#5F6B58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg>予定
+        <span class="pp" onclick="showScreen('dispatch')">配車 <b id="m-stat-disp-plan">0</b></span>
+        <span class="pp" onclick="showScreen('recovery')">回収 <b id="m-stat-rec-plan">0</b></span>
       </div>
 
       <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openStockSearch()"><span class="ico">🚗</span> 稼働可能な車両を探す</button>
@@ -1453,10 +1462,10 @@ a{color:var(--info);text-decoration:none}
   </main>
 
   <nav class="m-bottom-nav" id="m-bottom-nav" style="display:none">
-    <button data-nav="home" class="active" onclick="showScreen('home')"><span class="m-nav-ico">🏡</span>ホーム</button>
-    <button data-nav="dispatch" onclick="showScreen('dispatch')"><span class="m-nav-ico">🚙</span>配車</button>
-    <button data-nav="recovery" onclick="showScreen('recovery')"><span class="m-nav-ico">🛻</span>回収</button>
-    <button data-nav="menu" onclick="showScreen('menu')"><span class="m-nav-ico">📋</span>メニュー</button>
+    <button data-nav="home" class="active" onclick="showScreen('home')"><span class="m-nav-ico"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12H3l9-9 9 9h-2"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/><path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></svg></span>ホーム</button>
+    <button data-nav="dispatch" onclick="showScreen('dispatch')"><span class="m-nav-ico"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17"/><path d="M8 7h9v9"/></svg></span>配車</button>
+    <button data-nav="recovery" onclick="showScreen('recovery')"><span class="m-nav-ico"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10"/><path d="M16 17H7V8"/></svg></span>回収</button>
+    <button data-nav="menu" onclick="showScreen('menu')"><span class="m-nav-ico"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></span>メニュー</button>
   </nav>
 </div>
 
@@ -1879,7 +1888,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-19c';
+const APP_VERSION = '2026-06-23';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
