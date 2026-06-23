@@ -87,6 +87,8 @@ body.staff-mode .admin-only{display:none !important}
 .alert-compact-table td{padding:3px 5px}
 .alert-compact-table thead th{padding:4px 5px;font-size:10px;font-weight:600}
 .alert-compact-table .empty-state{padding:6px;font-size:11px;color:var(--muted)}
+.veh-more-row{display:none}
+.veh-more-toggle:hover td{background:#EAF5DC}
 .alert-compact-table tbody tr:nth-child(even){background:transparent}
 @media(max-width:900px){.alerts-grid{grid-template-columns:1fr !important}}
 /* 日付・時刻入力のクリアボタン (1クリックで消去) */
@@ -3012,7 +3014,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23b';
+const APP_VERSION = '2026-06-23c';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7127,6 +7129,13 @@ function dashGoSearch(q){
     }, 80);
   }, 600); // 600ms入力停止で遷移
 }
+// 🔧 車検・点検「他N件」をクリックで展開 (隠れ行を表示してトグル行を消す)
+function vehShowMore(el){
+  const row = el.closest('tr');
+  const tbl = el.closest('table');
+  if(tbl) tbl.querySelectorAll('.veh-more-row').forEach(r=>{ r.style.display='table-row'; });
+  if(row) row.remove();
+}
 /* ---------------- dashboard ---------------- */
 function renderDashboard(){
   const today = todayISO();
@@ -7312,7 +7321,7 @@ function renderDashboard(){
   // 期限セクション: 「期限近し」→「期限」
   const upcomingSection = upcomingAlerts.length > 0
     ? `${overdueAlerts.length > 0 ? '<div style="font-size:10px;color:#5F5E5A;padding:4px 6px;background:#F6F8FA;margin-bottom:3px">期限</div>' : ''}
-       <table><thead><tr><th>種別</th><th>ナンバー</th><th>車種</th><th>残</th></tr></thead><tbody>${upcomingAlerts.slice(0, UPCOMING_LIMIT).map(a=>renderAlertRow(a,false)).join('')}${upcomingAlerts.length>UPCOMING_LIMIT?`<tr><td colspan="4" class="text-muted text-sm" style="text-align:center;padding:4px">他 ${upcomingAlerts.length-UPCOMING_LIMIT} 件</td></tr>`:''}</tbody></table>`
+       <table><thead><tr><th>種別</th><th>ナンバー</th><th>車種</th><th>残</th></tr></thead><tbody>${upcomingAlerts.map((a,i)=>{ let r=renderAlertRow(a,false); if(i>=UPCOMING_LIMIT) r=r.replace('<tr ','<tr class="veh-more-row" '); return r; }).join('')}${upcomingAlerts.length>UPCOMING_LIMIT?`<tr class="veh-more-toggle" onclick="vehShowMore(this)"><td colspan="4" style="text-align:center;padding:5px;cursor:pointer;color:#1C5A93;font-weight:bold;font-size:11px">▼ 他 ${upcomingAlerts.length-UPCOMING_LIMIT} 件を表示</td></tr>`:''}</tbody></table>`
     : '';
   $('dashboard-alerts').innerHTML = (overdueAlerts.length + upcomingAlerts.length) > 0
     ? overdueSection + upcomingSection
