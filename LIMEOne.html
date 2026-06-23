@@ -3023,7 +3023,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23g';
+const APP_VERSION = '2026-06-23h';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -13694,7 +13694,7 @@ function renderVehicles(){
       <td>${fmtDate(v.lastInspectionAt)||'<span class="text-muted">―</span>'}</td>
       <td class="right admin-only">${v.vehiclePrice? '¥'+Number(v.vehiclePrice).toLocaleString():''}</td>
       <td class="left text-sm">${esc(v.lessor||'')}${v.dealer?`<div class="text-muted text-sm">${esc(v.dealer)}</div>`:''}</td>
-      <td onclick="event.stopPropagation()" class="nowrap"><div class="veh-actions">${maintBtn}<button class="veh-act" onclick="openVehicleHistoryModal('${v.id}')" title="この車両の貸出履歴">📋</button><button class="veh-act" onclick="openVehicleModal('${v.id}')" title="車両情報を編集">✏️</button></div></td>
+      <td onclick="event.stopPropagation()" class="nowrap"><div class="veh-actions">${maintBtn}<button class="veh-act" onclick="openVehicleHistoryModal('${v.id}')" title="この車両の貸出履歴">📋</button></div></td>
     </tr>`;
   }).join('') || '<tr><td colspan="14" class="empty-state">車両が未登録です。「＋ 車両を追加」から登録してください。</td></tr>';
 
