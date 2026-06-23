@@ -48,7 +48,7 @@ body{font-family:'Meiryo','メイリオ',sans-serif;font-size:13px;color:var(--t
 .nav-tab.active{background:var(--lime);color:var(--deep);font-weight:bold;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .nav-spacer{flex:1}
 /* ページコンテキストバー: ナビ直下、「現在地+説明+ヒント」を常時表示。初見者向け */
-.page-context-bar{display:flex;align-items:center;gap:10px;padding:6px 16px;background:linear-gradient(90deg,#F8FAFC 0%,#EDF3F8 60%,#F0F5FF 100%);border-bottom:1px solid #DDE5EC;font-size:12px;color:#444;flex-shrink:0;min-height:30px}
+.page-context-bar{display:flex;align-items:center;gap:10px;padding:6px 16px;background:#F8FAFC;border-bottom:1px solid var(--border);font-size:12px;color:#444;flex-shrink:0;min-height:30px}
 .page-context-bar .pc-icon{font-size:16px}
 .page-context-bar .pc-title{font-weight:bold;color:var(--navy);font-size:13px}
 .page-context-bar .pc-divider{color:#999;font-size:11px;margin:0 2px}
@@ -106,7 +106,7 @@ body.staff-mode .admin-only{display:none !important}
 .kpi-card:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(30,58,43,.08)}
 .kpi-card.green{border-left-color:var(--green)}
 .kpi-card.orange{border-left-color:var(--orange)}
-.kpi-card.red{border-left-color:var(--red);background:#FFF5F5}
+.kpi-card.red{border-left-color:var(--red)}
 .kpi-card.red .kpi-value{color:var(--red);font-weight:bold}
 .kpi-card.lime{border-left-color:var(--lime)}
 .kpi-label{font-size:11px;color:var(--muted);margin-bottom:4px;letter-spacing:.04em}
@@ -190,7 +190,7 @@ tr.row-kakunin td:first-child{box-shadow:inset 4px 0 0 #D4AD00}
 tr.row-haishayotei td:first-child{box-shadow:inset 4px 0 0 #3D7DC5}
 tr.row-haisha td:first-child{box-shadow:inset 4px 0 0 #D86C18}
 tr.row-faxsentinst td:first-child{box-shadow:inset 4px 0 0 #7A5530}
-tr.row-riyou td:first-child{box-shadow:inset 4px 0 0 #3BA645;background-image:linear-gradient(180deg,#F3FBF4,#F3FBF4)}
+tr.row-riyou td:first-child{box-shadow:inset 4px 0 0 #3BA645}
 tr.row-kaishu td:first-child{box-shadow:inset 4px 0 0 #CC5088}
 tr.row-henkyaku td:first-child{box-shadow:inset 4px 0 0 #3F5C8E}
 tr.row-kariseikyu td:first-child{box-shadow:inset 4px 0 0 #D86070}
@@ -245,8 +245,7 @@ tr.row-cancel td{opacity:.55}
 .btn-green{background:var(--lime);color:var(--deep);font-weight:bold}
 .btn-warning{background:#F39C12;color:#fff;font-weight:bold}
 .btn-warning:hover{background:#D87C04}
-tr.veh-maint-row{background:#FFF7E6}
-tr.veh-maint-row:hover{background:#FFECD6}
+tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 .btn-orange{background:var(--orange);color:#fff}
 .btn-sm{padding:4px 10px;font-size:11px}
 .btn-xs{padding:2px 7px;font-size:10px}
@@ -270,20 +269,20 @@ tr.veh-maint-row:hover{background:#FFECD6}
 .form-control:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(79,138,62,.16);background:#FCFEF9}
 .form-control[readonly]{background:#F4F6F2;color:#555;cursor:default}
 .form-control[readonly]:focus{box-shadow:none;border-color:var(--border)}
-.form-section{font-size:12px;font-weight:bold;color:var(--deep);background:linear-gradient(90deg,#F0F6E8,#F7FBEF);padding:7px 14px;margin:14px -18px 8px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--lime);border-bottom:1px solid var(--border);letter-spacing:.04em;transition:background .3s,border-left-color .3s,box-shadow .3s}
+.form-section{font-size:12px;font-weight:bold;color:var(--deep);background:var(--bg);padding:7px 14px;margin:14px -18px 8px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--lime);border-bottom:1px solid var(--border);letter-spacing:.04em;transition:background .3s,border-left-color .3s,box-shadow .3s}
 /* 案件モーダルを開いた時、状態に応じた該当セクションを一瞬ハイライト */
 .form-section.sec-highlight-pulse{background:linear-gradient(90deg,#FFF7C4,#FFFCE0)!important;border-left-color:#E69E50!important;box-shadow:0 0 0 2px rgba(230,158,80,.25)}
-.form-section.sec-receive{background:linear-gradient(90deg,#E8F1FB,#F4F9FE);color:#0B5FAD;border-left-color:#4F8FCB}
-.form-section.sec-insurer{background:linear-gradient(90deg,#EEF8EE,#F7FCF7);color:#1F6B1F;border-left-color:#5DAA5D}
-.form-section.sec-driver{background:linear-gradient(90deg,#FFF4E1,#FFFAEF);color:#9C6500;border-left-color:#E6B450}
-.form-section.sec-dispatch{background:linear-gradient(90deg,#FFE9D6,#FFF6EE);color:#A05B1C;border-left-color:#E69A5A}
-.form-section.sec-vehicle{background:linear-gradient(90deg,#E8E2F2,#F4F1FA);color:#4B2A7A;border-left-color:#8E72B6}
-.form-section.sec-period{background:linear-gradient(90deg,#FFE9F0,#FFF4F8);color:#A8256F;border-left-color:#E08AAB}
-.form-section.sec-deadline{background:linear-gradient(90deg,#FFF4D6,#FFFBEB);color:#B45309;border-left:6px solid #E6C54C}
-.form-section.sec-usage{background:linear-gradient(90deg,#D6E4F5,#EDF3FA);color:#1F3864;border-left:6px solid #1F3864;font-weight:bold}
-.form-section.sec-billing{background:linear-gradient(90deg,#FFF8D0,#FFFCEC);color:#8A6A00;border-left-color:#E6C54C}
-.form-section.sec-check{background:linear-gradient(90deg,#E5F4F1,#F2FAF8);color:#1A6B5E;border-left-color:#5BB1A0}
-.form-section.sec-memo{background:linear-gradient(90deg,#F1E8FA,#F9F4FE);color:#5A2E84;border-left-color:#9F7BC9}
+.form-section.sec-receive{color:#0B5FAD;border-left-color:#4F8FCB}
+.form-section.sec-insurer{color:#1F6B1F;border-left-color:#5DAA5D}
+.form-section.sec-driver{color:#9C6500;border-left-color:#E6B450}
+.form-section.sec-dispatch{color:#A05B1C;border-left-color:#E69A5A}
+.form-section.sec-vehicle{color:#4B2A7A;border-left-color:#8E72B6}
+.form-section.sec-period{color:#A8256F;border-left-color:#E08AAB}
+.form-section.sec-deadline{color:#B45309;border-left:6px solid #E6C54C}
+.form-section.sec-usage{color:#1F3864;border-left:6px solid #1F3864;font-weight:bold}
+.form-section.sec-billing{color:#8A6A00;border-left-color:#E6C54C}
+.form-section.sec-check{color:#1A6B5E;border-left-color:#5BB1A0}
+.form-section.sec-memo{color:#5A2E84;border-left-color:#9F7BC9}
 .modal-body .form-section:first-child{margin-top:0}
 /* 案件モーダル セクションジャンプチップ (2026-06-10b 磨き込み) */
 .sec-jump-bar{position:sticky;top:0;z-index:6;display:flex;gap:5px;flex-wrap:wrap;background:rgba(255,255,255,.97);padding:6px 0;margin:4px 0 2px;border-bottom:1px solid var(--border)}
@@ -297,14 +296,14 @@ tr.veh-maint-row:hover{background:#FFECD6}
 .gr-step-num{width:30px;height:30px;border-radius:50%;background:#FFF3E6;color:#7A4500;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:bold;flex:0 0 auto}
 .gr-step-title{font-size:16px;font-weight:bold;color:var(--navy);letter-spacing:.02em}
 .gr-step-micro{font-size:12.5px;color:#66686C;line-height:1.7;margin:8px 0 16px}
-.gr-det{border:1px solid #EAEAEA;border-radius:8px;background:#FBFAF7;margin-top:14px}
+.gr-det{border:1px solid var(--border);border-radius:8px;background:#fff;margin-top:14px}
 .gr-det>summary{list-style:none;cursor:pointer;padding:10px 14px;font-size:13px;color:#7A4500;font-weight:bold;display:flex;align-items:center;gap:7px;user-select:none}
 .gr-det>summary::-webkit-details-marker{display:none}
 .gr-det>summary::before{content:'\25B8';display:inline-block;transition:transform .2s;color:#B5895A}
 .gr-det[open]>summary::before{transform:rotate(90deg)}
 .gr-det-badge{margin-left:auto;font-size:11px;font-weight:normal;color:#888;background:#fff;border:1px solid #E6E6E6;border-radius:10px;padding:2px 9px}
 .gr-det-body{padding:6px 14px 14px}
-.gr-total-card{background:#FFF7E6;border:1px solid #E69E50;border-radius:10px;padding:12px 18px;margin:12px 0}
+.gr-total-card{background:#fff;border:1px solid var(--border);border-left:4px solid #E69E50;border-radius:10px;padding:12px 18px;margin:12px 0}
 .gr-nights{margin-top:12px;font-size:15px;font-weight:bold;color:var(--navy);min-height:20px}
 /* ナビ横スクロールの気づきインジケータ (2026-06-10b): タブが右に隠れている時だけ表示 */
 #nav-scroll-hint{position:fixed;top:0;right:0;width:34px;display:none;align-items:center;justify-content:center;background:linear-gradient(90deg,rgba(30,58,43,0),var(--deep) 55%);color:#fff;font-weight:bold;font-size:16px;z-index:60;cursor:pointer;user-select:none}
@@ -3014,7 +3013,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23c';
+const APP_VERSION = '2026-06-23d';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
