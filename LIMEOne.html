@@ -1185,9 +1185,13 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     <div class="toolbar">
       <div class="card-title" style="margin:0">🚙 登録車両</div>
       <select id="veh-filter-class" onchange="renderVehicles()"><option value="">クラス(全て)</option></select>
-      <select id="veh-filter-status" onchange="renderVehicles()">
+      <select id="veh-filter-status" onchange="renderVehicles()" title="登録ステータスで絞り込み">
+        <option value="">ステータス(全て)</option>
+        <option>稼働可</option><option>点検入庫中</option><option>納車待ち</option><option>売却済</option><option>廃車</option>
+      </select>
+      <select id="veh-filter-op" onchange="renderVehicles()" title="今の貸出状況で絞り込み">
         <option value="">稼働状況(全て)</option>
-        <option>稼働可</option><option>点検入庫中</option><option>売却済</option><option>廃車</option>
+        <option>稼働中</option><option>仮予約</option><option>空車</option><option>点検入庫中</option>
       </select>
       <input id="veh-search" placeholder="🔍 ナンバー下4桁 / 車種 / メーカー / カラー" oninput="dbRenderVehicles()">
       <div style="flex:1"></div>
@@ -3023,7 +3027,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23h';
+const APP_VERSION = '2026-06-23i';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -13623,7 +13627,7 @@ function plateString(p){ if(!p) return ''; return [p.area,p.no,p.kana,p.tail].fi
 
 function renderVehicles(){
   // capture current filter values BEFORE rebuilding (to preserve selection)
-  const fs = $('veh-filter-status').value, fc = $('veh-filter-class').value, q = ($('veh-search').value||'').toLowerCase();
+  const fs = $('veh-filter-status').value, fc = $('veh-filter-class').value, fo = ($('veh-filter-op')||{}).value||'', q = ($('veh-search').value||'').toLowerCase();
   // populate class options once or refresh content while keeping value
   const sel = $('veh-filter-class');
   const newHTML = '<option value="">クラス(全て)</option>' + DATA.vehicleClasses.map(v=>`<option value="${esc(v.code)}">${esc(v.code)} ${esc(v.name||'')}</option>`).join('');
@@ -13641,6 +13645,7 @@ function renderVehicles(){
     else rows = rows.filter(v=>v.status===fs);
   }
   if(fc) rows = rows.filter(v=>v.vehicleClass===fc);
+  if(fo){ const _opMap = computeVehicleOperationMap(); rows = rows.filter(v => (_opMap[v.id]||{label:'空車'}).label === fo); }
   if(q){
     const last4 = q.match(/^\d{4}$/);
     if(last4){
