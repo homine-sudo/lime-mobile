@@ -211,6 +211,9 @@ tr.row-cancel td{opacity:.55}
 .wk-tr{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px}
 .wk-kind{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:bold;color:#2A6FB0;white-space:nowrap}
 .wk-card.ret .wk-kind{color:#B23030}
+.wk-tag2{font-size:9px;font-weight:bold;padding:0 4px;border-radius:3px;background:#EEF0EC;color:#555;margin-left:3px}
+.wk-tag2.urg{background:#FCE8E8;color:#B23030}
+.wk-sama{font-size:9px;font-weight:normal;color:#9AA694;margin-left:2px}
 .wk-chip{font-size:10px;font-weight:bold;padding:1px 7px;border-radius:9px;white-space:nowrap;border:1px solid;flex:0 0 auto}
 .wk-chip.c-todo{background:#FFF0D6;color:#9C5800;border-color:#E6B062}
 .wk-chip.c-plan{background:#E2EFFA;color:#1C5A93;border-color:#9CC4E8}
@@ -3009,7 +3012,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23a';
+const APP_VERSION = '2026-06-23b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7328,14 +7331,25 @@ function renderDashboard(){
   const byDay = {}; weekDays.forEach(d => byDay[d] = []);
   DATA.cases.forEach(c=>{
     if(c.status==='キャンセル') return;
-    // 配車予定 (📤): dispatchAt の日
+    const isGen = c.category==='一般';
+    // 📤 配車(損保)/出発(一般): dispatchAt or useStart の日。一般の時刻は useStartTime(出発予定時間)
     const dDispatch = (c.dispatchAt||c.useStart||'').slice(0,10);
     if(dDispatch && dDispatch >= weekStart && dDispatch <= weekEnd){
-      byDay[dDispatch].push({c, kind:'dispatch', t: (c.dispatchAt||'').includes('T')? c.dispatchAt.split('T')[1].slice(0,5) : ''});
+      let dt = (c.dispatchAt||'').includes('T') ? c.dispatchAt.split('T')[1].slice(0,5) : '';
+      if(!dt && isGen) dt = c.useStartTime || '';
+      byDay[dDispatch].push({c, kind:'dispatch', t: dt});
     }
-    const dReturn = (c.recoveryCalledAt||'').slice(0,10);
-    if(dReturn && dReturn >= weekStart && dReturn <= weekEnd){
-      byDay[dReturn].push({c, kind:'return', t:''});
+    // 📥 回収(損保=recoveryCalledAt)/返却予定(一般=useEnd・時刻 useEndTime)
+    if(isGen){
+      const dRet = (c.useEnd||'').slice(0,10);
+      if(dRet && dRet >= weekStart && dRet <= weekEnd){
+        byDay[dRet].push({c, kind:'return', t: c.useEndTime || ''});
+      }
+    } else {
+      const dReturn = (c.recoveryCalledAt||'').slice(0,10);
+      if(dReturn && dReturn >= weekStart && dReturn <= weekEnd){
+        byDay[dReturn].push({c, kind:'return', t:''});
+      }
     }
   });
   // 各日内ソート: 時刻順 → kind順
@@ -7361,6 +7375,7 @@ function renderDashboard(){
     return `<td>${list.slice(0,10).map(it=>{
       const c = it.c;
       const isReturn = it.kind==='return';
+      const isGen = c.category==='一般';
       const driver = c.driverName || c.contractorName || '';
       // 車両情報を車両マスタから取得 (4桁プレート + クラス + 車名)
       const info = (typeof caseVehicleFullInfo === 'function') ? caseVehicleFullInfo(c) : { name:'', plate:'', classCode:'' };
@@ -7373,8 +7388,20 @@ function renderDashboard(){
       if(done){ chipCls='c-done'; chipTxt='✓ 完了'; }
       else if(c.status==='受付' || c.status==='確認中'){ chipCls='c-todo'; chipTxt=statusLabel(c.status); }
       else { chipCls='c-plan'; chipTxt=statusLabel(c.status); }
-      // 種別(配車=青レーン / 回収=赤レーン)+時刻
-      const kindTxt = (isReturn?'📥 回収':'📤 配車') + (it.t? ' '+it.t : '');
+      // 種別(配車/出発=青レーン / 回収/返却=赤レーン)+時刻+配車注記(頃/迄/至急/前日/前々日)
+      const kindLabel = isReturn ? (isGen?'返却':'回収') : (isGen?'出発':'配車');
+      let timeStr = it.t || '';
+      let timeAnno = '';
+      if(!isReturn){
+        const _note = c.dispatchNote || '';
+        const _has = (tok)=> _note.split(/[\s　・,、]+/).includes(tok);
+        if(timeStr && _has('頃')) timeStr += '頃';
+        else if(timeStr && _has('迄')) timeStr += '迄';
+        if(_has('至急')) timeAnno += '<span class="wk-tag2 urg">至急</span>';
+        if(_has('前々日配車')) timeAnno += '<span class="wk-tag2">前々日</span>';
+        else if(_has('前日配車')) timeAnno += '<span class="wk-tag2">前日</span>';
+      }
+      const kindTxt = (isReturn?'📥 ':'📤 ') + kindLabel + (timeStr? ' '+timeStr : '') + timeAnno;
       const memoActive = (c.internalMemo||'').trim() && !c.internalMemoDone;
       const memoHtml = memoActive
         ? `<div class="wk-memo" title="${esc(c.internalMemo)}">📝 ${esc((c.internalMemo||'').slice(0,18))}${(c.internalMemo||'').length>18?'…':''}</div>`
@@ -7391,7 +7418,7 @@ function renderDashboard(){
         <div class="wk-bar"></div>
         <div class="wk-bd">
           <div class="wk-tr"><span class="wk-kind">${kindTxt}</span><span class="wk-chip ${chipCls}">${esc(chipTxt)}</span></div>
-          <div class="wk-nm-row"><span class="wk-nm">${esc(driver.slice(0,14))||'（氏名未設定）'}</span><span class="wk-no">${esc(c.caseNo||'')}</span></div>
+          <div class="wk-nm-row"><span class="wk-nm">${driver?esc(driver.slice(0,14))+'<span class="wk-sama">様</span>':'（氏名未設定）'}</span><span class="wk-no">${esc(c.caseNo||'')}</span></div>
           ${vehHtml}
           ${destHtml}
           ${memoHtml}
