@@ -1260,13 +1260,14 @@ a{color:var(--info);text-decoration:none}
     <section id="m-screen-flow-prep" class="m-screen">
       <div class="m-flow-prog" id="m-flow-prog-prep"></div>
       <div class="m-info-box" id="m-prep-info"></div>
-      <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openHandoverPreview()">📄 手配書（全体）を見る</button>
+      <button class="m-btn m-btn-primary m-btn-block" style="margin-bottom:10px" id="m-prep-edit-btn" onclick="editFlowCase()"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/></svg>案件を編集</button>
+      <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openHandoverPreview()"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>手配書（全体）を見る</button>
       <div class="m-detail-section">
-        <h3>🚙 配車する車両</h3>
+        <h3><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg>配車する車両</h3>
         <div id="m-prep-vehicle"></div>
       </div>
       <div class="m-detail-section">
-        <h3>📋 配車前のチェック</h3>
+        <h3><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 13l2 2l4-4"/></svg>配車前のチェック</h3>
         <div style="font-size:13px;color:var(--muted);line-height:1.7">
           ・車両に異常がないか確認<br>
           ・燃料・書類・鍵の準備<br>
@@ -1887,7 +1888,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-23c';
+const APP_VERSION = '2026-06-23d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3362,14 +3363,15 @@ function renderRecoveryList(){
 // FLOW: COMMON RENDERING (info box + progress)
 // ============================================================
 function renderInfoBox(c, hostId, kind){
+  const ic=(p,w)=>`<svg class="m-svg" viewBox="0 0 24 24" width="${w||13}" height="${w||13}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   const tel = (raw) => raw
-    ? `<a class="m-tel-link" href="tel:${esc(String(raw).replace(/[^0-9+]/g,''))}">☎ ${esc(raw)}</a>`
+    ? `<a class="m-tel-link" href="tel:${esc(String(raw).replace(/[^0-9+]/g,''))}">${ic('<path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/>')} ${esc(raw)}</a>`
     : '<span class="empty">―</span>';
   const mapsBtn = c.dispatchToAddress
-    ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.dispatchToAddress)}" target="_blank" rel="noopener">📍 地図を開く</a>`
+    ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.dispatchToAddress)}" target="_blank" rel="noopener">${ic('<path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>')} 地図を開く</a>`
     : '';
   const dispatchInfo = c.dispatchAt
-    ? `${fmtDateTime(c.dispatchAt)}${c.dispatchNote?`<br><span style="font-size:12px;color:var(--muted)">📝 ${esc(c.dispatchNote)}</span>`:''}`
+    ? `${fmtDateTime(c.dispatchAt)}${c.dispatchNote?`<br><span style="font-size:12px;color:var(--muted)">${ic('<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/>')} ${esc(c.dispatchNote)}</span>`:''}`
     : '<span class="empty">未設定</span>';
   const driver = c.driverName || c.contractorName || '';
   const ins = findInsurer(c.insurerId) || {};
@@ -3394,18 +3396,18 @@ function renderInfoBox(c, hostId, kind){
   const _destName  = _isRec ? _rd.name : (c.dispatchToName||'');
   const _destAddr  = _isRec ? _rd.address : (c.dispatchToAddress||'');
   const _destTel   = _isRec ? _rd.tel : (c.dispatchToContactTel||c.dispatchToTel||'');
-  const _destLabel = _isRec ? (_rd.isDifferent ? '🏁回収先(配車先と別)' : '回収先') : '配車先';
+  const _destLabel = _isRec ? (_rd.isDifferent ? ic('<path d="M5 21V5a1 1 0 0 1 1-1h11l-2 4l2 4H6"/>')+' 回収先(配車先と別)' : '回収先') : '配車先';
   const _destContact = (_isRec && _rd.isDifferent) ? '' : (c.dispatchToContact||'');
-  const _destMapBtn = _destAddr ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(_destAddr)}" target="_blank" rel="noopener">📍 地図を開く</a>` : '';
+  const _destMapBtn = _destAddr ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(_destAddr)}" target="_blank" rel="noopener">${ic('<path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>')} 地図を開く</a>` : '';
 
   // 🔧 案C: 回収画面で、その車が車検/点検間近なら「回収後そのまま工場へ」を表示
   const _va = (_isRec && typeof _mVehAlertForCase==='function') ? _mVehAlertForCase(c) : null;
   const _vaRow = _va
-    ? `<div class="m-info-row" style="background:#FFF9E6;border-radius:6px;border:1px solid #F0D58A"><span class="lbl" style="color:#7A4500">🔧 点検期日</span><span class="val" style="color:#7A4500"><b>${esc(_va.kind)}</b> ${_va.daysLeft<0?`<span style="color:#A32D2D;font-weight:bold">${-_va.daysLeft}日超過</span>`:`残${_va.daysLeft}日`} <span style="color:var(--muted)">(${esc(fmtDateFull(_va.date))})</span><br><b>→ 回収後そのまま工場へ</b></span></div>`
+    ? `<div class="m-info-row" style="background:#FFF9E6;border-radius:6px;border:1px solid #F0D58A"><span class="lbl" style="color:#7A4500">${ic('<path d="M7 10h3v-3l-3.5-3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8l3.5 3.5"/>')} 点検期日</span><span class="val" style="color:#7A4500"><b>${esc(_va.kind)}</b> ${_va.daysLeft<0?`<span style="color:#A32D2D;font-weight:bold">${-_va.daysLeft}日超過</span>`:`残${_va.daysLeft}日`} <span style="color:var(--muted)">(${esc(fmtDateFull(_va.date))})</span><br><b>→ 回収後そのまま工場へ</b></span></div>`
     : '';
 
   $(hostId).innerHTML = `
-    <div class="caseno">📋 ${esc(c.caseNo||'')}</div>
+    <div class="caseno">${ic('<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>',15)} ${esc(c.caseNo||'')}</div>
     <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
     ${_staffRow}
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val strong">${kind==='recovery'?(fmtDateFull(c.recoveryCalledAt)||'<span class="empty">未設定</span>'):dispatchInfo}</span></div>
@@ -3413,7 +3415,7 @@ function renderInfoBox(c, hostId, kind){
     <div class="m-info-row"><span class="lbl">運転者</span><span class="val">${driver?`<b>${esc(driver)}</b>`:'<span class="empty">―</span>'} ${c.driverTel?tel(c.driverTel):''}</span></div>
     <div class="m-info-row"><span class="lbl">${_destLabel}</span><span class="val">${_destName?`<b>${esc(_destName)}</b>`:'<span class="empty">―</span>'}${_destContact?`<br>担当: ${esc(_destContact)} 様`:''}${_destTel?` ${tel(_destTel)}`:''}</span></div>
     ${_destAddr?`<div class="m-info-row"><span class="lbl">住所</span><span class="val">${esc(_destAddr)} ${_destMapBtn}</span></div>`:''}
-    <div class="m-info-row m-memo-edit-row" onclick="openMemoEdit('${c.id}')" style="cursor:pointer" title="タップで社内メモを編集"><span class="lbl">社内メモ</span><span class="val" style="color:#5A3F00;background:#FFF9E6;padding:6px 8px;border-radius:6px">${c.internalMemo?esc(c.internalMemo):'<span style="color:var(--muted);font-style:italic">＋ タップで追加</span>'} <span style="float:right;color:var(--muted);font-size:12px">✏️</span></span></div>
+    <div class="m-info-row m-memo-edit-row" onclick="openMemoEdit('${c.id}')" style="cursor:pointer" title="タップで社内メモを編集"><span class="lbl">社内メモ</span><span class="val" style="color:#5A3F00;background:#FFF9E6;padding:6px 8px;border-radius:6px">${c.internalMemo?esc(c.internalMemo):'<span style="color:var(--muted);font-style:italic">＋ タップで追加</span>'} <span style="float:right;color:var(--muted)">${ic('<path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/>')}</span></span></div>
     ${c.negotiationLog?`<div class="m-info-row"><span class="lbl">交渉記録</span><span class="val" style="color:#3D2459;background:#FAF5FE;padding:6px 8px;border-radius:6px;white-space:pre-wrap;line-height:1.6">${esc(c.negotiationLog)}</span></div>`:''}
   `;
 }
@@ -3443,7 +3445,7 @@ function renderFlowProgress(hostId, currentStep){
   $(hostId).innerHTML = steps.map((s, i) => {
     const cls = i < activeIdx ? 'done' : (i === activeIdx ? 'active' : '');
     return `<div class="m-flow-step ${cls}"><div class="num">${i+1}</div><div class="lbl">${s.lbl}</div></div>` +
-      (i < steps.length-1 ? '<div class="m-flow-arrow">›</div>' : '');
+      (i < steps.length-1 ? '<div class="m-flow-arrow"><svg class="m-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg></div>' : '');
   }).join('');
 }
 
@@ -3488,10 +3490,13 @@ async function renderFlowPrepScreen(){
   const hasVehicle = !!(c.vehicleId || c.vehicleName || c.plateNo);
   const depBtn = $('m-prep-depart-btn');
   if(depBtn){
-    depBtn.textContent = '📷 チェックシート撮影へ';
+    depBtn.innerHTML = '<svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M5 7h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2"/><circle cx="12" cy="13" r="3"/></svg>チェックシート撮影へ';
     depBtn.disabled = !hasVehicle;
   }
 }
+
+// フロー準備画面から案件を編集 (タップ→フロー の導線で編集に辿り着けるように)
+function editFlowCase(){ if(_flow && _flow.caseId && typeof openNewCaseModal==='function') openNewCaseModal(_flow.caseId); }
 
 function renderPrepVehicleSection(c){
   const host = $('m-prep-vehicle');
@@ -3500,20 +3505,20 @@ function renderPrepVehicleSection(c){
   if(hasVehicle){
     host.innerHTML = `
       <div class="m-vehicle-current">
-        <div class="v-ico-big">🚙</div>
+        <div class="v-ico-big"><svg class="m-svg" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg></div>
         <div class="v-info">
           <div class="v-name">${esc(c.vehicleName||c.vehicleClass||'(車種未設定)')}</div>
           <div class="v-plate">${esc(plate)||'<span style="color:#BBB">ナンバー未設定</span>'}</div>
         </div>
       </div>
-      <button class="m-btn m-btn-outline m-btn-block" style="margin-top:10px" onclick="openVehiclePicker()">🔄 別の車両に変更</button>
+      <button class="m-btn m-btn-outline m-btn-block" style="margin-top:10px" onclick="openVehiclePicker()"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/></svg>別の車両に変更</button>
     `;
   } else {
     host.innerHTML = `
       <div class="m-vehicle-empty">
-        <div class="ico">🚙</div>
+        <div class="ico"><svg class="m-svg" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg></div>
         <div style="font-size:13px;margin-bottom:10px">車両が未割当てです</div>
-        <button class="m-btn m-btn-primary" onclick="openVehiclePicker()">📋 車両を選択する</button>
+        <button class="m-btn m-btn-primary" onclick="openVehiclePicker()"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>車両を選択する</button>
       </div>
     `;
   }
@@ -6213,17 +6218,18 @@ async function renderCaseDetail(c){
   const canEdit = ['受付','確認中','配車予定','配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)
     && !c.recoveryCompleted && c.category !== '一般';
   const acts = [];
-  if(canDispatch) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterDispatchFlow('${c.id}')">🚙 配車フローへ進む</button>`);
-  if(canRecovery) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterRecoveryFlow('${c.id}')">🛻 回収フローへ進む</button>`);
+  const _svg = (p,w)=>`<svg class="m-svg" viewBox="0 0 24 24" width="${w||18}" height="${w||18}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px">${p}</svg>`;
+  if(canDispatch) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterDispatchFlow('${c.id}')">${_svg('<path d="M17 7L7 17"/><path d="M8 7h9v9"/>')}配車フローへ進む</button>`);
+  if(canRecovery) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterRecoveryFlow('${c.id}')">${_svg('<path d="M7 7l10 10"/><path d="M16 17H7V8"/>')}回収フローへ進む</button>`);
   if(canEdit){
-    acts.push(`<button class="m-btn m-btn-primary m-btn-block" onclick="openNewCaseModal('${c.id}')">✏️ 案件を編集</button>`);
-    acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="openVehiclePicker()">🔄 車両を変更</button>`);
+    acts.push(`<button class="m-btn m-btn-primary m-btn-block" onclick="openNewCaseModal('${c.id}')">${_svg('<path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/>')}案件を編集</button>`);
+    acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="openVehiclePicker()">${_svg('<path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/>')}車両を変更</button>`);
   }
   if(c.dispatchToTel || c.driverTel){
     const tel = c.dispatchToContactTel || c.dispatchToTel || c.driverTel;
-    acts.push(`<a class="m-btn m-btn-outline m-btn-block" href="tel:${esc(String(tel).replace(/[^0-9+]/g,''))}">☎ 電話する (${esc(tel)})</a>`);
+    acts.push(`<a class="m-btn m-btn-outline m-btn-block" href="tel:${esc(String(tel).replace(/[^0-9+]/g,''))}">${_svg('<path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/>')}電話する (${esc(tel)})</a>`);
   }
-  acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="goBack()">← 戻る</button>`);
+  acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="goBack()">${_svg('<path d="M19 12H5"/><path d="M11 18l-6-6l6-6"/>')}戻る</button>`);
   $('m-cd-actions').innerHTML = acts.join('');
 }
 
