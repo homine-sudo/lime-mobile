@@ -696,7 +696,7 @@ a{color:var(--info);text-decoration:none}
   min-height:16px;
 }
 .m-week-cnt{
-  display:inline-flex;align-items:center;
+  display:inline-flex;align-items:center;gap:2px;
   font-size:10px;font-weight:800;line-height:1;
   padding:2px 5px;border-radius:8px;
   background:rgba(255,255,255,.95);
@@ -1189,7 +1189,7 @@ a{color:var(--info);text-decoration:none}
 
       <!-- グローバル検索 -->
       <div class="m-search-box">
-        <span class="m-search-ico">🔍</span>
+        <span class="m-search-ico"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
         <input type="search" id="m-home-search" placeholder="案件検索: 受付No / 契約者 / 運転者 / 配車先 / 車両ナンバー" oninput="renderHomeSearch()" autocomplete="off">
         <button class="m-search-clear" onclick="clearSearch('m-home-search', renderHomeSearch)" aria-label="クリア">✕</button>
       </div>
@@ -1213,18 +1213,18 @@ a{color:var(--info);text-decoration:none}
         <span class="pp" onclick="showScreen('recovery')">回収 <b id="m-stat-rec-plan">0</b></span>
       </div>
 
-      <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openStockSearch()"><span class="ico">🚗</span> 稼働可能な車両を探す</button>
+      <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:14px" onclick="openStockSearch()"><span class="ico"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg></span> 稼働可能な車両を探す</button>
 
-      <button class="m-btn m-btn-block" id="m-home-insp-btn" style="margin-bottom:14px;display:none;border:1px solid #E0A800;color:#7A4500;background:#FFFBF0" onclick="setVehTab('due');showScreen('vehicles')"><span class="ico">🔧</span> <span id="m-home-insp-txt">点検・車検まもなく</span></button>
+      <button class="m-btn m-btn-block" id="m-home-insp-btn" style="margin-bottom:14px;display:none;border:1px solid #E0A800;color:#7A4500;background:#FFFBF0" onclick="setVehTab('due');showScreen('vehicles')"><span class="ico"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10h3v-3l-3.5-3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8l3.5 3.5"/></svg></span> <span id="m-home-insp-txt">点検・車検まもなく</span></button>
 
       <div class="m-home-quick">
-        <h3>⚡ クイック登録</h3>
+        <h3><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em;margin-right:5px"><path d="M13 3v7h6l-8 11v-7H5l8-11"/></svg>クイック登録</h3>
         <div class="m-quick-row">
           <button class="m-btn m-btn-success" onclick="openNewCaseModal()">
-            <span class="ico">📝</span>新規案件
+            <span class="ico"><svg class="m-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6"/><path d="M9 14h6"/></svg></span>新規案件
           </button>
           <button class="m-btn m-btn-recovery" onclick="openQuickRecModal()">
-            <span class="ico">🛻</span>回収予定登録
+            <span class="ico"><svg class="m-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10"/><path d="M16 17H7V8"/></svg></span>回収予定登録
           </button>
         </div>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px">
@@ -1377,7 +1377,7 @@ a{color:var(--info);text-decoration:none}
     <section id="m-screen-vehicles" class="m-screen">
       <div class="m-date-bar">🚙 車両管理</div>
       <div class="m-search-box">
-        <span class="m-search-ico">🔍</span>
+        <span class="m-search-ico"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
         <input type="search" id="m-veh-search" placeholder="検索: ナンバー / 車種 / クラス" oninput="renderVehiclesList()" autocomplete="off">
         <button class="m-search-clear" onclick="clearSearch('m-veh-search', renderVehiclesList)" aria-label="クリア">✕</button>
       </div>
@@ -1888,7 +1888,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-23';
+const APP_VERSION = '2026-06-23a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3050,8 +3050,8 @@ function renderHomeCalendar(){
         const dowCls = it.dow === 0 ? 'sun' : it.dow === 6 ? 'sat' : '';
         const todayCls = it.isToday ? 'today' : '';
         const counts = [];
-        if(it.dispCount > 0) counts.push(`<span class="m-week-cnt disp">🚙${it.dispCount}</span>`);
-        if(it.recCount > 0) counts.push(`<span class="m-week-cnt rec">🛻${it.recCount}</span>`);
+        if(it.dispCount > 0) counts.push(`<span class="m-week-cnt disp"><svg class="m-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17"/><path d="M8 7h9v9"/></svg>${it.dispCount}</span>`);
+        if(it.recCount > 0) counts.push(`<span class="m-week-cnt rec"><svg class="m-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10"/><path d="M16 17H7V8"/></svg>${it.recCount}</span>`);
         const body = counts.length
           ? `<div class="m-week-counts">${counts.join('')}</div>`
           : `<div class="m-week-counts"><span class="m-week-empty">–</span></div>`;
