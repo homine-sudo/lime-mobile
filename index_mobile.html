@@ -418,8 +418,8 @@ a{color:var(--info);text-decoration:none}
   transition:transform .15s,color .15s;
 }
 .m-card:active .m-card-right{color:var(--green);transform:translateX(2px)}
-.m-card.flow-dispatch{border-left-color:var(--green)}
-.m-card.flow-recovery{border-left-color:var(--purple)}
+.m-card.flow-dispatch{border-left-color:#3D7DC5}
+.m-card.flow-recovery{border-left-color:var(--red)}
 .m-card.done{
   opacity:.55;border-left-color:#7AAE2D;background:#F6F9F0;
   position:relative;
@@ -427,13 +427,12 @@ a{color:var(--info);text-decoration:none}
 .m-card.done .m-card-right{display:none}
 .m-card-row1{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .m-card-time{
-  font-weight:700;color:var(--navy);font-size:15px;
-  background:linear-gradient(135deg,#E8F0E0,#DDE8D1);
-  padding:3px 11px;border-radius:7px;letter-spacing:.02em;
-  box-shadow:inset 0 -1px 0 rgba(30,58,43,.05);
+  font-weight:700;color:#fff;font-size:15px;
+  background:var(--navy);
+  padding:3px 11px;border-radius:8px;letter-spacing:.02em;
 }
 .m-card-time.urgent{
-  background:linear-gradient(135deg,#FFE5E5,#FFD0D0);color:var(--red);
+  background:var(--red);color:#fff;
 }
 .m-card-caseno{font-weight:700;color:var(--navy);font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;letter-spacing:.02em}
 .m-card-badge{
@@ -1888,7 +1887,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-23a';
+const APP_VERSION = '2026-06-23b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3155,7 +3154,7 @@ function _renderSearchResultCard(c){
         ${plate ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${esc(plate)}</span></div>` : ''}
         ${completedHtml}
       </div>
-      <div class="m-card-right">›</div>
+      <div class="m-card-right"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg></div>
     </div>
   `;
 }
@@ -3224,17 +3223,17 @@ function _renderCaseCard(c, kind){
 
   // 電話リンクヘルパー (tap-to-call)
   const tel = (raw, label) => raw
-    ? `<a class="m-tel-link" href="tel:${esc(String(raw).replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()">☎ ${esc(label||raw)}</a>`
+    ? `<a class="m-tel-link" href="tel:${esc(String(raw).replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()"><svg class="m-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg> ${esc(label||raw)}</a>`
     : '';
   const mapsLink = c.dispatchToAddress
-    ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.dispatchToAddress)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 地図</a>`
+    ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.dispatchToAddress)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg class="m-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg> 地図</a>`
     : '';
 
   const _pp = [];
   if(c.dispatchTimePending) _pp.push('工場');
   if(c.dispatchTimePendingDriver) _pp.push('運転者');
   const pendingBadge = _pp.length
-    ? ` <span class="m-pending-badge" title="${_pp.join('/')}と時間調整中">📞${_pp.join('/')}調整中</span>`
+    ? ` <span class="m-pending-badge" title="${_pp.join('/')}と時間調整中"><svg class="m-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>${_pp.join('/')}調整中</span>`
     : '';
   const dispatchInfo = c.dispatchAt
     ? `${fmtDateTime(c.dispatchAt)}${pendingBadge}${c.dispatchNote?` ・${esc(c.dispatchNote)}`:''}`
@@ -3283,7 +3282,7 @@ function _renderCaseCard(c, kind){
           ${c.category === '一般' && (c.useStart || c.useEnd) ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>` : ''}
           ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
         </div>
-        <div class="m-card-right">›</div>
+        <div class="m-card-right"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg></div>
       </div>
     `;
   }
@@ -3304,7 +3303,7 @@ function _renderCaseCard(c, kind){
         ${c.dispatchToAddress ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsLink}</span></div>` : ''}
         ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
       </div>
-      <div class="m-card-right">›</div>
+      <div class="m-card-right"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg></div>
     </div>
   `;
 }
