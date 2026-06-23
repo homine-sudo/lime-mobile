@@ -246,6 +246,14 @@ tr.row-cancel td{opacity:.55}
 .btn-warning{background:#F39C12;color:#fff;font-weight:bold}
 .btn-warning:hover{background:#D87C04}
 tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
+/* 車両一覧 操作列: 統一サイズのアイコンボタン (点検入庫/履歴/編集) */
+.veh-actions{display:inline-flex;gap:4px;align-items:center}
+.veh-act{width:28px;height:26px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:14px;line-height:1;color:#555;padding:0;transition:background .12s,border-color .12s}
+.veh-act:hover{background:#EAF5DC;border-color:#B7C6AB}
+.veh-act.warn{color:var(--orange);border-color:#E9C9A0}
+.veh-act.warn:hover{background:#FFF3E4;border-color:var(--orange)}
+.veh-act.ok{color:var(--green);border-color:#A9CE9A}
+.veh-act.ok:hover{background:#EAF5DC;border-color:var(--green)}
 .btn-orange{background:var(--orange);color:#fff}
 .btn-sm{padding:4px 10px;font-size:11px}
 .btn-xs{padding:2px 7px;font-size:10px}
@@ -3015,7 +3023,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23f';
+const APP_VERSION = '2026-06-23g';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -13668,8 +13676,8 @@ function renderVehicles(){
     const insWarn = d => { if(!d) return '<span class="text-muted">―</span>'; const dl=Math.floor((parseDate(d)-new Date())/86400000); if(dl<0) return `<span class="badge badge-red" title="${dl*-1}日超過">${fmtDate(d)} ⚠</span>`; if(dl<60) return `<span class="badge badge-orange" title="あと${dl}日">${fmtDate(d)}</span>`; return fmtDate(d); };
     const op = vehOpMap[v.id] || {label:'空車', badge:'badge-gray', tip:''};
     const maintBtn = isMaint
-      ? `<button class="btn btn-xs btn-green" onclick="toggleMaintenance('${v.id}')" title="点検から復帰させる">↩ 復帰</button>`
-      : `<button class="btn btn-xs btn-warning" onclick="toggleMaintenance('${v.id}')" title="点検入庫中にする">🔧 点検入庫</button>`;
+      ? `<button class="veh-act ok" onclick="toggleMaintenance('${v.id}')" title="点検から復帰させる">↩</button>`
+      : `<button class="veh-act warn" onclick="toggleMaintenance('${v.id}')" title="点検入庫中にする (整備・車検へ)">🔧</button>`;
     const cls = findClass(v.vehicleClass);
     const dailyEx = classDailyIncl(cls);
     return `<tr onclick="openVehicleModal('${v.id}')" class="${isMaint?'veh-maint-row':''}">
@@ -13686,7 +13694,7 @@ function renderVehicles(){
       <td>${fmtDate(v.lastInspectionAt)||'<span class="text-muted">―</span>'}</td>
       <td class="right admin-only">${v.vehiclePrice? '¥'+Number(v.vehiclePrice).toLocaleString():''}</td>
       <td class="left text-sm">${esc(v.lessor||'')}${v.dealer?`<div class="text-muted text-sm">${esc(v.dealer)}</div>`:''}</td>
-      <td onclick="event.stopPropagation()" class="nowrap">${maintBtn} <button class="btn btn-xs btn-outline" onclick="openVehicleHistoryModal('${v.id}')" title="この車両の貸出履歴">📋 履歴</button> <button class="btn btn-xs btn-outline" onclick="openVehicleModal('${v.id}')">編集</button></td>
+      <td onclick="event.stopPropagation()" class="nowrap"><div class="veh-actions">${maintBtn}<button class="veh-act" onclick="openVehicleHistoryModal('${v.id}')" title="この車両の貸出履歴">📋</button><button class="veh-act" onclick="openVehicleModal('${v.id}')" title="車両情報を編集">✏️</button></div></td>
     </tr>`;
   }).join('') || '<tr><td colspan="14" class="empty-state">車両が未登録です。「＋ 車両を追加」から登録してください。</td></tr>';
 
