@@ -1089,15 +1089,35 @@ tr.veh-maint-row:hover{background:#FFECD6}
     </div>
     <div id="dash-month-sales" style="display:flex;gap:22px;flex-wrap:wrap;align-items:baseline"></div>
   </div>
-  <!-- 3) アラート2カラム: 利用期限・回収予定 と 車検・点検 -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px" class="alerts-grid">
-    <div class="card alert-compact" style="padding:8px 10px;border-left:4px solid var(--orange);margin-bottom:0" id="dashboard-deadline-alerts-card">
-      <div class="card-title" style="margin-bottom:4px;font-size:12px;display:flex;align-items:center;gap:6px">
-        ⏰ <span>利用期限・回収予定</span>
-        <span id="deadline-alert-count" style="color:var(--orange);font-weight:bold;font-size:11px"></span>
-        <span class="text-muted" style="font-size:10px;margin-left:auto">7日以内 / 超過</span>
+  <!-- 3) アラート: 左カラムに短いカードを縦積み(利用期限/回収/freee) + 右カラム=車検・点検(件数多) で左右の高さ偏りを解消 (2026-06-23a) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;align-items:start" class="alerts-grid">
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:0" class="alerts-left">
+      <div class="card alert-compact" style="padding:8px 10px;border-left:4px solid var(--orange);margin-bottom:0" id="dashboard-deadline-alerts-card">
+        <div class="card-title" style="margin-bottom:4px;font-size:12px;display:flex;align-items:center;gap:6px">
+          ⏰ <span>利用期限・回収予定</span>
+          <span id="deadline-alert-count" style="color:var(--orange);font-weight:bold;font-size:11px"></span>
+          <span class="text-muted" style="font-size:10px;margin-left:auto">7日以内 / 超過</span>
+        </div>
+        <div class="tbl-wrap alert-compact-table" id="dashboard-deadline-alerts"></div>
       </div>
-      <div class="tbl-wrap alert-compact-table" id="dashboard-deadline-alerts"></div>
+      <div class="card alert-compact admin-only" style="padding:8px 10px;border-left:4px solid #C53030;margin-bottom:0" id="dashboard-collection-card">
+        <div class="card-title" style="margin-bottom:4px;font-size:12px;display:flex;align-items:center;gap:6px">
+          💰 <span>回収アラート</span>
+          <span class="text-muted" style="font-size:10px;margin-left:auto">振込期日超過</span>
+        </div>
+        <div class="tbl-wrap alert-compact-table" id="dashboard-collection"></div>
+      </div>
+      <!-- v2026.04.29ba: 💸 freee修正待ち通知 (admin-only / 件数があれば表示) -->
+      <div class="card admin-only" id="dashboard-freee-fix-card" style="display:none;padding:8px 12px;background:#FFF7E6;border-left:5px solid #E69E50;cursor:pointer;margin-bottom:0" onclick="showPage('payments')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">💸</span>
+          <div style="flex:1">
+            <div style="font-weight:bold;color:#7A4500;font-size:13px">freee修正待ち <span id="dashboard-freee-fix-count" style="background:#E69E50;color:#fff;padding:1px 7px;border-radius:10px;font-size:11px;margin-left:4px"></span></div>
+            <div style="font-size:11px;color:#7A4500" id="dashboard-freee-fix-sub">CSV出力後に金額調整された案件があります</div>
+          </div>
+          <span style="font-size:12px;color:#7A4500;font-weight:bold">売上入金管理 →</span>
+        </div>
+      </div>
     </div>
     <div class="card alert-compact" style="padding:8px 10px;border-left:4px solid #888780;margin-bottom:0" id="dashboard-veh-alerts-card">
       <div class="card-title" style="margin-bottom:4px;font-size:12px;display:flex;align-items:center;gap:6px;color:#2C2C2A">
@@ -1107,21 +1127,6 @@ tr.veh-maint-row:hover{background:#FFECD6}
         <button class="btn btn-outline btn-xs" style="margin-left:auto;padding:2px 8px;font-size:10px" onclick="showPage('vehicles')">→</button>
       </div>
       <div class="tbl-wrap alert-compact-table" id="dashboard-alerts"></div>
-    </div>
-  </div>
-  <div class="card admin-only" style="padding:10px 12px;border-left:4px solid #C53030" id="dashboard-collection-card">
-    <div class="card-title" style="margin-bottom:6px;font-size:13px">💰 回収アラート <span class="text-muted text-sm">(振込期日超過)</span></div>
-    <div class="tbl-wrap alert-compact-table" id="dashboard-collection"></div>
-  </div>
-  <!-- v2026.04.29ba: 💸 freee修正待ち通知 (admin-only / 件数があれば表示) -->
-  <div class="card admin-only" id="dashboard-freee-fix-card" style="display:none;padding:8px 12px;background:#FFF7E6;border-left:5px solid #E69E50;cursor:pointer" onclick="showPage('payments')">
-    <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:18px">💸</span>
-      <div style="flex:1">
-        <div style="font-weight:bold;color:#7A4500;font-size:13px">freee修正待ち <span id="dashboard-freee-fix-count" style="background:#E69E50;color:#fff;padding:1px 7px;border-radius:10px;font-size:11px;margin-left:4px"></span></div>
-        <div style="font-size:11px;color:#7A4500" id="dashboard-freee-fix-sub">CSV出力後に金額調整された案件があります</div>
-      </div>
-      <span style="font-size:12px;color:#7A4500;font-weight:bold">売上入金管理 →</span>
     </div>
   </div>
   <!-- 📊 詳細グラフ → 「データ分析」/「売上集計」タブ -->
@@ -3004,7 +3009,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23';
+const APP_VERSION = '2026-06-23a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
