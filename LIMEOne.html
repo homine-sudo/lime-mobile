@@ -1302,7 +1302,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <button class="modal-close" title="閉じる" onclick="closeModal('noc-input-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div id="noc-case-info" class="text-sm text-muted" style="margin-bottom:12px;padding:8px 10px;background:#F5F3FF;border-radius:6px;border-left:3px solid #7C3AED"></div>
+      <div id="noc-case-info" class="text-sm text-muted" style="margin-bottom:12px;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;border-left:3px solid #7C3AED"></div>
       <div class="form-group">
         <label class="form-label">休業補償料</label>
         <input class="form-control" id="noc-amt-noc" type="number" inputmode="numeric" oninput="_nocRecalcTotal()" style="text-align:right;font-size:15px;font-weight:bold">
@@ -1433,7 +1433,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     <div class="modal-footer">
       <button class="btn btn-secondary btn-sm" onclick="closeVehicleModal()">キャンセル</button>
       <div class="spacer"></div>
-      <button class="btn btn-outline btn-sm admin-only" id="vm-sell" style="display:none;color:#B45309;border-color:#E6C54C" onclick="openSellDialog()">💸 売却</button>
+      <button class="btn btn-outline btn-sm admin-only" id="vm-sell" style="display:none" onclick="openSellDialog()">💸 売却</button>
       <button class="btn btn-danger btn-sm" id="vm-delete" style="display:none" onclick="deleteVehicle()">🗑️ 削除</button>
       <button class="btn btn-primary" onclick="saveVehicle()">💾 保存</button>
     </div>
@@ -3015,7 +3015,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23e';
+const APP_VERSION = '2026-06-23f';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -14183,10 +14183,10 @@ function _renderMastersInner(){
       const needsCheck = !!c.note && (/自動追加|要確認/.test(c.note)) && !((c.tel||'').trim());
       const telEmpty = !((c.tel||'').trim());
       const faxEmpty = !((c.fax||'').trim());
-      const emptyStyle = ';background:#fff8d6;border-color:#e0b400'; // 薄黄色+橙縁
+      const emptyStyle = ';box-shadow:inset 3px 0 0 var(--orange);border-color:var(--orange)'; // 白地+左橙アクセント(要確認)
       return `<div style="display:grid;grid-template-columns:24px 1.2fr 0.9fr 0.9fr 1fr 1fr 1.2fr 24px;gap:4px;margin-bottom:3px;align-items:center" title="${needsCheck?'⚠️ 案件履歴から自動追加・電話番号要確認':''}">
       <input type="radio" name="def-${idx}" ${c.isDefault?'checked':''} title="既定にする" onchange="setDefaultContact(${idx},${ci})">
-      <input value="${esc(c.name||'')}" placeholder="氏名" oninput="DATA.insurers[${idx}].contacts[${ci}].name=this.value;saveDebounced()" style="${needsCheck?'border-left:3px solid #e0b400;padding-left:6px':''}">
+      <input value="${esc(c.name||'')}" placeholder="氏名" oninput="DATA.insurers[${idx}].contacts[${ci}].name=this.value;saveDebounced()" style="${needsCheck?'border-left:3px solid var(--orange);padding-left:6px':''}">
       <input value="${esc(c.dept||'')}" placeholder="部署" oninput="DATA.insurers[${idx}].contacts[${ci}].dept=this.value;saveDebounced()">
       <input value="${esc(c.role||'')}" placeholder="役職" oninput="DATA.insurers[${idx}].contacts[${ci}].role=this.value;saveDebounced()">
       <input value="${esc(c.tel||'')}" placeholder="${needsCheck?'⚠️TEL要確認':'TEL'}" oninput="DATA.insurers[${idx}].contacts[${ci}].tel=this.value;saveDebounced()" style="${telEmpty?emptyStyle:''}">
