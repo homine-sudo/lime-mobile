@@ -708,17 +708,19 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 @media(max-width:1300px){.bi-hero-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:900px){.bi-hero-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.bi-hero-grid{grid-template-columns:1fr}}
-.bi-hero-card{background:#F8FAFC;border:0.5px solid #E1E8EE;border-radius:8px;padding:12px 14px;position:relative;overflow:hidden}
-.bi-hero-card.hc-money{background:linear-gradient(180deg,#F0FDF8 0%,#fff 100%);border-color:#9FE1CB}
-.bi-hero-card.hc-count{background:linear-gradient(180deg,#F0F7FE 0%,#fff 100%);border-color:#B5D4F4}
-.bi-hero-card.hc-avg{background:linear-gradient(180deg,#FEF7F4 0%,#fff 100%);border-color:#F5C4B3}
-.bi-hero-card.hc-rate{background:linear-gradient(180deg,#F4F2FE 0%,#fff 100%);border-color:#CECBF6}
+.bi-hero-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--navy);border-radius:8px;padding:12px 14px;position:relative;overflow:hidden}
+.bi-hero-card.hc-money{border-left-color:#1D9E75}
+.bi-hero-card.hc-count{border-left-color:#185FA5}
+.bi-hero-card.hc-avg{border-left-color:#993C1D}
+.bi-hero-card.hc-rate{border-left-color:#534AB7}
+.bi-hero-card.hc-disc{border-left-color:#C53030}
 .bi-hero-label{font-size:11px;color:#666;margin-bottom:3px;display:flex;align-items:center;gap:4px}
 .bi-hero-value{font-size:22px;font-weight:bold;line-height:1.15;color:#222}
 .bi-hero-card.hc-money .bi-hero-value{color:#0F6E56}
 .bi-hero-card.hc-count .bi-hero-value{color:#185FA5}
 .bi-hero-card.hc-avg .bi-hero-value{color:#993C1D}
 .bi-hero-card.hc-rate .bi-hero-value{color:#534AB7}
+.bi-hero-card.hc-disc .bi-hero-value{color:#C53030}
 .bi-hero-meta{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11px;flex-wrap:wrap}
 .bi-hero-meta .delta-up{color:#1D9E75;font-weight:bold}
 .bi-hero-meta .delta-down{color:#A32D2D;font-weight:bold}
@@ -729,7 +731,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 .bi-chart-row-small.bi-chart-row-4col{grid-template-columns:repeat(4,1fr)}
 @media(max-width:1400px){.bi-chart-row-small.bi-chart-row-4col{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.bi-chart-row-small.bi-chart-row-4col{grid-template-columns:1fr}}
-.bi-section-header{font-size:13px;font-weight:bold;color:var(--navy);padding:4px 10px;margin:0 0 6px 0;border-left:3px solid var(--navy);background:linear-gradient(90deg,#F0F5FF 0%,transparent 100%);letter-spacing:0.5px}
+.bi-section-header{font-size:13px;font-weight:bold;color:var(--navy);padding:4px 10px;margin:0 0 6px 0;border-left:3px solid var(--navy);background:transparent;letter-spacing:0.5px}
 .bi-rank-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 @media(max-width:1100px){.bi-rank-row{grid-template-columns:1fr}}
 
@@ -1577,7 +1579,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 <div class="page" id="page-payments">
   <div class="kpi-grid" id="pay-kpi"></div>
   <!-- 🤖 freee自動処理ログ (管理者のみ) 2026-06-05c -->
-  <div id="pay-freee-autolog-card" class="card admin-only" style="border-left:5px solid #2D5F1F;background:#F4FBF6;margin-bottom:10px">
+  <div id="pay-freee-autolog-card" class="card admin-only" style="border-left:4px solid var(--green);margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:10px;padding:4px 0 6px;flex-wrap:wrap">
       <span class="card-title" style="margin:0;color:#2D5F1F">🤖 freee自動処理ログ</span>
       <span style="font-size:11px;color:#666">1日1回 自動（①売上登録 / ②入金照合）・管理者のみ表示</span>
@@ -1585,7 +1587,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     <div id="pay-freee-autolog-body" style="font-size:13px"></div>
   </div>
   <!-- v2026.04.29ba: 💸 freee修正待ちリスト (CSVエクスポート後に金額調整された案件) -->
-  <div id="pay-freee-fix-card" class="card admin-only" style="display:none;border-left:5px solid #E69E50;background:linear-gradient(90deg,#FFF7E6 0%,#FFFDF7 80%);margin-bottom:10px">
+  <div id="pay-freee-fix-card" class="card admin-only" style="display:none;border-left:4px solid var(--orange);margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:10px;padding:4px 0 6px;flex-wrap:wrap">
       <span class="card-title" style="margin:0;color:#7A4500">💸 freee修正待ちリスト</span>
       <span id="pay-freee-fix-summary" style="font-size:12px;color:#7A4500;font-weight:normal"></span>
@@ -1623,8 +1625,8 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <select id="pay-filter-status" onchange="renderPayments()" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px"><option value="">状態</option><option value="返却済">車両回収済(仮請求)</option><option value="仮請求">仮請求</option><option value="請求済">請求済</option><option value="入金済">入金済</option></select>
       <span style="color:#ccc">|</span>
       <span style="font-size:11px;color:#2D5F1F;font-weight:bold">入金:</span>
-      <select id="pay-filter-paid-month" onchange="renderPayments()" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:#F4FBF6;font-size:12px"><option value="">月</option></select>
-      <input id="pay-filter-paid-date" type="date" onchange="renderPayments()" title="入金日(特定日)で絞込" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:#F4FBF6;width:175px;font-size:12px">
+      <select id="pay-filter-paid-month" onchange="renderPayments()" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px"><option value="">月</option></select>
+      <input id="pay-filter-paid-date" type="date" onchange="renderPayments()" title="入金日(特定日)で絞込" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;width:175px;font-size:12px">
       <button type="button" onclick="$('pay-filter-paid-month').value='';$('pay-filter-paid-date').value='';renderPayments()" title="入金フィルタクリア" style="border:none;background:transparent;cursor:pointer;color:#999;font-size:14px;padding:0 4px">✕</button>
     </div>
     <div class="tbl-wrap">
@@ -1640,7 +1642,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 <div class="page" id="page-bi">
 
   <!-- ==== ① 期間セレクタ ==== -->
-  <div class="card bi-section-period" style="padding:6px 10px;margin-bottom:8px;background:linear-gradient(90deg,#F8FAFC 0%,#F0F5FF 100%)">
+  <div class="card bi-section-period" style="padding:6px 10px;margin-bottom:8px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="font-size:12px;font-weight:bold;color:var(--navy)">📅 対象期間:</span>
       <div class="bi-period-group">
@@ -1666,7 +1668,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       </div>
       <div style="flex:1"></div>
       <span id="bi-range-label" style="font-size:12px;font-weight:bold;color:var(--navy);background:#FFFFFF;padding:4px 10px;border-radius:4px;border:1px solid #CFDEF7"></span>
-      <button class="btn btn-outline btn-sm no-print" onclick="printBIReport()" title="経営分析を PDFとして印刷/保存" style="background:#FFF7E6;border-color:#E69E50;color:#7A4500;font-size:12px;padding:4px 10px;font-weight:bold">📄 PDF出力</button>
+      <button class="btn btn-outline btn-sm no-print" onclick="printBIReport()" title="経営分析を PDFとして印刷/保存" style="font-size:12px;padding:4px 10px;font-weight:bold">📄 PDF出力</button>
     </div>
   </div>
 
@@ -1693,7 +1695,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 
   <div id="bi-yoy-section" class="bi-section-header" style="margin-top:12px;display:none">📊 年度比較サマリー</div>
   <div id="bi-yoy-card" class="card" style="padding:10px;display:none">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:6px 10px;background:#F0F5FF;border-radius:5px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:5px">
       <span style="font-size:12px;font-weight:bold;color:var(--navy)">📌 比較対象:</span>
       <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px">A:
         <select id="bi-yoy-year-a" onchange="updateBiYoyCompare()" style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px"></select>
@@ -1883,7 +1885,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     </div>
   </div>
   <!-- 💰 車両別 生涯ROI (購入〜現在/売却までの稼ぎ・データ正本=index_admin_mobile.html と同じ埋め込み実績) -->
-  <div class="card" style="padding:10px;margin-bottom:8px;background:#FFFDF2;border:1px solid #E8DCA8">
+  <div class="card" style="padding:10px;margin-bottom:8px;border-left:4px solid #ED7D31">
     <div class="card-title" style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
       💰 <span>車両別 生涯ROI</span>
       <span style="font-size:11px;color:#666;font-weight:normal">※購入〜現在/売却までの累計。期間セレクタ非連動 (2024-25=確定実績・2026年〜=ライブ集計)</span>
@@ -2198,7 +2200,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       </div>
     </div>
     <!-- v2026.04.29cf: freee MCP連携準備 (将来の自動化) -->
-    <div style="margin-top:14px;padding:12px;background:#F4FBF6;border:1px dashed #4F8A3E;border-radius:6px">
+    <div style="margin-top:14px;padding:12px;background:#fff;border:1px solid var(--border);border-left:4px solid var(--green);border-radius:6px">
       <div style="font-size:13px;font-weight:bold;color:#2D5F1F;margin-bottom:6px">✅ freee API直結 (売上の自動登録) — 稼働中</div>
       <div style="font-size:11px;color:#444;line-height:1.7">
         上の「freee API URL」を設定すれば、売上はGAS経由でfreeeに直接登録できます (CSV手動アップ不要)。<br>
@@ -2208,7 +2210,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     </div>
     <!-- 外部連携: Google カレンダー + LINE 通知 -->
     <div class="settings-section">🔔 外部連携 (Google カレンダー / LINE 通知)</div>
-    <div style="background:#F0F8FF;border-left:4px solid #1976D2;padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.7">
+    <div style="background:#fff;border:1px solid var(--border);border-left:4px solid #1976D2;padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.7">
       📡 <b>新規案件登録時・回収予定日登録時</b> に Google Apps Script (GAS) 経由で:<br>
       📅 ライム共有カレンダーへ予定追加 / 📨 スタッフグループ LINE へ通知<br>
       <span style="color:#666">初回のみ GAS スクリプトの作成と URL 登録が必要です。詳細は下の「📖 セットアップ手順を見る」をクリック。</span>
@@ -2271,7 +2273,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   </div>
   <div class="card">
     <div class="settings-section">💾 データ管理 / バックアップ</div>
-    <div style="background:#F0F5FF;border-left:4px solid var(--navy);padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.7">
+    <div style="background:#fff;border:1px solid var(--border);border-left:4px solid var(--navy);padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.7">
       🛡 <b>大事なデータです。定期的にExcel/JSONでバックアップを取りましょう。</b><br>
       まずは下の <b>「🛡 バックアップ状況を見る」</b> で現状を確認してください。<br>
       システムが壊れた場合、別PCで <b>index_v3.html</b> を開き「📂 完全バックアップ復元」でExcel/JSONから完全復元できます。
@@ -2318,7 +2320,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   </div>
   <div class="card">
     <div class="settings-section">🔢 受付番号 採番ルール</div>
-    <div style="background:#F4FBF6;border-left:3px solid var(--green);padding:12px;border-radius:4px;font-size:12px;line-height:1.8;margin-bottom:10px">
+    <div style="background:#fff;border:1px solid var(--border);border-left:4px solid var(--green);padding:12px;border-radius:4px;font-size:12px;line-height:1.8;margin-bottom:10px">
       <b>📋 運用方針</b><br>
       ・<b>Excelから取り込んだ既存番号は変更しません</b>（手作業で付けた番号も保持）<br>
       ・<b>システムから新規受付した時のみ自動採番</b>します<br>
@@ -2337,7 +2339,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     </div>
     <details>
       <summary class="text-sm" style="cursor:pointer;color:var(--muted)">⚠️ 既存データを一括振り直し（通常は使用しません）</summary>
-      <div style="background:#FFF7E6;border-left:3px solid var(--orange);padding:10px;border-radius:4px;margin-top:8px;font-size:12px">
+      <div style="background:#fff;border:1px solid var(--border);border-left:4px solid var(--orange);padding:10px;border-radius:4px;margin-top:8px;font-size:12px">
         <b>⚠️ 注意</b>: このボタンを押すと <u>Excelから取り込んだ既存番号も含めて全件</u> が新形式に振り直されます。通常運用では押さないでください。<br>
         過去番号を会計や保険会社へ提出済みの場合、整合性が崩れます。
       </div>
@@ -2376,7 +2378,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <button type="button" class="sec-jump-chip" onclick="jumpCaseSection('sec-billing')">🧾 請求・入金</button>
       </div>
       <!-- 必須・推奨項目の凡例 -->
-      <div style="font-size:11px;color:#666;background:#F8FAFC;border:1px solid #E0E6F0;border-radius:4px;padding:6px 10px;margin:6px 0">
+      <div style="font-size:11px;color:#666;background:#fff;border:1px solid var(--border);border-radius:4px;padding:6px 10px;margin:6px 0">
         <b style="color:#C53030">*</b> = 必須項目（保存ブロック）
         <b style="color:#E69E50">△</b> = 推奨項目（未入力なら確認ダイアログ）
       </div>
@@ -2503,9 +2505,9 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <div class="form-group" style="grid-column:span 3"><label class="form-label">完了備考</label><input class="form-control" id="f-dispatchDoneNote" placeholder="実配車者/引渡状況など"></div>
         <div class="form-group" style="grid-column:span 4">
           <label class="form-label">📛 車両情報 <span class="text-muted text-sm">「車両一覧から選ぶ」で検索・選択 / 他社借の場合はチェックしてフリー入力</span></label>
-          <div id="f-vehicle-picked" style="display:none;background:linear-gradient(90deg,#F7FDEC,#fff);padding:6px 12px;border:1px solid var(--lime);border-radius:6px;margin-bottom:6px;align-items:center;gap:10px"></div>
+          <div id="f-vehicle-picked" style="display:none;background:#fff;padding:6px 12px;border:1px solid var(--border);border-left:4px solid var(--lime);border-radius:6px;margin-bottom:6px;align-items:center;gap:10px"></div>
           <!-- 🏢 他社借チェックボックス -->
-          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:6px 10px;background:#FFF8E1;border:1px solid #E6C54C;border-radius:5px">
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-left:3px solid #E6C54C;border-radius:5px">
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin:0">
               <input type="checkbox" id="f-isBorrowed" onchange="onBorrowedToggle()" style="cursor:pointer">
               <span style="font-weight:bold;color:#B45309">🏢 他社借</span>
@@ -2532,7 +2534,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <div id="f-vehicle-warning" style="display:none;color:var(--red);font-size:11px;margin-top:-8px"></div>
       <!-- 🟧 返却期限(目安) - 保険会社が定める日の目安。実際の返却日ではない -->
       <div class="form-section sec-deadline">⏰ 返却期限(目安) <span style="font-size:10px;font-weight:normal;color:#888;margin-left:6px">※実際の返却日ではなく、保険の目安日</span></div>
-      <div style="background:#FFF8E1;border:1px solid #E6C54C;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="background:#fff;border:1px solid var(--border);border-left:4px solid #E6C54C;border-radius:8px;padding:10px 12px;margin-bottom:8px">
         <div class="form-grid cols4">
           <div class="form-group"><label class="form-label" style="color:#D97706;font-weight:bold">⏰ 返却期限(目安)</label><input class="form-control" id="f-useDeadline" type="date" style="border-color:#E6C54C;background:#fff" title="保険会社の目安日(例: 利用開始+30日)"></div>
           <div class="form-group" style="grid-column:span 3"><label class="form-label">期限メモ</label><input class="form-control" id="f-deadlineNote" placeholder="例: 車両修理完了予定日 等"></div>
@@ -2540,7 +2542,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       </div>
       <!-- 🟦 利用期間(実績) - 実際に貸し出した期間。金額算出の根拠 -->
       <div class="form-section sec-usage" id="sec-usage-header">📅 利用期間(実績) と 金額調整 <span style="font-size:10px;font-weight:normal;color:#888;margin-left:6px">※実際の貸出・返却日。金額計算の根拠</span></div>
-      <div style="background:#E8F2FC;border:2px solid var(--navy);border-radius:8px;padding:10px" id="sec-usage-container">
+      <div style="background:#fff;border:1px solid var(--border);border-left:4px solid var(--navy);border-radius:8px;padding:10px" id="sec-usage-container">
         <!-- ① 利用期間 → 利用金額 -->
         <div id="use-period-block" style="background:#fff;border-radius:6px;padding:10px 12px;border-left:4px solid var(--navy);margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
           <div style="font-size:11px;color:var(--navy);font-weight:bold;margin-bottom:6px;display:flex;align-items:center;gap:6px">
@@ -2559,10 +2561,10 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
             <div class="form-group"><label class="form-label" style="color:var(--navy);font-weight:bold">💰 利用額(税込)</label><input class="form-control" id="f-grossAmount" readonly style="text-align:right;font-weight:bold;background:#F8F8F8;font-size:15px;color:var(--navy)"></div>
           </div>
           <div style="display:grid;grid-template-columns:1.2fr 1.6fr 2fr;gap:10px;align-items:end;margin-top:8px;padding-top:8px;border-top:1px dashed #CFDEF7">
-            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">🚛 回収日 (予定/完了)</label><input class="form-control" id="f-recoveryCalledAt" type="date" onchange="onRecoveryDateChange()" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB;font-weight:bold"></div>
+            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">🚛 回収日 (予定/完了)</label><input class="form-control" id="f-recoveryCalledAt" type="date" onchange="onRecoveryDateChange()" style="font-size:13px;border-color:#C9A9E0;font-weight:bold"></div>
             <div class="form-group" style="margin:0">
               <label class="form-label" style="color:#2D5F1F;font-weight:bold">回収完了チェック</label>
-              <label id="f-recoveryCompleted-wrap" style="display:flex;align-items:center;gap:6px;background:#F0FFF0;border:2px solid #4F8A3E;border-radius:5px;padding:6px 10px;cursor:pointer;font-weight:bold;color:#2D5F1F;font-size:12px;height:30px;box-sizing:border-box">
+              <label id="f-recoveryCompleted-wrap" style="display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--green);border-radius:5px;padding:6px 10px;cursor:pointer;font-weight:bold;color:#2D5F1F;font-size:12px;height:30px;box-sizing:border-box">
                 <input type="checkbox" id="f-recoveryCompleted" onchange="onRecoveryCompletedChange()" style="width:16px;height:16px;cursor:pointer;flex-shrink:0">
                 <span>✓ 回収完了したらON</span>
               </label>
@@ -2573,19 +2575,19 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           </div>
           <!-- 回収先 (配車先と異なる場合のみ入力・空欄なら配車先と同じ) -->
           <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:10px;align-items:end;margin-top:8px;padding-top:8px;border-top:1px dashed #CFDEF7">
-            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">🏁 回収先名 <span class="text-muted" style="font-size:10px;font-weight:normal">(配車先と違う時だけ入力・空欄=配車先と同じ)</span></label><input class="form-control" id="f-recoveryToName" placeholder="例: 自宅へ配車→回収は工場 の工場名" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB"></div>
-            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">回収先住所</label><input class="form-control" id="f-recoveryToAddress" placeholder="空欄なら配車先住所" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB"></div>
-            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">回収先TEL</label><input class="form-control" id="f-recoveryToTel" placeholder="空欄なら配車先TEL" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB"></div>
+            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">🏁 回収先名 <span class="text-muted" style="font-size:10px;font-weight:normal">(配車先と違う時だけ入力・空欄=配車先と同じ)</span></label><input class="form-control" id="f-recoveryToName" placeholder="例: 自宅へ配車→回収は工場 の工場名" style="font-size:13px;border-color:#C9A9E0"></div>
+            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">回収先住所</label><input class="form-control" id="f-recoveryToAddress" placeholder="空欄なら配車先住所" style="font-size:13px;border-color:#C9A9E0"></div>
+            <div class="form-group" style="margin:0"><label class="form-label" style="color:#6B3F8C;font-weight:bold">回収先TEL</label><input class="form-control" id="f-recoveryToTel" placeholder="空欄なら配車先TEL" style="font-size:13px;border-color:#C9A9E0"></div>
           </div>
           <!-- 走行距離記録 (任意入力・キロ数のみ) -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:10px;align-items:end;margin-top:8px;padding-top:8px;border-top:1px dashed #CFDEF7">
             <div class="form-group" style="margin:0">
               <label class="form-label" style="color:#6B3F8C;font-weight:bold">📏 貸出メーター (km)</label>
-              <input class="form-control" id="f-meterAtDispatch" type="number" min="0" step="1" placeholder="例: 28450" oninput="onMeterChange()" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB;text-align:right">
+              <input class="form-control" id="f-meterAtDispatch" type="number" min="0" step="1" placeholder="例: 28450" oninput="onMeterChange()" style="font-size:13px;border-color:#C9A9E0;text-align:right">
             </div>
             <div class="form-group" style="margin:0">
               <label class="form-label" style="color:#6B3F8C;font-weight:bold">📏 返却メーター (km)</label>
-              <input class="form-control" id="f-meterAtReturn" type="number" min="0" step="1" placeholder="例: 28612" oninput="onMeterChange()" style="font-size:13px;border-color:#C9A9E0;background:#F8F3FB;text-align:right">
+              <input class="form-control" id="f-meterAtReturn" type="number" min="0" step="1" placeholder="例: 28612" oninput="onMeterChange()" style="font-size:13px;border-color:#C9A9E0;text-align:right">
             </div>
             <div class="form-group" style="margin:0">
               <label class="form-label">利用走行距離 (km)</label>
@@ -2614,7 +2616,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         </div>
 
         <!-- ③ 請求書発行 (v24aw: 返却状況廃止) -->
-        <div style="background:#FFF8E1;border-radius:6px;padding:6px 10px;border-left:4px solid #E6C54C;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;border-left:4px solid #E6C54C;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,0,0,.04)">
           <div style="display:inline-flex;align-items:center;gap:4px">
             <span style="background:var(--navy);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold">③</span>
             <span style="font-size:12px;color:var(--navy);font-weight:bold">請求書発行</span>
@@ -2652,13 +2654,13 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           </div>
           <textarea class="form-control" id="f-note1" rows="2"></textarea>
         </div>
-        <div class="form-group"><label class="form-label" style="color:var(--red)">🔒 社内メモ (手配書には表示されません)</label><textarea class="form-control" id="f-internalMemo" rows="2" placeholder="社内向けの注意事項など" style="background:#FFF5F5"></textarea></div>
+        <div class="form-group"><label class="form-label" style="color:var(--red)">🔒 社内メモ (手配書には表示されません)</label><textarea class="form-control" id="f-internalMemo" rows="2" placeholder="社内向けの注意事項など"></textarea></div>
       </div>
       <!-- v2026.05: 交渉記録 (社内専用・手配書/請求書には表示されない) -->
       <div class="form-grid cols1" style="margin-top:8px">
         <div class="form-group">
           <label class="form-label" style="color:#6B3F8C">🤝 交渉記録 <span class="text-muted text-sm">(社内専用・手配書/請求書には表示されません)</span></label>
-          <textarea class="form-control" id="f-negotiationLog" rows="3" placeholder="保険会社との交渉経緯・口頭でのやり取り・特例承諾の根拠など&#10;例) 2026/05/10 14:30 ◯◯損保 田中様より口頭で日額1万円上限承諾&#10;例) 2026/05/11 09:00 利用期限延長の合意取り付け" style="background:#FAF5FE;font-family:inherit;line-height:1.6"></textarea>
+          <textarea class="form-control" id="f-negotiationLog" rows="3" placeholder="保険会社との交渉経緯・口頭でのやり取り・特例承諾の根拠など&#10;例) 2026/05/10 14:30 ◯◯損保 田中様より口頭で日額1万円上限承諾&#10;例) 2026/05/11 09:00 利用期限延長の合意取り付け" style="font-family:inherit;line-height:1.6"></textarea>
         </div>
       </div>
       <!-- 請求・入金 (簡素化版: 状態+発行日/期日 / 入金情報 / 上書き項目) -->
@@ -2666,7 +2668,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <!-- v2026.04.29bz: 請求上書き機能は廃止 (Excel取込時のレガシー、業務に不要) -->
       <input type="hidden" id="f-invoiceDays">
       <input type="hidden" id="f-invoiceUnitPrice">
-      <div style="background:#F6F8FA;border-radius:8px;padding:10px">
+      <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px">
         <!-- 状態・請求日 (v24ay: 請求書No非表示) -->
         <div style="display:grid;grid-template-columns:160px 160px 160px 1fr;gap:10px;align-items:end;margin-bottom:8px">
           <div class="form-group" style="margin:0"><label class="form-label">状態</label>
@@ -2675,10 +2677,10 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           <input type="hidden" id="f-invoiceNo">
           <div class="form-group" style="margin:0"><label class="form-label">請求書発行日</label><input class="form-control" id="f-invoiceIssuedAt" type="date"></div>
           <div class="form-group" style="margin:0"><label class="form-label">振込期日</label><input class="form-control" id="f-paymentDueAt" type="date"></div>
-          <div class="form-group" style="margin:0"><label class="form-label" style="color:var(--navy);font-weight:bold">請求合計(税込)</label><input class="form-control" id="f-invoiceTotal" readonly style="font-weight:bold;color:var(--navy);background:#FFF8E1;font-size:14px;text-align:right"></div>
+          <div class="form-group" style="margin:0"><label class="form-label" style="color:var(--navy);font-weight:bold">請求合計(税込)</label><input class="form-control" id="f-invoiceTotal" readonly style="font-weight:bold;color:var(--navy);background:#fff;font-size:14px;text-align:right"></div>
         </div>
         <!-- 入金情報 + 入金済ボタン -->
-        <div style="display:grid;grid-template-columns:130px 130px 140px 160px auto;gap:10px;align-items:end;background:#E8F5E9;border-radius:6px;padding:8px 10px;border:1px solid #A5D6A7">
+        <div style="display:grid;grid-template-columns:130px 130px 140px 160px auto;gap:10px;align-items:end;background:#fff;border-radius:6px;padding:8px 10px;border:1px solid var(--border);border-left:4px solid var(--green)">
           <div class="form-group" style="margin:0"><label class="form-label" style="color:#2E7D32;font-weight:bold">💰 入金日</label><input class="form-control" id="f-paidAt" type="date" onchange="onPaidAtChange()"></div>
           <div class="form-group" style="margin:0"><label class="form-label">入金額</label><input class="form-control" id="f-paidAmount" type="number" placeholder="0" style="text-align:right"></div>
           <div class="form-group" style="margin:0"><label class="form-label">決済方法</label>
@@ -3013,7 +3015,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23d';
+const APP_VERSION = '2026-06-23e';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
