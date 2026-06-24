@@ -1236,9 +1236,9 @@ a{color:var(--info);text-decoration:none}
     <section id="m-screen-dispatch" class="m-screen">
       <div class="m-date-bar" id="m-disp-date"></div>
       <div class="m-tabs">
-        <button class="active" data-disp-tab="today" onclick="setDispTab('today')">📅 今日</button>
-        <button data-disp-tab="tomorrow" onclick="setDispTab('tomorrow')">📆 明日</button>
-        <button data-disp-tab="pending" onclick="setDispTab('pending')">📌 未対応</button>
+        <button class="active" data-disp-tab="today" onclick="setDispTab('today')">今日</button>
+        <button data-disp-tab="tomorrow" onclick="setDispTab('tomorrow')">明日</button>
+        <button data-disp-tab="pending" onclick="setDispTab('pending')">未対応</button>
       </div>
       <div id="m-disp-list"></div>
       <button class="m-fab" onclick="openNewCaseModal()" aria-label="新規案件">+</button>
@@ -1248,9 +1248,9 @@ a{color:var(--info);text-decoration:none}
     <section id="m-screen-recovery" class="m-screen">
       <div class="m-date-bar" id="m-rec-date"></div>
       <div class="m-tabs">
-        <button class="active" data-rec-tab="today" onclick="setRecTab('today')">📅 今日</button>
-        <button data-rec-tab="upcoming" onclick="setRecTab('upcoming')">📆 直近</button>
-        <button data-rec-tab="pending" onclick="setRecTab('pending')">📌 未対応</button>
+        <button class="active" data-rec-tab="today" onclick="setRecTab('today')">今日</button>
+        <button data-rec-tab="upcoming" onclick="setRecTab('upcoming')">直近</button>
+        <button data-rec-tab="pending" onclick="setRecTab('pending')">未対応</button>
       </div>
       <div id="m-rec-list"></div>
       <button class="m-fab fab-recovery" onclick="openQuickRecModal()" aria-label="回収予定追加">+</button>
@@ -1332,7 +1332,7 @@ a{color:var(--info);text-decoration:none}
       <div class="m-info-box" id="m-fax-info"></div>
       <div id="m-fax-dup-warn" style="display:none"></div>
       <div class="m-fax-preview-wrap">
-        <h3 style="font-size:14px;color:var(--navy);margin-bottom:8px">📠 送信内容確認</h3>
+        <h3 style="font-size:14px;color:var(--navy);margin-bottom:8px"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M7 17h10v4H7z"/><path d="M7 9V3h10v6"/><path d="M5 9h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2"/></svg>送信内容確認</h3>
         <div class="m-fax-meta">
           <div class="row">
             <span class="lbl">送信先FAX</span>
@@ -1342,13 +1342,13 @@ a{color:var(--info);text-decoration:none}
           <div class="row"><span class="lbl">送信方法</span><span class="val">メールFAX (eFax)</span></div>
           <div class="row"><span class="lbl">ステータス</span><span class="val" id="m-fax-status">未送信</span></div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin:6px 0">📄 送信書類プレビュー</div>
+        <div style="font-size:12px;color:var(--muted);margin:6px 0"><svg class="m-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>送信書類プレビュー</div>
         <div class="m-fax-preview-box" id="m-fax-preview-box"></div>
       </div>
       <div class="m-flow-actions">
         <div class="m-flow-actions-row">
           <button class="m-btn m-btn-outline" onclick="onFaxSkip()">スキップ</button>
-          <button class="m-btn m-btn-success" id="m-fax-send-btn" onclick="onFaxSend()">📠 FAX送信する</button>
+          <button class="m-btn m-btn-success" id="m-fax-send-btn" onclick="onFaxSend()"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M7 17h10v4H7z"/><path d="M7 9V3h10v6"/><path d="M5 9h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2"/></svg>FAX送信する</button>
         </div>
       </div>
     </section>
@@ -1363,30 +1363,30 @@ a{color:var(--info);text-decoration:none}
 
     <!-- (8) History -->
     <section id="m-screen-history" class="m-screen">
-      <div class="m-date-bar">📜 操作履歴</div>
+      <div class="m-date-bar"><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>操作履歴</div>
       <div class="m-tabs">
         <button class="active" data-hist-tab="all" onclick="setHistTab('all')">全て</button>
-        <button data-hist-tab="dispatch" onclick="setHistTab('dispatch')">🚙 配車</button>
-        <button data-hist-tab="recovery" onclick="setHistTab('recovery')">🛻 回収</button>
-        <button data-hist-tab="fax" onclick="setHistTab('fax')">📠 FAX</button>
+        <button data-hist-tab="dispatch" onclick="setHistTab('dispatch')">配車</button>
+        <button data-hist-tab="recovery" onclick="setHistTab('recovery')">回収</button>
+        <button data-hist-tab="fax" onclick="setHistTab('fax')">FAX</button>
       </div>
       <div id="m-hist-list"></div>
     </section>
 
     <!-- (8b) Vehicle management (車両一覧 + 点検入庫/復帰) -->
     <section id="m-screen-vehicles" class="m-screen">
-      <div class="m-date-bar">🚙 車両管理</div>
+      <div class="m-date-bar"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg>車両管理</div>
       <div class="m-search-box">
         <span class="m-search-ico"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
         <input type="search" id="m-veh-search" placeholder="検索: ナンバー / 車種 / クラス" oninput="renderVehiclesList()" autocomplete="off">
         <button class="m-search-clear" onclick="clearSearch('m-veh-search', renderVehiclesList)" aria-label="クリア">✕</button>
       </div>
       <div class="m-tabs">
-        <button class="active" data-veh-tab="all" onclick="setVehTab('all')">📋 全て</button>
-        <button data-veh-tab="available" onclick="setVehTab('available')">🟢 貸出可</button>
-        <button data-veh-tab="active" onclick="setVehTab('active')">✅ 稼働可</button>
-        <button data-veh-tab="maint" onclick="setVehTab('maint')">🛠️ 点検中</button>
-        <button data-veh-tab="due" onclick="setVehTab('due')">🔧 期日</button>
+        <button class="active" data-veh-tab="all" onclick="setVehTab('all')">全て</button>
+        <button data-veh-tab="available" onclick="setVehTab('available')">貸出可</button>
+        <button data-veh-tab="active" onclick="setVehTab('active')">稼働可</button>
+        <button data-veh-tab="maint" onclick="setVehTab('maint')">点検中</button>
+        <button data-veh-tab="due" onclick="setVehTab('due')">期日</button>
       </div>
       <div class="m-chips" id="m-veh-chips" style="margin:8px 0 4px"></div>
       <div id="m-veh-list"></div>
@@ -1533,7 +1533,7 @@ a{color:var(--info);text-decoration:none}
     <div class="m-form-row2">
       <div class="m-form-grp">
         <label>受付日</label>
-        <button type="button" class="m-datebtn" id="m-nc-receivedAt-btn" onclick="openMncCal('m-nc-receivedAt',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+        <button type="button" class="m-datebtn" id="m-nc-receivedAt-btn" onclick="openMncCal('m-nc-receivedAt',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg></span></button>
         <input type="hidden" id="m-nc-receivedAt">
       </div>
       <div class="m-form-grp">
@@ -1573,13 +1573,13 @@ a{color:var(--info);text-decoration:none}
       <label>運転者 TEL</label>
       <input type="tel" id="m-nc-driverTel" placeholder="090-1234-5678">
     </div>
-    <div class="m-section-divider">🏢 保険会社</div>
+    <div class="m-section-divider"><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-3"/></svg>保険会社</div>
     <div class="m-form-grp">
       <label>保険会社 <span class="muted">(📋で一覧から選ぶ or 直接入力)</span></label>
       <input type="hidden" id="m-nc-insurerId">
       <div class="m-inrow">
         <input type="text" id="m-nc-insurer" list="m-nc-insurer-list" placeholder="保険会社名を入力" oninput="onMncInsurerTextInput()">
-        <button type="button" class="m-pick-btn" onclick="openMncInsurerPicker()" title="一覧から選ぶ">📋</button>
+        <button type="button" class="m-pick-btn" onclick="openMncInsurerPicker()" title="一覧から選ぶ"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
       </div>
       <datalist id="m-nc-insurer-list"></datalist>
     </div>
@@ -1587,7 +1587,7 @@ a{color:var(--info);text-decoration:none}
       <label>担当者 <span class="muted">(📋で保険会社の担当者から選ぶ)</span></label>
       <div class="m-inrow">
         <input type="text" id="m-nc-insurerContact" placeholder="例: 佐藤" onblur="onMncContactBlurFuzzyCheck()">
-        <button type="button" class="m-pick-btn" onclick="openMncContactPicker()" title="担当者を選ぶ">📋</button>
+        <button type="button" class="m-pick-btn" onclick="openMncContactPicker()" title="担当者を選ぶ"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
       </div>
       <div id="m-nc-contact-hint" style="display:none;margin-top:4px;font-size:12px;color:#b85c00;line-height:1.4"></div>
     </div>
@@ -1608,16 +1608,16 @@ a{color:var(--info);text-decoration:none}
       </div>
       <div class="m-form-grp">
         <label>事故日</label>
-        <button type="button" class="m-datebtn" id="m-nc-accidentDate-btn" onclick="openMncCal('m-nc-accidentDate',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+        <button type="button" class="m-datebtn" id="m-nc-accidentDate-btn" onclick="openMncCal('m-nc-accidentDate',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg></span></button>
         <input type="hidden" id="m-nc-accidentDate">
       </div>
     </div>
-    <div class="m-section-divider">📍 配車先</div>
+    <div class="m-section-divider"><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>配車先</div>
     <div class="m-form-grp">
       <label>配車先名 <span class="muted">(🏭で工場マスタから選ぶ or 直接入力)</span></label>
       <div class="m-inrow">
         <input type="text" id="m-nc-dispatchTo" placeholder="例: トヨタモビリティ沖縄 豊崎店">
-        <button type="button" class="m-pick-btn" onclick="openMncFactoryPicker()" title="工場マスタから選ぶ">🏭</button>
+        <button type="button" class="m-pick-btn" onclick="openMncFactoryPicker()" title="工場マスタから選ぶ"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-3"/></svg></button>
       </div>
     </div>
     <div class="m-form-grp">
@@ -1636,19 +1636,19 @@ a{color:var(--info);text-decoration:none}
       <label>担当者 TEL</label>
       <input type="tel" id="m-nc-dispatchContactTel" placeholder="090-xxx-xxxx">
     </div>
-    <div class="m-section-divider">🚙 配車予約・車両</div>
+    <div class="m-section-divider"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg>配車予約・車両</div>
     <div class="m-form-grp">
       <label>配車予約日時</label>
-      <button type="button" class="m-datebtn" id="m-nc-dispatchAt-btn" onclick="openMncCal('m-nc-dispatchAt',true)"><span class="m-db-val ph" data-ph="日時を選択">日時を選択</span><span class="m-db-ico">📅</span></button>
+      <button type="button" class="m-datebtn" id="m-nc-dispatchAt-btn" onclick="openMncCal('m-nc-dispatchAt',true)"><span class="m-db-val ph" data-ph="日時を選択">日時を選択</span><span class="m-db-ico"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg></span></button>
       <input type="hidden" id="m-nc-dispatchAt">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;cursor:pointer;font-weight:600">
           <input type="checkbox" id="m-nc-dispatchTimePending" style="margin:0;cursor:pointer;width:auto">
-          📞 工場と調整中
+          <svg class="m-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>工場と調整中
         </label>
         <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;cursor:pointer;font-weight:600">
           <input type="checkbox" id="m-nc-dispatchTimePendingDriver" style="margin:0;cursor:pointer;width:auto">
-          📞 運転者と調整中
+          <svg class="m-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>運転者と調整中
         </label>
       </div>
     </div>
@@ -1675,20 +1675,20 @@ a{color:var(--info);text-decoration:none}
     </div>
     <div class="m-form-grp">
       <label>利用開始日</label>
-      <button type="button" class="m-datebtn" id="m-nc-useStart-btn" onclick="openMncCal('m-nc-useStart',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+      <button type="button" class="m-datebtn" id="m-nc-useStart-btn" onclick="openMncCal('m-nc-useStart',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg></span></button>
       <input type="hidden" id="m-nc-useStart">
     </div>
     <div class="m-form-grp">
       <label>利用終了日</label>
-      <button type="button" class="m-datebtn" id="m-nc-useEnd-btn" onclick="openMncCal('m-nc-useEnd',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+      <button type="button" class="m-datebtn" id="m-nc-useEnd-btn" onclick="openMncCal('m-nc-useEnd',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg></span></button>
       <input type="hidden" id="m-nc-useEnd">
     </div>
     <div class="m-form-grp">
       <label>利用期限 (予定)</label>
-      <button type="button" class="m-datebtn" id="m-nc-useDeadline-btn" onclick="openMncCal('m-nc-useDeadline',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico">📅</span></button>
+      <button type="button" class="m-datebtn" id="m-nc-useDeadline-btn" onclick="openMncCal('m-nc-useDeadline',false)"><span class="m-db-val ph" data-ph="日付を選択">日付を選択</span><span class="m-db-ico"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg></span></button>
       <input type="hidden" id="m-nc-useDeadline">
     </div>
-    <div class="m-section-divider">📝 メモ</div>
+    <div class="m-section-divider"><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/></svg>メモ</div>
     <div class="m-form-grp">
       <label>社内メモ</label>
       <textarea id="m-nc-memo" rows="2" placeholder="特記事項など"></textarea>
@@ -1703,9 +1703,9 @@ a{color:var(--info);text-decoration:none}
     <div class="m-modal-actions m-actions-2row">
       <div class="m-actions-row-top">
         <button class="m-btn m-btn-outline" onclick="closeNewCaseModal()">キャンセル</button>
-        <button class="m-btn m-btn-primary" id="m-nc-save-btn" onclick="saveNewCase(false)">💾 保存のみ</button>
+        <button class="m-btn m-btn-primary" id="m-nc-save-btn" onclick="saveNewCase(false)"><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>保存のみ</button>
       </div>
-      <button class="m-btn m-btn-success m-btn-full" id="m-nc-save-flow-btn" onclick="saveNewCase(true)">💾 保存して配車フローへ</button>
+      <button class="m-btn m-btn-success m-btn-full" id="m-nc-save-flow-btn" onclick="saveNewCase(true)"><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>保存して配車フローへ</button>
     </div>
   </div>
 </div>
@@ -1714,7 +1714,7 @@ a{color:var(--info);text-decoration:none}
 <div class="m-modal" id="m-ins-picker-modal">
   <div class="m-modal-body" style="max-height:88%">
     <div class="m-pick-head">
-      <h2>🏢 保険会社を選ぶ</h2>
+      <h2><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-3"/></svg>保険会社を選ぶ</h2>
       <button type="button" class="m-pick-x" onclick="$('m-ins-picker-modal').classList.remove('active')" aria-label="閉じる">✕</button>
     </div>
     <input type="text" id="m-ip-search" placeholder="🔍 保険会社名 / 支店 / FAX" oninput="renderMncInsurerPicker()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
@@ -1729,7 +1729,7 @@ a{color:var(--info);text-decoration:none}
 <div class="m-modal" id="m-con-picker-modal">
   <div class="m-modal-body" style="max-height:80%">
     <div class="m-pick-head">
-      <h2>👤 担当者を選ぶ</h2>
+      <h2><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><circle cx="12" cy="7" r="4"/><path d="M6 21v-1a6 6 0 0 1 12 0v1"/></svg>担当者を選ぶ</h2>
       <button type="button" class="m-pick-x" onclick="$('m-con-picker-modal').classList.remove('active')" aria-label="閉じる">✕</button>
     </div>
     <div id="m-cp-insurer-note" class="muted" style="font-size:12px;margin-bottom:8px"></div>
@@ -1745,7 +1745,7 @@ a{color:var(--info);text-decoration:none}
 <div class="m-modal" id="m-fac-picker-modal">
   <div class="m-modal-body" style="max-height:88%">
     <div class="m-pick-head">
-      <h2>🏭 工場(配車先)を選ぶ</h2>
+      <h2><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-3"/></svg>工場(配車先)を選ぶ</h2>
       <button type="button" class="m-pick-x" onclick="$('m-fac-picker-modal').classList.remove('active')" aria-label="閉じる">✕</button>
     </div>
     <input type="text" id="m-fp-search" placeholder="🔍 工場名 / TEL / 住所" oninput="renderMncFactoryPicker()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
@@ -1760,7 +1760,7 @@ a{color:var(--info);text-decoration:none}
 <div class="m-modal" id="m-cal-sheet">
   <div class="m-modal-body" style="max-height:92%">
     <div class="m-pick-head">
-      <h2 id="m-cal-h">📅 日付を選ぶ</h2>
+      <h2 id="m-cal-h"><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg>日付を選ぶ</h2>
       <button type="button" class="m-pick-x" onclick="closeMncCal(false)" aria-label="閉じる">✕</button>
     </div>
     <div class="m-cal-nav">
@@ -1795,7 +1795,7 @@ a{color:var(--info);text-decoration:none}
 <!-- 簡易版 回収登録 モーダル -->
 <div class="m-modal" id="m-quickrec-modal">
   <div class="m-modal-body" style="max-height:88%">
-    <h2>🛻 回収予定 登録 (簡易版)</h2>
+    <h2><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><path d="M7 7l10 10"/><path d="M16 17H7V8"/></svg>回収予定 登録 (簡易版)</h2>
     <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px">利用中の案件に回収予定日を設定します</div>
     <div class="m-form-grp">
       <label>🔍 案件を検索</label>
@@ -1810,7 +1810,7 @@ a{color:var(--info);text-decoration:none}
       <input type="date" id="m-qr-date">
     </div>
     <div class="m-modal-actions" style="margin-top:14px;flex-direction:column;gap:8px">
-      <button class="m-btn m-btn-success m-btn-full" id="m-qr-save-btn" onclick="saveQuickRecovery()" disabled>💾 回収予定を保存</button>
+      <button class="m-btn m-btn-success m-btn-full" id="m-qr-save-btn" onclick="saveQuickRecovery()" disabled><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>回収予定を保存</button>
       <button class="m-btn m-btn-outline m-btn-full" onclick="closeQuickRecModal()">キャンセル</button>
     </div>
   </div>
@@ -1819,13 +1819,13 @@ a{color:var(--info);text-decoration:none}
 <!-- 社内メモ 編集モーダル -->
 <div class="m-modal" id="m-memo-edit-modal">
   <div class="m-modal-body">
-    <h2>📝 社内メモを編集</h2>
+    <h2><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/></svg>社内メモを編集</h2>
     <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px">スタッフ間共有用の注意事項です（手配書には表示されません）</div>
     <div class="m-form-grp">
       <textarea id="m-memo-edit-text" rows="5" placeholder="特記事項・申し送りなど"></textarea>
     </div>
     <div class="m-modal-actions" style="margin-top:14px;flex-direction:column;gap:8px">
-      <button class="m-btn m-btn-success m-btn-full" onclick="saveMemoEdit()">💾 保存</button>
+      <button class="m-btn m-btn-success m-btn-full" onclick="saveMemoEdit()"><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>保存</button>
       <button class="m-btn m-btn-outline m-btn-full" onclick="closeMemoEdit()">キャンセル</button>
     </div>
   </div>
@@ -1834,7 +1834,7 @@ a{color:var(--info);text-decoration:none}
 <!-- 手配書プレビュー モーダル (全体) -->
 <div class="m-modal" id="m-handover-modal">
   <div class="m-modal-body" style="max-height:92%;padding:14px 10px 18px">
-    <h2 style="margin-bottom:8px">📄 手配書（全体）</h2>
+    <h2 style="margin-bottom:8px"><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>手配書（全体）</h2>
     <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px">受付〜配車完了報告・回収完了報告・ご利用金額まで（未確定の項目は空欄で表示）</div>
     <div id="m-handover-preview" style="background:#F2F2F2;border-radius:8px;padding:10px;max-height:65vh;overflow:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="m-modal-actions" style="margin-top:14px">
@@ -1846,7 +1846,7 @@ a{color:var(--info);text-decoration:none}
 <!-- 車両ピッカー モーダル -->
 <div class="m-modal" id="m-vehicle-modal">
   <div class="m-modal-body" style="max-height:85%">
-    <h2>🚙 車両を選択</h2>
+    <h2><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg>車両を選択</h2>
     <input type="text" id="m-vehicle-search" placeholder="🔍 車種・ナンバー・クラスで検索" oninput="filterVehicleList()" style="margin-bottom:12px">
     <div id="m-vehicle-list" style="max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="m-modal-actions" style="margin-top:14px">
@@ -1857,7 +1857,7 @@ a{color:var(--info);text-decoration:none}
 <!-- 🚗 稼働可能在庫 検索モーダル (読み取り専用) -->
 <div class="m-modal" id="m-stock-modal">
   <div class="m-modal-body" style="max-height:85%">
-    <h2>🚗 稼働可能な車両</h2>
+    <h2><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg>稼働可能な車両</h2>
     <div id="m-stock-count" style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px"></div>
     <input type="text" id="m-stock-search" placeholder="🔍 車種・ナンバー・クラスで検索" oninput="renderStockList()" autocomplete="off" style="margin-bottom:10px">
     <div class="m-chips" id="m-stock-chips" style="margin-bottom:10px"></div>
@@ -1888,7 +1888,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-23d';
+const APP_VERSION = '2026-06-23e';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3923,18 +3923,18 @@ async function renderFlowConfirmScreen(){
   $('m-confirm-do-btn').innerHTML = esc(_doLabel) + (_summary ? `<small>${esc(_summary)}</small>` : '');
   // セクションタイトル変更
   const sectionTitle = document.querySelector('#m-screen-flow-confirm .m-photo-section h3');
-  if(sectionTitle) sectionTitle.textContent = _flow.kind === 'recovery' ? '📷 配車時のチェックシート (参考)' : '📷 チェックシート';
+  if(sectionTitle) sectionTitle.innerHTML = '<svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M5 7h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2"/><circle cx="12" cy="13" r="3"/></svg>' + (_flow.kind === 'recovery' ? '配車時のチェックシート (参考)' : 'チェックシート');
   // 完了日時の編集欄 (配車=datetime-local / 回収=date)
   const timeSection = $('m-confirm-time-section');
   const timeInput = $('m-confirm-time');
   timeSection.style.display = '';
   if(_flow.kind === 'dispatch'){
-    $('m-confirm-time-label').textContent = '🕐 配車完了日時';
+    $('m-confirm-time-label').innerHTML = '<svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>配車完了日時';
     timeInput.type = 'datetime-local';
     timeInput.step = '60';
     timeInput.value = c.dispatchDoneAt || nowDateTimeLocal();
   } else {
-    $('m-confirm-time-label').textContent = '📅 回収日';
+    $('m-confirm-time-label').innerHTML = '<svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg>回収日';
     timeInput.type = 'date';
     timeInput.removeAttribute('step');
     timeInput.value = c.recoveryCalledAt || todayISO();
@@ -3947,12 +3947,12 @@ async function renderFlowConfirmScreen(){
   if(meterSection && meterInput){
     meterSection.style.display = '';
     if(_flow.kind === 'dispatch'){
-      meterLabel.textContent = '📏 貸出メーター (km)';
+      meterLabel.innerHTML = '<svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><rect x="3" y="8" width="18" height="8" rx="1"/><path d="M7 8v3M11 8v3M15 8v3M19 8v3"/></svg>貸出メーター (km)';
       meterInput.value = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? c.meterAtDispatch : '';
       meterDelta.style.display = 'none';
       meterInput.oninput = null;
     } else {
-      meterLabel.textContent = '📏 返却メーター (km)';
+      meterLabel.innerHTML = '<svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><rect x="3" y="8" width="18" height="8" rx="1"/><path d="M7 8v3M11 8v3M15 8v3M19 8v3"/></svg>返却メーター (km)';
       meterInput.value = (c.meterAtReturn != null && c.meterAtReturn !== '') ? c.meterAtReturn : '';
       meterDelta.style.display = '';
       const baseMeter = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? Number(c.meterAtDispatch) : null;
