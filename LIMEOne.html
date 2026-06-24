@@ -3028,7 +3028,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23j';
+const APP_VERSION = '2026-06-23k';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -11581,8 +11581,12 @@ function renderInstruction(){
       <div class="ho-section">■配車完了報告</div>
       <table class="ho-table">
         <tr><th style="width:16%">配車完了日時</th><td colspan="3">${c.dispatchDoneAt? fmtDT(c.dispatchDoneAt): '<span class="ho-sub">（未完了）</span>'}　　${esc(c.dispatchDoneNote||'')}</td></tr>
-        <tr><th>車種名</th><td colspan="3"><b class="ho-amt">${esc(vehActualName||'')}</b>${vehActualGrade?` <span class="ho-sub">(${esc(vehActualGrade)})</span>`:''}${vehActualMaker?`　<span class="ho-sub">${esc(vehActualMaker)}</span>`:''}${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}</td></tr>
-        <tr><th>登録番号</th><td colspan="3">${plate.length? `${esc(plate[0])}　　${esc(plate[1]||'')}　　${esc(plate[2]||'')}　　${esc(plate[3]||'')}` : ''}</td></tr>
+        <tr><th>車種名</th><td colspan="3">${c.isBorrowed
+          ? `<b class="ho-amt">${esc(c.borrowedVehicleInfo||vehActualName||'')}</b>　<span class="ho-sub" style="color:#B45309">🏢 他社借${c.borrowedFrom?`（借入先: ${esc(c.borrowedFrom)}）`:''}</span>${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}`
+          : `<b class="ho-amt">${esc(vehActualName||'')}</b>${vehActualGrade?` <span class="ho-sub">(${esc(vehActualGrade)})</span>`:''}${vehActualMaker?`　<span class="ho-sub">${esc(vehActualMaker)}</span>`:''}${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}`}</td></tr>
+        <tr><th>登録番号</th><td colspan="3">${(c.isBorrowed && !(c.plateNo||c.plateKana||c.plateTail))
+          ? '<span class="ho-sub" style="color:#B45309">🏢 他社借車両（車種名欄に車種・ナンバーを記載）</span>'
+          : (plate.length ? `${esc(plate[0])}　　${esc(plate[1]||'')}　　${esc(plate[2]||'')}　　${esc(plate[3]||'')}` : '')}</td></tr>
       </table>
       <div class="ho-section">■回収完了報告・ご利用金額</div>
       <table class="ho-table">
