@@ -2967,6 +2967,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     <!-- フッター -->
     <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--border);background:#fafbf8">
       <div style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" id="gr-btn-cancel" style="display:none;color:#C53030;border-color:#C53030" onclick="grCancelCase()" title="この一般貸渡をキャンセル状態にする (受付No保持・データは残り復元可。完全に消す場合は削除)">📛 キャンセル</button>
         <button class="btn btn-danger btn-sm" id="gr-btn-delete" style="display:none" onclick="grDeleteCase()" title="この案件を完全に削除">🗑️ 削除</button>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -3027,7 +3028,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23i';
+const APP_VERSION = '2026-06-23j';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -8698,9 +8699,12 @@ function openGeneralRentalModal(id){
   const _grBody = document.querySelector('#gr-modal .modal-body'); if(_grBody) _grBody.scrollTo({top:0});
   $('gr-modal-title').textContent = id ? `一般貸渡 編集 ${c.caseNo||''}` : '一般貸渡 新規';
   // 削除・印刷・返却完了ボタンは既存案件のみ
-  ['gr-btn-delete','gr-btn-print','gr-btn-invoice','gr-btn-return','gr-btn-return-step','gr-btn-handover','gr-btn-handover-step'].forEach(b=>{
+  ['gr-btn-delete','gr-btn-cancel','gr-btn-print','gr-btn-invoice','gr-btn-return','gr-btn-return-step','gr-btn-handover','gr-btn-handover-step'].forEach(b=>{
     const el = $(b); if(el) el.style.display = id ? '' : 'none';
   });
+  // キャンセルボタンは「既にキャンセル / 入金済」では隠す (損保 canCancelCase と同条件)
+  const _grCancelBtn = $('gr-btn-cancel');
+  if(_grCancelBtn) _grCancelBtn.style.display = (id && c.status!=='キャンセル' && c.status!=='入金済') ? '' : 'none';
   // インジケータリセット
   _grDirty = false;
   const ind = $('gr-save-indicator');
@@ -8811,7 +8815,7 @@ function saveGeneralRental(closeAfter){
   editingCaseId = c.id;
   fillGRForm(c);
   // 削除・印刷・返却完了ボタン表示
-  ['gr-btn-delete','gr-btn-print','gr-btn-invoice','gr-btn-return','gr-btn-return-step','gr-btn-handover','gr-btn-handover-step'].forEach(b=>{
+  ['gr-btn-delete','gr-btn-cancel','gr-btn-print','gr-btn-invoice','gr-btn-return','gr-btn-return-step','gr-btn-handover','gr-btn-handover-step'].forEach(b=>{
     const el = $(b); if(el) el.style.display = '';
   });
   if(typeof renderCases === 'function') renderCases();
@@ -8843,6 +8847,30 @@ function grDeleteCase(){
   toast('🗑️ 案件をキャンセル/非表示にしました');
   // 外部通知: 削除 → カレンダーイベント削除 + LINE通知
   if(typeof _fireCancelDeleteNotify === 'function') _fireCancelDeleteNotify(cSnapshot, 'delete');
+  closeGeneralRentalModal();
+  if(typeof renderCases === 'function') renderCases();
+}
+
+// 一般貸渡キャンセル: 状態を「キャンセル」にする (受付No保持・データは残り復元可・削除とは別) (2026-06-22f)
+//   損保案件の cancelCase 相当。削除(grDeleteCase)は isDeleted も立て非表示化するが、こちらは
+//   status='キャンセル'(+isCancelled) のみ＝一覧にはキャンセル状態の記録として残り、状態を戻せば復元可。
+function grCancelCase(){
+  if(!_grEditingId){ toast('保存後にキャンセルできます','error'); return; }
+  const c = findCaseById(_grEditingId);
+  if(!c) return;
+  if(c.status === 'キャンセル'){ toast('既にキャンセル済みです'); return; }
+  if(c.status === '入金済'){ toast('入金済の案件はキャンセルできません。先に入金記録を取り消してください','error'); return; }
+  const msg = `この一般貸渡をキャンセルします。\n\n・状態を「キャンセル」に変更\n・受付No「${c.caseNo||'未採番'}」は保持(再利用されません)\n・データは削除されず残ります(状態を戻せば復元可)\n\nよろしいですか?`;
+  if(!confirm(msg)) return;
+  const cSnapshot = JSON.parse(JSON.stringify(c));
+  c.status = 'キャンセル';
+  c.isCancelled = true;
+  c.updatedAt = Date.now();
+  c.updatedBy = 'PCキャンセル';
+  save();
+  toast('📛 一般貸渡をキャンセルしました (受付No: '+(c.caseNo||'未採番')+')');
+  // 外部通知: キャンセル → カレンダーイベント削除 + LINE通知
+  if(typeof _fireCancelDeleteNotify === 'function') _fireCancelDeleteNotify(cSnapshot, 'cancel');
   closeGeneralRentalModal();
   if(typeof renderCases === 'function') renderCases();
 }
