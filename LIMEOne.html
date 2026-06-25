@@ -3029,7 +3029,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23l';
+const APP_VERSION = '2026-06-23m';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3131,7 +3131,8 @@ function statusRowClass(st){ const s=STATUS_STYLE[st]; return s? `row-status ${s
 //   一覧バッジ/絞り込みだけが生status由来で「配車完了」のまま残るズレを解消する。
 function effectiveStatus(c){
   if(!c) return '';
-  if(c.status==='配車済' && !c.recoveryCompleted){
+  // 一般貸渡(GR)は「🚗 貸渡完了」ボタンで手動進行＝配車済の自動「利用中」表示はしない (2026-06-23m)
+  if(c.status==='配車済' && !c.recoveryCompleted && c.category!=='一般'){
     const us = (c.useStart||'').slice(0,10);
     if(us && us <= todayISO()) return '利用中';
   }
@@ -8504,11 +8505,11 @@ function grAutoFillClass(){
 function grMaybeAdvanceStatus(){
   const st = ($('gr-status')||{}).value || '';
   const hasVeh = !!($('gr-vehicleId')||{}).value;
-  const hasUseStart = !!($('gr-useStart')||{}).value;
-  if(['利用中','返却済','請求済','入金済','キャンセル'].includes(st)) return;
-  if(hasUseStart && hasVeh && (st==='受付' || st==='配車予定' || !st)){
-    $('gr-status').value = '配車済';
-  } else if(hasVeh && (st==='受付' || !st)){
+  // 配車済以降(配車済/利用中/返却済/…)は触らない。車両を割り当てただけでは「配車完了/利用中」にしない
+  //   ＝お渡しは手動の「🚗 貸渡完了」ボタンで 利用中 へ進める設計 (2026-06-23m: 予約しただけで完了表示になる不具合を修正)。
+  if(['配車済','利用中','返却済','請求済','入金済','キャンセル'].includes(st)) return;
+  // 受付(または未設定)で車両が割り当たったら「配車予定」まで前進。
+  if(hasVeh && (st==='受付' || !st)){
     $('gr-status').value = '配車予定';
   }
 }
