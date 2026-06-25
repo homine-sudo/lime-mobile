@@ -2537,9 +2537,10 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           </div>
           <!-- 🏢 他社借フリー入力エリア (他社借チェック時のみ表示) -->
           <div id="f-vehicle-borrowed" style="display:none;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#FFFBEB;border:1px dashed #E6C54C;border-radius:5px">
-            <div style="flex:1;min-width:160px"><label class="form-label" style="font-size:11px;color:#B45309">借入先(会社名)</label><input class="form-control" id="f-borrowedFrom" placeholder="例: ABCレンタカー" style="font-size:13px"></div>
-            <div style="flex:2;min-width:220px"><label class="form-label" style="font-size:11px;color:#B45309">車両情報(自由記述)</label><input class="form-control" id="f-borrowedVehicleInfo" placeholder="例: ヤリス 沖縄 506 れ 1234 / シルバー" style="font-size:13px"></div>
-            <div style="width:140px"><label class="form-label" style="font-size:11px;color:#B45309">借入日額(参考)</label><input type="number" class="form-control" id="f-borrowedDailyRate" placeholder="4400" style="font-size:13px"></div>
+            <div style="flex:1;min-width:150px"><label class="form-label" style="font-size:11px;color:#B45309">借入先(会社名) <span class="text-muted" style="font-weight:normal;font-size:10px">※手配書には出ません</span></label><input class="form-control" id="f-borrowedFrom" placeholder="例: スカイレンタカー" style="font-size:13px"></div>
+            <div style="flex:1.3;min-width:160px"><label class="form-label" style="font-size:11px;color:#B45309">車種名 <span class="text-muted" style="font-weight:normal;font-size:10px">→手配書の車種名</span></label><input class="form-control" id="f-borrowedVehicleInfo" placeholder="例: ヤリス" style="font-size:13px"></div>
+            <div style="flex:1.3;min-width:160px"><label class="form-label" style="font-size:11px;color:#B45309">登録番号(車番) <span class="text-muted" style="font-weight:normal;font-size:10px">→手配書の登録番号</span></label><input class="form-control" id="f-borrowedPlate" placeholder="例: 沖縄 506 れ 1234" style="font-size:13px"></div>
+            <div style="width:110px"><label class="form-label" style="font-size:11px;color:#B45309">借入日額(参考)</label><input type="number" class="form-control" id="f-borrowedDailyRate" placeholder="4400" style="font-size:13px"></div>
           </div>
         </div>
       </div>
@@ -3028,7 +3029,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23k';
+const APP_VERSION = '2026-06-23l';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -8311,7 +8312,7 @@ function defaultCase(){
     dispatchTimePending:false,        // 工場と時間調整中
     dispatchTimePendingDriver:false,  // 運転者と時間調整中
     vehicleClass:'', vehicleName:'', unitPrice:0, plateArea:'', plateNo:'', plateKana:'', plateTail:'',
-    isBorrowed:false, borrowedFrom:'', borrowedVehicleInfo:'', borrowedDailyRate:'',
+    isBorrowed:false, borrowedFrom:'', borrowedVehicleInfo:'', borrowedPlate:'', borrowedDailyRate:'',
     useStart:'', useEnd:'', returnStatus:'',
     status:'受付', invoiceNo:'', invoiceIssuedAt:'', paymentDueAt:'',
     paymentMethod:'', paidAt:'', paidAmount:'', salesYear:'', salesMonth:'',
@@ -8374,7 +8375,7 @@ function toggleCheck(i){
   if(typeof scheduleAutoSave === 'function') scheduleAutoSave();  // dirty 立てる: ✓ON/OFF で離脱警告対象に
   renderChecklist();
 }
-const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedDailyRate','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','recoveryToName','recoveryToAddress','recoveryToTel','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
+const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedPlate','borrowedDailyRate','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','recoveryToName','recoveryToAddress','recoveryToTel','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
   // 一般貸渡用 (自旅138号 貸渡証/貸渡簿の必須項目)
   'borrowerAddress','driverAddress','driverLicenseType','driverLicenseNo',
   // 一般貸渡 業務情報 (受取場所・補償・特記事項)
@@ -11582,10 +11583,10 @@ function renderInstruction(){
       <table class="ho-table">
         <tr><th style="width:16%">配車完了日時</th><td colspan="3">${c.dispatchDoneAt? fmtDT(c.dispatchDoneAt): '<span class="ho-sub">（未完了）</span>'}　　${esc(c.dispatchDoneNote||'')}</td></tr>
         <tr><th>車種名</th><td colspan="3">${c.isBorrowed
-          ? `<b class="ho-amt">${esc(c.borrowedVehicleInfo||vehActualName||'')}</b>　<span class="ho-sub" style="color:#B45309">🏢 他社借${c.borrowedFrom?`（借入先: ${esc(c.borrowedFrom)}）`:''}</span>${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}`
+          ? `<b class="ho-amt">${esc(c.borrowedVehicleInfo||vehActualName||'')}</b>${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}`
           : `<b class="ho-amt">${esc(vehActualName||'')}</b>${vehActualGrade?` <span class="ho-sub">(${esc(vehActualGrade)})</span>`:''}${vehActualMaker?`　<span class="ho-sub">${esc(vehActualMaker)}</span>`:''}${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}`}</td></tr>
-        <tr><th>登録番号</th><td colspan="3">${(c.isBorrowed && !(c.plateNo||c.plateKana||c.plateTail))
-          ? '<span class="ho-sub" style="color:#B45309">🏢 他社借車両（車種名欄に車種・ナンバーを記載）</span>'
+        <tr><th>登録番号</th><td colspan="3">${c.isBorrowed
+          ? esc(c.borrowedPlate||'')
           : (plate.length ? `${esc(plate[0])}　　${esc(plate[1]||'')}　　${esc(plate[2]||'')}　　${esc(plate[3]||'')}` : '')}</td></tr>
       </table>
       <div class="ho-section">■回収完了報告・ご利用金額</div>

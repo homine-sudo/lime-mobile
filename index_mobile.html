@@ -1888,7 +1888,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-23f';
+const APP_VERSION = '2026-06-23g';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5364,10 +5364,10 @@ function buildHandoverHTML(c, ins, s, upperOnly){
       <table class="ho-table">
         <tr><th style="width:16%">配車完了日時</th><td colspan="3">${c.dispatchDoneAt? fmtDT(c.dispatchDoneAt): '<span class="ho-sub">（未完了）</span>'}　　${esc(c.dispatchDoneNote||'')}</td></tr>
         <tr><th>車種名</th><td colspan="3">${c.isBorrowed
-          ? `<b class="ho-amt">${esc(c.borrowedVehicleInfo||c.vehicleName||'')}</b>　<span class="ho-sub" style="color:#B45309">🏢 他社借${c.borrowedFrom?`（借入先: ${esc(c.borrowedFrom)}）`:''}</span>${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}`
+          ? `<b class="ho-amt">${esc(c.borrowedVehicleInfo||c.vehicleName||'')}</b>${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}`
           : `<b class="ho-amt">${esc(c.vehicleName||'')}</b>${c.vehicleClass?`　<span class="ho-sub">(クラス: ${esc(c.vehicleClass)})</span>`:''}`}</td></tr>
-        <tr><th>登録番号</th><td colspan="3">${(c.isBorrowed && !(c.plateNo||c.plateKana||c.plateTail))
-          ? '<span class="ho-sub" style="color:#B45309">🏢 他社借車両（車種名欄に車種・ナンバーを記載）</span>'
+        <tr><th>登録番号</th><td colspan="3">${c.isBorrowed
+          ? esc(c.borrowedPlate||'')
           : (plate.length? `${esc(plate[0])}　　${esc(plate[1]||'')}　　${esc(plate[2]||'')}　　${esc(plate[3]||'')}` : '')}</td></tr>
       </table>
       <div class="ho-section">■回収完了報告・ご利用金額</div>
