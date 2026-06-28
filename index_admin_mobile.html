@@ -150,6 +150,45 @@
   .be-tiers .dot{font-size:10px;line-height:1}
   .be-tiers .be-main{white-space:nowrap}
   .be-tiers .be-sub{color:var(--ink3);font-size:10px}
+  /* ===== 分析レポート (report tab) — 経営分析スナップショット ===== */
+  .rpt-date{font-size:9.5px;color:var(--ink3);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;font-style:italic;font-family:var(--serif)}
+  .rpt-sec{font-size:9px;color:var(--acc);letter-spacing:.3em;text-transform:uppercase;font-style:italic;font-family:var(--serif)}
+  .rpt-h{font-family:var(--serif);font-size:19px;font-weight:500;color:var(--ink);letter-spacing:.02em;margin:1px 0 8px;line-height:1.35}
+  .rpt-verdict{border-left:2px solid var(--acc);padding:6px 0 6px 13px;margin:4px 0 10px;font-size:13px;line-height:1.85;color:var(--ink)}
+  .rpt-p{font-size:12.5px;line-height:1.85;color:var(--ink2);margin:8px 0}
+  .rpt-p b{color:var(--ink);font-weight:600}
+  .rpt-tbl{width:100%;border-collapse:collapse;font-size:12px;margin:10px 0 4px}
+  .rpt-tbl th{text-align:left;color:var(--ink3);font-size:9px;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--line2);padding:0 5px 6px;font-weight:400}
+  .rpt-tbl td{padding:7px 5px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
+  .rpt-tbl td.n,.rpt-tbl th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .rpt-tbl tr.tot td{border-top:1px solid var(--line2);border-bottom:0;color:var(--ink);font-weight:600}
+  .rpt-tbl td b{color:var(--ink);font-weight:600}
+  .rpt-pos{color:var(--acc);font-weight:600}.rpt-neg{color:var(--danger);font-weight:600}.rpt-warn{color:var(--warn);font-weight:600}
+  .rpt-call{background:var(--panel2);border:1px solid var(--line);border-left:2px solid var(--acc);padding:11px 13px;margin:11px 0;font-size:11.5px;line-height:1.8;color:var(--ink2)}
+  .rpt-call.r{border-left-color:var(--danger)} .rpt-call.a{border-left-color:var(--warn)}
+  .rpt-call b{color:var(--ink);font-weight:600}
+  .rpt-ul{padding-left:1.15em;margin:8px 0;font-size:12px;color:var(--ink2);line-height:1.75}
+  .rpt-ul li{margin-bottom:6px} .rpt-ul li b{color:var(--ink);font-weight:600}
+  .rpt-bars{margin:10px 0 4px}
+  .rpt-bars .r{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10.5px}
+  .rpt-bars .l{width:92px;flex:0 0 92px;color:var(--ink2);letter-spacing:.02em}
+  .rpt-bars .t{flex:1;height:11px;background:var(--line);overflow:hidden;border-radius:1px}
+  .rpt-bars .f{height:100%;background:var(--acc)}
+  .rpt-bars .f.pk{background:var(--ok)} .rpt-bars .f.lo{background:var(--line3)}
+  .rpt-bars .v{width:46px;flex:0 0 46px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);font-family:var(--serif)}
+  .rpt-kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0 4px}
+  .rpt-kpi{border:1px solid var(--line);border-left:2px solid var(--acc);background:var(--panel2);padding:11px 12px}
+  .rpt-kpi.g{border-left-color:var(--ok)} .rpt-kpi.r{border-left-color:var(--danger)} .rpt-kpi.a{border-left-color:var(--warn)}
+  .rpt-kpi .k{font-size:9px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase}
+  .rpt-kpi .v{font-family:var(--serif);font-size:23px;font-weight:500;color:var(--ink);line-height:1.1;margin-top:3px}
+  .rpt-kpi .v small{font-size:11px;color:var(--ink3);font-family:var(--sans);margin-left:2px}
+  .rpt-kpi .s{font-size:9.5px;color:var(--ink3);margin-top:3px;line-height:1.4}
+  .rpt-act{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:4px}
+  .rpt-act td{padding:9px 5px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top;line-height:1.6}
+  .rpt-act td.n{text-align:center;width:22px;color:var(--acc);font-family:var(--serif);font-size:16px;font-weight:600}
+  .rpt-act td b{color:var(--ink);font-weight:600}
+  .rpt-act .due{color:var(--ink3);font-size:9.5px;letter-spacing:.04em;white-space:nowrap}
+  .rpt-note{font-size:10px;color:var(--ink3);line-height:1.65;margin-top:6px}
   /* grid */
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -887,6 +926,170 @@
     </div>
   </section>
 
+  <!-- ========== 分析レポート ========== -->
+  <section id="sec-report">
+    <div class="card">
+      <div class="rpt-date">経営分析スナップショット · 2026-06-28</div>
+      <div class="rpt-h">総括 — 補助金頼みから本業黒字へ</div>
+      <div class="rpt-verdict"><b>FY2025に本業（営業利益）で黒字化した健全な成長企業。</b>財務余力も十分（現預金4,046万・自己資本比率24%・純有利子負債わずか1,338万）。ただし構造的弱点が3つ。</div>
+      <ul class="rpt-ul">
+        <li><b>① 利幅の薄い量的拡大。</b>FY2025は+59%増収だが売上総利益はほぼ横ばい。増収分を車両保有コスト（リース・減価償却）が食い切る損保代車の構造。</li>
+        <li><b>② 単一顧客依存（最大リスク）。</b>3事業すべてが1社依存（JA共済62%／次郎工業71%／プロシード100%）。<span class="rpt-neg">JA共済喪失で即・分岐点割れ。</span></li>
+        <li><b>③ データ衛生の劣化。</b>請求済未入金・回収済未請求の滞留 約950万（大半はステータス未更新）。</li>
+      </ul>
+      <div class="rpt-note">数値は2026-06-28時点のスナップショット。最新の稼働率・月次売上はTOP／売上／稼働タブ（ライブ）を参照。出典: freee会計（年次/累計が正本）・3事業 data.json・Fleet正本。主要数値は出典に対し独立再計算で検証済み。</div>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">01 / 全社財務</div>
+      <div class="rpt-h">3期P/L・利益の質・B/S</div>
+      <table class="rpt-tbl">
+        <tr><th>万円・税込</th><th class="n">FY2024</th><th class="n">FY2025</th><th class="n">FY26 Q1※</th></tr>
+        <tr><td>売上高</td><td class="n">6,048</td><td class="n"><b>9,620</b> <span class="rpt-pos">+59%</span></td><td class="n">2,866</td></tr>
+        <tr><td>営業利益（率）</td><td class="n">151<br><span class="ink3">2.5%</span></td><td class="n"><b>694</b><br><span class="rpt-pos">7.2%</span></td><td class="n">803※</td></tr>
+        <tr><td>経常利益</td><td class="n">1,095</td><td class="n">658</td><td class="n">788</td></tr>
+        <tr class="tot"><td>当期純利益</td><td class="n">559</td><td class="n">755</td><td class="n">788<br><span class="ink3">税前</span></td></tr>
+      </table>
+      <div class="rpt-p"><b>利益の質が改善（最重要）。</b>FY2024の経常黒字1,095万は営業利益わずか151万＋<b>助成金987万</b>頼みだった。FY2025は助成金が消えた中で<b>本業の営業利益694万で稼いだ＝本業黒字への転換</b>。</div>
+      <div class="rpt-call"><b>「粗利率73.5%→46.8%」は悪化ではない。</b>減価償却の計上場所の変更（FY24=販管費15.7M→FY25=売上原価27.5M）による会計上の組み替え。年度比較は組み替えに影響されない<b>営業利益率（2.5%→7.2%）で見るのが正しい</b>。</div>
+      <div class="rpt-kpis">
+        <div class="rpt-kpi g"><div class="k">現預金</div><div class="v">4,046<small>万</small></div><div class="s">純有利子負債 1,338万のみ</div></div>
+        <div class="rpt-kpi"><div class="k">自己資本比率</div><div class="v">24<small>%</small></div><div class="s">純資産1,880万 / 借入5,384万</div></div>
+        <div class="rpt-kpi g"><div class="k">流動比率</div><div class="v">約10<small>倍</small></div><div class="s">短期支払能力は十分</div></div>
+        <div class="rpt-kpi a"><div class="k">減価償却(原価)</div><div class="v">229→111<small>万/月</small></div><div class="s">半減＝分岐点を押し下げ</div></div>
+      </div>
+      <div class="rpt-note">※FY26 Q1は6月未締（給料・役員報酬未計上）・期末棚卸0で原価過大・税0計上・売上前倒し計上の歪みを含む上限寄りの値。純利益788万は税前。投資判断には使わない（補正後の実力営業利益率は約2〜3%と薄い）。</div>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">02 / ポートフォリオ</div>
+      <div class="rpt-h">実質レンタカー1本足、芽吹く2本目は電装</div>
+      <table class="rpt-tbl">
+        <tr><th>事業（FY26 Q1・運用ベース）</th><th class="n">売上</th><th class="n">構成</th><th class="n">粗利率</th></tr>
+        <tr><td>レンタカー（損保代車）</td><td class="n">1,395万</td><td class="n">78%</td><td class="n">約47%</td></tr>
+        <tr><td>電装取付</td><td class="n">207万</td><td class="n">12%</td><td class="n"><b class="rpt-pos">74.8%</b></td></tr>
+        <tr><td>DETALIA</td><td class="n">179万</td><td class="n">10%</td><td class="n">高</td></tr>
+        <tr class="tot"><td>3事業 計</td><td class="n">1,780万</td><td class="n">100%</td><td class="n">—</td></tr>
+      </table>
+      <div class="rpt-p"><b>電装が最有望の2本目。</b>全事業で最高採算（粗利率74.8%・部品支給で原価ほぼ0）。ただし電装もDETALIAも単独で月610万（分岐点）を支える規模には程遠く、当面は「レンタカーが底を支え、2事業を積み増す」構造。</div>
+      <div class="rpt-note">構成比は運用ベースの近似（FY2025通年ではレンタカーが全社の約95%）。freee Q1売上2,866万と運用合計1,780万の差は計上タイミング差＋八重瀬町役場の案件外契約。</div>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">03 / 最大リスク</div>
+      <div class="rpt-h">顧客集中 — 3事業すべて単一顧客依存</div>
+      <table class="rpt-tbl">
+        <tr><th>事業</th><th>最大顧客</th><th class="n">FY25</th><th class="n">FY26Q1</th></tr>
+        <tr><td>レンタカー</td><td>全国共済(JA)</td><td class="n">63.9%</td><td class="n">62.1%</td></tr>
+        <tr><td>DETALIA</td><td>次郎工業</td><td class="n">68.4%</td><td class="n"><span class="rpt-neg">70.5%</span></td></tr>
+        <tr><td>電装</td><td>プロシード</td><td class="n">—</td><td class="n">100%</td></tr>
+      </table>
+      <div class="rpt-call r"><b>JA共済喪失シミュレーション:</b> JA共済は月平均471万を供給＝全社月商の約61%。これが抜けると月商は<b>約306万に半減</b>し、通常分岐点610万どころか<b>現金下限425万さえ割り込む</b>。最大顧客1社の喪失＝即・赤字転落という単一障害点。</div>
+      <div class="rpt-p">損保代車は発注が事故数連動・<b>価格決定力ゼロ（平均単価¥5,484固定）</b>の受動型。自力開拓の成功例＝八重瀬町役場の法人レンタル（年契約・1台で月約9万）の横展開が分散の鍵。</div>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">04 / 運転資本・債権</div>
+      <div class="rpt-h">滞留 約950万、正体はほぼ「ステータス未更新」</div>
+      <table class="rpt-tbl">
+        <tr><th>区分</th><th class="n">金額</th><th class="n">件数</th><th>滞留</th></tr>
+        <tr><td>請求済・未入金</td><td class="n">374万</td><td class="n">11</td><td>90日超 310万</td></tr>
+        <tr><td>回収済・未請求</td><td class="n">486万</td><td class="n">42</td><td>60日超 20件</td></tr>
+        <tr><td>DETALIA未入金</td><td class="n">90万</td><td class="n">26</td><td>正常範囲</td></tr>
+      </table>
+      <ul class="rpt-ul">
+        <li>AR最古 = 全国共済 ¥207,900（664日・請求日空欄）</li>
+        <li>AR最大額 = 西日本自動車共済 <b>¥1,440,000</b>（636日・請求日空欄）</li>
+        <li>JA共済の90日超は約160万（3件）。「310万」は全顧客合算。</li>
+      </ul>
+      <div class="rpt-call"><b>正本はfreee売掛金1,162万。</b>古い案件は入金済へ前進させていないだけ（損保は月次一括請求でstatusが実会計と乖離）。DSOは約36日＝危険水準ではない。<span class="rpt-warn">ただし売掛金が1年で2倍（611→1,162万）＝四半期ごとにfreee実残高で監視を。</span></div>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">05 / 車両資産</div>
+      <div class="rpt-h">稼働57.5%、フリップ戦略は成功</div>
+      <div class="rpt-kpis">
+        <div class="rpt-kpi g"><div class="k">本日稼働率</div><div class="v">57.5<small>%</small></div><div class="s">42/73台・分岐点50%超</div></div>
+        <div class="rpt-kpi"><div class="k">リース / 自社</div><div class="v">41 / 35<small>台</small></div><div class="s">リース月額計 139万</div></div>
+        <div class="rpt-kpi g"><div class="k">売却17台 生涯ROI</div><div class="v">+1,976<small>万</small></div><div class="s">2年フリップが機能</div></div>
+        <div class="rpt-kpi a"><div class="k">低稼働リース車</div><div class="v">12<small>台</small></div><div class="s">月41万・整理候補</div></div>
+      </div>
+      <div class="rpt-call"><b>売却17台ROI +1,976万の内訳</b> ＝ 生涯レンタル売上 約2,390万 ＋ 売却額 約3,180万 − 投資額 約3,600万。リースは固定費＝<b>低稼働車の整理が分岐点を直接下げる最速のレバー</b>（1台≒分岐点−3.8万/月）。稼働ゼロのリース車1台（タントカスタム）が即仕分け候補筆頭。</div>
+      <div class="rpt-note">季節方針どおり夏（7-9月）は保持、10月に夏の稼働実績で仕分け判断。</div>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">06 / 損益分岐点</div>
+      <div class="rpt-h">月610万。実力月商は余裕あるが利益は薄い</div>
+      <table class="rpt-tbl">
+        <tr><th>段階</th><th class="n">必要月商</th><th class="n">レンタカー稼働</th></tr>
+        <tr><td>通常（会計黒字）</td><td class="n"><b>610万</b></td><td class="n">37台/日(50%)</td></tr>
+        <tr><td>限界（絶対固定費）</td><td class="n">470万</td><td class="n">28台/日(38%)</td></tr>
+        <tr><td>真の現金下限</td><td class="n">425万</td><td class="n">26台/日(35%)</td></tr>
+      </table>
+      <ul class="rpt-ul">
+        <li>限界利益率89.4%・固定費約540万/月（うち<b>車両保有272万＝約半分</b>）。</li>
+        <li>実力月商850万での<b>安全余裕率（標準定義）+28%</b>。構造的に黒字圏。</li>
+        <li>感度: 月商700万→営業利益+86万／<b>850万→約220万（利益率わずか2.6%）</b>。分岐点近傍では小さな売上減で利益が急速に蒸発。</li>
+        <li>稼働率+5pt ≒ 月売上+約61万／リース1台整理 ≒ 月固定費−3.4万。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">07 / 成長・季節性</div>
+      <div class="rpt-h">秋〜冬ピーク型。閑散は1・3・4・5月</div>
+      <div class="rpt-note">レンタカー月次（FY2025・運用値・万円）</div>
+      <div class="rpt-bars">
+        <div class="r"><div class="l">4月 閑散69%</div><div class="t"><div class="f lo" style="width:44%"></div></div><div class="v">510</div></div>
+        <div class="r"><div class="l">5月</div><div class="t"><div class="f lo" style="width:53%"></div></div><div class="v">608</div></div>
+        <div class="r"><div class="l">6月</div><div class="t"><div class="f" style="width:54%"></div></div><div class="v">624</div></div>
+        <div class="r"><div class="l">7月</div><div class="t"><div class="f" style="width:69%"></div></div><div class="v">789</div></div>
+        <div class="r"><div class="l">8月</div><div class="t"><div class="f" style="width:55%"></div></div><div class="v">626</div></div>
+        <div class="r"><div class="l">9月 繁忙155%</div><div class="t"><div class="f pk" style="width:100%"></div></div><div class="v">1147</div></div>
+        <div class="r"><div class="l">10月</div><div class="t"><div class="f" style="width:84%"></div></div><div class="v">969</div></div>
+        <div class="r"><div class="l">11月</div><div class="t"><div class="f" style="width:70%"></div></div><div class="v">801</div></div>
+        <div class="r"><div class="l">12月</div><div class="t"><div class="f" style="width:72%"></div></div><div class="v">824</div></div>
+        <div class="r"><div class="l">1月 閑散72%</div><div class="t"><div class="f lo" style="width:46%"></div></div><div class="v">530</div></div>
+        <div class="r"><div class="l">2月</div><div class="t"><div class="f" style="width:79%"></div></div><div class="v">904</div></div>
+        <div class="r"><div class="l">3月 閑散71%</div><div class="t"><div class="f lo" style="width:46%"></div></div><div class="v">526</div></div>
+      </div>
+      <div class="rpt-p">レンタカーは FY2024 5,531万→FY2025 8,858万（<b>+60%</b>）。FY2026はクリーン比較できる4月で+11.6%継続（伸び率は鈍化方向）。閑散期の谷をDETALIA/電装で埋められるかが利益安定の課題。</div>
+      <table class="rpt-tbl">
+        <tr><th>FY2027シナリオ</th><th class="n">通期売上</th><th class="n">前年比</th></tr>
+        <tr><td>保守</td><td class="n">1.04億</td><td class="n">+11.5%</td></tr>
+        <tr><td>中位</td><td class="n">1.16億</td><td class="n">+24.4%</td></tr>
+        <tr><td>強気</td><td class="n">1.28億</td><td class="n">+37.2%</td></tr>
+      </table>
+      <div class="rpt-note">全シナリオで年間分岐点7,320万を上回る。FY2027は3事業が揃う初の満年度。</div>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">08 / 追加観点</div>
+      <div class="rpt-h">人件費・税・設備投資・基盤</div>
+      <ul class="rpt-ul">
+        <li><b>人件費は重石ではない。</b>労働分配率は対売上9.1%、売上/人 約3,280万（FTE2.93）＝少人数・資本集約型。利益の重石は人ではなく<b>車両</b>。</li>
+        <li><b>税。</b>FY2025実効税率22.5%。FY26 Q1は中間期で税0計上＝純利益788万は<b>税前</b>。経常段階で評価が安全。</li>
+        <li><b>低い分岐点は恒久ではない。</b>減価償却半減（非現金の追い風）が今の好調の主因。長期借入5,384万＞車両簿価2,089万＝「投資の谷」。<b>フリート更新で償却・借入が再増加し分岐点は再上昇する</b>。</li>
+        <li><b>ダッシュボードの盲点。</b>集中度KPI（JA62%・次郎70.5%）が定点観測されていない。売上の正本をfreeeに明文化すべき。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">09 / 打ち手</div>
+      <div class="rpt-h">優先度つき Top 7</div>
+      <table class="rpt-act">
+        <tr><td class="n">1</td><td><b>AR・未請求の一斉棚卸し</b>（freee入金実績と1件ずつ突合→入金済前進 or 請求） <span class="due">／ 7月中</span></td></tr>
+        <tr><td class="n">2</td><td><b>JA共済依存をKPI化</b>（3年で62%→40%以下・準大手2社を各10%超に育成） <span class="due">／ 通期方針</span></td></tr>
+        <tr><td class="n">3</td><td><b>電装を「2本目の柱」に育成</b>（粗利74.8%・プロシード以外の法人開拓） <span class="due">／ 通期</span></td></tr>
+        <tr><td class="n">4</td><td><b>低稼働リース車の仕分け</b>（90日稼働率&lt;30%かつ残リース短を解約閾値・違約金vs残リース料で判定） <span class="due">／ リスト=今、実行=10月</span></td></tr>
+        <tr><td class="n">5</td><td><b>freee売掛金とシステムARの月次突合を定例化</b> <span class="due">／ 8月から</span></td></tr>
+        <tr><td class="n">6</td><td><b>裁量固定費のゼロベース見直し</b>（交際費467万・消耗品208万・地代378万） <span class="due">／ 通期</span></td></tr>
+        <tr><td class="n">7</td><td><b>データ基盤の根治（1案件1ファイル化）に着手</b> <span class="due">／ FY26下期</span></td></tr>
+      </table>
+      <div class="rpt-note">完全版（印刷・共有用HTML）＝ システム一時保管/HariTerrace経営分析_2026-06-28.html。Generated by Claude.</div>
+    </div>
+  </section>
+
   <!-- ========== 設定 ========== -->
   <section id="sec-set">
     <div class="card">
@@ -926,11 +1129,12 @@
   <!-- 中央: 現在タブ。タップで petals が扇形展開、もう一度タップか外側タップで閉じる -->
   <!-- 親指リーチ最適化のため左上方向のみへ扇形展開 (FAB位置=右下) -->
   <nav id="crown" class="crown closed" aria-label="セクションナビ">
-    <button class="petal" data-tab="now"  style="--ang:-75deg"><span>TOP</span></button>
-    <button class="petal" data-tab="rev"  style="--ang:-105deg"><span>売上</span></button>
-    <button class="petal" data-tab="ops"  style="--ang:-135deg"><span>稼働</span></button>
-    <button class="petal" data-tab="pipe" style="--ang:-165deg"><span>案件</span></button>
-    <button class="petal" data-tab="set"  style="--ang:-195deg"><span>設定</span></button>
+    <button class="petal" data-tab="now"    style="--ang:-70deg"><span>TOP</span></button>
+    <button class="petal" data-tab="rev"    style="--ang:-95deg"><span>売上</span></button>
+    <button class="petal" data-tab="ops"    style="--ang:-120deg"><span>稼働</span></button>
+    <button class="petal" data-tab="pipe"   style="--ang:-145deg"><span>案件</span></button>
+    <button class="petal" data-tab="report" style="--ang:-170deg"><span>分析</span></button>
+    <button class="petal" data-tab="set"    style="--ang:-195deg"><span>設定</span></button>
     <button class="crown-btn" id="crown-btn" type="button" aria-expanded="false">
       <span class="cur" id="crown-cur">TOP</span>
       <span class="hint">tap</span>
@@ -950,7 +1154,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-22b';
+const APP_VERSION = '2026-06-28';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2560,11 +2764,11 @@ function renderAll(){
 }
 
 // ---------- TABS / CROWN FAB ----------
-const TAB_LABELS = {now:'TOP', rev:'売上', ops:'稼働', pipe:'案件', set:'設定'};
+const TAB_LABELS = {now:'TOP', rev:'売上', ops:'稼働', pipe:'案件', report:'分析', set:'設定'};
 let _currentTab = 'now';
 function showTab(t){
   _currentTab = t;
-  ['now','rev','ops','pipe','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
+  ['now','rev','ops','pipe','report','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
   // Crown 中央表示と petal 現在地ハイライト
   const cur=$('crown-cur'); if(cur) cur.textContent=TAB_LABELS[t]||t;
   document.querySelectorAll('.crown .petal').forEach(p=>p.classList.toggle('current',p.dataset.tab===t));
@@ -2618,7 +2822,7 @@ function setupTabs(){
 }
 
 // ===== 操作性 (2026-06-12a): スワイプでタブ移動 / 引っ張って更新 / 復帰時 自動更新 =====
-const TAB_ORDER=['now','rev','ops','pipe','set'];
+const TAB_ORDER=['now','rev','ops','pipe','report','set'];
 function setupUX(){
   let swX=null, swY=null;            // スワイプ判定
   let ptrY=null, ptrReady=false;     // pull-to-refresh
