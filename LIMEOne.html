@@ -1702,7 +1702,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   <div id="bi-compare" style="margin-bottom:14px"></div>
 
   <!-- ==== 📅 今月の前年・前々年比較 (同月・同期間) 2026-06-29e ==== -->
-  <div class="bi-section-header" style="margin-top:12px">📅 今月の前年比較 <span style="font-size:11px;color:#888;font-weight:normal">去年・一昨年… の同じ月と比較</span></div>
+  <div class="bi-section-header" style="margin-top:12px">📅 月別 前年比較（12ヶ月） <span style="font-size:11px;color:#888;font-weight:normal">各月を 今年度／去年／一昨年 で比較</span></div>
   <div class="card" id="bi-month-yoy" style="padding:10px;margin-bottom:14px"></div>
 
   <!-- ==== 📊 年度別 受付件数 (昨年・一昨年... と複数年比較) 2026-06-29d ==== -->
@@ -3046,7 +3046,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-29e';
+const APP_VERSION = '2026-06-29f';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5708,20 +5708,21 @@ function biCalcUtilization(from, to){
   return { overall, periodDays, perVeh };
 }
 
-// 📅 今月の前年・前々年比較 (2026-06-29e): 今月を 去年同月・一昨年同月… と並べる。
-//   ユーザー要望で日付は揃えず「その月まるごと」で比較 (今月=本日までの実績 vs 過去年は通月)。
-//   件数=受付日(biFilterCasesByReceived・キャンセル除外・isHistorical重複排除)、売上=利用終了日ベース
-//   (キャンセル除外・isHistorical重複排除・一般は請求済以降のみ・calcAmounts税込)。
+// 📅 月別 前年比較 (12ヶ月) (2026-06-29f): 年度(4月〜翌3月)の各月を 今年度/前年度/前々年度 で並べる。
+//   ユーザー要望「12ヶ月見れるように」。件数⇄売上をトグル切替(window._biMonthMetric)。今月の行を強調。
+//   未到来の月は今年度=「—」(過去年は実績表示)。合計の前年比のみ同期間(4月〜現在月)で公平比較、列の合計は表示値どおり。
+//   件数=受付日(biFilterCasesByReceived・キャンセル除外・isHistorical重複排除)。売上=利用終了日(同条件+一般は請求済以降・calcAmounts税込)。
 //   当月の値はダッシュボード「今月の案件数/今月の売上」(月startsWith)と同基準=一致。
 function renderBiMonthYoY(){
   const host = $('bi-month-yoy'); if(!host) return;
   const today = todayISO();
-  const yr = Number(today.slice(0,4)), mm = today.slice(5,7);
+  const thisYear = Number(today.slice(0,4)), thisMonth = Number(today.slice(5,7));
+  const curFy = getNendo(new Date());
   const realCaseNos = _biRealCaseNos();
-  const mname = y => `${y}年${Number(mm)}月`;
-  const cntMonth = y => biFilterCasesByReceived(`${y}-${mm}-01`, `${y}-${mm}-31`).length;
-  const salesMonth = y => {
-    const from = `${y}-${mm}-01`, to = `${y}-${mm}-31`;
+  const metric = (window._biMonthMetric === 'sales') ? 'sales' : 'count';
+  const cntMonth = (y,m) => biFilterCasesByReceived(`${y}-${pad2(m)}-01`, `${y}-${pad2(m)}-31`).length;
+  const salesMonth = (y,m) => {
+    const from = `${y}-${pad2(m)}-01`, to = `${y}-${pad2(m)}-31`;
     let s = 0;
     (DATA.cases||[]).forEach(c => {
       if(c.status === 'キャンセル') return;
@@ -5734,44 +5735,65 @@ function renderBiMonthYoY(){
     });
     return s;
   };
-  const rows = [];
-  for(let off=0; off<=4; off++){ const y = yr - off; rows.push({ y, count: cntMonth(y), sales: salesMonth(y) }); }
-  // 今月(先頭)は必ず表示。末尾の「データ皆無の古い年」は落とす(去年・一昨年…とデータのある範囲まで)。
-  while(rows.length > 1){ const last = rows[rows.length-1]; if(last.count===0 && last.sales===0) rows.pop(); else break; }
-  const cur = rows[0];
-  const deltaTag = (curV, prevV, isYen) => {
-    if(prevV===0 && curV===0) return '<span class="text-muted">—</span>';
-    const d = curV - prevV;
-    const p = prevV>0 ? Math.round(d/prevV*100) : null;
-    const col = d>0 ? '#2E7D32' : d<0 ? '#C0392B' : '#888';
-    const sign = d>0 ? '+' : d<0 ? '−' : '';
-    const mag = isYen ? yen(Math.abs(d)) : (Math.abs(d) + '件');
-    return `<span style="color:${col};font-weight:bold">${sign}${mag}</span>${p!=null ? ` <span style="color:${col};font-size:11px">(${sign}${Math.abs(p)}%)</span>` : ''}`;
+  const val = (y,m) => metric === 'sales' ? salesMonth(y,m) : cntMonth(y,m);
+  const disp = v => metric === 'sales' ? yen(v) : `${v}件`;
+  const isFuture = (y,m) => (y > thisYear) || (y === thisYear && m > thisMonth);
+  const isCurrent = (y,m) => (y === thisYear && m === thisMonth);
+  const pctTag = (cur, prev, future) => {
+    if(future) return '';
+    if(prev===0 && cur===0) return '<span class="text-muted">—</span>';
+    if(prev===0) return '<span style="color:#2E7D32;font-weight:bold">新規</span>';
+    const p = Math.round((cur - prev) / prev * 100);
+    const col = p>0 ? '#2E7D32' : p<0 ? '#C0392B' : '#888';
+    const sign = p>0 ? '+' : p<0 ? '−' : '';
+    return `<span style="color:${col};font-weight:bold">${sign}${Math.abs(p)}%</span>`;
   };
-  const block = (title, key, isYen) => {
-    const curDisp = isYen ? yen(cur[key]) : `${cur[key]}件`;
-    const priors = rows.slice(1).map(r => {
-      const pvDisp = isYen ? yen(r[key]) : `${r[key]}件`;
-      return `<tr>
-        <td style="padding:3px 10px 3px 0;color:#555;white-space:nowrap">${mname(r.y)}</td>
-        <td class="money" style="padding:3px 14px 3px 0">${pvDisp}</td>
-        <td style="padding:3px 0;white-space:nowrap;font-size:12px">今月は ${deltaTag(cur[key], r[key], isYen)}</td>
-      </tr>`;
-    }).join('');
-    return `<div style="margin-bottom:12px">
-      <div style="font-size:12px;color:#666;margin-bottom:2px">${title}</div>
-      <div style="font-size:23px;font-weight:bold;color:var(--deep,#2C2C2A)">${curDisp} <span style="font-size:12px;color:#888;font-weight:normal">今月（${mname(yr)}・進行中）</span></div>
-      <table style="font-size:12px;margin-top:3px"><tbody>${priors}</tbody></table>
-    </div>`;
-  };
-  if(rows.length < 2){
-    host.innerHTML = block('受付件数','count',false) + block('売上（発生ベース・税込）','sales',true) + `<div class="text-muted" style="font-size:11px">比較できる前年データがまだありません（来年から去年比が出ます）。</div>`;
-    return;
-  }
-  host.innerHTML = block('受付件数','count',false)
-    + block('売上（発生ベース・税込）','sales',true)
-    + `<div class="text-muted" style="font-size:10px">※同じ月どうしの比較。今月は本日までの実績／過去年は月まるごと。受付件数=受付日／売上=利用終了日(キャンセル除く・一般は請求済以降)。</div>`;
+  // 年度の12ヶ月 (4月→翌3月)
+  const fmonths = [];
+  for(let i=0; i<12; i++){ const idx = 3 + i; const m = (idx % 12) + 1; const y = curFy + Math.floor(idx/12); fmonths.push({ y, m }); }
+  const yA = curFy, yB = curFy-1, yC = curFy-2;
+  let sumA=0, sumB=0, sumC=0, sumBytd=0, sumCytd=0;
+  const rowsHtml = fmonths.map(({y,m}) => {
+    const fut = isFuture(y,m), cur_ = isCurrent(y,m);
+    const a = fut ? null : val(y,m);
+    const b = val(y-1,m), c2 = val(y-2,m);
+    if(!fut){ sumA += a; sumBytd += b; sumCytd += c2; }
+    sumB += b; sumC += c2;
+    const hl = cur_ ? 'background:#F7FBEF;' : '';
+    return `<tr style="${hl}">
+      <td style="padding:3px 8px;white-space:nowrap">${m}月${cur_ ? ' <span style="color:#9A6A00;font-size:9px;font-weight:bold">今月</span>' : ''}</td>
+      <td class="money" style="padding:3px 8px;font-weight:${cur_?'bold':'normal'}">${fut ? '<span class="text-muted">—</span>' : disp(a)}</td>
+      <td class="money" style="padding:3px 8px;color:#555">${disp(b)}</td>
+      <td class="money" style="padding:3px 8px;color:#999">${disp(c2)}</td>
+      <td style="padding:3px 8px;white-space:nowrap">${pctTag(a===null?0:a, b, fut)}</td>
+    </tr>`;
+  }).join('');
+  const totalPct = pctTag(sumA, sumBytd, false);
+  const table = `<div class="tbl-wrap"><table style="font-size:12px;width:100%">
+    <thead><tr>
+      <th style="text-align:left">月</th>
+      <th class="money">${yA}年度</th>
+      <th class="money">${yB}年度</th>
+      <th class="money">${yC}年度</th>
+      <th>前年比</th>
+    </tr></thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot><tr style="border-top:2px solid #ccc;font-weight:bold;background:#FAFAF8">
+      <td style="padding:5px 8px">合計</td>
+      <td class="money" style="padding:5px 8px">${disp(sumA)}</td>
+      <td class="money" style="padding:5px 8px;color:#555">${disp(sumB)}</td>
+      <td class="money" style="padding:5px 8px;color:#999">${disp(sumC)}</td>
+      <td style="padding:5px 8px;white-space:nowrap">${totalPct}<span class="text-muted" style="font-size:9px;font-weight:normal"> 同期</span></td>
+    </tr></tfoot>
+  </table></div>`;
+  const toggle = `<div class="bi-chart-toggle" style="margin-bottom:8px">
+    <button class="bi-toggle-btn ${metric==='count'?'active':''}" onclick="setBiMonthMetric('count')">📋 受付件数</button>
+    <button class="bi-toggle-btn ${metric==='sales'?'active':''}" onclick="setBiMonthMetric('sales')">💴 売上</button>
+  </div>`;
+  host.innerHTML = toggle + table
+    + `<div class="text-muted" style="font-size:10px;margin-top:6px">※年度=4月〜翌3月。前年比=${yA}年度 vs ${yB}年度の同月。${metric==='sales' ? '売上=利用終了日(キャンセル除く・一般は請求済以降・税込)' : '受付件数=受付日(キャンセル除く)'}。今月(${thisMonth}月)は本日までの実績／未到来の月の今年度は「—」。合計の前年比は同期間(4〜${thisMonth}月)で比較。</div>`;
 }
+function setBiMonthMetric(m){ window._biMonthMetric = m; if(typeof renderBiMonthYoY === 'function') renderBiMonthYoY(); }
 // 📊 年度別 受付件数 (2026-06-29d): 昨年・一昨年... と複数年で件数を比較。期間セレクタに依らず常に年度ベース。
 //   集計 = biFilterCasesByReceived(受付日・キャンセル除外・isHistorical重複排除) を年度(4月〜翌3月)で。
 //   当年度は本日までの件数を出し「進行中」表示+前年同期(本日まで)と比較=公平に。完了年度は通年フル件数で前年比。
