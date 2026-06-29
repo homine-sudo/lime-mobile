@@ -3029,7 +3029,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-29';
+const APP_VERSION = '2026-06-29a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7254,13 +7254,17 @@ function renderDashboard(){
   inUse.forEach(c=>{ if(_vehIdSet.has(c.vehicleId)) _activeVehIds.add(c.vehicleId); });
   const todayActiveCount = _activeVehIds.size;
   const todayUtilRate = vehAll.length ? Math.round(todayActiveCount * 100 / vehAll.length) : 0;
+  // 「利用中(件数) > 本日稼働中(自社台数)」のズレの内訳 (2026-06-29):
+  //   他社借(isBorrowed)=自社マスタに無い→台数外が正常 / 入力漏れ=自社車だが vehicleId 未割当=要修正
+  const borrowedOut = inUse.filter(c=>c.isBorrowed).length;
+  const unassignedOwnOut = inUse.filter(c=>!c.isBorrowed && !_vehIdSet.has(c.vehicleId)).length;
 
   $('kpi-grid').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">本日の配車</div><div class="kpi-value">${todaysDispatch.length}件</div><div class="kpi-sub">${today}</div></div>
     <div class="kpi-card orange"><div class="kpi-label">本日の回収</div><div class="kpi-value">${todaysReturn.length}件</div><div class="kpi-sub">車両回収日が本日</div></div>
     <div class="kpi-card green"><div class="kpi-label">利用中</div><div class="kpi-value">${inUse.length}件 / ${yen(inUseDailySum)}</div><div class="kpi-sub">日額合計(税込)</div></div>
     <div class="kpi-card lime"><div class="kpi-label">今月の案件数</div><div class="kpi-value">${monthCases}件</div><div class="kpi-sub">${now.getFullYear()}年${now.getMonth()+1}月 受付</div></div>
-    <div class="kpi-card"><div class="kpi-label">本日 稼働中</div><div class="kpi-value">${todayActiveCount}<span style="font-size:14px;color:#666">/${vehAll.length}台</span></div><div class="kpi-sub">瞬間稼働率 ${todayUtilRate}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">本日 稼働中</div><div class="kpi-value">${todayActiveCount}<span style="font-size:14px;color:#666">/${vehAll.length}台</span></div><div class="kpi-sub">瞬間稼働率 ${todayUtilRate}%${borrowedOut?` ・他社借 +${borrowedOut}`:''}${unassignedOwnOut?` ・<span style="color:#C53030;font-weight:bold">⚠車両未割当 ${unassignedOwnOut}</span>`:''}</div></div>
   `;
 
   // 🔀 業務パイプライン (2026-06-10c): 状態別件数チップ。クリックで案件管理の該当状態フィルタへ
