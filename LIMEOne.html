@@ -3029,7 +3029,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-23m';
+const APP_VERSION = '2026-06-29';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -4240,6 +4240,18 @@ async function saveToDirImmediate(){
         console.warn('[マージ衝突]', conflicts);
       }
     }
+    // 受付No衝突の自己修復 (2026-06-29): 書込前に重複caseNoを検出→安全側を空き番号へ自動振替
+    try {
+      const _cr = _resolveCaseNoCollisions((toWrite && toWrite.cases) || []);
+      if(_cr.fixed.length){
+        console.warn('[受付No自動修正]', _cr.fixed);
+        _cr.fixed.forEach(f=> toast(`⚠️ 受付No重複を自動修正: ${f.oldNo} → ${f.newNo}${f.name?'（'+f.name+'）':''}`, 'error'));
+      }
+      if(_cr.warned.length){
+        console.warn('[受付No重複・要手動確認]', _cr.warned);
+        _cr.warned.forEach(w=> toast(`⚠️ 受付No ${w.caseNo} が重複（両方とも書類発行済）。手動で確認してください`, 'error'));
+      }
+    } catch(e){ console.warn('caseNo collision resolve failed:', e); }
     const json = JSON.stringify(toWrite, null, 2);
     // 3. アトミック書込み
     const tmpName = 'data.json.tmp';
@@ -5248,6 +5260,59 @@ function nextCaseNo(forDate){
     if(m) max = Math.max(max, Number(m[1]));
   });
   return `${nendo}-${mm}-${String(max+1).padStart(4,'0')}`;
+}
+// 受付No衝突の自己修復 (2026-06-29): stale端末の二重採番を、Dropbox書込前に安全側へ振り替える恒久対策。
+//   nextCaseNo はローカル(stale)案件数ベースのため、複数端末がオフライン/古い状態で並行登録すると
+//   同じ番号を二重採番し、マージ(id単位)では重複に気づかず両方残る → 最悪は片方消失。
+//   そこで保存マージ直後にこの関数で重複caseNoを検出し、番号を1つに収束させる。
+//   casesArr に対する forDate と taken(この修正パスで既に割当てた番号集合) を見て年度内の空き番号を返す。
+function _nextFreeCaseNoFor(casesArr, forDate, taken){
+  const d = (forDate && !isNaN(new Date(forDate).getTime())) ? new Date(forDate) : new Date();
+  const mm = pad2(d.getMonth()+1);
+  const nendo = (d.getMonth()+1 < 4) ? d.getFullYear()-1 : d.getFullYear();
+  let max = 0;
+  const consider = (no, recv) => {
+    if(!no) return;
+    const m = String(no).match(/(\d{4})$/); if(!m) return;
+    let inFiscal;
+    const cd = recv ? new Date(recv) : null;
+    if(cd && !isNaN(cd.getTime())){ inFiscal = (((cd.getMonth()+1<4)?cd.getFullYear()-1:cd.getFullYear())===nendo); }
+    else { inFiscal = /^(\d{4})-\d{2}-\d{4}$/.test(no) && Number(String(no).split('-')[0])===nendo; }
+    if(inFiscal) max = Math.max(max, Number(m[1]));
+  };
+  (casesArr||[]).forEach(c=> consider(c.caseNo, c.receivedAt));
+  if(taken) taken.forEach(no=> consider(no, null));
+  return `${nendo}-${mm}-${String(max+1).padStart(4,'0')}`;
+}
+// 重複caseNoを検出して安全側を新番号に振替。{fixed:[...], warned:[...]} を返す。
+//   keeper(番号据え置き) = 外部書類(invoiceNo/faxHistory)を持つ方 → それも無ければ createdAt が古い方。
+//   非keeperが外部書類を持つ場合は自動で動かさず warned に積む(送付済み書類との不整合回避)。
+function _resolveCaseNoCollisions(casesArr){
+  if(!Array.isArray(casesArr)) return {fixed:[], warned:[]};
+  const byNo = {};
+  casesArr.forEach(c=>{ if(c && c.caseNo) (byNo[c.caseNo]=byNo[c.caseNo]||[]).push(c); });
+  const fixed=[], warned=[];
+  const taken = new Set();
+  const extScore = c => (c.invoiceNo?1:0) + ((Array.isArray(c.faxHistory)&&c.faxHistory.length)?1:0);
+  Object.keys(byNo).forEach(no=>{
+    const grp = byNo[no];
+    if(grp.length < 2) return;  // 重複なし
+    const sorted = grp.slice().sort((a,b)=>{
+      const e = extScore(b)-extScore(a); if(e) return e;            // 外部書類を持つ方を残す
+      return Number(a.createdAt||0)-Number(b.createdAt||0);          // 同点は古い方を残す
+    });
+    const keeper = sorted[0];
+    sorted.slice(1).forEach(c=>{
+      if(extScore(c) > 0){ warned.push({ caseNo:no, keeperId:keeper.id, conflictId:c.id }); return; }
+      const newNo = _nextFreeCaseNoFor(casesArr, c.receivedAt || no, taken);
+      const old = c.caseNo;
+      c.caseNo = newNo; taken.add(newNo);
+      c.updatedAt = Date.now();
+      c.updatedBy = 'システム自動修正(受付No重複)';
+      fixed.push({ id:c.id, oldNo:old, newNo, name:(c.contractorName||c.driverName||'') });
+    });
+  });
+  return {fixed, warned};
 }
 function overdueDays(c){
   if(c.status==='入金済'||c.status==='キャンセル') return 0;

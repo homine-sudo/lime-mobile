@@ -1888,7 +1888,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-23g';
+const APP_VERSION = '2026-06-29';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2585,6 +2585,15 @@ async function _doSaveCycle(){
         const { data: disk, rev: diskRev } = await dbxLoadData();
         if(disk){ merged = mergeAll(DATA, disk, _lastSyncSnapshot); revToUse = diskRev; }
       } catch(e){}
+      // 受付No衝突の自己修復 (2026-06-29): 書込前に重複caseNoを検出→安全側を空き番号へ自動振替
+      try {
+        const _cr = _resolveCaseNoCollisions((merged && merged.cases) || []);
+        if(_cr.fixed.length){
+          console.warn('[受付No自動修正]', _cr.fixed);
+          _cr.fixed.forEach(f=> toast(`⚠️ 受付No重複を自動修正: ${f.oldNo}→${f.newNo}`, 'error'));
+        }
+        if(_cr.warned.length){ console.warn('[受付No重複・要確認]', _cr.warned); }
+      } catch(e){ console.warn('caseNo collision resolve failed:', e); }
       const jsonStr = JSON.stringify(merged, null, 2);
       const newRev = await dbxSaveDataAtomic(jsonStr, revToUse);
       // ★単純な DATA=merged は本サイクル実行中の別入力を取りこぼす。
@@ -4890,6 +4899,54 @@ function _genMobileCaseNo(forDate){
     if(m) max = Math.max(max, Number(m[1]));
   });
   return `${nendo}-${mm}-${String(max + 1).padStart(4, '0')}`;
+}
+// 受付No衝突の自己修復 (2026-06-29): PC LIMEOne と同一ロジック。stale端末の二重採番を
+//   保存マージ直後・Dropbox書込前に検出し、外部書類(invoiceNo/faxHistory)が無い安全側を
+//   年度内の空き番号へ自動振替する。両方とも書類発行済みなら自動で動かさず警告のみ。
+function _nextFreeCaseNoFor(casesArr, forDate, taken){
+  const d = (forDate && !isNaN(new Date(forDate).getTime())) ? new Date(forDate) : new Date();
+  const mm = pad2(d.getMonth()+1);
+  const nendo = (d.getMonth()+1 < 4) ? d.getFullYear()-1 : d.getFullYear();
+  let max = 0;
+  const consider = (no, recv) => {
+    if(!no) return;
+    const m = String(no).match(/(\d{4})$/); if(!m) return;
+    let inFiscal;
+    const cd = recv ? new Date(recv) : null;
+    if(cd && !isNaN(cd.getTime())){ inFiscal = (((cd.getMonth()+1<4)?cd.getFullYear()-1:cd.getFullYear())===nendo); }
+    else { inFiscal = /^(\d{4})-\d{2}-\d{4}$/.test(no) && Number(String(no).split('-')[0])===nendo; }
+    if(inFiscal) max = Math.max(max, Number(m[1]));
+  };
+  (casesArr||[]).forEach(c=> consider(c.caseNo, c.receivedAt));
+  if(taken) taken.forEach(no=> consider(no, null));
+  return `${nendo}-${mm}-${String(max+1).padStart(4,'0')}`;
+}
+function _resolveCaseNoCollisions(casesArr){
+  if(!Array.isArray(casesArr)) return {fixed:[], warned:[]};
+  const byNo = {};
+  casesArr.forEach(c=>{ if(c && c.caseNo) (byNo[c.caseNo]=byNo[c.caseNo]||[]).push(c); });
+  const fixed=[], warned=[];
+  const taken = new Set();
+  const extScore = c => (c.invoiceNo?1:0) + ((Array.isArray(c.faxHistory)&&c.faxHistory.length)?1:0);
+  Object.keys(byNo).forEach(no=>{
+    const grp = byNo[no];
+    if(grp.length < 2) return;
+    const sorted = grp.slice().sort((a,b)=>{
+      const e = extScore(b)-extScore(a); if(e) return e;
+      return Number(a.createdAt||0)-Number(b.createdAt||0);
+    });
+    const keeper = sorted[0];
+    sorted.slice(1).forEach(c=>{
+      if(extScore(c) > 0){ warned.push({ caseNo:no, keeperId:keeper.id, conflictId:c.id }); return; }
+      const newNo = _nextFreeCaseNoFor(casesArr, c.receivedAt || no, taken);
+      const old = c.caseNo;
+      c.caseNo = newNo; taken.add(newNo);
+      c.updatedAt = Date.now();
+      c.updatedBy = 'システム自動修正(受付No重複)';
+      fixed.push({ id:c.id, oldNo:old, newNo, name:(c.contractorName||c.driverName||'') });
+    });
+  });
+  return {fixed, warned};
 }
 
 async function saveNewCase(enterFlow){
