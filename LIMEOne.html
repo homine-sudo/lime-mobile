@@ -1132,6 +1132,15 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           <span style="font-size:12px;color:#7A4500;font-weight:bold">売上入金管理 →</span>
         </div>
       </div>
+      <!-- 🩺 データ点検 (2026-06-29b): 受付No重複/自社車の割当漏れ/二重割当 等を常時自己点検 (読み取りのみ・異常時のみ表示・クリックで案件を開く) -->
+      <div class="card alert-compact" style="display:none;padding:8px 10px;border-left:4px solid #C53030;margin-bottom:0" id="data-health-card">
+        <div class="card-title" style="margin-bottom:4px;font-size:12px;display:flex;align-items:center;gap:6px;color:#C53030">
+          🩺 <span>データ点検</span>
+          <span id="data-health-sub" style="color:#C53030;font-weight:bold;font-size:11px"></span>
+          <span class="text-muted" style="font-size:10px;margin-left:auto">受付No重複・割当漏れ・二重割当 等</span>
+        </div>
+        <div class="tbl-wrap alert-compact-table" id="data-health-body"></div>
+      </div>
     </div>
     <div class="card alert-compact" style="padding:8px 10px;border-left:4px solid #888780;margin-bottom:0" id="dashboard-veh-alerts-card">
       <div class="card-title" style="margin-bottom:4px;font-size:12px;display:flex;align-items:center;gap:6px;color:#2C2C2A">
@@ -3029,7 +3038,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-29a';
+const APP_VERSION = '2026-06-29b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -13853,7 +13862,11 @@ function renderDataHealth(){
   const card = $('data-health-card'); const body = $('data-health-body'); const sub = $('data-health-sub');
   if(!card || !body) return;
   const today = todayISO();
-  const issues = { noName:[], inUseNoStart:[], inUseNoDispatch:[], overdueInvoice:[], longUse:[], noPlate:[] };
+  // 2026-06-29b: 出庫中(=今その車が出ている)判定 + 自社保有車両ID集合 (受付No重複/割当漏れ/二重割当の点検用)
+  const _out = c => c && c.status!=='キャンセル' && ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)
+    && c.useStart && c.useStart<=today && !(c.useEnd && c.useEnd<today);
+  const _fleet = new Set((DATA.vehicles||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち').map(v=>v.id));
+  const issues = { dupNo:[], doubleBooked:[], outNoVeh:[], noName:[], inUseNoStart:[], inUseNoDispatch:[], overdueInvoice:[], longUse:[] };
   DATA.cases.forEach(c => {
     if(c.status==='キャンセル') return;
     // 1. 契約者・運転者ともに空
@@ -13872,13 +13885,23 @@ function renderDataHealth(){
       const d = Math.floor((new Date() - parseDate(c.useStart)) / 86400000);
       if(d > 90) issues.longUse.push({c, days:d});
     }
-    // 6. 利用中なのにナンバー情報なし
-    if(c.status==='利用中' && !c.plateTail && !c.vehicleId) issues.noPlate.push(c);
+    // 6. 出庫中(配車済〜手配書FAX済)なのに自社車両が未割当 (他社借は自社マスタに無いので除外=正常)
+    if(_out(c) && !c.isBorrowed && !_fleet.has(c.vehicleId)) issues.outNoVeh.push(c);
   });
+  // 受付No重複: 同一caseNoが非削除案件で2件以上 (stale端末の二重採番の残骸検出)
+  const _byNo = {};
+  DATA.cases.forEach(c=>{ if(c.caseNo && !c.isDeleted) (_byNo[c.caseNo]=_byNo[c.caseNo]||[]).push(c); });
+  Object.keys(_byNo).forEach(no=>{ if(_byNo[no].length>1) issues.dupNo.push(..._byNo[no]); });
+  // 二重割当: 同じ自社車が複数の出庫中案件に割当 (同じ車が同時に2人へ=実在し得ない=データ誤り)
+  const _byVeh = {};
+  DATA.cases.forEach(c=>{ if(_out(c) && _fleet.has(c.vehicleId)) (_byVeh[c.vehicleId]=_byVeh[c.vehicleId]||[]).push(c); });
+  Object.keys(_byVeh).forEach(vid=>{ if(_byVeh[vid].length>1) issues.doubleBooked.push(..._byVeh[vid]); });
   const rows = [];
+  if(issues.dupNo.length) rows.push({icon:'🔢', sev:'red', kind:'受付No重複 (同じ番号が複数案件)', items:issues.dupNo});
+  if(issues.doubleBooked.length) rows.push({icon:'⚠️', sev:'red', kind:'同じ車両が複数の貸出中案件に割当 (二重割当)', items:issues.doubleBooked});
+  if(issues.outNoVeh.length) rows.push({icon:'🚗', sev:'orange', kind:'貸出中なのに自社車両が未割当 (要割当・他社借は除く)', items:issues.outNoVeh});
   if(issues.inUseNoStart.length) rows.push({icon:'⚠️', sev:'red', kind:'利用中なのに利用開始日が未入力', items:issues.inUseNoStart});
   if(issues.inUseNoDispatch.length) rows.push({icon:'⚠️', sev:'orange', kind:'利用中なのに配車完了日時が未記録', items:issues.inUseNoDispatch});
-  if(issues.noPlate.length) rows.push({icon:'🚗', sev:'orange', kind:'利用中なのに貸出車両ナンバーが未設定', items:issues.noPlate});
   if(issues.overdueInvoice.length) rows.push({icon:'💰', sev:'red', kind:'振込期日60日超過の請求', items:issues.overdueInvoice.map(x=>x.c)});
   if(issues.longUse.length) rows.push({icon:'⏰', sev:'orange', kind:'90日以上利用中のまま未返却', items:issues.longUse.map(x=>x.c)});
   if(issues.noName.length) rows.push({icon:'👤', sev:'gray', kind:'契約者・運転者ともに未入力', items:issues.noName});
