@@ -1701,6 +1701,10 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   <div class="bi-section-header">📈 過去との比較 <span style="font-size:11px;color:#888;font-weight:normal">当期 vs 前年同期</span></div>
   <div id="bi-compare" style="margin-bottom:14px"></div>
 
+  <!-- ==== 📅 今月の前年・前々年比較 (同月・同期間) 2026-06-29e ==== -->
+  <div class="bi-section-header" style="margin-top:12px">📅 今月の前年比較 <span style="font-size:11px;color:#888;font-weight:normal">去年・一昨年… の同じ月と比較</span></div>
+  <div class="card" id="bi-month-yoy" style="padding:10px;margin-bottom:14px"></div>
+
   <!-- ==== 📊 年度別 受付件数 (昨年・一昨年... と複数年比較) 2026-06-29d ==== -->
   <div class="bi-section-header" style="margin-top:12px">📊 年度別 受付件数 <span style="font-size:11px;color:#888;font-weight:normal">昨年・一昨年… と比較</span></div>
   <div class="card" id="bi-yearly-count" style="padding:10px;margin-bottom:14px"></div>
@@ -3042,7 +3046,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-29d';
+const APP_VERSION = '2026-06-29e';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5704,6 +5708,70 @@ function biCalcUtilization(from, to){
   return { overall, periodDays, perVeh };
 }
 
+// 📅 今月の前年・前々年比較 (2026-06-29e): 今月を 去年同月・一昨年同月… と並べる。
+//   ユーザー要望で日付は揃えず「その月まるごと」で比較 (今月=本日までの実績 vs 過去年は通月)。
+//   件数=受付日(biFilterCasesByReceived・キャンセル除外・isHistorical重複排除)、売上=利用終了日ベース
+//   (キャンセル除外・isHistorical重複排除・一般は請求済以降のみ・calcAmounts税込)。
+//   当月の値はダッシュボード「今月の案件数/今月の売上」(月startsWith)と同基準=一致。
+function renderBiMonthYoY(){
+  const host = $('bi-month-yoy'); if(!host) return;
+  const today = todayISO();
+  const yr = Number(today.slice(0,4)), mm = today.slice(5,7);
+  const realCaseNos = _biRealCaseNos();
+  const mname = y => `${y}年${Number(mm)}月`;
+  const cntMonth = y => biFilterCasesByReceived(`${y}-${mm}-01`, `${y}-${mm}-31`).length;
+  const salesMonth = y => {
+    const from = `${y}-${mm}-01`, to = `${y}-${mm}-31`;
+    let s = 0;
+    (DATA.cases||[]).forEach(c => {
+      if(c.status === 'キャンセル') return;
+      if(!c.useEnd) return;
+      const u = c.useEnd.slice(0,10);
+      if(u < from || u > to) return;
+      if(c.isHistorical && realCaseNos.has(c.caseNo)) return;
+      if(c.category === '一般' && !['請求済','入金済'].includes(c.status)) return;
+      s += (calcAmounts(c).total || 0);
+    });
+    return s;
+  };
+  const rows = [];
+  for(let off=0; off<=4; off++){ const y = yr - off; rows.push({ y, count: cntMonth(y), sales: salesMonth(y) }); }
+  // 今月(先頭)は必ず表示。末尾の「データ皆無の古い年」は落とす(去年・一昨年…とデータのある範囲まで)。
+  while(rows.length > 1){ const last = rows[rows.length-1]; if(last.count===0 && last.sales===0) rows.pop(); else break; }
+  const cur = rows[0];
+  const deltaTag = (curV, prevV, isYen) => {
+    if(prevV===0 && curV===0) return '<span class="text-muted">—</span>';
+    const d = curV - prevV;
+    const p = prevV>0 ? Math.round(d/prevV*100) : null;
+    const col = d>0 ? '#2E7D32' : d<0 ? '#C0392B' : '#888';
+    const sign = d>0 ? '+' : d<0 ? '−' : '';
+    const mag = isYen ? yen(Math.abs(d)) : (Math.abs(d) + '件');
+    return `<span style="color:${col};font-weight:bold">${sign}${mag}</span>${p!=null ? ` <span style="color:${col};font-size:11px">(${sign}${Math.abs(p)}%)</span>` : ''}`;
+  };
+  const block = (title, key, isYen) => {
+    const curDisp = isYen ? yen(cur[key]) : `${cur[key]}件`;
+    const priors = rows.slice(1).map(r => {
+      const pvDisp = isYen ? yen(r[key]) : `${r[key]}件`;
+      return `<tr>
+        <td style="padding:3px 10px 3px 0;color:#555;white-space:nowrap">${mname(r.y)}</td>
+        <td class="money" style="padding:3px 14px 3px 0">${pvDisp}</td>
+        <td style="padding:3px 0;white-space:nowrap;font-size:12px">今月は ${deltaTag(cur[key], r[key], isYen)}</td>
+      </tr>`;
+    }).join('');
+    return `<div style="margin-bottom:12px">
+      <div style="font-size:12px;color:#666;margin-bottom:2px">${title}</div>
+      <div style="font-size:23px;font-weight:bold;color:var(--deep,#2C2C2A)">${curDisp} <span style="font-size:12px;color:#888;font-weight:normal">今月（${mname(yr)}・進行中）</span></div>
+      <table style="font-size:12px;margin-top:3px"><tbody>${priors}</tbody></table>
+    </div>`;
+  };
+  if(rows.length < 2){
+    host.innerHTML = block('受付件数','count',false) + block('売上（発生ベース・税込）','sales',true) + `<div class="text-muted" style="font-size:11px">比較できる前年データがまだありません（来年から去年比が出ます）。</div>`;
+    return;
+  }
+  host.innerHTML = block('受付件数','count',false)
+    + block('売上（発生ベース・税込）','sales',true)
+    + `<div class="text-muted" style="font-size:10px">※同じ月どうしの比較。今月は本日までの実績／過去年は月まるごと。受付件数=受付日／売上=利用終了日(キャンセル除く・一般は請求済以降)。</div>`;
+}
 // 📊 年度別 受付件数 (2026-06-29d): 昨年・一昨年... と複数年で件数を比較。期間セレクタに依らず常に年度ベース。
 //   集計 = biFilterCasesByReceived(受付日・キャンセル除外・isHistorical重複排除) を年度(4月〜翌3月)で。
 //   当年度は本日までの件数を出し「進行中」表示+前年同期(本日まで)と比較=公平に。完了年度は通年フル件数で前年比。
@@ -5804,6 +5872,7 @@ function renderBI(){
   // 📊 現状把握 → 📈 過去との比較 → 🔮 予測
   renderBiHealthboard(range, cases, kpi, kpiPrev, util, prevUtilOverall);
   renderBiCompare(kpi, kpiPrev, util, prevUtilOverall, range);
+  renderBiMonthYoY();      // 📅 今月の前年・前々年比較 (同月・月まるごと)
   renderBiYearlyCount();   // 📊 年度別 受付件数 (複数年比較・期間セレクタ非依存)
   renderBiOutlook();
 
