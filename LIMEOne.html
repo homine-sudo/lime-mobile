@@ -1693,6 +1693,18 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     </div>
   </div>
 
+  <!-- ==== 🎯 今、順調？ (ひと目判定 + 今月/今年度を前年比) 2026-06-29g 再設計トップ ==== -->
+  <div class="bi-section-header">🎯 今、順調？ <span style="font-size:11px;color:#888;font-weight:normal">今月・今年度を前年・前々年と比較</span></div>
+  <div id="bi-summary" style="margin-bottom:14px"></div>
+
+  <!-- ==== 📅 月別 前年比較（12ヶ月）==== -->
+  <div class="bi-section-header" style="margin-top:12px">📅 月別 前年比較（12ヶ月） <span style="font-size:11px;color:#888;font-weight:normal">各月を 今年度／去年／一昨年 で比較</span></div>
+  <div class="card" id="bi-month-yoy" style="padding:10px;margin-bottom:14px"></div>
+
+  <!-- ==== ▼ もっと詳しく (折りたたみ・既存の詳細分析をすべて格納) 2026-06-29g ==== -->
+  <details id="bi-more" style="margin-top:10px" ontoggle="if(this.open && typeof renderBI==='function') setTimeout(renderBI,40)">
+    <summary style="cursor:pointer;font-size:13px;font-weight:bold;color:var(--navy);padding:8px 10px;border-left:3px solid var(--navy);background:#FAFAF8;margin-bottom:10px">▸ もっと詳しく（稼働率・車両ROI・取引先・担当者・予測 など全分析）</summary>
+
   <!-- ==== 📊 現状把握 (いま・主要指標を一望) ==== -->
   <div class="bi-section-header">📊 現状把握 <span style="font-size:11px;color:#888;font-weight:normal">いま / 前年同期比</span></div>
   <div id="bi-healthboard" style="margin-bottom:14px"></div>
@@ -1700,10 +1712,6 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   <!-- ==== 📈 過去との比較 (当期 vs 前年同期) ==== -->
   <div class="bi-section-header">📈 過去との比較 <span style="font-size:11px;color:#888;font-weight:normal">当期 vs 前年同期</span></div>
   <div id="bi-compare" style="margin-bottom:14px"></div>
-
-  <!-- ==== 📅 今月の前年・前々年比較 (同月・同期間) 2026-06-29e ==== -->
-  <div class="bi-section-header" style="margin-top:12px">📅 月別 前年比較（12ヶ月） <span style="font-size:11px;color:#888;font-weight:normal">各月を 今年度／去年／一昨年 で比較</span></div>
-  <div class="card" id="bi-month-yoy" style="padding:10px;margin-bottom:14px"></div>
 
   <!-- ==== 📊 年度別 受付件数 (昨年・一昨年... と複数年比較) 2026-06-29d ==== -->
   <div class="bi-section-header" style="margin-top:12px">📊 年度別 受付件数 <span style="font-size:11px;color:#888;font-weight:normal">昨年・一昨年… と比較</span></div>
@@ -1956,6 +1964,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       </div>
       <div style="height:200px"><canvas id="bi-chart-adjust-trend"></canvas></div>
     </div>
+  </details>
   </details>
 </div>
 
@@ -3046,7 +3055,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-06-29f';
+const APP_VERSION = '2026-06-29g';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5708,6 +5717,62 @@ function biCalcUtilization(from, to){
   return { overall, periodDays, perVeh };
 }
 
+// 🎯 今、順調？ (2026-06-29g 再設計トップ): 今月/今年度を 去年・一昨年 と前年比で。ひと目判定+2カード。
+//   今月=暦月(当月は本日まで)。今年度=4/1〜本日の同期比(前年は1年前の同日まで)。件数=受付日/売上=利用終了日(一般は請求済以降)。
+function renderBiSummary(){
+  const host = $('bi-summary'); if(!host) return;
+  const today = todayISO();
+  const Y = Number(today.slice(0,4)), mm = today.slice(5,7), dd = today.slice(8,10), monthNum = Number(mm);
+  const curFy = getNendo(new Date());
+  const realCaseNos = _biRealCaseNos();
+  const cntRange = (f,t) => biFilterCasesByReceived(f,t).length;
+  const salesRange = (f,t) => {
+    let s = 0;
+    (DATA.cases||[]).forEach(c => {
+      if(c.status === 'キャンセル') return;
+      if(!c.useEnd) return;
+      const u = c.useEnd.slice(0,10);
+      if(u < f || u > t) return;
+      if(c.isHistorical && realCaseNos.has(c.caseNo)) return;
+      if(c.category === '一般' && !['請求済','入金済'].includes(c.status)) return;
+      s += (calcAmounts(c).total || 0);
+    });
+    return s;
+  };
+  const mC = y => cntRange(`${y}-${mm}-01`, `${y}-${mm}-31`);
+  const mS = y => salesRange(`${y}-${mm}-01`, `${y}-${mm}-31`);
+  const curMC = mC(Y), pMC = mC(Y-1), p2MC = mC(Y-2);
+  const curMS = mS(Y), pMS = mS(Y-1), p2MS = mS(Y-2);
+  const curFC = cntRange(`${curFy}-04-01`, today), pFC = cntRange(`${curFy-1}-04-01`, `${Y-1}-${mm}-${dd}`), p2FC = cntRange(`${curFy-2}-04-01`, `${Y-2}-${mm}-${dd}`);
+  const curFS = salesRange(`${curFy}-04-01`, today), pFS = salesRange(`${curFy-1}-04-01`, `${Y-1}-${mm}-${dd}`), p2FS = salesRange(`${curFy-2}-04-01`, `${Y-2}-${mm}-${dd}`);
+  const pctTxt = (c,p) => {
+    if(p>0){ const v = Math.round((c-p)/p*100); const col = v>0?'#2E7D32':v<0?'#C0392B':'#888'; const sg = v>0?'+':v<0?'−':''; return `<span style="color:${col};font-weight:bold">${sg}${Math.abs(v)}%</span>`; }
+    return c>0 ? '<span style="color:#2E7D32;font-weight:bold">新規</span>' : '<span style="color:#888">—</span>';
+  };
+  const metric = (lbl, c, p, p2, peer, isYen) => `
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:#888">${lbl}</div>
+      <div style="font-size:24px;font-weight:bold;color:var(--navy);line-height:1.2">${isYen ? yen(c) : c+'<span style="font-size:13px">件</span>'}</div>
+      <div style="font-size:12px;margin-top:2px">
+        <span style="color:#888">${peer} ${isYen ? yen(p) : p}</span> ${pctTxt(c,p)}
+        <span style="color:#888">${peer==='去年'?'一昨年':'一昨年同期'} ${isYen ? yen(p2) : p2}</span> ${pctTxt(c,p2)}
+      </div>
+    </div>`;
+  const card = (title, inner) => `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:13px;color:#555;margin-bottom:10px;font-weight:bold">${title}</div>${inner}</div>`;
+  const arrow = v => v==null ? '—' : (v>0?`<span style="color:#2E7D32;font-weight:bold">↑ ${v}%</span>` : v<0?`<span style="color:#C0392B;font-weight:bold">↓ ${Math.abs(v)}%</span>` : '<span style="color:#888">±0%</span>');
+  const vL = pMC>0 ? Math.round((curMC-pMC)/pMC*100) : null;
+  const v2 = p2MC>0 ? Math.round((curMC-p2MC)/p2MC*100) : null;
+  const verdict = `<div style="background:#fff;border:1px solid var(--border);border-left:3px solid var(--navy);padding:11px 14px;margin-bottom:12px">
+    <div style="font-size:12px;color:#888;margin-bottom:3px">🎯 ひと目の判定 — 今月（${monthNum}月）の受付</div>
+    <div style="font-size:15px;color:var(--navy)">今月 <b>${curMC}件</b>　・　去年同月比 ${arrow(vL)}　／　一昨年同月比 ${arrow(v2)}</div>
+  </div>`;
+  host.innerHTML = verdict
+    + `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">`
+    + card(`今月（${Y}年${monthNum}月・進行中）`, metric('受付件数', curMC, pMC, p2MC, '去年', false) + metric('売上（発生ベース・税込）', curMS, pMS, p2MS, '去年', true))
+    + card(`今年度（4月〜${monthNum}月・同期比）`, metric('受付件数', curFC, pFC, p2FC, '去年同期', false) + metric('売上（発生ベース・税込）', curFS, pFS, p2FS, '去年同期', true))
+    + `</div>`;
+}
 // 📅 月別 前年比較 (12ヶ月) (2026-06-29f): 年度(4月〜翌3月)の各月を 今年度/前年度/前々年度 で並べる。
 //   ユーザー要望「12ヶ月見れるように」。件数⇄売上をトグル切替(window._biMonthMetric)。今月の行を強調。
 //   未到来の月は今年度=「—」(過去年は実績表示)。合計の前年比のみ同期間(4月〜現在月)で公平比較、列の合計は表示値どおり。
@@ -5892,9 +5957,10 @@ function renderBI(){
   }
 
   // 📊 現状把握 → 📈 過去との比較 → 🔮 予測
+  renderBiSummary();       // 🎯 今、順調？ (再設計トップ・今月/今年度を前年比)
   renderBiHealthboard(range, cases, kpi, kpiPrev, util, prevUtilOverall);
   renderBiCompare(kpi, kpiPrev, util, prevUtilOverall, range);
-  renderBiMonthYoY();      // 📅 今月の前年・前々年比較 (同月・月まるごと)
+  renderBiMonthYoY();      // 📅 月別 前年比較 (12ヶ月)
   renderBiYearlyCount();   // 📊 年度別 受付件数 (複数年比較・期間セレクタ非依存)
   renderBiOutlook();
 
