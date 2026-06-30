@@ -751,6 +751,24 @@ a{color:var(--info);text-decoration:none}
   border-left-color:var(--lime);
 }
 @keyframes tslide{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+/* 完了直後undo付きトースト */
+.m-toast-undo{display:flex;align-items:center;gap:12px;transition:opacity .35s}
+.m-toast-undo-msg{flex:1;min-width:0}
+.m-toast-undo-btn{
+  flex:0 0 auto;background:rgba(255,255,255,.2);color:#fff;
+  border:1.5px solid rgba(255,255,255,.7);border-radius:8px;
+  padding:6px 14px;font-size:13px;font-weight:700;letter-spacing:.02em;cursor:pointer;
+}
+.m-toast-undo-btn:active{background:rgba(255,255,255,.35)}
+/* 完了済みカードのFAX送り直しボタン */
+.m-card-resend-row{margin-top:10px}
+.m-card-resend{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#fff;color:#2C5282;border:1.5px solid #2C5282;
+  border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:700;
+  letter-spacing:.02em;cursor:pointer;
+}
+.m-card-resend:active{background:#EAF2FB;transform:scale(.97)}
 
 /* === MODAL === */
 .m-modal{
@@ -1888,7 +1906,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-29';
+const APP_VERSION = '2026-06-30';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2852,7 +2870,13 @@ function confirmPdfBeforeSend(meta){
         <b>⚠️ 取引先に届くのは下の内容そのものです。</b><br>
         右端の見切れ・項目欠け・ページを確認してから送信してください。
       </div>
-      ${meta&&meta.to?`<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">📧 送信先: ${esc(meta.to)}</div>`:''}
+      ${meta&&meta.faxDisplay?`<div style="background:#FEF2F2;border:1px solid #F3C0C0;border-radius:8px;padding:10px 12px;margin-bottom:10px;text-align:center;color:#C53030">
+        <span style="font-size:11.5px;font-weight:700">この番号に送信します</span><br>
+        <span style="font-size:19px;font-weight:700;letter-spacing:.04em">${esc(meta.faxDisplay)}</span>
+        ${meta.partnerName?`<br><span style="font-size:13px;font-weight:700;color:#7A2E2E">${esc(meta.partnerName)}</span>`:''}
+        ${meta.docLabel?`<span style="font-size:11.5px;color:var(--muted);font-weight:400"> ／ ${esc(meta.docLabel)}</span>`:''}
+      </div>`:''}
+      ${meta&&meta.to?`<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">📧 送信先アドレス: ${esc(meta.to)}</div>`:''}
       ${img
         ? `<div style="border:1px solid #999;border-radius:6px;overflow:auto;max-height:56vh;background:#fff"><img src="${img}" style="width:100%;display:block" alt="送信PDFプレビュー"></div>`
         : `<div style="border:1px solid #C53030;border-radius:6px;padding:14px;background:#FEF2F2;color:#C53030;font-size:12.5px;text-align:center">プレビュー画像を生成できませんでした。<br>不安な場合は中止して、Dropboxに保存されたPDFを確認してください。</div>`}`;
@@ -3227,6 +3251,13 @@ function _renderCaseCard(c, kind){
   const isDone = kind === 'dispatch'
     ? !!c.dispatchDoneAt
     : !!c.recoveryCompleted;
+  // ★FAX送り直し(軽量版): 完了済み かつ 当該フェーズのFAXが既に送信済みの案件にだけ
+  //   「FAXを送り直す」を出す。完了フローを再走させない専用経路 enterFaxResend へ (写真二重追記・
+  //   完了LINE再発火・完了時刻上書きなし)。3層防御は onFaxSend 経由で必ず通る。
+  const _faxSent = kind === 'dispatch' ? c.faxSentAtDispatch : c.faxSentAtReturn;
+  const resendBtn = (isDone && _faxSent)
+    ? `<div class="m-card-resend-row"><button type="button" class="m-card-resend" onclick="enterFaxResend('${c.id}','${kind}',event)"><svg class="m-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 17h2a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2"/><path d="M7 9V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v5"/><rect x="7" y="14" width="10" height="6" rx="1"/></svg>FAXを送り直す</button></div>`
+    : '';
   const time = kind === 'dispatch'
     ? (fmtTime(c.dispatchAt) || '--:--')
     : (c.recoveryCalledAt ? (fmtTime(c.recoveryCalledAt) || fmtDate(c.recoveryCalledAt)) : '--:--');
@@ -3291,6 +3322,7 @@ function _renderCaseCard(c, kind){
           ${toLine ? `<div class="m-card-row"><span class="lbl">回収先</span><span class="val">${toLine}</span></div>` : ''}
           ${c.category === '一般' && (c.useStart || c.useEnd) ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>` : ''}
           ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
+          ${resendBtn}
         </div>
         <div class="m-card-right"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg></div>
       </div>
@@ -3312,6 +3344,7 @@ function _renderCaseCard(c, kind){
         ${toLine ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${toLine}</span></div>` : ''}
         ${c.dispatchToAddress ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsLink}</span></div>` : ''}
         ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
+        ${resendBtn}
       </div>
       <div class="m-card-right"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg></div>
     </div>
@@ -3987,10 +4020,21 @@ async function renderFlowConfirmScreen(){
   }
 }
 
+// 完了直後undo & 多重実行ガード用 (直前1操作のみ退避)
+let _confirmBusy = false;
+let _undoComplete = null;
 async function onConfirmDo(){
+  if(_confirmBusy) return;                 // ★多重実行ガード: 連打・固まり時の焦りタップで二重記録/二重通知しない
   if(!_flow) return;
   const c = findCaseById(_flow.caseId); if(!c) return;
+  _confirmBusy = true;
+  const _doBtn = $('m-confirm-do-btn'); if(_doBtn) _doBtn.disabled = true;
   showSpinner((_flow.kind==='recovery'?'回収':'配車')+'完了を記録中...');
+  // ★完了直前の値を退避 (完了直後の「取り消す」undo用・この案件の直前1操作のみ)
+  const _undoKind = _flow.kind;
+  const _undoSnap = _undoKind==='dispatch'
+    ? { status:c.status, dispatchDoneAt:c.dispatchDoneAt, useStart:c.useStart, meterAtDispatch:c.meterAtDispatch, csLen:(c.checkSheets||[]).length }
+    : { status:c.status, recoveryCalledAt:c.recoveryCalledAt, useEnd:c.useEnd, recoveryCompleted:c.recoveryCompleted, meterAtReturn:c.meterAtReturn, salesYear:c.salesYear, salesMonth:c.salesMonth };
   try {
     // 1. case.checkSheets に追記 (配車時のみ。回収は撮影機能なし)
     if(_flow.kind === 'dispatch' && _flow.photoPath){
@@ -4050,10 +4094,19 @@ async function onConfirmDo(){
     _stampUpdated(c);
     _syncVehicleMileage(c);  // 返却/貸出メーター → 車両マスタ mileage へ追従 (走行距離を定位置に最新化)
 
-    // 3. Dropboxに保存
-    await saveToDropbox();
+    // 3. Dropboxに保存 — ★保存の成否を必ず確認する (saveToDropbox は true=永続化成功/false=失敗)。
+    //   2026-05-18c で他の保存箇所は直したが、この完了フローだけ戻り値を見ておらず
+    //   「保存に失敗してもLINE通知を飛ばし完了表示で進む」穴が残っていた。失敗時は通知も
+    //   完了表示もせず明示エラーを出して止める (＝通知だけ来て保存消失 を完了動線でも根絶)。
+    const _ok = await saveToDropbox();
+    if(!_ok){
+      _applyCompleteSnap(c, _undoKind, _undoSnap);  // 保存できていないので画面上も完了前に戻す (誤って「配車済」表示が残るのを防ぐ)
+      hideSpinner();
+      toast('❌ 保存できませんでした。完了は記録されていません。🔄同期してから、もう一度お試しください', 'error');
+      return;   // 通知・成功トースト・FAX画面遷移はしない。finally で _confirmBusy を解除
+    }
 
-    // 4. LINE通知 (失敗してもフロー継続)
+    // 4. LINE通知 (保存成功後のみ・失敗してもフロー継続)
     try {
       if(_flow.kind === 'dispatch'){
         await sendExternalNotify('dispatchDone', _buildNotifyPayload(c, 'dispatchDone'));
@@ -4063,7 +4116,10 @@ async function onConfirmDo(){
     } catch(e){}
 
     hideSpinner();
-    toast((_flow.kind==='recovery'?'🛻 回収':'🚙 配車')+'完了を記録しました', 'success');
+
+    // ★完了直後undo: 「取り消す」を数秒だけ添えたトーストを出す (誤確定の即時救済)
+    _undoComplete = { caseId: c.id, kind: _undoKind, snap: _undoSnap };
+    _toastWithUndo((_undoKind==='recovery'?'🛻 回収':'🚙 配車')+'完了を記録しました', _undoComplete);
 
     // 5. FAX画面へ
     _flow.step = 2;
@@ -4072,7 +4128,94 @@ async function onConfirmDo(){
   } catch(e){
     hideSpinner();
     toast('保存エラー: '+e.message, 'error');
+  } finally {
+    _confirmBusy = false;
+    if(_doBtn) _doBtn.disabled = false;
   }
+}
+
+// ============================================================
+// 完了直後 undo + 専用FAX送り直し (第1波: ミスしない・直せる)
+// ============================================================
+// 完了前スナップショットを案件に戻す (保存失敗時の誤表示巻き戻し / 完了直後undo の共通処理)。
+function _applyCompleteSnap(c, kind, snap){
+  if(kind === 'dispatch'){
+    c.status = snap.status;
+    c.dispatchDoneAt = snap.dispatchDoneAt;
+    c.useStart = snap.useStart;
+    c.meterAtDispatch = snap.meterAtDispatch;
+    // この完了で追記したチェックシートを取り除く (写真ファイル自体はDropboxに残るだけで無害)
+    if(Array.isArray(c.checkSheets) && c.checkSheets.length > snap.csLen){
+      c.checkSheets = c.checkSheets.slice(0, snap.csLen);
+    }
+  } else {
+    c.status = snap.status;
+    c.recoveryCalledAt = snap.recoveryCalledAt;
+    c.useEnd = snap.useEnd;
+    c.recoveryCompleted = snap.recoveryCompleted;
+    c.meterAtReturn = snap.meterAtReturn;
+    c.salesYear = snap.salesYear;
+    c.salesMonth = snap.salesMonth;
+  }
+}
+
+// トーストに「取り消す」アクションを添える (8秒猶予)。完了直後の誤確定を即座に巻き戻す。
+function _toastWithUndo(msg, undoState){
+  const host = $('m-toast-host'); if(!host) { toast(msg, 'success'); return; }
+  const t = document.createElement('div');
+  t.className = 'm-toast success m-toast-undo';
+  const span = document.createElement('span'); span.className = 'm-toast-undo-msg'; span.textContent = msg;
+  const btn = document.createElement('button'); btn.className = 'm-toast-undo-btn'; btn.textContent = '取り消す';
+  btn.onclick = () => { undoLastComplete(undoState, t); };
+  t.appendChild(span); t.appendChild(btn);
+  host.appendChild(t);
+  const TTL = 8000;   // undo猶予 (通常トーストより長く)
+  setTimeout(() => { t.style.opacity = '0'; }, TTL);
+  setTimeout(() => { t.remove(); }, TTL + 400);
+  haptic('success');
+}
+
+// 完了直後 undo の実体。退避した「完了前の値」だけをピンポイントで戻して再保存する。
+//   全案件コピーではなくフィールド指定で戻すので、猶予中に別端末が他フィールドを編集していても影響を最小化。
+async function undoLastComplete(undoState, toastEl){
+  if(toastEl){ toastEl.remove(); }
+  const u = undoState || _undoComplete;
+  if(!u){ return; }
+  _undoComplete = null;
+  const c = findCaseById(u.caseId); if(!c){ toast('案件が見つかりません', 'error'); return; }
+  showSpinner('完了を取り消し中...');
+  try {
+    _applyCompleteSnap(c, u.kind, u.snap);
+    _stampUpdated(c);
+    const _ok = await saveToDropbox();
+    hideSpinner();
+    if(!_ok){ toast('❌ 取り消しの保存に失敗しました。🔄同期して状態を確認してください', 'error'); return; }
+    // 訂正LINE: グループに「完了を取り消した」と知らせる (完了通知は既に飛んでいるため)
+    try {
+      const lbl = u.kind === 'recovery' ? '回収完了' : '配車完了';
+      const who = c.updatedBy || c.staff || '';
+      const txt = ['↩️ '+lbl+'を取り消しました', '受付No: '+(c.caseNo||''), who ? '担当: '+who : ''].filter(Boolean).join('\n');
+      await sendExternalNotify('updateCase', { line: { text: txt }, calendar: null });
+    } catch(e){}
+    toast('↩️ '+(u.kind==='recovery'?'回収':'配車')+'完了を取り消しました', 'success');
+    // リスト画面へ戻す (完了が無くなったのでFAX画面に留まらない)
+    _flow = null;
+    showScreen(u.kind === 'recovery' ? 'recovery' : 'dispatch');
+  } catch(e){
+    hideSpinner();
+    toast('取り消しエラー: '+e.message, 'error');
+  }
+}
+
+// 専用FAX送り直し: 完了フロー(写真追記・完了記録・LINE通知)を一切再走させず、FAX画面に直行する。
+//   PDF生成→_validatePdfPlacement→confirmPdfBeforeSend の3層防御は onFaxSend 経由で必ず通る。
+//   当日リストの完了済みカードの「FAXを送り直す」から呼ぶ (軽量版)。
+async function enterFaxResend(caseId, kind, ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  const c = findCaseById(caseId); if(!c){ toast('案件が見つかりません', 'error'); return; }
+  _flow = { kind: kind, caseId: caseId, step: 2, photoBlob: null, photoDataUrl: null, photoPath: null, faxNumber: null, resend: true };
+  showScreen('flow-fax');
+  await renderFlowFaxScreen();
 }
 
 // ============================================================
@@ -4213,7 +4356,13 @@ async function onFaxSend(){
 
     hideSpinner();
     // ★ 送信前に実PDF画像を人間が確認 (見切れ・欠け・ページを最終チェック)
-    const okToSend = await confirmPdfBeforeSend({ to: toEmail });
+    //   あわせて送信先FAX番号と取引先名を大きく再掲し、番号誤りを人間が止められるようにする。
+    const okToSend = await confirmPdfBeforeSend({
+      to: toEmail,
+      faxDisplay: fmtFaxDisplay(fax) || _flow.faxNumber || '',
+      partnerName: (findInsurer(c.insurerId)||{}).name || c.dispatchToName || '',
+      docLabel: _flow.kind === 'recovery' ? '回収完了報告書' : '手配書'
+    });
     if(!okToSend){
       toast('FAX送信を中止しました (PDFは保存済み)', 'error');
       return;
@@ -4256,8 +4405,8 @@ async function sendFaxSmart(pdfBlob, toEmail, subject, body, filename, c, faxNum
       });
       hideSpinner();
       if(r.ok){
-        await _markFaxSent(c, toEmail, 'gas-auto');
-        toast('📠 FAX送信完了 (GAS自動)', 'success');
+        const _ok = await _markFaxSent(c, toEmail, 'gas-auto');
+        if(_ok) toast('📠 FAX送信完了 (GAS自動)', 'success');  // 保存成功時のみ「完了」表示 (失敗時は_markFaxSentが警告を出す)
         _finishFaxFlow(c);
         return;
       }
@@ -4292,8 +4441,8 @@ async function sendFaxViaShare(pdfBlob, toEmail, subject, body, filename, c){
         text: `📠 FAX送信用 PDF\n\n宛先 (クリップボードにコピー済): ${toEmail}\n本文に「${body}」を入れる (eFaxカバーページスキップ用)\n\n手順:\n1. 共有先「メール」を選択\n2. 宛先欄を長押し → ペースト\n3. 本文に ${body} を入力\n4. 送信`
       });
       // 共有完了後 (キャンセルされてもエラーは出さない)
-      await _markFaxSent(c, toEmail, 'webshare-mail');
-      toast('📠 メールAppで送信操作してください', 'success');
+      const _ok = await _markFaxSent(c, toEmail, 'webshare-mail');
+      if(_ok) toast('📠 メールAppで送信操作してください', 'success');  // 保存成功時のみ (失敗時は_markFaxSentが警告)
       _finishFaxFlow(c);
     } catch(e){
       // ユーザーがキャンセル(AbortError) → 何もしない
@@ -4392,7 +4541,14 @@ async function _markFaxSent(c, toEmail, method){
     if(c.status === '回収連絡' || c.status === '利用中') c.status = '手配書FAX済';
   }
   _stampUpdated(c);
-  await saveToDropbox();
+  // ★保存の成否を確認 (faxSentAt* = 二重送信防止フラグ)。FAXは既に実送信済みなので
+  //   ここで止めはしないが、保存に失敗すると二重送信防止フラグが永続化されず、別端末/PCが
+  //   同じFAXを再送→取引先に二重着信 という最重要事故の入口になる。失敗は必ず人に知らせる。
+  const _ok = await saveToDropbox();
+  if(!_ok){
+    toast('⚠️ FAXは送信できましたが、送信済みの記録の保存に失敗しました。必ず🔄同期して「送信済み」を確定してください（でないと二重送信の恐れ）', 'error');
+  }
+  return _ok;
 }
 
 function _finishFaxFlow(c){
