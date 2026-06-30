@@ -1926,7 +1926,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-30a';
+const APP_VERSION = '2026-06-30b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3819,6 +3819,15 @@ async function selectVehicle(vehicleId){
   const fromDetail = (_currentScreen === 'case-detail');
   const c = findCaseById(fromDetail ? _activeCaseId : (_flow?.caseId || _activeCaseId));
   if(!v || !c){ toast('車両または案件が見つかりません','error'); return; }
+  // ★[気づかせ] 車両の二重割当 (別案件で利用中の車を選んだ時・止めはしない)
+  const _usedByOther = (DATA?.cases || []).some(o => o.id !== c.id && _isActive(o) && !o.recoveryCompleted
+    && ['配車済','利用中','回収連絡','手配書FAX済'].includes(o.status) && o.vehicleId === v.id);
+  if(_usedByOther){
+    const _okDup = await confirmModal('⚠️ 車両の二重割当',
+      `この車両は<b>別の案件で利用中</b>です。<br>本当にこの案件にも割り当てますか?`,
+      '二重割当を承知で割当', 'm-btn-danger');
+    if(!_okDup){ return; }
+  }
   const _prevVehicleId = c.vehicleId || '';
   // 案件に車両情報を反映
   c.vehicleId = v.id;
@@ -5107,6 +5116,12 @@ function closeMncCal(commit){
       _mncDateBtn(_mncCal.target);
       inp.dispatchEvent(new Event('change',{bubbles:true}));
     }
+    // ★[気づかせ] 利用開始日 > 利用終了日 の前後逆転 (止めはしない)
+    if(_mncCal.target === 'm-nc-useStart' || _mncCal.target === 'm-nc-useEnd'){
+      const _s = ($('m-nc-useStart')?.value || '').slice(0,10);
+      const _e = ($('m-nc-useEnd')?.value || '').slice(0,10);
+      if(_s && _e && _s > _e){ toast('⚠️ 利用終了日が開始日より前です。日付を確認してください', 'error'); }
+    }
   }
   $('m-cal-sheet').classList.remove('active');
   _mncCal = null;
@@ -5223,12 +5238,46 @@ function _resolveCaseNoCollisions(casesArr){
   return {fixed, warned};
 }
 
+// 同一クラスの直近 unitPrice 中央値 (桁違い検知用・データ4件未満は0=判定しない)
+function _classMedianUnitPrice(vehicleClass){
+  if(!vehicleClass) return 0;
+  const prices = (DATA?.cases || [])
+    .filter(o => (o.vehicleClass||'') === vehicleClass && o.status !== 'キャンセル' && Number(o.unitPrice) > 0)
+    .map(o => Number(o.unitPrice)).sort((a,b) => a - b);
+  if(prices.length < 4) return 0;
+  return prices[Math.floor(prices.length / 2)];
+}
+
 async function saveNewCase(enterFlow){
-  // バリデーション無し — 全項目空のままでも登録可能 (PC版で後から編集する想定)
+  // バリデーションはハードブロックしない方針。ただし「うっかり」だけは気づかせる (確認1段)。
   const contractor = $('m-nc-contractor').value.trim();
   const insurerText = ($('m-nc-insurer').value || '').trim();
   const dispatchTo = $('m-nc-dispatchTo').value.trim();
   const dispatchAt = $('m-nc-dispatchAt').value;
+
+  // ★[気づかせ] ほぼ空の案件のうっかり登録 (新規時のみ・止めはしない)
+  if(!_editingCaseId){
+    const _driver = ($('m-nc-driver')?.value || '').trim();
+    const _us = ($('m-nc-useStart')?.value || '').trim();
+    if(!contractor && !_driver && !insurerText && !dispatchTo && !dispatchAt && !_us){
+      const _okEmpty = await confirmModal('確認',
+        '氏名・保険会社・配車先・日時 などが<b>すべて空</b>です。<br>このまま案件を登録しますか?',
+        'このまま登録', 'm-btn-primary');
+      if(!_okEmpty){ return; }
+    }
+  }
+  // ★[気づかせ] 桁違い料金 (新規・編集とも・クラス相場の3倍超 or 1/3未満・止めはしない)
+  {
+    const _up = Number($('m-nc-unitPrice')?.value || 0);
+    const _vc = $('m-nc-vehicleClass')?.value || '';
+    const _med = _classMedianUnitPrice(_vc);
+    if(_med && _up > 0 && (_up > _med * 3 || _up < _med / 3)){
+      const _okPrice = await confirmModal('⚠️ 料金の確認',
+        `1日料金 <b>¥${_up.toLocaleString()}</b> は、このクラス(${esc(_vc)})の目安 <b>¥${_med.toLocaleString()}</b> と大きく違います。<br>桁違いの入力ではありませんか?`,
+        'この料金で登録', 'm-btn-primary');
+      if(!_okPrice){ return; }
+    }
+  }
 
   // 保険会社: ピッカーでマスタ選択済みなら そのIDを直使用。
   //   未選択(手入力)なら 入力テキストから find-or-create してリンク。
