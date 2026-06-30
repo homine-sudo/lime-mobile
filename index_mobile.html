@@ -118,6 +118,24 @@ a{color:var(--info);text-decoration:none}
 }
 .m-update-banner .m-ub-btn:active{transform:scale(.94)}
 .m-update-banner .m-ub-btn.primary{background:#2D5034;color:#fff}
+/* 接続/データ鮮度の常設バナー (異常時のみ表示) */
+.m-conn-banner{
+  display:none;align-items:center;gap:8px;flex-shrink:0;
+  padding:8px 12px;font-size:12.5px;font-weight:700;
+  border-bottom:1px solid rgba(0,0,0,.12);
+}
+.m-conn-banner.active{display:flex}
+.m-conn-banner.warn{background:linear-gradient(135deg,#F9D976 0%,#F39F18 100%);color:#3A2400}
+.m-conn-banner.danger{background:linear-gradient(135deg,#F1A7A7 0%,#D85B5B 100%);color:#3A0000}
+.m-conn-banner .m-cb-ico{font-size:16px;line-height:1}
+.m-conn-banner .m-cb-msg{flex:1;letter-spacing:.01em;line-height:1.35}
+.m-conn-banner .m-cb-btn{
+  background:rgba(255,255,255,.65);color:#2A1A00;border:none;flex-shrink:0;
+  padding:5px 11px;border-radius:8px;font-size:12px;font-weight:700;
+  transition:background .15s,transform .08s;
+}
+.m-conn-banner.danger .m-cb-btn{color:#3A0000}
+.m-conn-banner .m-cb-btn:active{transform:scale(.94)}
 .m-header-title{flex:1;font-size:17px;font-weight:800;letter-spacing:.12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   background:linear-gradient(180deg,#fff 0%,#E0F0D0 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
@@ -1157,6 +1175,8 @@ a{color:var(--info);text-decoration:none}
       <span class="m-sync-dot"></span><span id="m-sync-text">同期</span>
     </button>
   </header>
+  <!-- 接続/データ鮮度バナー (オフライン・未連携・データが古い時のみ表示・JSで内容生成) -->
+  <div class="m-conn-banner" id="m-conn-banner"></div>
   <!-- 新バージョン通知バナー (バックグラウンドチェックでヒットしたら表示) -->
   <div class="m-update-banner" id="m-update-banner">
     <span class="m-ub-ico">🆕</span>
@@ -1906,7 +1926,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-06-30';
+const APP_VERSION = '2026-06-30a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1923,7 +1943,8 @@ const LS_KEYS = {
   verifier: 'limeMob_dbx_verifier', editor: 'limeMob_editor',
   cachedData: 'limeMob_cachedData', cachedRev: 'limeMob_cachedRev',
   cachedSnap: 'limeMob_cachedSnap', dispTab: 'limeMob_dispTab',
-  recTab: 'limeMob_recTab', histTab: 'limeMob_histTab'
+  recTab: 'limeMob_recTab', histTab: 'limeMob_histTab',
+  lastSyncAt: 'limeMob_lastSyncAt'
 };
 
 // ============================================================
@@ -1933,6 +1954,10 @@ let DATA = null;
 let DBX_TOKEN = null, DBX_REFRESH = null;
 let _lastDbxRev = null, _lastSyncSnapshot = null;
 let _isSyncing = false, _saveTail = null, _saveFollow = null;
+// ★第2波(2026-06-30): オフライン常設サイン+自動再同期用。
+//   _saveSeq=保存完了の通し番号。loadFromDropbox は取得開始時の値を覚え、適用直前に
+//   変わっていたら「取得中に保存が走った」=取得データ陳腐化 とみなし適用しない(新データ消失を防ぐ)。
+let _lastSyncAt = 0, _saveSeq = 0, _lastAutoResyncAt = 0;
 let _currentScreen = 'onboard';
 let _screenHistory = [];
 
@@ -2508,40 +2533,54 @@ function mergeAll(local, disk, snap){
 // ============================================================
 // SYNC OPERATIONS
 // ============================================================
-async function loadFromDropbox(){
+async function loadFromDropbox(silent){
   if(_isSyncing) return;
   _isSyncing = true; updateSyncStatus('syncing','読込中...');
+  const _seqBefore = _saveSeq;   // 取得開始時の保存通し番号 (競合ガード用)
   try {
     const { data, rev, errorDetail } = await dbxLoadData();
     if(data){
+      // ★競合ガード: 取得中に保存が走った/実行中なら、取得データ(disk)は陳腐化の恐れ。
+      //   ここで DATA=data すると保存済みの最新を stale で上書きしうる(=自動再同期が
+      //   新たなデータ消失を起こす)。適用せず保存側を尊重し、次回同期で取り込む。
+      if(_saveTail || _saveSeq !== _seqBefore){
+        updateSyncStatus('ok','同期OK');
+        return false;
+      }
       DATA = data; _lastDbxRev = rev;
       captureSyncSnapshot(data);
+      _lastSyncAt = Date.now();
       try {
         localStorage.setItem(LS_KEYS.cachedData, JSON.stringify(data));
         localStorage.setItem(LS_KEYS.cachedRev, rev || '');
+        localStorage.setItem(LS_KEYS.lastSyncAt, String(_lastSyncAt));
       } catch(e){}
       updateSyncStatus('ok','同期OK');
       return true;
     }
     updateSyncStatus('error','data.json無');
-    const hint = errorDetail ? ` (${String(errorDetail).slice(0,120)})` : '';
-    toast('data.json が見つかりません'+hint+' — 設定の「Dropbox診断」を実行', 'error');
+    if(!silent){
+      const hint = errorDetail ? ` (${String(errorDetail).slice(0,120)})` : '';
+      toast('data.json が見つかりません'+hint+' — 設定の「Dropbox診断」を実行', 'error');
+    }
     return false;
   } catch(e){
     updateSyncStatus('error','エラー');
-    toast('同期エラー: '+e.message, 'error');
+    if(!silent) toast('同期エラー: '+e.message, 'error');
     try {
       const raw = localStorage.getItem(LS_KEYS.cachedData);
       if(raw){
+        if(_saveTail || _saveSeq !== _seqBefore) return false;  // 保存中はキャッシュ適用も避ける
         DATA = JSON.parse(raw);
         _lastDbxRev = localStorage.getItem(LS_KEYS.cachedRev) || null;
         restoreSyncSnapshot();
-        toast('オフラインキャッシュから読込', 'success');
+        _lastSyncAt = Number(localStorage.getItem(LS_KEYS.lastSyncAt) || 0);
+        if(!silent) toast('オフラインキャッシュから読込', 'success');
         return true;
       }
     } catch(e2){}
     return false;
-  } finally { _isSyncing = false; }
+  } finally { _isSyncing = false; try { _renderConnBanner(); } catch(_){} }
 }
 
 // ★2026-05-18 修正 (再発データ消失の根治):
@@ -2619,12 +2658,16 @@ async function _doSaveCycle(){
       //   スナップショットを base として既存 mergeAll で再マージし保護。
       DATA = mergeAll(DATA, merged, snapAtStart);
       _lastDbxRev = newRev;
+      _saveSeq++;                 // 保存完了の通し番号 (loadFromDropbox の競合ガードが参照)
+      _lastSyncAt = Date.now();   // 保存=ディスクと同期した時刻 (鮮度バナー用)
       captureSyncSnapshot(DATA);
       try {
         localStorage.setItem(LS_KEYS.cachedData, JSON.stringify(DATA, null, 2));
         localStorage.setItem(LS_KEYS.cachedRev, newRev || '');
+        localStorage.setItem(LS_KEYS.lastSyncAt, String(_lastSyncAt));
       } catch(e){}
       updateSyncStatus('ok','同期OK');
+      try { _renderConnBanner(); } catch(_){}
       lastErr = null; break;
     } catch(e){
       lastErr = e;
@@ -2653,7 +2696,10 @@ function updateSyncStatus(state, msg){
 async function syncNow(){
   await loadFromDropbox();
   refreshCurrentScreen();
+  try { _renderConnBanner(); } catch(_){}
 }
+// 手動再同期 (バナーのボタン用・syncNow と同じだが意味を分けて命名)
+async function manualResync(){ await syncNow(); }
 
 function refreshCurrentScreen(){
   if(_currentScreen === 'home') renderHome();
@@ -2661,6 +2707,78 @@ function refreshCurrentScreen(){
   else if(_currentScreen === 'recovery') renderRecoveryList();
   else if(_currentScreen === 'history') renderHistory();
   else if(_currentScreen === 'settings') refreshSettings();
+}
+
+// ============================================================
+// 第2波: オフライン/データ鮮度の常設バナー + 裏での自動再同期
+//   目的=長時間開きっぱなしの端末が古いデータ(stale)のまま操作・保存し、
+//   別端末の最新編集を丸ごと上書きする「データ消失の根本原因」を構造的に予防する。
+// ============================================================
+const STALE_MS = 12 * 60 * 1000;          // この時間 同期できていなければ「古い」警告
+const AUTO_RESYNC_INTERVAL = 3 * 60 * 1000; // 裏での自動再同期の間隔
+const AUTO_RESYNC_MIN_GAP = 25 * 1000;      // 自動再同期の最短間隔 (画面遷移連発でも抑制)
+
+// いずれかのモーダル/シート/スピナー/ライトボックスが開いているか (編集中=DATA差し替え禁止の判定)
+function _hasOpenOverlay(){
+  return !!document.querySelector('[id$="-modal"].active, [id$="-sheet"].active, #m-spinner.active, #m-lightbox.active');
+}
+function _connState(){
+  if(isDemoMode()) return 'ok';
+  if(!DBX_TOKEN) return 'no-token';
+  if(typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline';
+  if(_lastSyncAt && (Date.now() - _lastSyncAt) > STALE_MS) return 'stale';
+  return 'ok';
+}
+function _fmtAgo(ms){
+  const m = Math.floor(ms / 60000);
+  if(m < 1) return '1分以内';
+  if(m < 60) return m + '分前';
+  const h = Math.floor(m / 60); return h + '時間' + (m % 60) + '分前';
+}
+function _renderConnBanner(){
+  const el = $('m-conn-banner'); if(!el) return;
+  const st = _connState();
+  if(st === 'ok'){ el.classList.remove('active'); return; }
+  el.classList.remove('warn', 'danger');
+  const ago = _lastSyncAt ? _fmtAgo(Date.now() - _lastSyncAt) : '未取得';
+  let ico, msg, btn;
+  if(st === 'no-token'){
+    el.classList.add('danger'); ico = '🔌';
+    msg = 'Dropbox未連携 — データは保存・同期されません';
+    btn = `<button class="m-cb-btn" onclick="showScreen('settings')">設定へ</button>`;
+  } else if(st === 'offline'){
+    el.classList.add('danger'); ico = '📴';
+    msg = `オフライン — 表示中のデータは<b>${ago}</b>。配車判断・新規登録の前に同期を`;
+    btn = `<button class="m-cb-btn" onclick="manualResync()">🔄 再試行</button>`;
+  } else {
+    el.classList.add('warn'); ico = '⏳';
+    msg = `データが<b>${ago}</b>です — 最新化をおすすめします`;
+    btn = `<button class="m-cb-btn" onclick="manualResync()">🔄 今すぐ同期</button>`;
+  }
+  el.innerHTML = `<span class="m-cb-ico">${ico}</span><span class="m-cb-msg">${msg}</span>${btn}`;
+  el.classList.add('active');
+}
+// 裏での自動再同期。安全な状況(保存中でない・編集中でない・フロー中でない・一覧/ホーム表示中)
+//   のときだけ静かに loadFromDropbox→画面更新する。これで stale 化の発生確率自体を下げる。
+async function _autoResync(reason){
+  if(isDemoMode()) return;
+  if(!DBX_TOKEN) return;
+  if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  if(_isSyncing) return;
+  if(_saveTail) return;        // 保存中は触らない
+  if(_confirmBusy) return;     // 完了処理中
+  if(_flow) return;            // 配車/回収フロー進行中 (未保存の写真/状態)
+  if(_hasOpenOverlay()) return; // モーダル/シートで編集中
+  const SAFE = ['home', 'dispatch', 'recovery', 'history'];
+  if(SAFE.indexOf(_currentScreen) === -1) return;
+  if(Date.now() - _lastAutoResyncAt < AUTO_RESYNC_MIN_GAP) return;
+  _lastAutoResyncAt = Date.now();
+  const okLoaded = await loadFromDropbox(true);  // silent=true: 失敗してもトーストを出さない
+  // 取得適用後、まだ安全な状況なら画面を静かに更新 (取得中に編集を始めていたら更新しない)
+  if(okLoaded && !_flow && !_hasOpenOverlay() && SAFE.indexOf(_currentScreen) !== -1){
+    refreshCurrentScreen();
+  }
+  try { _renderConnBanner(); } catch(_){}
 }
 
 // ============================================================
@@ -6477,6 +6595,9 @@ function showScreen(name){
   if(name === 'history') renderHistory();
   if(name === 'settings') refreshSettings();
   if(name === 'vehicles') renderVehiclesList();
+  try { _renderConnBanner(); } catch(_){}
+  // 一覧/ホームに移ったら静かに裏で最新化 (自己ガード付き=安全時のみ・throttleあり)
+  try { _autoResync('nav'); } catch(_){}
 }
 
 function goBack(){
@@ -6795,6 +6916,7 @@ async function init(){
       DATA = JSON.parse(raw);
       _lastDbxRev = localStorage.getItem(LS_KEYS.cachedRev) || null;
       restoreSyncSnapshot();
+      _lastSyncAt = Number(localStorage.getItem(LS_KEYS.lastSyncAt) || 0);  // 鮮度バナー用
     }
   } catch(e){}
 
@@ -6802,11 +6924,18 @@ async function init(){
 
   _startProactiveRefresh();
 
+  // ★第2波: 裏での自動再同期 + 接続/鮮度バナー (stale端末上書きの構造的予防)
+  try { _renderConnBanner(); } catch(_){}
+  setInterval(() => { try { _autoResync('interval'); } catch(_){} }, AUTO_RESYNC_INTERVAL); // 定期的に静かに最新化
+  setInterval(() => { try { _renderConnBanner(); } catch(_){} }, 30 * 1000);                // 「N分前」/オフライン表示を更新
+  window.addEventListener('online',  () => { try { _renderConnBanner(); _autoResync('online'); } catch(_){} });
+  window.addEventListener('offline', () => { try { _renderConnBanner(); } catch(_){} });
+
   // アップデートチェック: 起動5秒後・30分ごと・アプリ復帰時 (静かに動作・新版があればバナー表示)
   setTimeout(() => checkForUpdate(true), 5000);
   setInterval(() => checkForUpdate(true), 30 * 60 * 1000);
   document.addEventListener('visibilitychange', () => {
-    if(!document.hidden) checkForUpdate(true);
+    if(!document.hidden){ checkForUpdate(true); try { _renderConnBanner(); _autoResync('visible'); } catch(_){} }
   });
 
   const hasName = !!localStorage.getItem(LS_KEYS.editor);
