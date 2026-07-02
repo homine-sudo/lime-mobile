@@ -1939,7 +1939,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-02g';
+const APP_VERSION = '2026-07-02h';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5443,11 +5443,12 @@ async function saveNewCase(enterFlow){
     const ec = findCaseById(editId);
     if(!ec){ toast('案件が見つかりません','error'); return; }
     const _v = id => ($(id)?.value || '').trim();
-    // 意味のある変更の検出用に旧値を退避 (updateCase 通知の発火判定)
-    const _keys = ['dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver',
-      'driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact',
-      'dispatchToContactTel','insurerId','insurerContact','useStart','useEnd','useDeadline','unitPrice',
-      'vehicleClass','contractorName','accidentNo','accidentDate'];
+    // updateCase 通知の発火判定用に旧値を退避。
+    // 2026-07-02h: 通知対象を「グループに知らせる価値がある変更」だけに絞る (ユーザー要望・事故日等の
+    //   事務修正で「🔄配車日時変更」が飛ぶ誤爆を解消)。= 配車予定日時・配車先(名前/住所)・利用開始/終了 のみ。
+    //   事故日/事故No/保険会社担当/TEL/FAX/契約者/単価/クラス/メモ等は静かに保存 (通知・カレンダー再作成なし)。
+    //   PC側 (_fireCaseNotifications) は元々 dispatchAt 変更のみ発火=これでほぼ対称。
+    const _keys = ['dispatchAt','dispatchToName','dispatchToAddress','useStart','useEnd'];
     const _before = {}; _keys.forEach(k => _before[k] = ec[k]);
 
     ec.receivedAt = $('m-nc-receivedAt').value || ec.receivedAt || todayISO();
