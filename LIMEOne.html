@@ -1205,7 +1205,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <select id="veh-filter-class" onchange="renderVehicles()"><option value="">クラス(全て)</option></select>
       <select id="veh-filter-status" onchange="renderVehicles()" title="登録ステータスで絞り込み">
         <option value="">ステータス(全て)</option>
-        <option>稼働可</option><option>点検入庫中</option><option>納車待ち</option><option>売却済</option><option>廃車</option>
+        <option>稼働可</option><option>点検入庫中</option><option>社用車</option><option>納車待ち</option><option>売却済</option><option>廃車</option>
       </select>
       <select id="veh-filter-op" onchange="renderVehicles()" title="今の貸出状況で絞り込み">
         <option value="">稼働状況(全て)</option>
@@ -3064,7 +3064,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-02a';
+const APP_VERSION = '2026-07-02b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5694,7 +5694,7 @@ function biCalcKpis(cases, range){
 function biCalcUtilization(from, to){
   const fromD = parseDate(from), toD = parseDate(to);
   const periodDays = fromD && toD ? Math.max(1, Math.floor((toD - fromD) / 86400000) + 1) : 30;
-  const vehicles = (DATA.vehicles||[]).filter(v => v.status!=='売却済' && v.status!=='廃車' && v.status!=='納車待ち');
+  const vehicles = (DATA.vehicles||[]).filter(v => v.status!=='売却済' && v.status!=='廃車' && v.status!=='納車待ち' && v.status!=='社用車');
   const vehUsage = {};
   vehicles.forEach(v => { vehUsage[v.id] = { days:0, sales:0 }; });
   // 全案件をスキャンし、利用期間と集計期間の重複日数を加算
@@ -7461,13 +7461,17 @@ function _availAddDays(iso, n){
 }
 function _availStartOf(c){ return (c.useStart||c.dispatchAt||'').slice(0,10); }
 function _availEffEnd(c, today){
-  let end = (c.useEnd||'').slice(0,10) || (c.useDeadline||'').slice(0,10);  // 明示の返却予定日 > 使用期限
-  if(!end){
-    const st = _availStartOf(c); if(!st) return '';
-    end = _availAddDays(st, 30);                                     // 空なら配車日+30日(車両保険の実質期限)を見込み
-  }
-  // 空く予定日が既に過去なのにまだ出庫中(役場等の長期契約・返却処理漏れ)= いつ空くか不明。先読みでは「当面は占有」とみなし楽観視しない(点検カードで別途炙り出す)。
-  return end < today ? _availAddDays(today, 400) : end;
+  // 「今も出ている系」= 出庫ステータス かつ 回収未完了。過去日の返却予定でも未返却ならまだ占有と見なす対象。
+  const active = ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted;
+  const ue = (c.useEnd||'').slice(0,10);
+  if(ue) return (ue < today && active) ? _availAddDays(today, 400) : ue;   // 実返却予定日が最優先(過去でも未返却の出庫中なら当面占有)
+  // 返却予定日なし:
+  if(['請求済','入金済'].includes(c.status)) return _availStartOf(c);        // 前払い/請求後で実返却日不明=在庫に戻す(延長しない)。マンスリーは返却予定日を入れて↑で拾う
+  const dl = (c.useDeadline||'').slice(0,10);
+  if(dl) return (dl < today && active) ? _availAddDays(today, 400) : dl;    // 使用期限(出庫中案件で意味を持つ)
+  const st = _availStartOf(c); if(!st) return '';
+  const eff = _availAddDays(st, 30);                                        // 出庫中で終了未定=配車+30日見込み(車両保険の実質期限)
+  return (eff < today && active) ? _availAddDays(today, 400) : eff;         // 30日超で未返却=当面占有(役場等の長期・返却漏れ)
 }
 function renderAvailabilityBoard(){
   const body = $('availability-board-body'); const sub = $('availability-board-sub');
@@ -7475,7 +7479,7 @@ function renderAvailabilityBoard(){
   const today = todayISO();
   const HORIZON = 14;      // 14日先まで差し引き
   const MANAGED_MIN = 5;   // 保有これ以上=「よく出る大所帯」= 差し引きタイムライン (小クラスは満杯のみ・感覚で分かる範囲)
-  const fleet = (DATA.vehicles||[]).filter(v=> v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち');
+  const fleet = (DATA.vehicles||[]).filter(v=> v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち' && v.status!=='社用車');
   if(!fleet.length){ body.innerHTML = '<div class="text-muted text-sm">車両がありません</div>'; if(sub) sub.textContent=''; return; }
   const vById = {}; fleet.forEach(v=> vById[v.id]=v);
   const clsOf = v => (((v&&(v.vehicleClass||v.class))||'—').toString().trim().toUpperCase()) || '—';
@@ -7484,7 +7488,7 @@ function renderAvailabilityBoard(){
   // 案件のクラス: 車両割当済=その車のクラス / 未割当の先の予約=受付時の希望クラス(vehicleClass)
   const caseClass = c => (c.vehicleId && vById[c.vehicleId]) ? clsOf(vById[c.vehicleId]) : (((c.vehicleClass||'').trim().toUpperCase())||'—');
   // 在庫を消費する案件: キャンセル/返却済/請求済/入金済 以外・開始日あり・(自社車割当 or 希望クラスあり)。他社借は自社在庫を消費しないので除外。
-  const occupying = (DATA.cases||[]).filter(c=> c && !c.isBorrowed && !['キャンセル','返却済','請求済','入金済'].includes(c.status) && _availStartOf(c) && ((c.vehicleId && vById[c.vehicleId]) || (c.vehicleClass||'').trim()));
+  const occupying = (DATA.cases||[]).filter(c=> c && !c.isBorrowed && !c.isDeleted && !c.isCancelled && !['キャンセル','返却済'].includes(c.status) && !c.recoveryCompleted && _availStartOf(c) && ((c.vehicleId && vById[c.vehicleId]) || (c.vehicleClass||'').trim()));
   const days = []; for(let i=0;i<HORIZON;i++) days.push(_availAddDays(today,i));
   // クラスの日別 空き台数 = 保有 − その日に占有される台数 (出=useStartで消費・帰=effEndで解放)
   const availOf = cls => days.map(day=>{
@@ -7578,7 +7582,7 @@ function renderDashboard(){
   // 🚗 本日 瞬間稼働率 (2026-05-25e: 期間平均→瞬間値・2026-05-28b: 利用中と同一述語に統一)
   //   保有 = 廃車/売却済を除外。点検入庫中は分母には入れる(=潜在稼働可能の母数)
   //   月平均稼働率は経営分析タブに残存 (別の経営指標として有用)
-  const vehAll = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち');
+  const vehAll = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち' && v.status!=='社用車');
   const _vehIdSet = new Set(vehAll.map(v=>v.id));
   const _activeVehIds = new Set();
   inUse.forEach(c=>{ if(_vehIdSet.has(c.vehicleId)) _activeVehIds.add(c.vehicleId); });
@@ -13956,7 +13960,7 @@ function renderUtilization(year){
   const now = new Date();
   const yEndDate = new Date(now.getFullYear()===Number(year)? now : new Date(Number(year)+1, 0, 0));
   const yEnd = fmtDateISO(yEndDate);
-  const vehicles = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='納車待ち');
+  const vehicles = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='納車待ち' && v.status!=='社用車');
   const rows = vehicles.map(v=>{
     const start = (v.purchaseDate && v.purchaseDate>yStart)? v.purchaseDate : yStart;
     const availDays = Math.max(0, daysBetween(start, yEnd));
@@ -14189,7 +14193,7 @@ function renderDataHealth(){
   // 2026-06-29b: 出庫中(=今その車が出ている)判定 + 自社保有車両ID集合 (受付No重複/割当漏れ/二重割当の点検用)
   const _out = c => c && c.status!=='キャンセル' && ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)
     && c.useStart && c.useStart<=today && !(c.useEnd && c.useEnd<today);
-  const _fleet = new Set((DATA.vehicles||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち').map(v=>v.id));
+  const _fleet = new Set((DATA.vehicles||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち'&&v.status!=='社用車').map(v=>v.id));
   const issues = { dupNo:[], doubleBooked:[], outNoVeh:[], noName:[], inUseNoStart:[], inUseNoDispatch:[], overdueInvoice:[], longUse:[], staleOut:[] };
   DATA.cases.forEach(c => {
     if(c.status==='キャンセル') return;

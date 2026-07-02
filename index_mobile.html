@@ -1938,7 +1938,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-02a';
+const APP_VERSION = '2026-07-02b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3790,9 +3790,16 @@ function _mAvailToday(){ const d=new Date(); return `${d.getFullYear()}-${_mAvai
 function _mAvailAddDays(iso,n){ const p=(iso||'').slice(0,10).split('-'); if(p.length<3) return iso; const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${_mAvailP2(d.getMonth()+1)}-${_mAvailP2(d.getDate())}`; }
 function _mAvailStartOf(c){ return (c.useStart||c.dispatchAt||'').slice(0,10); }
 function _mAvailEffEnd(c,today){
-  let end=(c.useEnd||'').slice(0,10)||(c.useDeadline||'').slice(0,10);
-  if(!end){ const st=_mAvailStartOf(c); if(!st) return ''; end=_mAvailAddDays(st,30); }
-  return end<today ? _mAvailAddDays(today,400) : end;   // 空く予定日が過去でまだ出庫中(長期/返却漏れ)=当面占有扱い(楽観視しない)
+  // 「今も出ている系」= 出庫ステータス かつ 回収未完了
+  const active=['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)&&!c.recoveryCompleted;
+  const ue=(c.useEnd||'').slice(0,10);
+  if(ue) return (ue<today&&active)?_mAvailAddDays(today,400):ue;        // 実返却予定日が最優先(過去でも未返却の出庫中なら当面占有)
+  if(['請求済','入金済'].includes(c.status)) return _mAvailStartOf(c);   // 前払い/請求後で実返却日不明=在庫に戻す(延長しない)。マンスリーは返却予定日を入れて↑で拾う
+  const dl=(c.useDeadline||'').slice(0,10);
+  if(dl) return (dl<today&&active)?_mAvailAddDays(today,400):dl;         // 使用期限(出庫中案件で意味を持つ)
+  const st=_mAvailStartOf(c); if(!st) return '';
+  const eff=_mAvailAddDays(st,30);                                       // 出庫中で終了未定=配車+30日見込み
+  return (eff<today&&active)?_mAvailAddDays(today,400):eff;              // 30日超で未返却=当面占有(役場等)
 }
 function openAvailBoard(){ renderAvailBoard(); $('m-avail-modal').classList.add('active'); }
 function closeAvailBoard(){ $('m-avail-modal').classList.remove('active'); }
@@ -3801,7 +3808,7 @@ function renderAvailBoard(){
   if(!DATA){ body.innerHTML='<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; if(sub) sub.textContent=''; return; }
   const today=_mAvailToday();
   const HORIZON=14, MANAGED_MIN=5;
-  const fleet=(DATA.vehicles||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち');
+  const fleet=(DATA.vehicles||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち'&&v.status!=='社用車');
   if(!fleet.length){ body.innerHTML='<div class="m-empty"><div class="ico">🚙</div><div class="ttl">車両がありません</div></div>'; if(sub) sub.textContent=''; return; }
   const vById={}; fleet.forEach(v=>vById[v.id]=v);
   const clsOf=v=>(((v&&(v.vehicleClass||v.class))||'—').toString().trim().toUpperCase())||'—';
@@ -3810,7 +3817,7 @@ function renderAvailBoard(){
   // 案件のクラス: 車両割当済=その車のクラス / 未割当の先の予約=希望クラス(vehicleClass)
   const caseClass=c=>(c.vehicleId&&vById[c.vehicleId])?clsOf(vById[c.vehicleId]):(((c.vehicleClass||'').trim().toUpperCase())||'—');
   // 在庫を消費する案件 (他社借は自社在庫を消費しないので除外)
-  const occupying=(DATA.cases||[]).filter(c=>c&&!c.isBorrowed&&!['キャンセル','返却済','請求済','入金済'].includes(c.status)&&_mAvailStartOf(c)&&((c.vehicleId&&vById[c.vehicleId])||(c.vehicleClass||'').trim()));
+  const occupying=(DATA.cases||[]).filter(c=>c&&!c.isBorrowed&&!c.isDeleted&&!c.isCancelled&&!['キャンセル','返却済'].includes(c.status)&&!c.recoveryCompleted&&_mAvailStartOf(c)&&((c.vehicleId&&vById[c.vehicleId])||(c.vehicleClass||'').trim()));
   const days=[]; for(let i=0;i<HORIZON;i++) days.push(_mAvailAddDays(today,i));
   const availOf=cls=>days.map(day=>{ let occ=0; for(const c of occupying){ if(caseClass(c)!==cls) continue; const s=_mAvailStartOf(c),e=_mAvailEffEnd(c,today); if(s&&e&&s<=day&&day<=e) occ++; } return own[cls]-occ; });
   const managed=Object.keys(own).filter(k=>own[k]>=MANAGED_MIN).sort((a,b)=>(own[b]-own[a])||a.localeCompare(b));
