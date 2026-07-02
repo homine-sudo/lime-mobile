@@ -1911,7 +1911,8 @@ a{color:var(--info);text-decoration:none}
   <div class="m-modal-body" style="max-height:88%">
     <h2><svg class="m-svg" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>在庫の差し引き（よく出るクラス）</h2>
     <div id="m-avail-sub" style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px"></div>
-    <div id="m-avail-body" style="max-height:64vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div id="m-avail-body" style="max-height:56vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div id="m-avail-detail"></div>
     <div class="m-modal-actions" style="margin-top:14px">
       <button class="m-btn m-btn-outline" style="flex:1" onclick="closeAvailBoard()">閉じる</button>
     </div>
@@ -1938,7 +1939,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-02b';
+const APP_VERSION = '2026-07-02c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3804,7 +3805,8 @@ function _mAvailEffEnd(c,today){
 function openAvailBoard(){ renderAvailBoard(); $('m-avail-modal').classList.add('active'); }
 function closeAvailBoard(){ $('m-avail-modal').classList.remove('active'); }
 function renderAvailBoard(){
-  const body=$('m-avail-body'), sub=$('m-avail-sub'); if(!body) return;
+  const body=$('m-avail-body'), sub=$('m-avail-sub'); const det=$('m-avail-detail'); if(det) det.innerHTML='';
+  if(!body) return;
   if(!DATA){ body.innerHTML='<div class="m-empty"><div class="ico">📡</div><div class="ttl">データ未読込</div></div>'; if(sub) sub.textContent=''; return; }
   const today=_mAvailToday();
   const HORIZON=14, MANAGED_MIN=5;
@@ -3814,45 +3816,71 @@ function renderAvailBoard(){
   const clsOf=v=>(((v&&(v.vehicleClass||v.class))||'—').toString().trim().toUpperCase())||'—';
   const nameMap={}; (DATA.vehicleClasses||[]).forEach(x=>{ if(x&&x.code) nameMap[x.code.toUpperCase()]=x.name||''; });
   const own={}; fleet.forEach(v=>{const k=clsOf(v);own[k]=(own[k]||0)+1;});
-  // 案件のクラス: 車両割当済=その車のクラス / 未割当の先の予約=希望クラス(vehicleClass)
   const caseClass=c=>(c.vehicleId&&vById[c.vehicleId])?clsOf(vById[c.vehicleId]):(((c.vehicleClass||'').trim().toUpperCase())||'—');
-  // 在庫を消費する案件 (他社借は自社在庫を消費しないので除外)
   const occupying=(DATA.cases||[]).filter(c=>c&&!c.isBorrowed&&!c.isDeleted&&!c.isCancelled&&!['キャンセル','返却済'].includes(c.status)&&!c.recoveryCompleted&&_mAvailStartOf(c)&&((c.vehicleId&&vById[c.vehicleId])||(c.vehicleClass||'').trim()));
   const days=[]; for(let i=0;i<HORIZON;i++) days.push(_mAvailAddDays(today,i));
-  const availOf=cls=>days.map(day=>{ let occ=0; for(const c of occupying){ if(caseClass(c)!==cls) continue; const s=_mAvailStartOf(c),e=_mAvailEffEnd(c,today); if(s&&e&&s<=day&&day<=e) occ++; } return own[cls]-occ; });
-  const managed=Object.keys(own).filter(k=>own[k]>=MANAGED_MIN).sort((a,b)=>(own[b]-own[a])||a.localeCompare(b));
-  const small=Object.keys(own).filter(k=>own[k]<MANAGED_MIN);
   const fmtMD=iso=>{const p=(iso||'').split('-');return p.length>=3?`${Number(p[1])}/${Number(p[2])}`:iso;};
   const WDN=['日','月','火','水','木','金','土'];
   const wdOf=iso=>{const p=(iso||'').split('-');if(p.length<3)return '';return WDN[new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()];};
   const cellCol=n=>n<=0?{bg:'#FCEBEB',fg:'#A32D2D',bd:'#E24B4A'}:n===1?{bg:'#FAEEDA',fg:'#854F0B',bd:'#EF9F27'}:{bg:'#EAF3DE',fg:'#3B6D11',bd:'#C0DD97'};
-  const avMap={}; managed.forEach(k=>avMap[k]=availOf(k));
+  // クラス×日 の 空き数・出発/返却/稼働中 案件ID を計算 (タップの内訳に使う)
+  const flowsByCls={};
+  Object.keys(own).forEach(cls=>{
+    const spans=occupying.filter(c=>caseClass(c)===cls).map(c=>({id:c.id,s:_mAvailStartOf(c),e:_mAvailEffEnd(c,today)})).filter(x=>x.s&&x.e);
+    flowsByCls[cls]=days.map(day=>{ const prev=_mAvailAddDays(day,-1); let occ=0; const dep=[],ret=[],occIds=[]; spans.forEach(x=>{const onD=x.s<=day&&day<=x.e,onP=x.s<=prev&&prev<=x.e; if(onD){occ++;occIds.push(x.id);} if(onD&&!onP)dep.push(x.id); if(!onD&&onP)ret.push(x.id);}); return {free:own[cls]-occ,occ,dep,ret,occIds}; });
+  });
+  window._mAvailFlows=flowsByCls; window._mAvailDaysArr=days;
+  const managed=Object.keys(own).filter(k=>own[k]>=MANAGED_MIN).sort((a,b)=>(own[b]-own[a])||a.localeCompare(b));
+  const small=Object.keys(own).filter(k=>own[k]<MANAGED_MIN).sort((a,b)=>(own[b]-own[a])||a.localeCompare(b));
   let html='';
   if(!managed.length){ html+=`<div class="m-empty" style="padding:16px"><div class="ttl">保有${MANAGED_MIN}台以上のクラスがありません</div></div>`; }
   managed.forEach(cls=>{
-    const av=avMap[cls]; const min=Math.min.apply(null,av), minIdx=av.indexOf(min); const warn=min<=1;
+    const fl=flowsByCls[cls]; const av=fl.map(f=>f.free); const min=Math.min.apply(null,av), minIdx=av.indexOf(min); const warn=min<=1;
     html+=`<div style="padding:11px 2px;border-bottom:1px solid #EFEDE7">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap">
         <div style="border-left:3px solid ${warn?'#C53030':'#97C459'};padding-left:7px"><b style="font-size:15px">${esc(cls)}</b>${nameMap[cls]?` <span style="font-size:10px;color:#999">${esc(nameMap[cls])}</span>`:''} <span style="font-size:10px;color:#999">保有${own[cls]}</span></div>
         <div style="margin-left:auto;font-size:11px;color:${warn?'#A32D2D':'#666'}">最少 <b style="font-size:14px">${min}</b>台 <span style="color:#999">(${fmtMD(days[minIdx])})</span>${warn?' ・他社借検討':''}</div>
       </div>
       <div style="display:flex;gap:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">
-        ${av.map((n,i)=>{ const c=cellCol(n),t0=(i===0); const diff=i>0?n-av[i-1]:0; const mark=diff>0?`<span style="color:#3B6D11;font-size:9px">▲${diff}</span>`:diff<0?`<span style="color:#A32D2D;font-size:9px">▼${-diff}</span>`:`<span style="font-size:9px;color:transparent">·</span>`; const w=wdOf(days[i]); const wc=w==='日'?'#C0392B':w==='土'?'#2C5282':'#AAA';
-          return `<div style="flex:none;width:42px;text-align:center">
+        ${fl.map((f,i)=>{ const c=cellCol(f.free),t0=(i===0); const mk=(f.ret.length?`<span style="color:#3B6D11">▲${f.ret.length}</span>`:'')+(f.dep.length?`<span style="color:#A32D2D">▼${f.dep.length}</span>`:''); const w=wdOf(days[i]); const wc=w==='日'?'#C0392B':w==='土'?'#2C5282':'#AAA';
+          return `<div onclick="mAvailDayDetail('${esc(cls)}',${i})" style="flex:none;width:42px;text-align:center;cursor:pointer">
             <div style="font-size:9px;color:${t0?'#333':'#999'}">${t0?'今日':fmtMD(days[i])}</div>
             <div style="font-size:8px;color:${wc};margin-bottom:2px">${w}</div>
-            <div style="background:${c.bg};border:1px solid ${c.bd};border-radius:4px;padding:5px 0"><b style="font-size:15px;color:${c.fg}">${n}</b></div>
-            <div style="margin-top:2px;height:12px">${mark}</div>
+            <div style="background:${c.bg};border:1px solid ${c.bd};border-radius:4px;padding:5px 0"><b style="font-size:15px;color:${c.fg}">${f.free}</b></div>
+            <div style="margin-top:2px;height:12px;font-size:9px">${mk||'<span style="color:transparent">·</span>'}</div>
           </div>`; }).join('')}
       </div>
     </div>`;
   });
-  const flags=[];
-  small.forEach(cls=>{ let occ=0; for(const c of occupying){ if(caseClass(c)!==cls) continue; const s=_mAvailStartOf(c),e=_mAvailEffEnd(c,today); if(s&&e&&s<=today&&today<=e) occ++; } const free=own[cls]-occ; if(free<=0) flags.push(`<span style="color:#A32D2D;font-weight:bold">${esc(cls)}満杯</span>`); else if(free===1&&own[cls]>=2) flags.push(`<span style="color:#9C4C00">${esc(cls)}残1</span>`); });
-  html+=`<div style="margin-top:11px;font-size:11px;color:#888;padding:0 2px"><b>小クラス(保有${MANAGED_MIN-1}台以下)</b> — ${flags.length?flags.join(' ・ ')+' <span style="color:#999">/ 他は空きあり</span>':'<span style="color:#3B6D11">満杯・残1なし</span>'}</div>`;
-  html+=`<div style="margin-top:9px;font-size:10px;color:#999;padding:0 2px;line-height:1.5">数字=空き台数 ・ <span style="color:#3B6D11">▲帰り</span> <span style="color:#A32D2D">▼予約</span> ・ 帰りの多くは「配車+30日」の見込み(車両保険の実質期限)。</div>`;
+  if(small.length){
+    html+=`<div style="margin-top:11px;font-size:11px;color:#888;padding:0 2px;margin-bottom:5px">その他のクラス（保有${MANAGED_MIN-1}台以下・タップで内訳）</div><div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 2px">`;
+    html+=small.map(cls=>{ const fl=flowsByCls[cls]; const av=fl.map(f=>f.free); const todayFree=av[0]; const min=Math.min.apply(null,av),minIdx=av.indexOf(min); const c=cellCol(todayFree); const minTxt=min!==todayFree?` <span style="color:#999;font-size:10px">最少${min}(${fmtMD(days[minIdx])})</span>`:'';
+      return `<span onclick="mAvailDayDetail('${esc(cls)}',0)" style="cursor:pointer;border:1px solid ${c.bd};background:${c.bg};padding:5px 10px;font-size:12px;border-radius:4px"><b>${esc(cls)}</b> <b style="color:${c.fg};font-size:14px">${todayFree}</b><span style="color:#999">空/${own[cls]}</span>${minTxt}</span>`; }).join('');
+    html+=`</div>`;
+  }
+  html+=`<div style="margin-top:10px;font-size:10px;color:#999;padding:0 2px;line-height:1.5">数字=空き台数 ・ <span style="color:#3B6D11">▲帰り</span> <span style="color:#A32D2D">▼予約</span> ・ <b>日付をタップでその日に動く案件</b> ・ 帰りの多くは「配車+30日」の見込み。</div>`;
   body.innerHTML=html;
-  if(sub){ const tightCls=managed.filter(k=>Math.min.apply(null,avMap[k])<=1); sub.textContent=(managed.length?(tightCls.length?`⚠ ${tightCls.join(' / ')} が逼迫`:'よく出るクラスは余裕あり'):'')+` ・ ${today}`; }
+  if(sub){ const tightCls=managed.filter(k=>Math.min.apply(null,flowsByCls[k].map(f=>f.free))<=1); sub.textContent=(managed.length?(tightCls.length?`⚠ ${tightCls.join(' / ')} が逼迫`:'よく出るクラスは余裕あり'):'')+` ・ ${today}`; }
+}
+// 🅿️ 在庫ボードのセルタップ内訳 (2026-07-02c): その日の 出る/帰る (無ければ稼働中) 案件を表示・タップで案件詳細へ
+function mAvailDayDetail(cls,i){
+  const cont=$('m-avail-detail'); if(!cont) return;
+  const flows=window._mAvailFlows||{}, days=window._mAvailDaysArr||[];
+  const fl=flows[cls]; if(!fl||!fl[i]){ cont.innerHTML=''; return; }
+  const f=fl[i]; const day=days[i]||'';
+  const WDN=['日','月','火','水','木','金','土']; const p=(day||'').split('-');
+  const wd=p.length>=3?WDN[new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()]:''; const md=p.length>=3?`${Number(p[1])}/${Number(p[2])}`:day;
+  const byId=id=>(DATA.cases||[]).find(c=>c.id===id);
+  const vlabel=c=>{const v=c.vehicleId&&(DATA.vehicles||[]).find(x=>x.id===c.vehicleId);const pl=v?(v.plate||{}):{};const plate=[pl.area,pl.no,pl.kana,pl.tail].filter(Boolean).join('');return ((v&&v.name)?v.name:(c.vehicleName||''))+(plate?` ${plate}`:'');};
+  const retBasis=c=>c?(c.useEnd?'返却予定':(c.useDeadline?'使用期限':'配車+30日見込み')):'';
+  const link=(id,extra)=>{const c=byId(id);if(!c)return '';const who=c.driverName||c.contractorName||'';const dst=c.dispatchToName||'';return `<div onclick="closeAvailBoard();openCaseDetail('${id}')" style="padding:7px 2px;border-bottom:1px solid #F0EFEA;font-size:13px;cursor:pointer"><b style="color:#185FA5">${esc(c.caseNo||'')}</b> ${esc(vlabel(c))}${(who||dst)?`<br><span style="color:#666;font-size:12px">${esc((who||'').slice(0,14))}${dst?` → ${esc(dst)}`:''}</span>`:''}${extra?` <span style="color:#999;font-size:11px">${extra}</span>`:''}</div>`;};
+  let h=`<div style="border:1px solid #E0E0DC;border-radius:8px;padding:9px 10px;background:#FBFBF9;margin-top:8px">
+    <div style="font-weight:bold;font-size:13px;margin-bottom:4px">${esc(cls)} ・ ${md}(${wd}) の動き <span style="color:#999;font-weight:normal">（空き${f.free}台）</span><span onclick="var d=document.getElementById('m-avail-detail');if(d)d.innerHTML='';" style="float:right;color:#999">✕</span></div>`;
+  if(f.dep.length){ h+=`<div style="color:#A32D2D;font-weight:bold;font-size:12px;margin-top:4px">▼ 出る ${f.dep.length}件</div>${f.dep.map(id=>link(id)).join('')}`; }
+  if(f.ret.length){ h+=`<div style="color:#3B6D11;font-weight:bold;font-size:12px;margin-top:4px">▲ 帰る ${f.ret.length}件</div>${f.ret.map(id=>link(id,'('+retBasis(byId(id))+')')).join('')}`; }
+  if(!f.dep.length&&!f.ret.length){ if(f.occ){ h+=`<div style="font-size:12px;color:#666;margin-top:4px">出入りなし。稼働中 ${f.occ}台:</div>${f.occIds.slice(0,8).map(id=>link(id)).join('')}${f.occIds.length>8?`<div style="color:#999;font-size:11px">…他 ${f.occIds.length-8}件</div>`:''}`; } else { h+=`<div style="font-size:12px;color:#3B6D11;margin-top:4px">この日は全台空き</div>`; } }
+  h+=`</div>`;
+  cont.innerHTML=h;
 }
 function filterVehicleList(){
   const q = ($('m-vehicle-search').value || '').toLowerCase().trim();

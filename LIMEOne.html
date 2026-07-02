@@ -1164,9 +1164,10 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     <div class="card-title" style="margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:6px">
       🅿️ <span>在庫の差し引き（よく出るクラス）</span>
       <span id="availability-board-sub" style="color:#888;font-weight:normal;font-size:10px"></span>
-      <span class="text-muted" style="font-size:10px;margin-left:auto">保有5台以上の14日フロー ・ 数字=空き ・ ▲帰り ▼予約</span>
+      <span class="text-muted" style="font-size:10px;margin-left:auto">よく出るクラスは14日フロー/他は簡易 ・ 数字=空き ・ 日付クリックで内訳</span>
     </div>
     <div id="availability-board-body"></div>
+    <div id="availability-board-detail"></div>
   </div>
   <div class="card">
     <div class="toolbar">
@@ -3064,7 +3065,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-02b';
+const APP_VERSION = '2026-07-02c';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7475,10 +7476,11 @@ function _availEffEnd(c, today){
 }
 function renderAvailabilityBoard(){
   const body = $('availability-board-body'); const sub = $('availability-board-sub');
+  const detEl = $('availability-board-detail'); if(detEl) detEl.innerHTML='';   // 前回のクリック内訳をクリア
   if(!body) return;
   const today = todayISO();
   const HORIZON = 14;      // 14日先まで差し引き
-  const MANAGED_MIN = 5;   // 保有これ以上=「よく出る大所帯」= 差し引きタイムライン (小クラスは満杯のみ・感覚で分かる範囲)
+  const MANAGED_MIN = 5;   // 保有これ以上=「よく出る大所帯」=14日フルストリップ / 未満=簡易カード
   const fleet = (DATA.vehicles||[]).filter(v=> v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち' && v.status!=='社用車');
   if(!fleet.length){ body.innerHTML = '<div class="text-muted text-sm">車両がありません</div>'; if(sub) sub.textContent=''; return; }
   const vById = {}; fleet.forEach(v=> vById[v.id]=v);
@@ -7487,29 +7489,33 @@ function renderAvailabilityBoard(){
   const own = {}; fleet.forEach(v=>{ const k=clsOf(v); own[k]=(own[k]||0)+1; });
   // 案件のクラス: 車両割当済=その車のクラス / 未割当の先の予約=受付時の希望クラス(vehicleClass)
   const caseClass = c => (c.vehicleId && vById[c.vehicleId]) ? clsOf(vById[c.vehicleId]) : (((c.vehicleClass||'').trim().toUpperCase())||'—');
-  // 在庫を消費する案件: キャンセル/返却済/請求済/入金済 以外・開始日あり・(自社車割当 or 希望クラスあり)。他社借は自社在庫を消費しないので除外。
+  // 在庫を消費する案件: キャンセル/返却済/回収完了 以外・開始日あり・(自社車割当 or 希望クラスあり)。他社借は自社在庫を消費しないので除外。
   const occupying = (DATA.cases||[]).filter(c=> c && !c.isBorrowed && !c.isDeleted && !c.isCancelled && !['キャンセル','返却済'].includes(c.status) && !c.recoveryCompleted && _availStartOf(c) && ((c.vehicleId && vById[c.vehicleId]) || (c.vehicleClass||'').trim()));
   const days = []; for(let i=0;i<HORIZON;i++) days.push(_availAddDays(today,i));
-  // クラスの日別 空き台数 = 保有 − その日に占有される台数 (出=useStartで消費・帰=effEndで解放)
-  const availOf = cls => days.map(day=>{
-    let occ=0;
-    for(const c of occupying){ if(caseClass(c)!==cls) continue; const s=_availStartOf(c), e=_availEffEnd(c,today); if(s && e && s<=day && day<=e) occ++; }
-    return own[cls]-occ;
-  });
-  const managed = Object.keys(own).filter(k=> own[k] >= MANAGED_MIN).sort((a,b)=> (own[b]-own[a]) || a.localeCompare(b));
-  const small   = Object.keys(own).filter(k=> own[k] < MANAGED_MIN);
   const fmtMD = iso => { const p=(iso||'').split('-'); return p.length>=3? `${Number(p[1])}/${Number(p[2])}`:iso; };
   const WDN = ['日','月','火','水','木','金','土'];
   const wdOf = iso => { const p=(iso||'').split('-'); if(p.length<3) return ''; return WDN[new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()]; };
   const cellCol = n => n<=0 ? {bg:'#FCEBEB',fg:'#A32D2D',bd:'#E24B4A'} : n===1 ? {bg:'#FAEEDA',fg:'#854F0B',bd:'#EF9F27'} : {bg:'#EAF3DE',fg:'#3B6D11',bd:'#C0DD97'};
-  const avMap = {}; managed.forEach(k=> avMap[k]=availOf(k));
+  // クラス×日 の 空き数・出発(dep)/返却(ret)/稼働中(occIds) 案件ID を計算 (セルクリックの内訳に使う)
+  const flowsByCls = {};
+  Object.keys(own).forEach(cls=>{
+    const spans = occupying.filter(c=>caseClass(c)===cls).map(c=>({id:c.id, s:_availStartOf(c), e:_availEffEnd(c,today)})).filter(x=>x.s&&x.e);
+    flowsByCls[cls] = days.map(day=>{
+      const prev = _availAddDays(day,-1);
+      let occ=0; const dep=[], ret=[], occIds=[];
+      spans.forEach(x=>{ const onD=x.s<=day&&day<=x.e, onP=x.s<=prev&&prev<=x.e; if(onD){occ++;occIds.push(x.id);} if(onD&&!onP)dep.push(x.id); if(!onD&&onP)ret.push(x.id); });
+      return { free: own[cls]-occ, occ, dep, ret, occIds };
+    });
+  });
+  window._availFlows = flowsByCls; window._availDaysArr = days;   // クリック内訳用に保持
+
+  const managed = Object.keys(own).filter(k=> own[k] >= MANAGED_MIN).sort((a,b)=> (own[b]-own[a]) || a.localeCompare(b));
+  const small   = Object.keys(own).filter(k=> own[k] < MANAGED_MIN).sort((a,b)=> (own[b]-own[a]) || a.localeCompare(b));
 
   let html = '';
-  if(!managed.length){
-    html += `<div class="text-muted text-sm">保有${MANAGED_MIN}台以上のクラスがありません</div>`;
-  }
+  if(!managed.length){ html += `<div class="text-muted text-sm">保有${MANAGED_MIN}台以上のクラスがありません</div>`; }
   managed.forEach(cls=>{
-    const av = avMap[cls];
+    const fl = flowsByCls[cls]; const av = fl.map(f=>f.free);
     const min = Math.min.apply(null, av), minIdx = av.indexOf(min);
     const warn = min <= 1;
     html += `<div style="padding:10px 0;border-bottom:1px solid #F0EFEA">
@@ -7518,36 +7524,61 @@ function renderAvailabilityBoard(){
         <div style="margin-left:auto;font-size:12px;color:${warn?'#A32D2D':'#666'}">今後最少 <b style="font-size:15px">${min}</b>台 <span style="color:#999">(${fmtMD(days[minIdx])})</span>${warn?' ・予約が続けば他社借を':' ・余裕あり'}</div>
       </div>
       <div style="display:flex;gap:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">
-        ${av.map((n,i)=>{
-          const c=cellCol(n), t0=(i===0);
-          const diff = i>0 ? n-av[i-1] : 0;
-          const mark = diff>0 ? `<span style="color:#3B6D11;font-size:10px">▲${diff}</span>` : diff<0 ? `<span style="color:#A32D2D;font-size:10px">▼${-diff}</span>` : `<span style="font-size:10px;color:transparent">·</span>`;
+        ${fl.map((f,i)=>{
+          const c=cellCol(f.free), t0=(i===0);
+          const mk = (f.ret.length?`<span style="color:#3B6D11">▲${f.ret.length}</span>`:'')+(f.dep.length?`<span style="color:#A32D2D">▼${f.dep.length}</span>`:'');
           const w=wdOf(days[i]); const wc = w==='日'?'#C0392B':w==='土'?'#2C5282':'#AAA';
-          return `<div style="flex:none;width:46px;text-align:center">
+          return `<div onclick="showAvailDayDetail('${esc(cls)}',${i})" title="クリックで内訳" style="flex:none;width:46px;text-align:center;cursor:pointer">
             <div style="font-size:10px;color:${t0?'#333':'#999'}">${t0?'今日':fmtMD(days[i])}</div>
             <div style="font-size:9px;color:${wc};margin-bottom:2px">${w}</div>
-            <div style="background:${c.bg};border:1px solid ${c.bd};border-radius:4px;padding:5px 0"><b style="font-size:15px;color:${c.fg}">${n}</b></div>
-            <div style="margin-top:2px;height:13px">${mark}</div>
+            <div style="background:${c.bg};border:1px solid ${c.bd};border-radius:4px;padding:5px 0"><b style="font-size:15px;color:${c.fg}">${f.free}</b></div>
+            <div style="margin-top:2px;height:13px;font-size:10px">${mk||'<span style="color:transparent">·</span>'}</div>
           </div>`;
         }).join('')}
       </div>
     </div>`;
   });
-  // 小クラス (保有 MANAGED_MIN 未満): 今日の満杯/残1 のみ圧縮表示 (感覚で分かる範囲)
-  const flags = [];
-  small.forEach(cls=>{
-    let occ=0; for(const c of occupying){ if(caseClass(c)!==cls) continue; const s=_availStartOf(c), e=_availEffEnd(c,today); if(s&&e&&s<=today&&today<=e) occ++; }
-    const free = own[cls]-occ;
-    if(free<=0) flags.push(`<span style="color:#A32D2D;font-weight:bold">${esc(cls)}満杯</span>`);
-    else if(free===1 && own[cls]>=2) flags.push(`<span style="color:#9C4C00">${esc(cls)}残1</span>`);
-  });
-  html += `<div style="margin-top:10px;font-size:11px;color:#888"><b>小クラス(保有${MANAGED_MIN-1}台以下)</b> — ${flags.length? flags.join(' ・ ')+' <span style="color:#999">/ 他は空きあり</span>' : '<span style="color:#3B6D11">満杯・残1なし</span>'}</div>`;
-  html += `<div style="margin-top:8px;font-size:10px;color:#999;line-height:1.5">数字=その日の空き台数 ・ <span style="color:#3B6D11">▲帰り(戻る)</span> <span style="color:#A32D2D">▼予約(出る)</span> ・ 帰りの多くは「配車+30日」の見込み(車両保険の実質期限)。使用期限/返却予定日を入れた車はその日で計算。</div>`;
+  // その他のクラス(保有MANAGED_MIN未満)も簡易表示: 今日空き+最少 のコンパクトカード(クリックで内訳)
+  if(small.length){
+    html += `<div style="margin-top:10px;font-size:11px;color:#888;margin-bottom:4px">その他のクラス（保有${MANAGED_MIN-1}台以下・クリックで内訳）</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+    html += small.map(cls=>{
+      const fl=flowsByCls[cls]; const av=fl.map(f=>f.free); const todayFree=av[0];
+      const min=Math.min.apply(null,av), minIdx=av.indexOf(min); const c=cellCol(todayFree);
+      const minTxt = min!==todayFree ? ` <span style="color:#999;font-size:10px">最少${min}(${fmtMD(days[minIdx])})</span>` : '';
+      return `<span onclick="showAvailDayDetail('${esc(cls)}',0)" title="クリックで内訳" style="cursor:pointer;border:1px solid ${c.bd};background:${c.bg};padding:4px 9px;font-size:12px;border-radius:4px"><b>${esc(cls)}</b>${nameMap[cls]?`<span style="color:#999;font-size:10px"> ${esc(nameMap[cls])}</span>`:''} <b style="color:${c.fg};font-size:14px">${todayFree}</b><span style="color:#999">空/${own[cls]}台</span>${minTxt}</span>`;
+    }).join('');
+    html += `</div>`;
+  }
+  html += `<div style="margin-top:8px;font-size:10px;color:#999;line-height:1.5">数字=その日の空き台数 ・ <span style="color:#3B6D11">▲帰り(戻る)</span> <span style="color:#A32D2D">▼予約(出る)</span> ・ <b>日付/カードをクリックでその日に動く案件を表示</b> ・ 帰りの多くは「配車+30日」の見込み(車両保険の実質期限)。</div>`;
   body.innerHTML = html;
   if(sub){
-    const tightCls = managed.filter(k=> Math.min.apply(null, avMap[k]) <= 1);
+    const tightCls = managed.filter(k=> Math.min.apply(null, flowsByCls[k].map(f=>f.free)) <= 1);
     sub.textContent = managed.length ? (tightCls.length ? `⚠ ${tightCls.join(' / ')} が逼迫` : 'よく出るクラスは余裕あり') : '';
   }
+}
+// 🅿️ 在庫ボードのセルクリック内訳 (2026-07-02c): その日の 出る/帰る (無ければ稼働中) 案件を表示し、クリックで案件を開く
+function showAvailDayDetail(cls, i){
+  const cont = $('availability-board-detail'); if(!cont) return;
+  const flows = window._availFlows||{}; const days = window._availDaysArr||[];
+  const fl = flows[cls]; if(!fl || !fl[i]){ cont.innerHTML=''; return; }
+  const f = fl[i]; const day = days[i]||'';
+  const WDN=['日','月','火','水','木','金','土']; const p=(day||'').split('-');
+  const wd = p.length>=3? WDN[new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()]:'';
+  const md = p.length>=3? `${Number(p[1])}/${Number(p[2])}`:day;
+  const byId = id => DATA.cases.find(c=>c.id===id);
+  const vlabel = c => { const v=c.vehicleId&&DATA.vehicles.find(x=>x.id===c.vehicleId); const pl=v?(v.plate||{}):{}; const plate=[pl.area,pl.no,pl.kana,pl.tail].filter(Boolean).join(''); return ((v&&v.name)?v.name:(c.vehicleName||''))+(plate?` ${plate}`:''); };
+  const retBasis = c => c? (c.useEnd?'返却予定':(c.useDeadline?'使用期限':'配車+30日見込み')) : '';
+  const link = (id, extra) => { const c=byId(id); if(!c) return ''; const who=c.driverName||c.contractorName||''; const dst=c.dispatchToName||''; return `<a href="#" onclick="event.preventDefault();openCaseModal('${id}')" style="display:block;margin:3px 0;color:#185FA5;text-decoration:none"><b>${esc(c.caseNo||'')}</b> ${esc(vlabel(c))}${who?` ・ ${esc(who.slice(0,12))}`:''}${dst?` → ${esc(dst)}`:''}${extra?` <span style="color:#999">${extra}</span>`:''}</a>`; };
+  let h = `<div style="border:1px solid #E0E0DC;border-radius:6px;padding:8px 10px;background:#FBFBF9;margin-top:6px">
+    <div style="font-weight:bold;font-size:12px;margin-bottom:4px">${esc(cls)} ・ ${md}(${wd}) の動き <span style="color:#999;font-weight:normal">（空き${f.free}台）</span><a href="#" onclick="event.preventDefault();var d=document.getElementById('availability-board-detail');if(d)d.innerHTML='';" style="float:right;color:#999;font-size:11px">✕</a></div>`;
+  if(f.dep.length){ h += `<div style="margin:4px 0"><span style="color:#A32D2D;font-weight:bold;font-size:12px">▼ 出る ${f.dep.length}件</span>${f.dep.map(id=>link(id)).join('')}</div>`; }
+  if(f.ret.length){ h += `<div style="margin:4px 0"><span style="color:#3B6D11;font-weight:bold;font-size:12px">▲ 帰る ${f.ret.length}件</span>${f.ret.map(id=>link(id,'('+retBasis(byId(id))+')')).join('')}</div>`; }
+  if(!f.dep.length && !f.ret.length){
+    if(f.occ){ h += `<div style="margin:4px 0;font-size:11px;color:#666">出入りなし。この日 稼働中 ${f.occ}台:</div>${f.occIds.slice(0,10).map(id=>link(id)).join('')}${f.occIds.length>10?`<div style="color:#999;font-size:11px">…他 ${f.occIds.length-10}件</div>`:''}`; }
+    else { h += `<div style="font-size:11px;color:#3B6D11">この日は全台空き</div>`; }
+  }
+  h += `</div>`;
+  cont.innerHTML = h;
 }
 function renderDashboard(){
   const today = todayISO();
