@@ -3065,7 +3065,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-02f';
+const APP_VERSION = '2026-07-02g';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7526,7 +7526,7 @@ function renderAvailabilityBoard(){
       <div style="display:flex;gap:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">
         ${fl.map((f,i)=>{
           const c=cellCol(f.free), t0=(i===0);
-          const mk = (f.ret.length?`<span style="color:#3B6D11">▲${f.ret.length}</span>`:'')+(f.dep.length?`<span style="color:#A32D2D">▼${f.dep.length}</span>`:'');
+          const mk = (f.ret.length?`<span style="color:#C53030">▲${f.ret.length}</span>`:'')+(f.dep.length?`<span style="color:#185FA5">▼${f.dep.length}</span>`:'');
           const w=wdOf(days[i]); const wc = w==='日'?'#C0392B':w==='土'?'#2C5282':'#AAA';
           return `<div onclick="showAvailDayDetail('${esc(cls)}',${i})" title="クリックで内訳" style="flex:none;width:46px;text-align:center;cursor:pointer">
             <div style="font-size:10px;color:${t0?'#333':'#999'}">${t0?'今日':fmtMD(days[i])}</div>
@@ -7557,7 +7557,7 @@ function renderAvailabilityBoard(){
     }).join('');
     html += `</div>`;
   }
-  html += `<div style="margin-top:8px;font-size:10px;color:#999;line-height:1.5">数字=その日の空き台数 ・ <span style="color:#3B6D11">▲帰り(戻る)</span> <span style="color:#A32D2D">▼予約(出る)</span> ・ <b>日付/カードをクリックでその日に動く案件を表示</b> ・ 帰りの多くは「利用開始日から30日」の見込み(車両保険の実質期限)。</div>`;
+  html += `<div style="margin-top:8px;font-size:10px;color:#999;line-height:1.5">数字=その日の空き台数 ・ <span style="color:#C53030">▲帰り(戻る)</span> <span style="color:#185FA5">▼予約(出る)</span> ・ <b>日付/カードをクリックでその日に動く案件を表示</b> ・ 帰りの多くは「利用開始日から30日」の見込み(車両保険の実質期限)。</div>`;
   body.innerHTML = html;
   if(sub){
     const tightCls = managed.filter(k=> Math.min.apply(null, flowsByCls[k].map(f=>f.free)) <= 1);
@@ -7580,8 +7580,8 @@ function showAvailDayDetail(cls, i){
   const link = (id, extra) => { const c=byId(id); if(!c) return ''; const who=c.driverName||c.contractorName||''; const dst=c.dispatchToName||''; return `<a href="#" onclick="event.preventDefault();openCaseModal('${id}')" style="display:block;margin:3px 0;color:#185FA5;text-decoration:none"><b>${esc(c.caseNo||'')}</b>${targetTag(c)} ${esc(vlabel(c))}${who?` ・ ${esc(who.slice(0,12))}`:''}${dst?` → ${esc(dst)}`:''}${extra?` <span style="color:#999">${extra}</span>`:''}</a>`; };
   let h = `<div style="border:1px solid #E0E0DC;border-radius:6px;padding:8px 10px;background:#FBFBF9;margin-top:6px">
     <div style="font-weight:bold;font-size:12px;margin-bottom:4px">${esc(cls)} ・ ${md}(${wd}) の動き <span style="color:#999;font-weight:normal">（空き${f.free}台）</span><a href="#" onclick="event.preventDefault();var d=document.getElementById('availability-board-detail');if(d)d.innerHTML='';" style="float:right;color:#999;font-size:11px">✕</a></div>`;
-  if(f.dep.length){ h += `<div style="margin:4px 0"><span style="color:#A32D2D;font-weight:bold;font-size:12px">▼ 出る ${f.dep.length}件</span>${f.dep.map(id=>link(id)).join('')}</div>`; }
-  if(f.ret.length){ h += `<div style="margin:4px 0"><span style="color:#3B6D11;font-weight:bold;font-size:12px">▲ 帰る ${f.ret.length}件</span>${f.ret.map(id=>link(id,'('+retBasis(byId(id))+')')).join('')}</div>`; }
+  if(f.dep.length){ h += `<div style="margin:4px 0"><span style="color:#185FA5;font-weight:bold;font-size:12px">▼ 出る ${f.dep.length}件</span>${f.dep.map(id=>link(id)).join('')}</div>`; }
+  if(f.ret.length){ h += `<div style="margin:4px 0"><span style="color:#C53030;font-weight:bold;font-size:12px">▲ 帰る ${f.ret.length}件</span>${f.ret.map(id=>link(id,'('+retBasis(byId(id))+')')).join('')}</div>`; }
   if(!f.dep.length && !f.ret.length){
     if(f.occ){ h += `<div style="margin:4px 0;font-size:11px;color:#666">出入りなし。この日 稼働中 ${f.occ}台:</div>${f.occIds.slice(0,10).map(id=>link(id)).join('')}${f.occIds.length>10?`<div style="color:#999;font-size:11px">…他 ${f.occIds.length-10}件</div>`:''}`; }
     else { h += `<div style="font-size:11px;color:#3B6D11">この日は全台空き</div>`; }
