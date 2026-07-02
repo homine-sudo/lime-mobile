@@ -1103,15 +1103,6 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     </div>
     <div id="dash-month-sales" style="display:flex;gap:22px;flex-wrap:wrap;align-items:baseline"></div>
   </div>
-  <!-- 2d) 🅿️ 在庫（空き）ボード: クラス別の今の空き台数 + 満杯クラスは「いつ空くか」を30日先読み (2026-07-02・読み取り専用) -->
-  <div class="card" style="padding:8px 12px" id="availability-board-card">
-    <div class="card-title" style="margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:6px">
-      🅿️ <span>在庫（空き）ボード</span>
-      <span id="availability-board-sub" style="color:#888;font-weight:normal;font-size:10px"></span>
-      <span class="text-muted" style="font-size:10px;margin-left:auto">クラス別の空き ・ 満杯は空き予定日を先読み</span>
-    </div>
-    <div id="availability-board-body"></div>
-  </div>
   <!-- 3) アラート: 左カラムに短いカードを縦積み(利用期限/回収/freee) + 右カラム=車検・点検(件数多) で左右の高さ偏りを解消 (2026-06-23a) -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;align-items:start" class="alerts-grid">
     <div style="display:flex;flex-direction:column;gap:8px;min-width:0" class="alerts-left">
@@ -1168,6 +1159,15 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 <!-- 配車予約 -->
 <div class="page" id="page-reservations">
   <div class="kpi-grid" id="res-kpi"></div>
+  <!-- 🅿️ 在庫の差し引き (よく出るクラスの14日フロー・2026-07-02a・読み取り専用) -->
+  <div class="card" style="padding:8px 12px" id="availability-board-card">
+    <div class="card-title" style="margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:6px">
+      🅿️ <span>在庫の差し引き（よく出るクラス）</span>
+      <span id="availability-board-sub" style="color:#888;font-weight:normal;font-size:10px"></span>
+      <span class="text-muted" style="font-size:10px;margin-left:auto">保有5台以上の14日フロー ・ 数字=空き ・ ▲帰り ▼予約</span>
+    </div>
+    <div id="availability-board-body"></div>
+  </div>
   <div class="card">
     <div class="toolbar">
       <div class="card-title" style="margin:0">📅 配車予約一覧</div>
@@ -3064,7 +3064,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-02';
+const APP_VERSION = '2026-07-02a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7473,85 +7473,76 @@ function renderAvailabilityBoard(){
   const body = $('availability-board-body'); const sub = $('availability-board-sub');
   if(!body) return;
   const today = todayISO();
+  const HORIZON = 14;      // 14日先まで差し引き
+  const MANAGED_MIN = 5;   // 保有これ以上=「よく出る大所帯」= 差し引きタイムライン (小クラスは満杯のみ・感覚で分かる範囲)
   const fleet = (DATA.vehicles||[]).filter(v=> v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち');
+  if(!fleet.length){ body.innerHTML = '<div class="text-muted text-sm">車両がありません</div>'; if(sub) sub.textContent=''; return; }
   const vById = {}; fleet.forEach(v=> vById[v.id]=v);
   const clsOf = v => (((v&&(v.vehicleClass||v.class))||'—').toString().trim().toUpperCase()) || '—';
   const nameMap = {}; (DATA.vehicleClasses||[]).forEach(x=>{ if(x&&x.code) nameMap[x.code.toUpperCase()] = x.name||''; });
-  if(!fleet.length){ body.innerHTML = '<div class="text-muted text-sm">車両がありません</div>'; if(sub) sub.textContent=''; return; }
   const own = {}; fleet.forEach(v=>{ const k=clsOf(v); own[k]=(own[k]||0)+1; });
-  // 今出ている案件 (ダッシュボード _isOutToday と同一述語)
-  const isOut = c => c && c.status!=='キャンセル' && ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)
-    && c.useStart && c.useStart.slice(0,10)<=today && !(c.useEnd && c.useEnd.slice(0,10)<today);
-  const outNow = {}; const usedVid = new Set(); let borrowedNow = 0;
-  DATA.cases.forEach(c=>{
-    if(!isOut(c)) return;
-    if(c.isBorrowed){ borrowedNow++; return; }
-    if(c.vehicleId && vById[c.vehicleId] && !usedVid.has(c.vehicleId)){ usedVid.add(c.vehicleId); const k=clsOf(vById[c.vehicleId]); outNow[k]=(outNow[k]||0)+1; }
+  // 案件のクラス: 車両割当済=その車のクラス / 未割当の先の予約=受付時の希望クラス(vehicleClass)
+  const caseClass = c => (c.vehicleId && vById[c.vehicleId]) ? clsOf(vById[c.vehicleId]) : (((c.vehicleClass||'').trim().toUpperCase())||'—');
+  // 在庫を消費する案件: キャンセル/返却済/請求済/入金済 以外・開始日あり・(自社車割当 or 希望クラスあり)。他社借は自社在庫を消費しないので除外。
+  const occupying = (DATA.cases||[]).filter(c=> c && !c.isBorrowed && !['キャンセル','返却済','請求済','入金済'].includes(c.status) && _availStartOf(c) && ((c.vehicleId && vById[c.vehicleId]) || (c.vehicleClass||'').trim()));
+  const days = []; for(let i=0;i<HORIZON;i++) days.push(_availAddDays(today,i));
+  // クラスの日別 空き台数 = 保有 − その日に占有される台数 (出=useStartで消費・帰=effEndで解放)
+  const availOf = cls => days.map(day=>{
+    let occ=0;
+    for(const c of occupying){ if(caseClass(c)!==cls) continue; const s=_availStartOf(c), e=_availEffEnd(c,today); if(s && e && s<=day && day<=e) occ++; }
+    return own[cls]-occ;
   });
-  // 満杯クラスの「最初に空く日」を30日先まで見る (占有 = キャンセル/返却済/請求済/入金済 以外で自社車割当・開始日あり)
-  const HZ = 30;
-  const occupying = DATA.cases.filter(c=> c && !['キャンセル','返却済','請求済','入金済'].includes(c.status) && c.vehicleId && vById[c.vehicleId] && _availStartOf(c));
-  const firstFreeDate = (clsKey)=>{
-    for(let i=0;i<HZ;i++){
-      const day = _availAddDays(today,i); let occ=0;
-      for(const c of occupying){ if(clsOf(vById[c.vehicleId])!==clsKey) continue; const s=_availStartOf(c), e=_availEffEnd(c,today); if(s && e && s<=day && day<=e) occ++; }
-      if(occ < (own[clsKey]||0)) return day;
-    }
-    return '';   // 30日先まで満杯
-  };
-  const rowData = Object.keys(own).map(k=>{
-    const o=own[k], out=outNow[k]||0, free=Math.max(0,o-out);
-    return { k, o, out, free, full: free<=0, nearly: free===1 && o>=2 };
-  });
-  const rank = r => r.full?3:(r.nearly?2:1);
-  rowData.sort((a,b)=> rank(b)-rank(a) || (b.out/b.o)-(a.out/a.o) || a.k.localeCompare(b.k));
-  const tight = rowData.filter(r=>r.full||r.nearly);
-  const easy  = rowData.filter(r=>!r.full && !r.nearly).sort((a,b)=>b.free-a.free);
-  const totOwn=fleet.length, totOut=usedVid.size, totFree=Math.max(0,totOwn-totOut), rate=totOwn?Math.round(totOut*100/totOwn):0;
+  const managed = Object.keys(own).filter(k=> own[k] >= MANAGED_MIN).sort((a,b)=> (own[b]-own[a]) || a.localeCompare(b));
+  const small   = Object.keys(own).filter(k=> own[k] < MANAGED_MIN);
   const fmtMD = iso => { const p=(iso||'').split('-'); return p.length>=3? `${Number(p[1])}/${Number(p[2])}`:iso; };
+  const WDN = ['日','月','火','水','木','金','土'];
+  const wdOf = iso => { const p=(iso||'').split('-'); if(p.length<3) return ''; return WDN[new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()]; };
+  const cellCol = n => n<=0 ? {bg:'#FCEBEB',fg:'#A32D2D',bd:'#E24B4A'} : n===1 ? {bg:'#FAEEDA',fg:'#854F0B',bd:'#EF9F27'} : {bg:'#EAF3DE',fg:'#3B6D11',bd:'#C0DD97'};
+  const avMap = {}; managed.forEach(k=> avMap[k]=availOf(k));
 
-  let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:baseline;margin-bottom:8px">
-    <span><b style="font-size:20px;color:var(--green)">${totFree}</b><span style="color:#888;font-size:11px"> 台 空き</span></span>
-    <span style="color:#555;font-size:12px">稼働 ${totOut} / 保有 ${totOwn} ・ 稼働率 ${rate}%${borrowedNow?` ・<span style="color:#185FA5">他社借 +${borrowedNow}</span>`:''}</span>
-  </div>`;
-
-  if(tight.length){
-    html += `<div style="font-size:11px;color:#9C4C00;font-weight:bold;margin:2px 0">⚠ 要注意 (満杯・残りわずか)</div>`;
-    html += tight.map(r=>{
-      const color = r.full?'#C53030':'#9C4C00';
-      const chip = r.full
-        ? `<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">満杯</span>`
-        : `<span style="background:#FAEEDA;color:#854F0B;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">残1</span>`;
-      const pct = r.o? Math.round(r.out/r.o*100):0;
-      const nm = nameMap[r.k]? `<span style="color:#999;font-size:10px;margin-left:4px">${esc(nameMap[r.k])}</span>` : '';
-      const ff = r.full? firstFreeDate(r.k) : '';
-      const fore = r.full
-        ? `<div style="margin:3px 0 0 8px;font-size:11px;color:${ff?'#7A4500':'#A32D2D'}">${ff?`🔓 ${fmtMD(ff)}頃に空く見込み`:'⛔ 30日先まで満杯 — 他社借の検討を'}</div>`
-        : '';
-      return `<div style="padding:6px 0;border-bottom:1px solid #F0EFEA">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:104px;flex:none"><b style="font-size:14px">${esc(r.k)}</b>${nm}</div>
-          <div style="flex:1;min-width:40px"><div style="height:7px;background:#F1EFE8;overflow:hidden"><div style="height:100%;width:${pct}%;background:${r.full?'#E24B4A':'#EF9F27'}"></div></div><div style="color:#999;font-size:10px;margin-top:2px">稼働 ${r.out} / 保有 ${r.o}</div></div>
-          <div style="text-align:right;flex:none;width:44px"><b style="font-size:17px;color:${color}">${r.free}</b><span style="color:#999;font-size:10px"> 空</span></div>
-          <div style="width:44px;flex:none;text-align:right">${chip}</div>
-        </div>${fore}
-      </div>`;
-    }).join('');
-  } else {
-    html += `<div style="color:#3B6D11;font-size:12px;padding:4px 0">✓ 満杯・残りわずかのクラスはありません</div>`;
+  let html = '';
+  if(!managed.length){
+    html += `<div class="text-muted text-sm">保有${MANAGED_MIN}台以上のクラスがありません</div>`;
   }
-
-  if(easy.length){
-    html += `<div style="margin-top:8px;font-size:11px;color:#888">空きあり</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">`;
-    html += easy.map(r=>`<span title="稼働 ${r.out}/${r.o}" style="border:1px solid #E0E0DC;border-left:3px solid #639922;padding:3px 9px;font-size:12px;background:#fff"><b>${esc(r.k)}</b> <span style="color:#3B6D11">空${r.free}</span></span>`).join('');
-    html += `</div>`;
-  }
-  html += `<div style="margin-top:8px;font-size:10px;color:#999">※「空く見込み」は 返却予定日 → 使用期限 → 配車日+30日(車両保険の実質期限) の順で推定。使用期限を入れると精度が上がります。</div>`;
-
+  managed.forEach(cls=>{
+    const av = avMap[cls];
+    const min = Math.min.apply(null, av), minIdx = av.indexOf(min);
+    const warn = min <= 1;
+    html += `<div style="padding:10px 0;border-bottom:1px solid #F0EFEA">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+        <div style="border-left:3px solid ${warn?'#C53030':'#97C459'};padding-left:8px"><b style="font-size:15px">${esc(cls)}</b>${nameMap[cls]?` <span style="font-size:11px;color:#999">${esc(nameMap[cls])}</span>`:''} <span style="font-size:11px;color:#999">保有${own[cls]}台</span></div>
+        <div style="margin-left:auto;font-size:12px;color:${warn?'#A32D2D':'#666'}">今後最少 <b style="font-size:15px">${min}</b>台 <span style="color:#999">(${fmtMD(days[minIdx])})</span>${warn?' ・予約が続けば他社借を':' ・余裕あり'}</div>
+      </div>
+      <div style="display:flex;gap:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">
+        ${av.map((n,i)=>{
+          const c=cellCol(n), t0=(i===0);
+          const diff = i>0 ? n-av[i-1] : 0;
+          const mark = diff>0 ? `<span style="color:#3B6D11;font-size:10px">▲${diff}</span>` : diff<0 ? `<span style="color:#A32D2D;font-size:10px">▼${-diff}</span>` : `<span style="font-size:10px;color:transparent">·</span>`;
+          const w=wdOf(days[i]); const wc = w==='日'?'#C0392B':w==='土'?'#2C5282':'#AAA';
+          return `<div style="flex:none;width:46px;text-align:center">
+            <div style="font-size:10px;color:${t0?'#333':'#999'}">${t0?'今日':fmtMD(days[i])}</div>
+            <div style="font-size:9px;color:${wc};margin-bottom:2px">${w}</div>
+            <div style="background:${c.bg};border:1px solid ${c.bd};border-radius:4px;padding:5px 0"><b style="font-size:15px;color:${c.fg}">${n}</b></div>
+            <div style="margin-top:2px;height:13px">${mark}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  // 小クラス (保有 MANAGED_MIN 未満): 今日の満杯/残1 のみ圧縮表示 (感覚で分かる範囲)
+  const flags = [];
+  small.forEach(cls=>{
+    let occ=0; for(const c of occupying){ if(caseClass(c)!==cls) continue; const s=_availStartOf(c), e=_availEffEnd(c,today); if(s&&e&&s<=today&&today<=e) occ++; }
+    const free = own[cls]-occ;
+    if(free<=0) flags.push(`<span style="color:#A32D2D;font-weight:bold">${esc(cls)}満杯</span>`);
+    else if(free===1 && own[cls]>=2) flags.push(`<span style="color:#9C4C00">${esc(cls)}残1</span>`);
+  });
+  html += `<div style="margin-top:10px;font-size:11px;color:#888"><b>小クラス(保有${MANAGED_MIN-1}台以下)</b> — ${flags.length? flags.join(' ・ ')+' <span style="color:#999">/ 他は空きあり</span>' : '<span style="color:#3B6D11">満杯・残1なし</span>'}</div>`;
+  html += `<div style="margin-top:8px;font-size:10px;color:#999;line-height:1.5">数字=その日の空き台数 ・ <span style="color:#3B6D11">▲帰り(戻る)</span> <span style="color:#A32D2D">▼予約(出る)</span> ・ 帰りの多くは「配車+30日」の見込み(車両保険の実質期限)。使用期限/返却予定日を入れた車はその日で計算。</div>`;
   body.innerHTML = html;
   if(sub){
-    const fullN = tight.filter(r=>r.full).length, nearN = tight.filter(r=>r.nearly).length;
-    sub.textContent = tight.length? `満杯 ${fullN} ・ 残1 ${nearN}クラス` : '全クラス空きあり';
+    const tightCls = managed.filter(k=> Math.min.apply(null, avMap[k]) <= 1);
+    sub.textContent = managed.length ? (tightCls.length ? `⚠ ${tightCls.join(' / ')} が逼迫` : 'よく出るクラスは余裕あり') : '';
   }
 }
 function renderDashboard(){
@@ -7605,9 +7596,6 @@ function renderDashboard(){
     <div class="kpi-card lime"><div class="kpi-label">今月の案件数</div><div class="kpi-value">${monthCases}件</div><div class="kpi-sub">${now.getFullYear()}年${now.getMonth()+1}月 受付 ・ <span style="color:#888">前年同月 ${monthCasesPrev}件</span></div></div>
     <div class="kpi-card"><div class="kpi-label">本日 稼働中</div><div class="kpi-value">${todayActiveCount}<span style="font-size:14px;color:#666">/${vehAll.length}台</span></div><div class="kpi-sub">瞬間稼働率 ${todayUtilRate}%${borrowedOut?` ・他社借 +${borrowedOut}`:''}${unassignedOwnOut?` ・<span style="color:#C53030;font-weight:bold">⚠車両未割当 ${unassignedOwnOut}</span>`:''}</div></div>
   `;
-
-  // 🅿️ 在庫（空き）ボード (2026-07-02): クラス別の空き + 満杯クラスの空き予定(30日先読み)
-  try { renderAvailabilityBoard(); } catch(e){ console.warn('availability board failed:', e); }
 
   // 🔀 業務パイプライン (2026-06-10c): 状態別件数チップ。クリックで案件管理の該当状態フィルタへ
   const pipeEl = $('dash-pipeline');
@@ -14039,6 +14027,9 @@ function renderReservations(){
     <div class="kpi-card orange"><div class="kpi-label">期間内 合計</div><div class="kpi-value">${rows.length}件</div></div>
     <div class="kpi-card ${noVehicle.length?'red':''}"><div class="kpi-label">車両未割当</div><div class="kpi-value">${noVehicle.length}件</div><div class="kpi-sub">車両マスター登録後に割当できます</div></div>
   `;
+
+  // 🅿️ 在庫の差し引きボード (2026-07-02a): 配車予約タブに表示
+  try { renderAvailabilityBoard(); } catch(e){ console.warn('availability board failed:', e); }
 
   const fmtDT = s => { if(!s) return '―'; const d=parseDate(s); if(!d) return esc(s); return `${fmtDate(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
   $('res-tbody').innerHTML = rows.map(c=>{
