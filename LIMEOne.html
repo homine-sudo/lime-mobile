@@ -3065,7 +3065,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-02c';
+const APP_VERSION = '2026-07-02d';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7538,14 +7538,22 @@ function renderAvailabilityBoard(){
       </div>
     </div>`;
   });
-  // その他のクラス(保有MANAGED_MIN未満)も簡易表示: 今日空き+最少 のコンパクトカード(クリックで内訳)
+  // その他のクラス(保有MANAGED_MIN未満): 白基調カードのグリッド(今日空きを大きく・左アクセント色・逼迫順・クリックで内訳)
   if(small.length){
-    html += `<div style="margin-top:10px;font-size:11px;color:#888;margin-bottom:4px">その他のクラス（保有${MANAGED_MIN-1}台以下・クリックで内訳）</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
-    html += small.map(cls=>{
+    const smallSorted = small.slice().sort((a,b)=> (flowsByCls[a][0].free - flowsByCls[b][0].free) || (own[b]-own[a]) || a.localeCompare(b));
+    html += `<div style="margin-top:12px;font-size:11px;color:#888;margin-bottom:6px">その他のクラス（保有${MANAGED_MIN-1}台以下・クリックで内訳）</div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">`;
+    html += smallSorted.map(cls=>{
       const fl=flowsByCls[cls]; const av=fl.map(f=>f.free); const todayFree=av[0];
       const min=Math.min.apply(null,av), minIdx=av.indexOf(min); const c=cellCol(todayFree);
-      const minTxt = min!==todayFree ? ` <span style="color:#999;font-size:10px">最少${min}(${fmtMD(days[minIdx])})</span>` : '';
-      return `<span onclick="showAvailDayDetail('${esc(cls)}',0)" title="クリックで内訳" style="cursor:pointer;border:1px solid ${c.bd};background:${c.bg};padding:4px 9px;font-size:12px;border-radius:4px"><b>${esc(cls)}</b>${nameMap[cls]?`<span style="color:#999;font-size:10px"> ${esc(nameMap[cls])}</span>`:''} <b style="color:${c.fg};font-size:14px">${todayFree}</b><span style="color:#999">空/${own[cls]}台</span>${minTxt}</span>`;
+      const chip = todayFree<=0 ? `<span style="background:#FCEBEB;color:#A32D2D;font-size:10px;padding:1px 7px;border-radius:8px">満杯</span>`
+        : (todayFree===1 && own[cls]>=2 ? `<span style="background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 7px;border-radius:8px">残1</span>`
+        : (min<todayFree ? `<span style="color:#999;font-size:10px">最少${min}・${fmtMD(days[minIdx])}</span>` : `<span style="color:#3B6D11;font-size:10px">余裕</span>`));
+      return `<div onclick="showAvailDayDetail('${esc(cls)}',0)" title="クリックで内訳" style="cursor:pointer;background:#fff;border:1px solid #E6E5E0;border-left:3px solid ${c.bd};border-radius:6px;padding:8px 10px">
+        <div style="font-size:13px;font-weight:bold;color:#2C2C2A">${esc(cls)}${nameMap[cls]?` <span style="color:#999;font-size:10px;font-weight:normal">${esc(nameMap[cls])}</span>`:''}</div>
+        <div style="margin:2px 0 4px"><b style="font-size:21px;color:${c.fg}">${todayFree}</b><span style="color:#999;font-size:11px"> 空 / 保有${own[cls]}</span></div>
+        <div>${chip}</div>
+      </div>`;
     }).join('');
     html += `</div>`;
   }
