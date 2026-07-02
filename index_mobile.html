@@ -1939,7 +1939,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-02e';
+const APP_VERSION = '2026-07-02f';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3785,7 +3785,7 @@ function renderStockList(){
   }).join('');
 }
 // 🅿️ 在庫（空き）ボード (2026-07-02): クラス別の今の空き + 満杯クラスは30日先読み(いつ空くか)。閲覧専用・PC版と同一ロジック。
-//   車両保険(損保代車)の使用期限が実質30日 → 返却予定日/使用期限が空でも「配車日+30日」を空く見込みとして扱う。
+//   車両保険(損保代車)の使用期限が実質30日 → 返却予定日/使用期限が空でも「利用開始日から30日」を空く見込みとして扱う。
 function _mAvailP2(n){ return String(n).padStart(2,'0'); }
 function _mAvailToday(){ const d=new Date(); return `${d.getFullYear()}-${_mAvailP2(d.getMonth()+1)}-${_mAvailP2(d.getDate())}`; }
 function _mAvailAddDays(iso,n){ const p=(iso||'').slice(0,10).split('-'); if(p.length<3) return iso; const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${_mAvailP2(d.getMonth()+1)}-${_mAvailP2(d.getDate())}`; }
@@ -3799,7 +3799,7 @@ function _mAvailEffEnd(c,today){
   const dl=(c.useDeadline||'').slice(0,10);
   if(dl) return (dl<today&&active)?_mAvailAddDays(today,400):dl;         // 使用期限(出庫中案件で意味を持つ)
   const st=_mAvailStartOf(c); if(!st) return '';
-  const eff=_mAvailAddDays(st,30);                                       // 出庫中で終了未定=配車+30日見込み
+  const eff=_mAvailAddDays(st,30);                                       // 出庫中で終了未定=利用開始+30日見込み
   return (eff<today&&active)?_mAvailAddDays(today,400):eff;              // 30日超で未返却=当面占有(役場等)
 }
 function openAvailBoard(){ renderAvailBoard(); $('m-avail-modal').classList.add('active'); }
@@ -3865,7 +3865,7 @@ function renderAvailBoard(){
       </div>`; }).join('');
     html+=`</div>`;
   }
-  html+=`<div style="margin-top:10px;font-size:10px;color:#999;padding:0 2px;line-height:1.5">数字=空き台数 ・ <span style="color:#3B6D11">▲帰り</span> <span style="color:#A32D2D">▼予約</span> ・ <b>日付をタップでその日に動く案件</b> ・ 帰りの多くは「配車+30日」の見込み。</div>`;
+  html+=`<div style="margin-top:10px;font-size:10px;color:#999;padding:0 2px;line-height:1.5">数字=空き台数 ・ <span style="color:#3B6D11">▲帰り</span> <span style="color:#A32D2D">▼予約</span> ・ <b>日付をタップでその日に動く案件</b> ・ 帰りの多くは「利用開始日から30日」の見込み。</div>`;
   body.innerHTML=html;
   if(sub){ const tightCls=managed.filter(k=>Math.min.apply(null,flowsByCls[k].map(f=>f.free))<=1); sub.textContent=(managed.length?(tightCls.length?`⚠ ${tightCls.join(' / ')} が逼迫`:'よく出るクラスは余裕あり'):'')+` ・ ${today}`; }
 }
@@ -3879,7 +3879,7 @@ function mAvailDayDetail(cls,i){
   const wd=p.length>=3?WDN[new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()]:''; const md=p.length>=3?`${Number(p[1])}/${Number(p[2])}`:day;
   const byId=id=>(DATA.cases||[]).find(c=>c.id===id);
   const vlabel=c=>{const v=c.vehicleId&&(DATA.vehicles||[]).find(x=>x.id===c.vehicleId);const pl=v?(v.plate||{}):{};const plate=[pl.area,pl.no,pl.kana,pl.tail].filter(Boolean).join('');return ((v&&v.name)?v.name:(c.vehicleName||''))+(plate?` ${plate}`:'');};
-  const retBasis=c=>c?(c.useEnd?'返却予定':(c.useDeadline?'使用期限':'配車+30日見込み')):'';
+  const retBasis=c=>c?(c.useEnd?'返却予定':(c.useDeadline?'使用期限':'利用開始+30日見込み')):'';
   const targetTag=c=>{if(!c.target)return '';const m={'対物':['#E6F1FB','#0C447C'],'車両':['#E1F5EE','#0F6E56'],'人身':['#FCEBEB','#A32D2D'],'その他':['#F1EFE8','#444441']};const col=m[c.target]||m['その他'];return ` <span style="background:${col[0]};color:${col[1]};font-size:10px;padding:1px 6px;border-radius:6px">${esc(c.target)}</span>`;};
   const link=(id,extra)=>{const c=byId(id);if(!c)return '';const who=c.driverName||c.contractorName||'';const dst=c.dispatchToName||'';return `<div onclick="closeAvailBoard();openCaseDetail('${id}')" style="padding:7px 2px;border-bottom:1px solid #F0EFEA;font-size:13px;cursor:pointer"><b style="color:#185FA5">${esc(c.caseNo||'')}</b>${targetTag(c)} ${esc(vlabel(c))}${(who||dst)?`<br><span style="color:#666;font-size:12px">${esc((who||'').slice(0,14))}${dst?` → ${esc(dst)}`:''}</span>`:''}${extra?` <span style="color:#999;font-size:11px">${extra}</span>`:''}</div>`;};
   let h=`<div style="border:1px solid #E0E0DC;border-radius:8px;padding:9px 10px;background:#FBFBF9;margin-top:8px">
