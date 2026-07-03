@@ -3065,7 +3065,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-02h';
+const APP_VERSION = '2026-07-03';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3876,23 +3876,41 @@ async function tryLoadFromDir(){
     let d;
     try { d = JSON.parse(txt); }
     catch(parseErr){
-      // v2026.04.29bt: data.json が破損していた場合の救済
+      // ★2026-07-03 消失対策: 旧実装はパース失敗を「破損」と断定し、localStorage由来の
+      //   staleなDATAで共有data.jsonを即・自動上書きしていた (Dropbox同期中の途切れ読みでも発動
+      //   =0166ミヤギ消失系の最有力経路)。新実装: ①500ms後に1回再読取(途切れ読みは直る)
+      //   ②それでも破損なら 破損コピー退避+人間の確認を挟んでのみ復旧上書き (自動クロバー廃止)。
       console.error('data.json破損:', parseErr);
-      toast('⚠️ 共有フォルダの data.json が破損しています。ローカルデータを保護します', 'error');
-      // 破損コピーを保存して人間が後で復旧できるようにする
+      await new Promise(r => setTimeout(r, 500));
       try {
-        const corruptName = 'data.corrupt.'+Date.now()+'.json';
-        const cfh = await dirHandle.getFileHandle(corruptName, {create:true});
-        const cw = await cfh.createWritable();
-        await cw.write(txt);
-        await cw.close();
-        console.warn('破損ファイルを保存:', corruptName);
-      } catch(e){}
-      // ローカルデータがあれば、それで上書きして正常な状態に戻す
-      if(DATA.cases && DATA.cases.length > 0){
-        await saveToDirImmediate();
+        const f2 = await (await dirHandle.getFileHandle('data.json', {create:false})).getFile();
+        d = JSON.parse(await f2.text());
+      } catch(retryErr){ d = null; }
+      if(!d){
+        toast('⚠️ 共有フォルダの data.json を読み取れません (破損の可能性)', 'error');
+        // 破損コピーを保存して人間が後で復旧できるようにする
+        try {
+          const corruptName = 'data.corrupt.'+Date.now()+'.json';
+          const cfh = await dirHandle.getFileHandle(corruptName, {create:true});
+          const cw = await cfh.createWritable();
+          await cw.write(txt);
+          await cw.close();
+          console.warn('破損ファイルを保存:', corruptName);
+        } catch(e){}
+        // 人間の確認を挟んでのみローカルデータで復旧 (自動では絶対に上書きしない)
+        if(DATA.cases && DATA.cases.length > 0){
+          const okRescue = confirm(
+            'data.json が破損しているようです (破損コピーは退避済み)。\n\n' +
+            'このPCのローカルデータ (案件' + DATA.cases.length + '件) で復旧上書きしますか?\n\n' +
+            '※他の端末の方が新しいデータを持っている可能性がある場合は「キャンセル」し、\n' +
+            '  Dropboxのバージョン履歴からの復元を検討してください (CLAUDE.md §7)。');
+          if(okRescue){
+            _setForceWriteOnce();
+            await saveToDirImmediate();
+          }
+        }
+        return;
       }
-      return;
     }
     // 承認プロンプトは廃止(ユーザー要望:「最新データは常に読み込むから承認得ないで読み込んで」)
     // ただし、リモートが空(0件)なのにローカルに案件があるケースのみ、サイレントで読込をスキップして誤消去防止
@@ -3903,8 +3921,17 @@ async function tryLoadFromDir(){
     }
     DATA = normalizeData(d);
     invalidateIndexes(); // ★必須: DATA置換後は索引キャッシュを破棄
+    // ★見守りジャーナル (2026-07-03): このPCが直近に見た案件が disk から消えていたら復元
+    try {
+      const _healed = _journalHeal(DATA);
+      if(_healed.length){
+        invalidateIndexes();
+        toast('🛟 消失していた案件を復元: ' + _healed.map(h => h.caseNo).join(', '), 'error');
+      }
+    } catch(e){ console.warn('[journal] heal失敗:', e); }
     if(typeof captureSyncSnapshot === 'function') captureSyncSnapshot(DATA);  // v2026.04.29cu: ロード時スナップショット
-    save(); // localStorageに反映
+    try { _journalRecord(DATA); } catch(e){}
+    save(); // localStorageに反映 (共有モードなら復元分もディスクへ書込)
     const page = _navCurrent || 'dashboard';
     showPage(page, true);
     toast('📥 共有フォルダから読込完了 (案件'+(DATA.cases||[]).length+'件)', true);
@@ -3951,6 +3978,87 @@ function captureSyncSnapshot(data){
   snap.msgsById = new Map((data.internalMessages||[]).map(m => [m.id, JSON.stringify(m)]));
   _lastSyncSnapshot = snap;
 }
+
+// ============================================================
+// 見守りジャーナル (2026-07-03 消失対策・モバイルと同一設計)
+//   このPCが「共有フォルダで確認した」直近14日更新の案件スナップショットを localStorage に保持し、
+//   別端末のstale上書き等で案件が data.json から id ごと消えた時に自動復元する。
+//   ・ソフト削除(isDeleted)は id が残るので誤復活しない
+//   ・data.json 直編集メンテで意図的にレコードを消す時は トップレベル journalEpoch を +1 (全端末が破棄)
+//   ・settings.purgedIds={id:true} も尊重 ・完全バックアップ復元/ID自動修復時は _journalClear() を呼ぶ
+// ============================================================
+const JOURNAL_LS_KEY = LS_KEY + '_journal';
+const JOURNAL_KEEP_MS = 14 * 24 * 3600 * 1000;
+const JOURNAL_MAX = 60;
+function _journalLoad(){
+  try {
+    const raw = localStorage.getItem(JOURNAL_LS_KEY);
+    if(raw){ const j = JSON.parse(_lsDecompress(raw)); if(j && typeof j === 'object' && j.entries) return j; }
+  } catch(e){}
+  return { epoch: 0, entries: {} };
+}
+function _journalStore(j){
+  try { localStorage.setItem(JOURNAL_LS_KEY, _lsCompress(JSON.stringify(j))); }
+  catch(e){ console.warn('[journal] 保存失敗(容量?):', e); }
+}
+function _journalClear(){
+  try { localStorage.removeItem(JOURNAL_LS_KEY); } catch(e){}
+}
+// 復元/修復の「次の1回だけ全書込」フラグ。リロードを跨ぐ経路(完全バックアップ復元)があるため
+// window 変数と localStorage の両方に立て、書込成功時に両方消す。
+function _setForceWriteOnce(){
+  window._forceWriteOnce = true;
+  try { localStorage.setItem(LS_KEY + '_forceWrite', '1'); } catch(e){}
+}
+function _isForceWriteOnce(){
+  if(window._forceWriteOnce) return true;
+  try { return localStorage.getItem(LS_KEY + '_forceWrite') === '1'; } catch(e){ return false; }
+}
+function _clearForceWriteOnce(){
+  window._forceWriteOnce = false;
+  try { localStorage.removeItem(LS_KEY + '_forceWrite'); } catch(e){}
+}
+function _journalRecord(dataObj){
+  if(!dataObj || !Array.isArray(dataObj.cases)) return;
+  const j = _journalLoad();
+  const diskEpoch = Number(dataObj.journalEpoch || 0);
+  if(j.epoch !== diskEpoch){ j.epoch = diskEpoch; j.entries = {}; }
+  const cutoff = Date.now() - JOURNAL_KEEP_MS;
+  dataObj.cases.forEach(c => {
+    if(!c || !c.id) return;
+    const ut = Number(c.updatedAt || 0);
+    if(ut < cutoff) return;
+    const snap = { ...c }; delete snap._conflictHistory;
+    j.entries[c.id] = { id: c.id, caseNo: c.caseNo || '', updatedAt: ut, snap };
+  });
+  const ids = Object.keys(j.entries);
+  ids.forEach(id => { if(Number(j.entries[id].updatedAt||0) < cutoff) delete j.entries[id]; });
+  const sorted = Object.keys(j.entries).sort((a,b) => Number(j.entries[b].updatedAt||0) - Number(j.entries[a].updatedAt||0));
+  sorted.slice(JOURNAL_MAX).forEach(id => delete j.entries[id]);
+  _journalStore(j);
+}
+// targetObj にジャーナル案件が id ごと存在しなければ復元 (snapのまま注入=updatedAt保持)。戻り値=復元エントリ配列。
+function _journalHeal(targetObj){
+  if(!targetObj || !Array.isArray(targetObj.cases)) return [];
+  const j = _journalLoad();
+  const diskEpoch = Number(targetObj.journalEpoch || 0);
+  if(j.epoch !== diskEpoch){ j.epoch = diskEpoch; j.entries = {}; _journalStore(j); return []; }
+  const purged = (targetObj.settings && targetObj.settings.purgedIds) || {};
+  const have = new Set(targetObj.cases.filter(c => c && c.id).map(c => c.id));
+  const healed = [];
+  Object.keys(j.entries).forEach(id => {
+    if(have.has(id) || purged[id]) return;
+    const ent = j.entries[id];
+    if(!ent || !ent.snap || !ent.snap.id) return;
+    targetObj.cases.push(JSON.parse(JSON.stringify(ent.snap)));
+    healed.push(ent);
+  });
+  if(healed.length){
+    console.warn('[journal] 消失案件を復元:', healed.map(h => h.caseNo + '/' + h.id));
+  }
+  return healed;
+}
+
 // v2026.04.29cv/cx: 汎用 3-way merge — 衝突時は勝者に _conflictHistory を付与
 /* フィールド単位 3-way マージ (v2026.05: データ消失防止の根本対策)
  * snapshot から各フィールドが「どちらで変化したか」を判定し、変化した側を採用。
@@ -4046,12 +4154,20 @@ function mergeCollection(localArr, diskArr, snapMap, label){
     } else if(L && !D){
       merged.push(L);
     } else if(!L && D){
-      const wasInSnap = snapMap && snapMap.has(id);
-      if(wasInSnap){
-        const Ds = JSON.stringify(D);
-        if(Ds === snapStr){ /* 削除確定 */ }
-        else { merged.push(D); conflicts.push({ label, id, win:'disk-restored', winner:D, loser:null }); }
-      } else { merged.push(D); }
+      // ★2026-07-03 消失対策: 案件(cases)は「削除確定」判定を廃止し disk-only を常に保持する。
+      //   案件の削除は全てソフト削除(isDeletedフラグ・idは残る)なので、id ごと消える正当な経路は無い
+      //   =この分岐で落ちるのは「localStorageのdata/snap不整合」等の事故だけだった(0166消失系の温床)。
+      //   車両・マスタ(insurers/factories/staff)は今もハード削除(splice/filter)があるため従来判定を維持。
+      if(label === 'cases'){
+        merged.push(D);
+      } else {
+        const wasInSnap = snapMap && snapMap.has(id);
+        if(wasInSnap){
+          const Ds = JSON.stringify(D);
+          if(Ds === snapStr){ /* 削除確定 */ }
+          else { merged.push(D); conflicts.push({ label, id, win:'disk-restored', winner:D, loser:null }); }
+        } else { merged.push(D); }
+      }
     }
   });
   return { merged, conflicts };
@@ -4251,22 +4367,55 @@ async function saveToDirImmediate(){
     // 重要: ローカル DATA は normalizeData 済み・スナップショットも normalizeData 済みのため、
     //   diskData も normalizeData して比較レベルを揃える。
     //   これをやらないと「実質同じ内容なのにフィールド整形差で衝突」が毎回発生する。
+    // ★2026-07-03 消失対策 (fail-closed 化):
+    //   旧実装は 読取失敗/JSONパース失敗 を握りつぶし「ローカル優先で全書込」していた。
+    //   Dropboxクライアントがファイルを差し替え中の途切れ読み(torn read)でパースが失敗するだけで
+    //   staleなローカルDATAで共有data.jsonを丸ごと上書きする=0166ミヤギ消失系の温床。
+    //   新実装: パース失敗は300ms後に1回だけ再読取→それでも失敗なら保存中止(throw)。
+    //   書込してよいのは ①正常読取+マージ ②ファイル不存在/空(初回) ③_forceWriteOnce(復元/修復の明示経路) のみ。
     let diskData = null;
-    try {
+    let fileMissing = false;
+    const _readDisk = async () => {
       const fh = await dirHandle.getFileHandle('data.json', {create:false});
       const f = await fh.getFile();
-      const txt = await f.text();
-      if(txt) {
+      return await f.text();
+    };
+    if(!_isForceWriteOnce()){
+      let txt = null;
+      try { txt = await _readDisk(); }
+      catch(e){
+        if(e && e.name === 'NotFoundError'){ fileMissing = true; }
+        else {
+          await new Promise(r => setTimeout(r, 300));
+          try { txt = await _readDisk(); }
+          catch(e2){ if(e2 && e2.name === 'NotFoundError'){ fileMissing = true; } else { throw new Error('data.json を読み取れないため保存を中止しました (自動で再試行します)'); } }
+        }
+      }
+      if(!fileMissing && txt != null && txt.trim()){
         try {
           const raw = JSON.parse(txt);
           diskData = (typeof normalizeData === 'function') ? normalizeData(raw) : raw;
-        } catch(_){ /* 破損 → ローカル優先 */ }
+        } catch(_){
+          // torn read の可能性 → 1回だけ再読取
+          await new Promise(r => setTimeout(r, 300));
+          try {
+            const raw2 = JSON.parse(await _readDisk());
+            diskData = (typeof normalizeData === 'function') ? normalizeData(raw2) : raw2;
+          } catch(_2){
+            throw new Error('data.json が読取途中/破損のため保存を中止しました (自動で再試行します。続く場合は再読込)');
+          }
+        }
+        if(diskData && !Array.isArray(diskData.cases)){
+          // パースはできたが案件配列が無い=別物/破損 → 全上書きせず中止
+          throw new Error('data.json の内容が想定外のため保存を中止しました (開発者に連絡)');
+        }
       }
-    } catch(e){ /* 初回・読込失敗はOK (ローカル全書込み) */ }
+    }
     // 2. 3-way merge
     let toWrite;
     let conflictsToShow = [];
-    if(!diskData || !Array.isArray(diskData.cases)){
+    if(_isForceWriteOnce() || !diskData || !Array.isArray(diskData.cases)){
+      // 初回(ファイル無し/空) or 明示的な復元・修復経路のみローカル全書込
       toWrite = DATA;
     } else {
       const { merged, conflicts } = mergeWithDisk(DATA, diskData, _lastSyncSnapshot);
@@ -4275,11 +4424,30 @@ async function saveToDirImmediate(){
         conflictsToShow = conflicts;
         console.warn('[マージ衝突]', conflicts);
       }
+      // ★消失ガード (2026-07-03): マージ結果に disk の案件が id ごと欠けていたら書込中止
+      {
+        const mIds = new Set((toWrite.cases||[]).filter(c=>c&&c.id).map(c=>c.id));
+        const purged = (toWrite.settings && toWrite.settings.purgedIds) || {};
+        const lostRecs = (diskData.cases||[]).filter(c => c && c.id && !mIds.has(c.id) && !purged[c.id]);
+        if(lostRecs.length){
+          console.error('[消失ガード] マージ結果に欠落:', lostRecs.map(c=>c.caseNo+'/'+c.id));
+          throw new Error('保存を中止しました (マージ結果にデータ欠落を検出。開発者に連絡してください)');
+        }
+      }
+      // ★見守りジャーナル: このPCが直近に見た案件が disk から消えていたら復元して書き込む (2026-07-03)
+      try {
+        const _healed = _journalHeal(toWrite);
+        if(_healed.length){
+          toast('🛟 消失していた案件を復元して保存: ' + _healed.map(h => h.caseNo).join(', '), 'error');
+        }
+      } catch(e){ console.warn('[journal] heal失敗:', e); }
     }
     // 受付No衝突の自己修復 (2026-06-29): 書込前に重複caseNoを検出→安全側を空き番号へ自動振替
+    let _crFixed = [];
     try {
       const _cr = _resolveCaseNoCollisions((toWrite && toWrite.cases) || []);
       if(_cr.fixed.length){
+        _crFixed = _cr.fixed;
         console.warn('[受付No自動修正]', _cr.fixed);
         _cr.fixed.forEach(f=> toast(`⚠️ 受付No重複を自動修正: ${f.oldNo} → ${f.newNo}${f.name?'（'+f.name+'）':''}`, 'error'));
       }
@@ -4313,11 +4481,40 @@ async function saveToDirImmediate(){
     const f2 = await (await dirHandle.getFileHandle('data.json')).getFile();
     dirDataMtime = f2.lastModified;
     updateSyncStatus('✔ 共有フォルダに同期: '+new Date().toLocaleTimeString('ja-JP'));
+    // ★復元/修復の明示経路 (_forceWriteOnce) は1回で解除しジャーナルも破棄 (2026-07-03)
+    if(_isForceWriteOnce()){
+      _clearForceWriteOnce();
+      try { _journalClear(); } catch(e){}
+    }
+    try { _journalRecord(DATA); } catch(e){}
+    // ★受付No自動修正の訂正LINE (2026-07-03): 改番は保存確定後に必ずグループへ知らせる
+    //   (以前のLINE通知の受付Noが旧番号のまま残るため。凍結でなく「修復+正直に訂正」方式)
+    if(_crFixed.length && DATA.settings && DATA.settings.gasWebAppUrl){
+      _crFixed.forEach(f => {
+        const txt = `⚠️ 受付No 自動修正\n${f.oldNo} → ${f.newNo}${f.name ? '\n名前: ' + f.name : ''}\n(番号重複を自動解消しました。これ以前の通知に出ている ${f.oldNo} はこの案件では新番号 ${f.newNo} になります)`;
+        try { sendExternalNotify('updateCase', { line: { text: txt }, calendar: null }).catch(()=>{}); } catch(e){}
+      });
+    }
+    window._dirSaveFailCount = 0;
     if(conflictsToShow.length) showConflictDialog(conflictsToShow);
   }catch(e){
     console.error('Save to dir failed:', e);
     updateSyncStatus('⚠️ 同期失敗: '+e.message);
-    toast('⚠️ 共有フォルダ同期失敗: ' + (e.message||''), 'error');
+    // ★トースト連発防止 (2026-07-03): 600msデバウンス保存が連続失敗してもトーストは30秒に1回
+    window._dirSaveFailCount = (window._dirSaveFailCount || 0) + 1;
+    const now = Date.now();
+    if(!window._dirSaveFailToastAt || now - window._dirSaveFailToastAt > 30000){
+      window._dirSaveFailToastAt = now;
+      toast('⚠️ 共有フォルダ同期失敗: ' + (e.message||''), 'error');
+    }
+    // ★自動再試行 (2026-07-03 fail-closed化に伴う再送機構): 15秒後に1本だけ再実行。
+    //   これが無いと静かな時間帯に読取失敗した変更が localStorage 止まりのまま他端末に届かない。
+    if(!window._dirSaveRetryTimer){
+      window._dirSaveRetryTimer = setTimeout(() => {
+        window._dirSaveRetryTimer = null;
+        try { saveToDirImmediate(); } catch(_){}
+      }, 15000);
+    }
   }
 }
 
@@ -4472,8 +4669,16 @@ async function checkExternalChange(){
           // スナップショットがない初回などは ディスク優先 (従来挙動)
           DATA = normalizedDisk;
         }
+        // ★見守りジャーナル (2026-07-03): 他PC由来の更新で案件が id ごと消えていたら復元
+        try {
+          const _healed = _journalHeal(DATA);
+          if(_healed.length){
+            toast('🛟 消失していた案件を復元: ' + _healed.map(h => h.caseNo).join(', '), 'error');
+          }
+        } catch(e){ console.warn('[journal] heal失敗:', e); }
         invalidateIndexes(); // ★必須: DATA置換後は索引キャッシュを破棄
         if(typeof captureSyncSnapshot === 'function') captureSyncSnapshot(DATA);  // スナップショット更新
+        try { _journalRecord(DATA); } catch(e){}
         save();
         const page = _navCurrent || 'dashboard';
         showPage(page, true);
@@ -16183,6 +16388,12 @@ function importJSON(input){
       }
       if(action==='replace'){
         DATA = normalizeData(d);
+        // ★2026-07-03: 全上書き取込は「復元モード」= 次の1回だけマージ/消失ガード/ジャーナルを迂回して
+        //   ディスクへ全書込。journalEpoch を +1 して全端末の見守りジャーナルを破棄させる
+        //   (取込で意図的に消したレコードを他端末が復活させない)。
+        DATA.journalEpoch = Number(DATA.journalEpoch || 0) + 1;
+        _setForceWriteOnce();
+        try { _journalClear(); } catch(e){}
       } else if(action==='merge'){
         mergeImportedData(d);
       } else if(action==='appendCases'){
@@ -16473,6 +16684,11 @@ function importFullBackup(input){
       if(newMessages.length) DATA.internalMessages = newMessages;
       // normalizeDataで補正
       DATA = (typeof normalizeData === 'function') ? normalizeData(DATA) : DATA;
+      // ★2026-07-03: 復元は「過去に戻す」意図の全上書き = 次の1回だけマージ/消失ガード/ジャーナルを迂回。
+      //   journalEpoch +1 で全端末の見守りジャーナルを破棄 (復元で消したレコードの自動復活を防ぐ)。
+      DATA.journalEpoch = Number(DATA.journalEpoch || 0) + 1;
+      _setForceWriteOnce();
+      try { _journalClear(); } catch(e){}
       save();
       toast(`✅ 完全バックアップから復元: 案件${newCases.length}件 / 車両${newVehicles.length}台 / 保険会社${newInsurers.length}社`, true);
       setTimeout(()=>location.reload(), 1500); // 全画面再描画のため一度リロード
@@ -18681,6 +18897,29 @@ defTest('共有モード: 同一フィールド同時編集はupdatedAt勝者', 
   return { status:'pass', detail:'同一フィールド衝突で updatedAt 新しい方が勝ち、衝突履歴も記録' };
 });
 
+// --- 2026-07-03 消失対策: disk-only 案件はマージで絶対に落とさない (削除確定分岐の cases 廃止を守る) ---
+defTest('共有モード: disk側にしか無い案件はマージで消えない', () => {
+  if(typeof mergeCollection !== 'function'){
+    return { status: 'fail', detail: 'mergeCollection 関数なし', fix:'🛠 開発者連絡', category:'code' };
+  }
+  // 「スナップショットにあり・ローカルに無い・disk不変」= 旧実装が『削除確定』として落としていた形。
+  //   案件は全てソフト削除(idが残る)なので、この形は事故(localStorage不整合等)でしか生じない → 保持が正。
+  const dOnly = { id:'tc-dloss', caseNo:'2099-99-9003', status:'配車済', updatedAt: 3000 };
+  const snapMap = new Map([['tc-dloss', JSON.stringify(dOnly)]]);
+  const r = mergeCollection([], [dOnly], snapMap, 'cases');
+  if(!r.merged.some(c => c.id === 'tc-dloss')){
+    return { status:'fail', detail:'disk-only 案件がマージで消えた (削除確定分岐が cases に復活している)', fix:'🛠 mergeCollection の cases 分岐を確認 (2026-07-03 消失対策)', category:'code' };
+  }
+  // 車両/マスタは従来どおり削除確定が機能すること (ハード削除の伝播用)
+  const vOnly = { id:'tv-dloss', name:'テスト車', updatedAt: 3000 };
+  const vSnap = new Map([['tv-dloss', JSON.stringify(vOnly)]]);
+  const rv = mergeCollection([], [vOnly], vSnap, 'vehicles');
+  if(rv.merged.some(v => v.id === 'tv-dloss')){
+    return { status:'fail', detail:'車両の削除確定が機能していない (ハード削除が他PCで復活する)', fix:'🛠 mergeCollection の vehicles 分岐を確認', category:'code' };
+  }
+  return { status:'pass', detail:'案件=disk-only保持 / 車両=削除確定維持 (2026-07-03 消失対策)' };
+});
+
 // --- v2026.04.29bp: ID重複検出 (案件/車両/保険会社/工場) ---
 defTest('案件ID重複チェック', () => {
   const seen = {};
@@ -18717,7 +18956,15 @@ defTest('案件ID重複チェック', () => {
           seen2[c.id] = true;
         }
       });
-      if(fixed){ save(); }
+      if(fixed){
+        // ★2026-07-03: id 書換は 消失ガード(旧idが欠落と誤検知→書込永久ブロック) と
+        //   見守りジャーナル(旧idを復元→重複製造) の両方と衝突するため、
+        //   復元モード(1回だけ全書込)+journalEpoch+1(全端末ジャーナル破棄) で通す。
+        DATA.journalEpoch = Number(DATA.journalEpoch || 0) + 1;
+        _setForceWriteOnce();
+        try { _journalClear(); } catch(e){}
+        save();
+      }
       return { fixed, message: `${fixed}件の重複IDを修復しました` };
     }
   };

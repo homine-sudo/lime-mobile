@@ -1939,7 +1939,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-02h';
+const APP_VERSION = '2026-07-03';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1957,7 +1957,8 @@ const LS_KEYS = {
   cachedData: 'limeMob_cachedData', cachedRev: 'limeMob_cachedRev',
   cachedSnap: 'limeMob_cachedSnap', dispTab: 'limeMob_dispTab',
   recTab: 'limeMob_recTab', histTab: 'limeMob_histTab',
-  lastSyncAt: 'limeMob_lastSyncAt'
+  lastSyncAt: 'limeMob_lastSyncAt',
+  journal: 'limeMob_journal'
 };
 
 // ============================================================
@@ -2322,8 +2323,11 @@ function _asciiSafeJson(obj){
   return JSON.stringify(obj).replace(/[-￿]/g, c =>
     '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4));
 }
-async function dbxApi(endpoint, args, body, contentType){
+async function dbxApi(endpoint, args, body, contentType, opts){
   if(!DBX_TOKEN) throw new Error('未認証');
+  // opts.timeoutMs: data.json の読み書き専用 (キャプティブポータル等での無期限ハング防止)。
+  //   写真アップロード等の大容量転送には渡さない (低速回線で正当に長くかかるため)。
+  const _timeoutMs = opts && opts.timeoutMs;
   const doRequest = async () => {
     const headers = { 'Authorization': 'Bearer ' + DBX_TOKEN };
     // RPCエンドポイント (body にJSON送信) では Dropbox-API-Arg は不要
@@ -2331,7 +2335,15 @@ async function dbxApi(endpoint, args, body, contentType){
       headers['Dropbox-API-Arg'] = _asciiSafeJson(args);
     }
     if(contentType) headers['Content-Type'] = contentType;
-    return await fetch(endpoint, { method: 'POST', headers, body });
+    const init = { method: 'POST', headers, body };
+    if(_timeoutMs && typeof AbortController !== 'undefined'){
+      const ac = new AbortController();
+      init.signal = ac.signal;
+      const t = setTimeout(() => ac.abort(), _timeoutMs);
+      try { return await fetch(endpoint, init); }
+      finally { clearTimeout(t); }
+    }
+    return await fetch(endpoint, init);
   };
   let res = await doRequest();
   if(res.status === 401){
@@ -2343,7 +2355,7 @@ async function dbxApi(endpoint, args, body, contentType){
 
 async function dbxLoadData(){
   const res = await dbxApi('https://content.dropboxapi.com/2/files/download',
-    { path: DBX_DATA_PATH }, null, null);
+    { path: DBX_DATA_PATH }, null, null, { timeoutMs: 30000 });
   if(res.status === 409){
     // 詳細エラーを取得 (path/not_found 等)
     let detail = '';
@@ -2416,13 +2428,19 @@ async function dbxDiagnose(){
 }
 
 async function dbxSaveDataAtomic(jsonStr, expectedRev){
+  // ★2026-07-03 消失対策: expectedRev 必須 (CAS書込のみ)。
+  //   旧実装は expectedRev 空だと mode=overwrite で「stale端末の全上書き」経路になっていた
+  //   (0166ミヤギ消失事故の温床)。本番の data.json は常に存在するため overwrite は不要。
+  if(!expectedRev){
+    const e = new Error('rev未取得のため書込を中止しました (全上書き防止)'); e.code = 'no_rev'; throw e;
+  }
   const args = {
     path: DBX_DATA_PATH,
-    mode: expectedRev ? { '.tag': 'update', update: expectedRev } : { '.tag': 'overwrite' },
+    mode: { '.tag': 'update', update: expectedRev },
     autorename: false, mute: true
   };
   const res = await dbxApi('https://content.dropboxapi.com/2/files/upload',
-    args, new Blob([jsonStr], { type: 'application/octet-stream' }), 'application/octet-stream');
+    args, new Blob([jsonStr], { type: 'application/octet-stream' }), 'application/octet-stream', { timeoutMs: 45000 });
   if(!res.ok){
     const err = await res.text();
     if(res.status === 409){
@@ -2544,6 +2562,73 @@ function mergeAll(local, disk, snap){
 }
 
 // ============================================================
+// 見守りジャーナル (2026-07-03 消失対策)
+//   この端末が「diskで確認した」直近14日更新の案件スナップショットを localStorage に保持し、
+//   別端末のstale上書き等で案件が data.json から id ごと消えた時に自動復元する。
+//   ・ソフト削除(isDeleted)は id が残るので誤復活しない
+//   ・data.json 直編集メンテで意図的にレコードを消す時は、トップレベル journalEpoch を +1 する
+//     (全端末がジャーナルを破棄する殺すスイッチ) ・settings.purgedIds={id:true} も尊重
+//   ・デモモードは記録/復元とも無効
+// ============================================================
+const JOURNAL_KEEP_MS = 14 * 24 * 3600 * 1000;  // 14日
+const JOURNAL_MAX = 60;                          // 端末あたり最大保持件数
+function _journalLoad(){
+  try {
+    const raw = localStorage.getItem(LS_KEYS.journal);
+    if(raw){ const j = JSON.parse(raw); if(j && typeof j === 'object' && j.entries) return j; }
+  } catch(e){}
+  return { epoch: 0, entries: {} };
+}
+function _journalStore(j){
+  try { localStorage.setItem(LS_KEYS.journal, JSON.stringify(j)); }
+  catch(e){ console.warn('[journal] 保存失敗(容量?):', e); }
+}
+// diskで確認済みの dataObj から直近14日更新の案件を記録 (保存成功後/ロード成功後に呼ぶ)
+function _journalRecord(dataObj){
+  if(isDemoMode() || !dataObj || !Array.isArray(dataObj.cases)) return;
+  const j = _journalLoad();
+  const diskEpoch = Number(dataObj.journalEpoch || 0);
+  if(j.epoch !== diskEpoch){ j.epoch = diskEpoch; j.entries = {}; }  // epoch変更=メンテ実施→全破棄
+  const cutoff = Date.now() - JOURNAL_KEEP_MS;
+  dataObj.cases.forEach(c => {
+    if(!c || !c.id) return;
+    const ut = Number(c.updatedAt || 0);
+    if(ut < cutoff) return;
+    const snap = { ...c }; delete snap._conflictHistory;  // 履歴は重いので持たない
+    j.entries[c.id] = { id: c.id, caseNo: c.caseNo || '', updatedAt: ut, snap };
+  });
+  // 期限切れ削除 + 件数上限 (updatedAt 新しい順に JOURNAL_MAX 件)
+  const ids = Object.keys(j.entries);
+  ids.forEach(id => { if(Number(j.entries[id].updatedAt||0) < cutoff) delete j.entries[id]; });
+  const sorted = Object.keys(j.entries).sort((a,b) => Number(j.entries[b].updatedAt||0) - Number(j.entries[a].updatedAt||0));
+  sorted.slice(JOURNAL_MAX).forEach(id => delete j.entries[id]);
+  _journalStore(j);
+}
+// targetObj(disk由来のマージ結果 or ロード直後のDATA) にジャーナル案件が id ごと存在しなければ復元。
+//   復元は snap をそのまま注入 (updatedAt は元のまま=より新しい生存版がフィールドマージで勝てる)。
+//   戻り値=復元した案件の配列 (呼び出し側でトースト表示)。
+function _journalHeal(targetObj){
+  if(isDemoMode() || !targetObj || !Array.isArray(targetObj.cases)) return [];
+  const j = _journalLoad();
+  const diskEpoch = Number(targetObj.journalEpoch || 0);
+  if(j.epoch !== diskEpoch){ j.epoch = diskEpoch; j.entries = {}; _journalStore(j); return []; }
+  const purged = (targetObj.settings && targetObj.settings.purgedIds) || {};
+  const have = new Set(targetObj.cases.filter(c => c && c.id).map(c => c.id));
+  const healed = [];
+  Object.keys(j.entries).forEach(id => {
+    if(have.has(id) || purged[id]) return;
+    const ent = j.entries[id];
+    if(!ent || !ent.snap || !ent.snap.id) return;
+    targetObj.cases.push(JSON.parse(JSON.stringify(ent.snap)));
+    healed.push(ent);
+  });
+  if(healed.length){
+    console.warn('[journal] 消失案件を復元:', healed.map(h => h.caseNo + '/' + h.id));
+  }
+  return healed;
+}
+
+// ============================================================
 // SYNC OPERATIONS
 // ============================================================
 async function loadFromDropbox(silent){
@@ -2561,6 +2646,9 @@ async function loadFromDropbox(silent){
         return false;
       }
       DATA = data; _lastDbxRev = rev;
+      // ★見守りジャーナル: この端末が直近に見た案件が disk から id ごと消えていたら復元 (2026-07-03)
+      let _healed = [];
+      try { _healed = _journalHeal(DATA); } catch(e){ console.warn('[journal] heal失敗:', e); }
       captureSyncSnapshot(data);
       _lastSyncAt = Date.now();
       try {
@@ -2568,7 +2656,13 @@ async function loadFromDropbox(silent){
         localStorage.setItem(LS_KEYS.cachedRev, rev || '');
         localStorage.setItem(LS_KEYS.lastSyncAt, String(_lastSyncAt));
       } catch(e){}
+      try { _journalRecord(DATA); } catch(e){}
       updateSyncStatus('ok','同期OK');
+      if(_healed.length){
+        toast('🛟 消失していた案件を復元: ' + _healed.map(h => h.caseNo).join(', ') + ' (次の保存で確定)', 'error');
+        // 復元を disk に永続化 (fire-and-forget。失敗しても次の自然な保存で確定する)
+        try { saveToDropbox().catch(()=>{}); } catch(e){}
+      }
       return true;
     }
     updateSyncStatus('error','data.json無');
@@ -2650,15 +2744,41 @@ async function _doSaveCycle(){
     attempts++;
     try {
       const snapAtStart = _lastSyncSnapshot;  // 保存直後の再マージ基準
-      let merged = DATA, revToUse = _lastDbxRev;
+      // ★2026-07-03 消失対策 (fail-closed 化):
+      //   旧実装はプル失敗を catch{} で握りつぶし merged=DATA(=stale丸ごと) にフォールバックし、
+      //   さらに _lastDbxRev 空なら overwrite モードで無条件全上書きしていた (0166ミヤギ消失の温床)。
+      //   新実装: プル成功+新鮮rev の CAS 書込のみ許可。プル失敗=保存失敗 (リトライ後 false)。
+      let disk = null, revToUse = null;
       try {
-        const { data: disk, rev: diskRev } = await dbxLoadData();
-        if(disk){ merged = mergeAll(DATA, disk, _lastSyncSnapshot); revToUse = diskRev; }
-      } catch(e){}
+        const r = await dbxLoadData();
+        disk = r.data; revToUse = r.rev;
+      } catch(e){ e._pullFail = true; throw e; }
+      if(!disk){
+        // not_found: 本番の data.json は常に存在する。モバイルからの新規作成(=全上書き)は禁止。
+        lastErr = new Error('data.json が見つかりません — 保存を中止しました (設定の「Dropbox診断」を実行)');
+        lastErr.code = 'not_found'; break;
+      }
+      let merged = mergeAll(DATA, disk, _lastSyncSnapshot);
+      // ★消失ガード: マージ結果に disk の案件が id ごと欠けていたら書込中止 (将来のマージ退行への保険)
+      {
+        const mIds = new Set((merged.cases||[]).filter(c=>c&&c.id).map(c=>c.id));
+        const purged = (merged.settings && merged.settings.purgedIds) || {};
+        const lostRecs = (disk.cases||[]).filter(c => c && c.id && !mIds.has(c.id) && !purged[c.id]);
+        if(lostRecs.length){
+          console.error('[消失ガード] マージ結果に欠落:', lostRecs.map(c=>c.caseNo+'/'+c.id));
+          lastErr = new Error('保存を中止しました (マージ結果にデータ欠落を検出。開発者に連絡してください)');
+          lastErr.code = 'loss_guard'; break;
+        }
+      }
+      // ★見守りジャーナル: この端末が直近に見た案件が disk から消えていたら merged に復元して書き込む
+      let _healed = [];
+      try { _healed = _journalHeal(merged); } catch(e){ console.warn('[journal] heal失敗:', e); }
       // 受付No衝突の自己修復 (2026-06-29): 書込前に重複caseNoを検出→安全側を空き番号へ自動振替
+      let _crFixed = [];
       try {
         const _cr = _resolveCaseNoCollisions((merged && merged.cases) || []);
         if(_cr.fixed.length){
+          _crFixed = _cr.fixed;
           console.warn('[受付No自動修正]', _cr.fixed);
           _cr.fixed.forEach(f=> toast(`⚠️ 受付No重複を自動修正: ${f.oldNo}→${f.newNo}`, 'error'));
         }
@@ -2675,24 +2795,44 @@ async function _doSaveCycle(){
       _lastSyncAt = Date.now();   // 保存=ディスクと同期した時刻 (鮮度バナー用)
       captureSyncSnapshot(DATA);
       try {
-        localStorage.setItem(LS_KEYS.cachedData, JSON.stringify(DATA, null, 2));
+        // cachedData は minified (旧 null,2 の整形保存は iOS の localStorage 枠を圧迫していた)
+        localStorage.setItem(LS_KEYS.cachedData, JSON.stringify(DATA));
         localStorage.setItem(LS_KEYS.cachedRev, newRev || '');
         localStorage.setItem(LS_KEYS.lastSyncAt, String(_lastSyncAt));
       } catch(e){}
+      try { _journalRecord(DATA); } catch(e){}
+      if(_healed.length){
+        toast('🛟 消失していた案件を復元して保存: ' + _healed.map(h => h.caseNo).join(', '), 'error');
+      }
+      // ★受付No自動修正の訂正LINE (2026-07-03): 改番は保存確定後に必ずグループへ知らせる
+      //   (以前のLINE通知の受付Noが旧番号のまま残るため。凍結でなく「修復+正直に訂正」方式)
+      if(_crFixed.length && !isDemoMode() && DATA.settings && DATA.settings.gasWebAppUrl){
+        _crFixed.forEach(f => {
+          const txt = `⚠️ 受付No 自動修正\n${f.oldNo} → ${f.newNo}${f.name ? '\n名前: ' + f.name : ''}\n(番号重複を自動解消しました。これ以前の通知に出ている ${f.oldNo} はこの案件では新番号 ${f.newNo} になります)`;
+          try { sendExternalNotify('updateCase', { line: { text: txt }, calendar: null }).catch(()=>{}); } catch(e){}
+        });
+      }
       updateSyncStatus('ok','同期OK');
       try { _renderConnBanner(); } catch(_){}
       lastErr = null; break;
     } catch(e){
       lastErr = e;
-      if(e.code === 'rev_conflict' && attempts < MAX){
-        await new Promise(r => setTimeout(r, 200)); continue;
+      // rev競合=短間隔・ネットワーク系(プル失敗/タイムアウト/5xx)=バックオフ で再試行
+      const retriable = e.code === 'rev_conflict' || e._pullFail ||
+        e.name === 'AbortError' || /読込失敗|書込失敗|Failed to fetch|NetworkError|Load failed/i.test(String(e.message||''));
+      if(retriable && attempts < MAX){
+        const delay = e.code === 'rev_conflict' ? 200 : [500, 1500, 3000][attempts-1] || 3000;
+        await new Promise(r => setTimeout(r, delay)); continue;
       }
       break;
     }
   }
   if(lastErr){
     updateSyncStatus('error','保存失敗');
-    toast('保存エラー: '+lastErr.message, 'error');
+    const msg = lastErr._pullFail || lastErr.name === 'AbortError'
+      ? '保存を中止しました: 最新データを取得できません (電波状況を確認して再試行してください)'
+      : '保存エラー: ' + lastErr.message;
+    toast(msg, 'error');
     return false;
   }
   return true;
@@ -3936,7 +4076,7 @@ function filterVehicleList(){
 async function selectVehicle(vehicleId){
   const v = (DATA?.vehicles || []).find(x => x.id === vehicleId);
   const fromDetail = (_currentScreen === 'case-detail');
-  const c = findCaseById(fromDetail ? _activeCaseId : (_flow?.caseId || _activeCaseId));
+  let c = findCaseById(fromDetail ? _activeCaseId : (_flow?.caseId || _activeCaseId));
   if(!v || !c){ toast('車両または案件が見つかりません','error'); return; }
   // ★[気づかせ] 車両の二重割当 (別案件で利用中の車を選んだ時・止めはしない)
   const _usedByOther = (DATA?.cases || []).some(o => o.id !== c.id && _isActive(o) && !o.recoveryCompleted
@@ -3966,6 +4106,8 @@ async function selectVehicle(vehicleId){
     hideSpinner();
     if(!_ok){ toast('❌ 保存できませんでした。「🔄同期」してから再度お試しください','error'); return; }
     toast(`🚙 車両「${v.name||v.maker||''}」を登録しました`, 'success');
+    // ★確定番号で通知/再描画: 保存サイクル内の自己修復で改番されうるので DATA から引き直す (2026-07-03)
+    c = findCaseById(c.id) || c;
     // 画面再描画
     if(fromDetail){
       // 案件詳細から車両変更 = 意味のある変更 → PC同等の updateCase 通知 (実保存成功後のみ)
@@ -4353,11 +4495,13 @@ async function onConfirmDo(){
     }
 
     // 4. LINE通知 (保存成功後のみ・失敗してもフロー継続)
+    // ★確定番号で通知: 保存サイクル内の受付No自己修復で改番されうるので DATA から引き直す (2026-07-03)
+    const _cNow = findCaseById(c.id) || c;
     try {
       if(_flow.kind === 'dispatch'){
-        await sendExternalNotify('dispatchDone', _buildNotifyPayload(c, 'dispatchDone'));
+        await sendExternalNotify('dispatchDone', _buildNotifyPayload(_cNow, 'dispatchDone'));
       } else {
-        await sendExternalNotify('recoveryDone', _buildNotifyPayload(c, 'recoveryDone'));
+        await sendExternalNotify('recoveryDone', _buildNotifyPayload(_cNow, 'recoveryDone'));
       }
     } catch(e){}
 
@@ -5368,6 +5512,15 @@ function _classMedianUnitPrice(vehicleClass){
 }
 
 async function saveNewCase(enterFlow){
+  // ★再入ガード (2026-07-03): 確認モーダル/保存の await 中に保存ボタンを二度押しすると
+  //   同一内容の案件が別idで二重登録される窓があった。実行中は後続タップを無視。
+  if(window._ncSaving) return;
+  window._ncSaving = true;
+  try {
+    await _saveNewCaseBody(enterFlow);
+  } finally { window._ncSaving = false; }
+}
+async function _saveNewCaseBody(enterFlow){
   // バリデーションはハードブロックしない方針。ただし「うっかり」だけは気づかせる (確認1段)。
   const contractor = $('m-nc-contractor').value.trim();
   const insurerText = ($('m-nc-insurer').value || '').trim();
@@ -5450,6 +5603,9 @@ async function saveNewCase(enterFlow){
     //   PC側 (_fireCaseNotifications) は元々 dispatchAt 変更のみ発火=これでほぼ対称。
     const _keys = ['dispatchAt','dispatchToName','dispatchToAddress','useStart','useEnd'];
     const _before = {}; _keys.forEach(k => _before[k] = ec[k]);
+    // ★保存失敗時の巻き戻し用フルスナップショット (2026-07-03: 失敗した編集がメモリに残留し
+    //   別操作の保存に同乗して永続化される穴を塞ぐ)
+    const _fullBefore = JSON.parse(JSON.stringify(ec));
 
     ec.receivedAt = $('m-nc-receivedAt').value || ec.receivedAt || todayISO();
     ec.staff = _v('m-nc-staff') || ec.staff || '';
@@ -5489,13 +5645,18 @@ async function saveNewCase(enterFlow){
     try {
       const _ok = await saveToDropbox();
       if(!_ok){
+        // ★巻き戻し (2026-07-03): 未保存の編集をメモリに残さない (「未保存です」表示と実体を一致させる)
+        try { Object.keys(ec).forEach(k => { if(!(k in _fullBefore)) delete ec[k]; });
+              Object.assign(ec, _fullBefore); } catch(e){}
         hideSpinner();
         toast('❌ 保存できませんでした。変更は未保存です。「🔄同期」してから再度お試しください', 'error');
         return;
       }
       // 意味のある変更があれば PC同等の updateCase 通知 (LINE＋カレンダー再作成)・実保存成功後のみ
+      // ★確定番号で通知: 保存サイクル内の自己修復で改番されうるので DATA から引き直す (2026-07-03)
+      const _ecNow = findCaseById(editId) || ec;
       if(_changed){
-        try { await sendExternalNotify('updateCase', _buildNotifyPayload(ec, 'updateCase')); } catch(e){}
+        try { await sendExternalNotify('updateCase', _buildNotifyPayload(_ecNow, 'updateCase')); } catch(e){}
       }
       hideSpinner();
       closeNewCaseModal();
@@ -5516,7 +5677,7 @@ async function saveNewCase(enterFlow){
   const initialStatus = dispatchAt ? '配車予定' : '受付';
   const receivedAt = $('m-nc-receivedAt').value || todayISO();
   const _v = id => ($(id)?.value || '').trim();
-  const c = {
+  let c = {
     id: _genMobileCaseId(),
     caseNo: _genMobileCaseNo(receivedAt),
     receivedAt: receivedAt,
@@ -5573,10 +5734,16 @@ async function saveNewCase(enterFlow){
     const _ok = await saveToDropbox();
     if(!_ok){
       // ★未保存のまま通知しない。モーダルは閉じず再試行できるようにする
+      // ★幽霊案件の除去 (2026-07-03): push 済みの c を DATA に残すと、再保存時に採番が
+      //   幽霊を含めて max+1 され重複登録になる/別操作の保存に同乗して勝手に永続化される。
+      DATA.cases = DATA.cases.filter(x => x.id !== c.id);
       hideSpinner();
       toast('❌ 保存できませんでした。案件は未登録です。「🔄同期」してからもう一度保存してください', 'error');
       return;
     }
+    // ★確定番号で通知 (2026-07-03): 保存サイクル内の受付No自己修復で改番された場合、
+    //   手元の c は detached な旧番号のことがある。DATA から引き直して LINE=アプリの番号を一致させる。
+    c = (DATA.cases || []).find(x => x.id === c.id) || c;
     // LINE通知 (newCase イベント) — 実保存確認後のみ
     try { await sendExternalNotify('newCase', _buildNotifyPayload(c, 'newCase')); } catch(e){}
     hideSpinner();
@@ -5653,7 +5820,7 @@ function selectQuickRecCase(id){
 }
 async function saveQuickRecovery(){
   if(!_quickRecSelectedId){ toast('案件を選択してください','error'); return; }
-  const c = findCaseById(_quickRecSelectedId); if(!c){ toast('案件が見つかりません','error'); return; }
+  let c = findCaseById(_quickRecSelectedId); if(!c){ toast('案件が見つかりません','error'); return; }
   const date = $('m-qr-date').value;
   if(!date){ toast('回収予定日を入力してください','error'); return; }
 
@@ -5680,6 +5847,8 @@ async function saveQuickRecovery(){
       toast('❌ 保存できませんでした。回収予定は未保存です。「🔄同期」してから再登録してください', 'error');
       return;
     }
+    // ★確定番号で通知 (2026-07-03): 自己修復の改番を反映するため DATA から引き直す
+    c = findCaseById(c.id) || c;
     try { await sendExternalNotify('recoveryDateSet', _buildNotifyPayload(c, 'recoveryDateSet')); } catch(e){}
     hideSpinner();
     closeQuickRecModal();
@@ -6504,7 +6673,12 @@ async function confirmVehicleMaintenance(id){
   v.repairHistory = (v.repairHistory ? v.repairHistory + '\n' : '') + `[${ts}] 点検入庫 (モバイル)`;
   showSpinner('点検入庫を記録中...');
   try {
-    await saveToDropbox();
+    const _ok = await saveToDropbox();
+    if(!_ok){
+      hideSpinner();
+      toast('❌ 保存できませんでした。点検入庫は記録されていません。「🔄同期」してから再度お試しください', 'error');
+      return;
+    }
     try { await sendExternalNotify('vehicleMaintenance', _buildVehicleNotifyPayload(v, 'vehicleMaintenance')); } catch(e){}
     hideSpinner();
     toast(`🛠️ ${plate} を点検入庫中に設定しました`, 'success');
@@ -6576,7 +6750,12 @@ async function confirmVehicleRestore(){
     v.updatedBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
     showSpinner('修正を保存中...');
     try {
-      await saveToDropbox();
+      const _ok = await saveToDropbox();
+      if(!_ok){
+        hideSpinner();
+        toast('❌ 保存できませんでした。修正は未保存です。「🔄同期」してから再度お試しください', 'error');
+        return;
+      }
       hideSpinner();
       toast(`💾 ${plate} の点検日を修正しました`, 'success');
       closeVehicleRestoreModal();
@@ -6601,7 +6780,12 @@ async function confirmVehicleRestore(){
   v.updatedBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
   showSpinner('復帰を記録中...');
   try {
-    await saveToDropbox();
+    const _ok = await saveToDropbox();
+    if(!_ok){
+      hideSpinner();
+      toast('❌ 保存できませんでした。復帰は記録されていません。「🔄同期」してから再度お試しください', 'error');
+      return;
+    }
     try { await sendExternalNotify('vehicleRestore', _buildVehicleNotifyPayload(v, 'vehicleRestore', { nextInspection: nextIns, nextShaken, note })); } catch(e){}
     hideSpinner();
     toast(`✅ ${plate} を稼働可に復帰しました`, 'success');
