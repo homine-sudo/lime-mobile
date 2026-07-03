@@ -1939,7 +1939,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-03a';
+const APP_VERSION = '2026-07-03b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2974,6 +2974,79 @@ function latestCheckSheet(c, kind){
 }
 
 // ============================================================
+// FAXインク検証 (2026-07-03c 新設・PC LIMEOne と同一実装・3層防御「卒業」への布石ステップ1)
+//   _validatePdfPlacement の実証済みの死角=「canvasの枠・縦横比は正常なのに中身だけ欠ける」
+//   (2026-05-16のGrid右列欠落型) を、DOM期待テキスト×canvasインク画素のゾーン照合で捕捉。
+//   ★観察期間中は警告のみ (throwしない)。confirmPdfBeforeSend に赤バナー表示+ローカルログ。
+//   2〜4週間 全FAX green が続いたら「green時は人間確認スキップ」への格下げを検討 (卒業条件)。
+// ============================================================
+function _inkCheckSheet(sheetEl, canvas){
+  try {
+    const COLS = 2, ROWS = 3;
+    const sr = sheetEl.getBoundingClientRect();
+    if(!sr.width || !sr.height || !canvas || !canvas.width || !canvas.height) return { pass: true, skipped: 'no-rect' };
+    const expect = new Array(COLS * ROWS).fill(0);
+    sheetEl.querySelectorAll('*').forEach(el => {
+      if(el.children.length) return;
+      const txt = (el.textContent || '').trim();
+      if(txt.length < 4) return;
+      const r = el.getBoundingClientRect();
+      if(!r.width || !r.height) return;
+      const cx = (r.left + r.right) / 2 - sr.left, cy = (r.top + r.bottom) / 2 - sr.top;
+      const zc = Math.min(COLS - 1, Math.max(0, Math.floor(cx / sr.width * COLS)));
+      const zr = Math.min(ROWS - 1, Math.max(0, Math.floor(cy / sr.height * ROWS)));
+      expect[zr * COLS + zc] += txt.length;
+    });
+    const ctx = canvas.getContext('2d', { willReadFrequently: true }) || canvas.getContext('2d');
+    const zones = [];
+    let pass = true;
+    for(let zr = 0; zr < ROWS; zr++) for(let zc = 0; zc < COLS; zc++){
+      const exp = expect[zr * COLS + zc];
+      let inked = 0, blank = false;
+      if(exp >= 10){
+        const x0 = Math.floor(canvas.width * zc / COLS), y0 = Math.floor(canvas.height * zr / ROWS);
+        const w = Math.floor(canvas.width / COLS), h = Math.floor(canvas.height / ROWS);
+        const img = ctx.getImageData(x0, y0, w, h).data;
+        for(let y = 0; y < h; y += 2){
+          const row = y * w * 4;
+          for(let x = 0; x < w; x += 2){
+            const i = row + x * 4;
+            if(img[i] < 200 || img[i+1] < 200 || img[i+2] < 200) inked++;
+          }
+        }
+        blank = inked < 40;
+        if(blank) pass = false;
+      }
+      zones.push({ zone: 'r' + (zr+1) + 'c' + (zc+1), expectChars: exp, inked, blank });
+    }
+    return { pass, zones };
+  } catch(e){
+    return { pass: true, skipped: String((e && e.message) || e) };
+  }
+}
+function _inkLogPush(entry){
+  try {
+    const KEY = 'limeFaxInkLog';
+    const log = JSON.parse(localStorage.getItem(KEY) || '[]');
+    log.push({ at: entry.at, label: entry.label, pass: entry.pass,
+               skipped: entry.skipped || '',
+               blankZones: (entry.zones || []).filter(z => z.blank).map(z => z.zone).join(',') });
+    while(log.length > 50) log.shift();
+    localStorage.setItem(KEY, JSON.stringify(log));
+  } catch(e){}
+}
+function _runInkCheck(label, sheetEl, canvas){
+  let ink = { pass: true, skipped: 'error' };
+  try { ink = _inkCheckSheet(sheetEl, canvas); } catch(e){}
+  window._lastInkCheck = { ...ink, at: Date.now(), label };
+  _inkLogPush(window._lastInkCheck);
+  if(ink.pass === false){
+    console.warn('[FAXインク検証] 空白ゾーン検出 (観察期間=警告のみ・送信前確認で目視を):',
+      (ink.zones || []).filter(z => z.blank));
+  }
+  return ink;
+}
+// ============================================================
 // PDF配置 整合性チェック (再発防止)
 //   2026-05-15: html2canvas に windowWidth/width を渡したことで
 //   キャンバスがページ幅を超え、PDF右端が大幅に見切れて取引先に不完全な
@@ -3104,6 +3177,8 @@ async function _genHandoverPDF(sheetEl, opt){
   const wMm = cw * fit, hMm = ch * fit;
   const xMm = m[3] + (availW - wMm) / 2, yMm = m[0];
   _validatePdfPlacement('モバイル手配書', { canvas: rawCanvas, sheetEl, pageW, pageH, x: xMm, y: yMm, w: wMm, h: hMm });
+  // ★インク検証 (2026-07-03c): ②の死角=枠正常・中身欠落 を捕捉。観察期間中は警告のみ (生成は止めない)
+  _runInkCheck('モバイル手配書', sheetEl, rawCanvas);
   // ③ A4縦比率の合成canvasを作り、生canvasを fit 配置で焼く (余白=白)。
   //    これを html2pdf に canvas として渡せば 1ページに正確に収まり右端見切れが起きない。
   const PXMM = 300 / 25.4;  // 300dpi 相当
@@ -3137,6 +3212,11 @@ function confirmPdfBeforeSend(meta){
     const img = window._lastFaxPdfImg || '';
     $('m-modal-title').textContent = '🔍 送信前確認';
     $('m-modal-msg').innerHTML = `
+      ${(window._lastInkCheck && window._lastInkCheck.pass === false) ? `
+      <div style="font-size:12.5px;line-height:1.7;background:#FEF2F2;border-left:3px solid #C53030;padding:8px 10px;border-radius:6px;margin-bottom:10px;color:#C53030">
+        <b>🚨 機械検証が「文字があるはずの領域の空白」を検出 (${esc((window._lastInkCheck.zones||[]).filter(z=>z.blank).map(z=>z.zone).join(', '))})</b><br>
+        右側・下部の欠けを特に確認し、少しでも欠けていたら<b>必ず中止</b>してください。
+      </div>` : ''}
       <div style="font-size:12.5px;line-height:1.7;color:var(--text);background:#FFF7E6;border-left:3px solid #E69E50;padding:8px 10px;border-radius:6px;margin-bottom:10px">
         <b>⚠️ 取引先に届くのは下の内容そのものです。</b><br>
         右端の見切れ・項目欠け・ページを確認してから送信してください。
