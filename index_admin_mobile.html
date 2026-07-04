@@ -307,6 +307,7 @@
   .crown.open .petal:nth-child(4){transition-delay:.11s}
   .crown.open .petal:nth-child(5){transition-delay:.14s}
   .crown.open .petal:nth-child(6){transition-delay:.17s}
+  .crown.open .petal:nth-child(7){transition-delay:.20s}
   /* scrim — softens background while open, also click-to-close */
   .crown-scrim{position:fixed;inset:0;background:rgba(242,239,230,.55);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .25s;z-index:15}
   .crown-scrim.on{opacity:1;pointer-events:auto}
@@ -620,6 +621,33 @@
   .rpt-live b:first-child{color:var(--acc);font-size:8.5px;letter-spacing:.24em;margin-right:6px;font-family:var(--sans)}
   .ar-note2{font-size:10px;color:var(--ink2);margin-top:6px;line-height:1.6}
   .ar-note2 b{color:var(--acc)}
+  /* 第4波: 資金繰りタブ */
+  .cf-hero{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 12px}
+  .cf-hero-l{font-size:10px;letter-spacing:.16em;color:var(--ink3);text-transform:uppercase}
+  .cf-hero-v{font-family:var(--serif);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+  .cf-hero-v .unit{font-size:11px;color:var(--ink3);font-family:var(--sans);margin-left:2px}
+  .cf-grid>div{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-top:1px dotted var(--line);font-size:11.5px}
+  .cf-grid .cf-k{color:var(--ink2)}
+  .cf-grid .cf-v{font-family:var(--serif);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+  .cf-grid .cf-v.dn{color:var(--danger)}
+  .cf-runway{margin-top:11px;padding:8px 10px;border-left:3px solid var(--acc);background:#F4F6FB;font-size:11px;color:var(--ink2);line-height:1.6}
+  .cf-chart{width:100%;height:150px;display:block}
+  .cf-chart .cf-bar{fill:var(--acc-hi)}
+  .cf-chart .cf-bar.trough{fill:var(--acc)}
+  .cf-chart .cf-bar.warn{fill:var(--warn)}
+  .cf-chart .cf-bar.danger{fill:var(--danger)}
+  .cf-chart .cf-floor{stroke:var(--danger);stroke-width:1;stroke-dasharray:3,3}
+  .cf-chart .cf-ax{stroke:var(--line2);stroke-width:.5}
+  .cf-chart text{font-size:7px;fill:var(--ink3);font-family:var(--sans)}
+  .cf-chart text.wk{fill:var(--acc);font-weight:600}
+  .cf-tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:4px}
+  .cf-tbl{border-collapse:collapse;font-size:9.5px;white-space:nowrap;min-width:100%}
+  .cf-tbl th,.cf-tbl td{padding:4px 7px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--line)}
+  .cf-tbl th{color:var(--ink3);font-weight:400;letter-spacing:.02em;position:sticky;left:0}
+  .cf-tbl td.mo,.cf-tbl th.mo{text-align:left;color:var(--ink2);font-weight:500;position:sticky;left:0;background:var(--panel)}
+  .cf-tbl td.dn{color:var(--danger)}
+  .cf-tbl td.close{font-weight:600;color:var(--ink)}
+  .cf-tbl tr.trough td{background:#F2F6FC}
   .ins-count{font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none}
 
   /* ===== 先々の埋まり (今後14日) ===== */
@@ -1217,6 +1245,40 @@
     </div>
   </section>
 
+  <!-- ========== 資金繰り (2026-07-04 神アプリ第4波・freeeライブ+納車待ち車両capex連動) ========== -->
+  <section id="sec-kane">
+    <!-- 現金ポジション (freeeライブ) -->
+    <div class="card" id="cf-pos-card">
+      <div class="lbl">現金ポジション · freee ライブ</div>
+      <div class="cf-hero">
+        <div class="cf-hero-l">現預金 残高</div>
+        <div class="cf-hero-v num" id="cf-cash">—<span class="unit">円</span></div>
+      </div>
+      <div class="cf-grid">
+        <div><span class="cf-k">車両仕入で減る額（納車待ち・現金）</span><span class="cf-v num dn" id="cf-capex">—</span></div>
+        <div><span class="cf-k">仕入後の手元現金（見込み）</span><span class="cf-v num" id="cf-after">—</span></div>
+        <div><span class="cf-k">借入金 残高</span><span class="cf-v num" id="cf-loan">—</span></div>
+        <div><span class="cf-k">実質有利子負債（借入−現預金）</span><span class="cf-v num" id="cf-netdebt">—</span></div>
+      </div>
+      <div class="cf-runway" id="cf-runway"></div>
+    </div>
+
+    <!-- 12ヶ月 資金繰り予定 チャート -->
+    <div class="card">
+      <div class="lbl">資金繰り予定 · 今後12ヶ月（各月末の現金）</div>
+      <svg class="cf-chart" id="cf-chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
+      <div class="fwd-legend"><span><span class="sw"></span>月末 現金残高</span><span><span class="swl" style="border-color:var(--danger)"></span>現金下限 425万</span></div>
+      <div class="sm" id="cf-verdict" style="margin-top:8px;text-align:center"></div>
+    </div>
+
+    <!-- 月次内訳テーブル -->
+    <div class="card">
+      <div class="lbl">月次内訳 <span class="sm ink3" style="font-weight:normal">単位: 万円 ・ 横スクロール →</span></div>
+      <div class="cf-tbl-wrap"><table class="cf-tbl" id="cf-table"></table></div>
+      <div class="sm ink3" id="cf-assump" style="margin-top:10px;line-height:1.7"></div>
+    </div>
+  </section>
+
   <!-- ========== 設定 ========== -->
   <section id="sec-set">
     <div class="card">
@@ -1257,11 +1319,12 @@
   <!-- 親指リーチ最適化のため左上方向のみへ扇形展開 (FAB位置=右下) -->
   <nav id="crown" class="crown closed" aria-label="セクションナビ">
     <button class="petal" data-tab="now"    style="--ang:-70deg"><span>TOP</span></button>
-    <button class="petal" data-tab="rev"    style="--ang:-95deg"><span>売上</span></button>
-    <button class="petal" data-tab="ops"    style="--ang:-120deg"><span>稼働</span></button>
-    <button class="petal" data-tab="pipe"   style="--ang:-145deg"><span>案件</span></button>
-    <button class="petal" data-tab="report" style="--ang:-170deg"><span>分析</span></button>
-    <button class="petal" data-tab="set"    style="--ang:-195deg"><span>設定</span></button>
+    <button class="petal" data-tab="rev"    style="--ang:-91deg"><span>売上</span></button>
+    <button class="petal" data-tab="ops"    style="--ang:-112deg"><span>稼働</span></button>
+    <button class="petal" data-tab="kane"   style="--ang:-133deg"><span>資金</span></button>
+    <button class="petal" data-tab="pipe"   style="--ang:-154deg"><span>案件</span></button>
+    <button class="petal" data-tab="report" style="--ang:-175deg"><span>分析</span></button>
+    <button class="petal" data-tab="set"    style="--ang:-196deg"><span>設定</span></button>
     <button class="crown-btn" id="crown-btn" type="button" aria-expanded="false">
       <span class="cur" id="crown-cur">TOP</span>
       <span class="hint">tap</span>
@@ -2096,6 +2159,12 @@ const BREAK_EVEN = {
   limit:   4700000, limitDaily: 155000,   // 会計トントン (絶対固定費のみ・日15.5万=正本MD/レジェンドと一致)
   cash:    4250000, cashDaily: 140000      // 現金下限 (借入元金返済込み)
 };
+// ===== 資金繰り (第4波・2026-07-04) 前提定数 =====
+// 借入元金返済 = 損益分岐点MD (freee B/S 連続月差で確定・元金74万/月)。営業CFはfreee営業利益÷経過月でライブ算出。
+// CASH_SPECIAL = 税金・賞与など特殊支出の月別予定 {YYYY-MM: 金額(正=支出)}。実額が分かり次第ここに追記して反映。
+//   現状は空 (推測で税額を入れて資金繰りを誤らせない)。UIに「未設定・要入力」と明示する。
+const CASH_CFG = { loanRepay: 740000, opCFfallback: 1400000, floor: 4250000 };
+const CASH_SPECIAL = {}; // 例) '2027-05': 2500000  ← 法人税・消費税・賞与の予定を入れる
 function renderBreakEven(){
   const card=document.getElementById('be-card'); if(!card) return;
   const s=thisMonthSummary();
@@ -2326,6 +2395,104 @@ function renderIntakeNote(){
   el.innerHTML='レンタカー 直近30日の受付 <b class="num" style="font-size:12px">'+i.cur+'</b> 件'+
     (pct!=null?('（前年同一30日 '+i.prev+'件 <span class="'+(pct>=0?'up':'dn')+'">'+(pct>=0?'+':'')+pct+'%</span>）'):'')+
     (share!=null?('<br>受付当日の配車が '+share+'% の直前埋まり型 — 受付ペースが未来の忙しさの先行指標'):'');
+}
+
+// ===== 資金繰り予定 (第4波・2026-07-04) — freeeライブ(現預金/営業利益/借入) + 納車待ち車両capex連動 =====
+function vehiclesPending(){ return ((DR&&DR.vehicles)||[]).filter(v=>v.status==='納車待ち'); }
+function cashFlowPlan(){
+  // 期首現金 = freee 現預金 (ライブ) / fallback は既知値
+  const openCash = (FREEE_BS && FREEE_BS.cash!=null) ? FREEE_BS.cash : 36087108;
+  const loan = (FREEE_BS && FREEE_BS.loan) ? FREEE_BS.loan : 53839000;
+  // 月次営業CF = freee 営業利益 ÷ 経過月 (4月起点)。減価償却は期中ほぼ未計上=営業利益≒営業キャッシュ。fallback 定数。
+  let opCF = CASH_CFG.opCFfallback, opCFlive=false;
+  if(FREEE_PL && FREEE_PL.op!=null && FREEE_PL.em){ const mo=Math.max(1,FREEE_PL.em-3); opCF=Math.round(FREEE_PL.op/mo); opCFlive=true; }
+  const repay = CASH_CFG.loanRepay;
+  // 車両仕入 (納車待ち・全額現金・今月=index0 に計上=最も現金が下がる保守的置き方)
+  const pend = vehiclesPending();
+  const capex = pend.reduce((s,v)=>s+Number(v.vehiclePrice||0),0);
+  // 12ヶ月投影 (当月起点)
+  const now=new Date(); const rows=[]; let c=openCash; let trough={close:Infinity,idx:-1};
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(), now.getMonth()+i, 1);
+    const key=d.getFullYear()+'-'+pad2(d.getMonth()+1);
+    const cap=(i===0)?capex:0;
+    const sp=Number(CASH_SPECIAL[key]||0);
+    const open=c;
+    const close=open+opCF-repay-cap-sp;
+    rows.push({key, label:(d.getMonth()+1)+'月', open, cf:opCF, repay, capex:cap, special:sp, close, vsFloor:close-CASH_CFG.floor});
+    if(close<trough.close){ trough={close, idx:i, label:(d.getMonth()+1)+'月'}; }
+    c=close;
+  }
+  return {openCash, loan, opCF, opCFlive, repay, capex, pendCount:pend.length, rows, trough, floor:CASH_CFG.floor,
+    hasSpecial:Object.keys(CASH_SPECIAL).length>0};
+}
+function renderCash(){
+  const card=$('cf-pos-card'); if(!card) return;
+  const p=cashFlowPlan();
+  const man=n=>Math.round(n/10000).toLocaleString(); // 万円
+  // 現金ポジション
+  $('cf-cash').innerHTML=yen(p.openCash)+'<span class="unit">円</span>';
+  $('cf-capex').textContent=(p.capex>0?'−':'')+yen(p.capex)+' 円';
+  $('cf-after').textContent=yen(p.openCash-p.capex)+' 円';
+  $('cf-loan').textContent=yen(p.loan)+' 円';
+  $('cf-netdebt').textContent=yen(Math.max(0,p.loan-p.openCash))+' 円';
+  // 余裕 = (現在現預金 − 現金下限) ÷ 月次純減耗... ここでは車両仕入後でも下限まで何ヶ月かを示す
+  const afterCap=p.openCash-p.capex;
+  const monthsToFloor = (p.opCF-p.repay)>=0 ? '∞（毎月プラス）' : Math.floor((afterCap-p.floor)/((p.repay-p.opCF)))+' ヶ月';
+  $('cf-runway').innerHTML='車両 '+p.pendCount+'台（'+yen(p.capex)+'円）を現金で仕入れても、手元現金は '+yen(afterCap)+'円。'+
+    '現金下限（'+man(p.floor)+'万）まで <b>'+yen(afterCap-p.floor)+'円</b> の余裕。'+
+    (p.opCF>p.repay?' 営業CFが返済を上回るため以後は毎月プラス。':' ');
+  // チャート (月末現金 12本 + 下限ライン)
+  const svg=$('cf-chart');
+  if(svg){
+    const W=320,H=150,L=8,R=8,T=10,B=20; const w=W-L-R,h=H-T-B; const n=p.rows.length;
+    const vals=p.rows.map(r=>r.close);
+    const maxV=Math.max(p.openCash, ...vals, p.floor)*1.08; const minV=0;
+    const y=v=>T+h-(v-minV)/(maxV-minV)*h;
+    const slot=w/n, bw=slot*0.62;
+    let bars='',lbls='';
+    p.rows.forEach((r,i)=>{
+      const bh=Math.max(1,(r.close-minV)/(maxV-minV)*h);
+      const x=L+i*slot+(slot-bw)/2;
+      let cls='cf-bar'; if(i===p.trough.idx)cls+=' trough';
+      if(r.close<p.floor)cls+=' danger'; else if(r.close<p.floor*1.5)cls+=' warn';
+      bars+='<rect class="'+cls+'" x="'+x.toFixed(1)+'" y="'+(T+h-bh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'"/>';
+      if(i===0||i%2===0) lbls+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle"'+(i===0?' class="wk"':'')+'>'+r.label+'</text>';
+    });
+    const fy=y(p.floor);
+    svg.innerHTML=
+      '<line class="cf-ax" x1="'+L+'" y1="'+(T+h)+'" x2="'+(L+w)+'" y2="'+(T+h)+'"/>'+
+      '<line class="cf-floor" x1="'+L+'" y1="'+fy.toFixed(1)+'" x2="'+(L+w)+'" y2="'+fy.toFixed(1)+'"/>'+
+      '<text x="'+(L+2)+'" y="'+(fy-3).toFixed(1)+'">現金下限 '+man(p.floor)+'万</text>'+
+      bars+lbls;
+  }
+  // 判定
+  const safe=p.trough.close>=p.floor;
+  const vEl=$('cf-verdict');
+  vEl.innerHTML= safe
+    ? '<span style="color:var(--acc)">🟢 資金繰りは健全</span> — 最も下がる '+p.trough.label+' でも '+yen(p.trough.close)+'円（下限まで +'+yen(p.trough.close-p.floor)+'円）'
+    : '<span style="color:var(--danger)">🔴 '+p.trough.label+' に現金下限を割る見込み</span> — '+yen(p.trough.close)+'円（不足 '+yen(p.floor-p.trough.close)+'円）';
+  // 月次テーブル (万円)
+  const t=$('cf-table');
+  if(t){
+    const head='<tr><th class="mo">月</th><th>期首</th><th>営業CF</th><th>返済</th><th>車両</th><th>税賞与</th><th>期末</th><th>下限差</th></tr>';
+    const body=p.rows.map((r,i)=>'<tr'+(i===p.trough.idx?' class="trough"':'')+'>'+
+      '<td class="mo">'+r.label+'</td>'+
+      '<td>'+man(r.open)+'</td>'+
+      '<td>+'+man(r.cf)+'</td>'+
+      '<td class="dn">−'+man(r.repay)+'</td>'+
+      '<td class="dn">'+(r.capex?'−'+man(r.capex):'0')+'</td>'+
+      '<td'+(r.special?' class="dn"':'')+'>'+(r.special?'−'+man(r.special):'0')+'</td>'+
+      '<td class="close">'+man(r.close)+'</td>'+
+      '<td'+(r.vsFloor<0?' class="dn"':'')+'>'+(r.vsFloor>=0?'+':'')+man(r.vsFloor)+'</td>'+
+    '</tr>').join('');
+    t.innerHTML=head+body;
+  }
+  // 前提
+  $('cf-assump').innerHTML='【前提】期首現金・借入残＝freee'+(FREEE_BS?'ライブ':'（前回値）')+
+    '。 月次営業CF ＝ '+yen(p.opCF)+'円'+(p.opCFlive?'（freee営業利益 4〜当月 ÷ 経過月）':'（概算）')+
+    '。 借入元金返済 ＝ '+yen(p.repay)+'円/月。 車両仕入 ＝ 納車待ち'+p.pendCount+'台を今月に全額現金計上。'+
+    (p.hasSpecial?'':'<br><span style="color:var(--warn)">※ 税金（法人税・消費税）・賞与は未設定（0）。予定額を教えてもらえれば「税賞与」列に反映します。入れるとさらに下がります。</span>');
 }
 function renderNow(){
   const s=thisMonthSummary();
@@ -2730,7 +2897,7 @@ function freeeFetchPL(force){
   _jsonpPL(fy, d=>{
     if(!d){ host.innerHTML='<tr><td colspan=2 class="ink3">freee取得失敗</td></tr>'; _freePLfetched=null; return; }
     FREEE_PL={fy,em,...d};
-    _renderFreeePL(); renderProfitCard();
+    _renderFreeePL(); renderProfitCard(); try{ renderCash(); }catch(e){}   // 資金繰りの営業CFライブ更新
     if(_freePLPrevFetched!==fy-1){ _freePLPrevFetched=fy-1;
       _jsonpPL(fy-1, p=>{ if(p){ FREEE_PL_PREV={fy:fy-1,...p}; _renderFreeePL(); renderProfitCard(); } }); // 前年度=通期確定 (月絞りなし)
     }
@@ -2760,12 +2927,12 @@ function _jsonpGAS(params,cbPrefix,onDone,parse){
 function freeeFetchBSPaid(force){
   if(DEMO){
     if(!FREEE_BS){ FREEE_BS={cash:40460000,loan:54579000}; FREEE_PAID={'demo-TA1':{date:todayISO()}}; }
-    _renderFreeeBS(); try{ renderAR(); }catch(e){}
+    _renderFreeeBS(); try{ renderAR(); }catch(e){} try{ renderCash(); }catch(e){}
     return;
   }
   const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url) return;
   if(!_freeBSfetched||force){ _freeBSfetched=true;
-    _jsonpGAS('action=report&type=bs&fiscal_year='+_currentFY(),'freeeBS',d=>{ if(d){ FREEE_BS=d; _renderFreeeBS(); } else _freeBSfetched=false; },_parseBS);
+    _jsonpGAS('action=report&type=bs&fiscal_year='+_currentFY(),'freeeBS',d=>{ if(d){ FREEE_BS=d; _renderFreeeBS(); try{ renderCash(); }catch(e){} } else _freeBSfetched=false; },_parseBS);
   }
   if(!_freePaidFetched||force){ _freePaidFetched=true;
     _jsonpGAS('action=paidStatus&since='+addDays(todayISO(),-365),'freeePaid',res=>{
@@ -3421,14 +3588,15 @@ function renderAll(){
   renderStaleBar();
   renderNow();renderRev();renderOps();renderPipe();renderSet();
   try{ renderReportLive(); }catch(e){ console.warn('reportLive',e); }   // 第3波: 分析タブLIVE行
+  try{ renderCash(); }catch(e){ console.warn('cash',e); }               // 第4波: 資金繰りタブ
 }
 
 // ---------- TABS / CROWN FAB ----------
-const TAB_LABELS = {now:'TOP', rev:'売上', ops:'稼働', pipe:'案件', report:'分析', set:'設定'};
+const TAB_LABELS = {now:'TOP', rev:'売上', ops:'稼働', kane:'資金', pipe:'案件', report:'分析', set:'設定'};
 let _currentTab = 'now';
 function showTab(t){
   _currentTab = t;
-  ['now','rev','ops','pipe','report','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
+  ['now','rev','ops','kane','pipe','report','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
   // Crown 中央表示と petal 現在地ハイライト
   const cur=$('crown-cur'); if(cur) cur.textContent=TAB_LABELS[t]||t;
   document.querySelectorAll('.crown .petal').forEach(p=>p.classList.toggle('current',p.dataset.tab===t));
@@ -3482,7 +3650,7 @@ function setupTabs(){
 }
 
 // ===== 操作性 (2026-06-12a): スワイプでタブ移動 / 引っ張って更新 / 復帰時 自動更新 =====
-const TAB_ORDER=['now','rev','ops','pipe','report','set'];
+const TAB_ORDER=['now','rev','ops','kane','pipe','report','set'];
 function setupUX(){
   let swX=null, swY=null;            // スワイプ判定
   let ptrY=null, ptrReady=false;     // pull-to-refresh
@@ -3585,6 +3753,11 @@ function DEMO_R(){
     });
   }
   const insurers=[{id:'ins-ja',name:'JA共済（デモ）'},{id:'ins-b',name:'共済B（デモ）'},{id:'ins-c',name:'損保C（デモ）'}];
+  // 資金繰り検証用: 納車待ち車両 (車両仕入capex)
+  vehicles.push(
+    {id:'VP1',name:'クラウンスポーツ',grade:'HEV Z',vehicleClass:'P',color:'ブラック',maker:'トヨタ',status:'納車待ち',leaseFee:0,vehiclePrice:5060000,plate:{area:'沖縄',no:'',kana:'',tail:''},plateDisplay:'',inspectionDate:'',mileage:0},
+    {id:'VP2',name:'N-WGN',grade:'L',vehicleClass:'K',color:'ホワイト',maker:'ホンダ',status:'納車待ち',leaseFee:0,vehiclePrice:1556500,plate:{area:'沖縄',no:'',kana:'',tail:''},plateDisplay:'',inspectionDate:'',mileage:0}
+  );
   return {cases,vehicles,insurers,settings:{taxRate:10}};
 }
 function DEMO_D(){
