@@ -547,6 +547,79 @@
   .ins-d{font-size:10.5px;color:var(--ink3);margin-top:2px;letter-spacing:.02em;line-height:1.5}
   .ins-arw{flex:0 0 auto;color:var(--line2);font-size:13px;margin-top:2px}
   .ins-ok{display:flex;align-items:center;gap:10px;padding:8px 0;font-family:var(--serif);font-size:14.5px;color:#2D7D33;letter-spacing:.03em}
+
+  /* ===== 神アプリ 第1波 (2026-07-04): 判定帯 / 今日の現場 / 未回収・請求待ち / 集中度 / 観測ノート ===== */
+  .verdict-card{border-left:3px solid var(--acc)}
+  .vd-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .vd-badge{font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:.12em;line-height:1}
+  .vd-lens{display:flex;gap:11px;margin-left:auto;font-size:10.5px;color:var(--ink2);letter-spacing:.04em;align-items:baseline}
+  .vd-lens .ld{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
+  .vd-lines{font-size:11px;color:var(--ink2);line-height:1.8;margin-top:8px;border-top:1px dotted var(--line);padding-top:7px;letter-spacing:.02em}
+  .gb-main{display:flex;align-items:baseline;gap:9px;margin-top:2px}
+  .gb-big{font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.1;white-space:nowrap}
+  .gb-tot{font-size:11px;color:var(--ink3);letter-spacing:.04em}
+  .gb-row{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0 4px 9px;border-left:3px solid var(--line2);margin-top:6px;font-size:12.5px;color:var(--ink2)}
+  .gb-row.disp{border-left-color:#3D7DC5}
+  .gb-row.rec{border-left-color:var(--danger)}
+  .gb-row .st{font-size:11.5px}
+  .gb-row .st.done{color:var(--ink3)}
+  .gb-row .st.left{color:var(--danger);font-weight:600}
+  .gb-tom{font-size:10.5px;color:var(--ink3);margin-top:9px;line-height:1.6}
+  .gb-it{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px dotted var(--line);font-size:11.5px;color:var(--ink2)}
+  .gb-it:last-child{border-bottom:0}
+  .gb-it .gk{flex:0 0 auto;font-size:9px;letter-spacing:.1em;padding:1px 6px;border:1px solid var(--line2);color:var(--ink3);white-space:nowrap}
+  .gb-it .gk.disp{color:#185FA5;border-color:#8FB3DC}
+  .gb-it .gk.rec{color:var(--danger);border-color:#D9A0A8}
+  .gb-it .gt{flex:1 1 auto;min-width:0}
+  .gb-it .gb-left{margin-left:auto;color:var(--danger);font-size:10px;font-weight:600;white-space:nowrap}
+  details.kd{margin-top:9px}
+  details.kd>summary{list-style:none;cursor:pointer;font-size:10.5px;color:var(--acc);letter-spacing:.08em}
+  details.kd>summary::-webkit-details-marker{display:none}
+  details.kd>summary::before{content:'▸ '}
+  details.kd[open]>summary::before{content:'▾ '}
+  .ar-grid{display:table;width:100%;table-layout:fixed;margin-top:4px}
+  .ar-col{display:table-cell;vertical-align:top;padding-right:12px}
+  .ar-col+.ar-col{border-left:1px solid var(--line);padding-left:13px;padding-right:0}
+  .ar-h{font-size:9px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;line-height:1.5}
+  .ar-v{font-family:var(--serif);font-size:21px;font-weight:600;margin-top:4px;line-height:1.1}
+  .ar-v .unit{font-size:10px;color:var(--ink3);font-family:var(--sans);margin-left:2px}
+  .ar-v.danger{color:var(--danger)}
+  .ar-sub{font-size:10px;color:var(--ink2);line-height:1.7;margin-top:4px}
+  .ar-sub .dn{color:var(--danger);font-weight:600}
+  .ar-hist{font-size:9.5px;color:var(--ink3);margin-top:4px;line-height:1.5}
+  .ar-note{font-size:10.5px;color:var(--warn);margin-top:10px;border-top:1px dotted var(--line);padding-top:7px;letter-spacing:.02em}
+  .conc{margin-top:10px;padding-top:9px;border-top:1px dotted var(--line);cursor:pointer}
+  .conc-row{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;color:var(--ink2)}
+  .conc-row .num{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink)}
+  .conc-row .num.dn{color:var(--danger)}
+  .conc-bar{position:relative;height:3px;background:#E2E3E5;margin-top:6px}
+  .conc-bar>i{position:absolute;left:0;top:0;height:3px;background:var(--acc)}
+  .conc-bar .tick{position:absolute;top:-3px;width:2px;height:9px;background:var(--danger)}
+  .conc-cap{font-size:9px;color:var(--ink3);margin-top:4px;letter-spacing:.04em}
+  .rec-intake{font-size:10px;color:var(--ink3);margin-top:9px;line-height:1.7;border-top:1px dotted var(--line);padding-top:7px}
+  /* 第2波: 在庫逼迫チップ / 平常比 / 現場スパーク / スタッフ負荷 */
+  .gb-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .gb-chip{font-size:10px;padding:2px 8px;letter-spacing:.05em;border:1px solid var(--line2);color:var(--ink2);white-space:nowrap}
+  .gb-chip.full{color:var(--danger);border-color:#D9A0A8;background:#FBF3F4}
+  .gb-chip.ok{color:#0C447C;border-color:#8FB3DC;background:#F2F7FC}
+  .gb-chip.mut{color:var(--ink3)}
+  .gb-norm{margin-left:auto;font-size:9.5px;letter-spacing:.04em;color:#185FA5;background:#EDF3FA;border:1px solid #C8D9EC;padding:2px 8px;white-space:nowrap}
+  .gb-norm.hot{background:#DCE8F6;color:#0C447C;font-weight:600}
+  .gb-norm.mut{background:transparent;border-color:var(--line2);color:var(--ink3)}
+  .gb-spark{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .gb-spark-svg{width:150px;height:22px;flex:0 0 auto}
+  .gb-spark-svg rect{fill:#B9C9E4}
+  .gb-spark-svg rect:last-child{fill:var(--acc)}
+  .gb-spark>span{font-size:9px;color:var(--ink3);letter-spacing:.04em;line-height:1.5}
+  .stf-bar{display:flex;height:10px;margin-top:6px;background:#E9EAEC}
+  .stf-bar>i{display:block;height:100%}
+  .stf-names{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:10.5px;color:var(--ink2);margin-top:7px}
+  .stf-names .sw{display:inline-block;width:8px;height:8px;margin-right:4px}
+  /* 第3波: 分析タブLIVE行 / AR freee突合 */
+  .rpt-live{margin:9px 0;padding:7px 9px;border-left:2px solid var(--acc);background:#F4F6FB;font-size:10.5px;color:var(--ink2);line-height:1.7}
+  .rpt-live b:first-child{color:var(--acc);font-size:8.5px;letter-spacing:.24em;margin-right:6px;font-family:var(--sans)}
+  .ar-note2{font-size:10px;color:var(--ink2);margin-top:6px;line-height:1.6}
+  .ar-note2 b{color:var(--acc)}
   .ins-count{font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none}
 
   /* ===== 先々の埋まり (今後14日) ===== */
@@ -602,6 +675,15 @@
   <!-- ========== 今月 — これ1画面で全部わかる ========== -->
   <section id="sec-now" class="on">
 
+    <!-- ⓪ 判定帯 — 会社の状況の総括 (お金/現場/リスク 3レンズ・最悪レンズの色=総合色・fail-honest: 取得失敗レンズは判定保留・2026-07-04 神アプリ第1波) -->
+    <div class="card verdict-card" id="verdict-card" style="display:none">
+      <div class="vd-top">
+        <span class="vd-badge" id="vd-badge">—</span>
+        <span class="vd-lens" id="vd-lens"></span>
+      </div>
+      <div class="vd-lines" id="vd-lines"></div>
+    </div>
+
     <!-- ① HERO: IWC Portugieser 7 Days ダイヤルに忠実 -->
     <div class="card hero">
       <!-- 当月 合算売上 (主役) -->
@@ -640,13 +722,78 @@
       </div>
     </div>
 
-    <!-- ①b 気づき (自動インサイト — 「順調か」を見に行かなくても異常が分かる・2026-06-12a) -->
-    <div class="card">
-      <div class="lbl">今月の気づき<span id="ins-count" class="ins-count"></span></div>
-      <div id="insights"></div>
+    <!-- ①a 今日の現場 · 全社 (3事業合成の残ジョブ + 現況 — 旧「現況·全社」カードを刷新・2026-07-04 第1波)
+         配車=損保dispatchAt/一般useStart ・ 回収=損保recoveryCalledAt/一般useEnd (本体モバイル 2026-07-04 確定基準と同一) -->
+    <div class="card" id="genba-card">
+      <div class="lbl">今日の現場 · 全社 <span class="sm ink3" id="gb-date" style="font-weight:normal"></span></div>
+      <div class="gb-main"><span class="gb-big num" id="gb-remain">—</span><span class="gb-tot" id="gb-tot"></span><span class="gb-norm" id="gb-norm" style="display:none"></span></div>
+      <div id="gb-rows"></div>
+      <!-- 在庫逼迫チップ (本体在庫ボード 2026-07-02d の occupying 基準を読み取り移植・第2波) -->
+      <div class="gb-chips tap" id="gb-stock" style="display:none" onclick="showTab('ops')"></div>
+      <div class="gb-tom" id="gb-tom" style="display:none"></div>
+      <details class="kd" id="gb-detail-wrap" style="display:none"><summary>本日の明細（時刻・お客様・行き先）</summary><div id="gb-detail"></div></details>
+      <!-- 現場アクション指数 マイクロスパーク (写真+FAX+配車完了の日次・判定には使わない従属表示・第2波) -->
+      <div class="gb-spark" id="gb-spark" style="display:none"></div>
+      <div class="hr" style="margin:12px 0 4px"></div>
+      <div class="now-load">
+        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-rental">—</div><div class="k">レンタカー稼働中</div></div>
+        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-det">—</div><div class="k">DETALIA入庫中</div></div>
+        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-den">—</div><div class="k">電装 進行中</div></div>
+      </div>
+      <div class="now-mrow" id="cl-month">当月処理 —</div>
     </div>
 
-    <!-- ② 部門別 売上 (3部門 × 当月/当年度) -->
+    <!-- ①b 気づき 二層化 (上段=今日の要対応 max4 / 下段=観測ノート details既定閉・2026-07-04 第1波。旧「今月の気づき」を再設計) -->
+    <div class="card">
+      <div class="lbl">今日の要対応<span id="ins-count" class="ins-count"></span></div>
+      <div id="insights"></div>
+      <details class="kd" id="ins-notes-wrap" style="display:none"><summary id="ins-notes-sum">観測ノート</summary><div id="ins-notes"></div></details>
+    </div>
+
+    <!-- 2026-06-13 整理: TOPの利益(freee)カードは売上タブの「freee 実損益」(フルPL・前年度進捗%付き)と重複のため撤去。renderProfitCard は #profit-card 不在で no-op (害なし・呼出は温存)。 -->
+    <!-- 2026-07-04 第1波: 部門別売上カードは 未回収・請求待ちカードの後ろへ移動 (TOP順=判定帯→HERO→今日の現場→要対応→損益分岐点→未回収→部門別→受付) -->
+
+    <!-- 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値) — 2026-06-16 3段階化 -->
+    <div class="card" id="be-card">
+      <div class="lbl">損益分岐点 · 全社 <span class="sm ink3" style="font-weight:normal">3段階で監視</span></div>
+      <div class="med num" id="be-daily">—<span class="unit">円</span></div>
+      <div class="unit-sm" style="margin-top:3px">当月の日商 · 売上 ÷ 経過日数</div>
+      <div class="sm" id="be-verdict" style="margin-top:8px">—</div>
+      <div class="bar bar-ticks" style="margin-top:14px"><i id="be-bar" style="width:0%"></i></div>
+      <div class="sm ink3" id="be-sub" style="margin-top:6px">—</div>
+      <div class="be-tiers" id="be-tiers" style="margin-top:11px">
+        <div><span class="dot" style="color:var(--acc)">●</span><span class="be-main">黒字 <b class="num">610万</b>/月</span><span class="be-sub">日20万・レンタカー稼働率50%</span></div>
+        <div><span class="dot" style="color:var(--warn)">●</span><span class="be-main">会計トントン <b class="num">470万</b>/月</span><span class="be-sub">絶対固定費のみ・日15.5万</span></div>
+        <div><span class="dot" style="color:var(--danger)">●</span><span class="be-main">現金下限 <b class="num">425万</b>/月</span><span class="be-sub">借入元金74万込み・日14万</span></div>
+      </div>
+      <div class="sm ink3" id="be-note" style="margin-top:9px">固定費 約545万 ÷ 限界利益率 89.4%（FY2026確定・暦日ベース・年1回見直し）</div>
+      <!-- 受注ランレート (売上タブに埋没していた値を分岐点に接続・2026-07-04 第1波) -->
+      <div class="sm" id="be-runrate" style="margin-top:8px;padding-top:8px;border-top:1px dotted var(--line)"></div>
+    </div>
+
+    <!-- ③b 未回収 · 請求待ち (お金の詰まり・2026-07-04 第1波)
+         左=請求済で未入金(ライブ/2024台帳分は別枠) 右=請求書発行待ち(返却済・仮請求+電装作業済) -->
+    <div class="card" id="ar-card">
+      <div class="lbl" style="display:flex;justify-content:space-between;align-items:baseline">未回収 · 請求待ち<span style="color:var(--line2);font-weight:400;letter-spacing:.04em">タップで案件 ›</span></div>
+      <div class="ar-grid">
+        <div class="ar-col tap" onclick="showTab('pipe')">
+          <div class="ar-h">未回収（請求済）</div>
+          <div class="ar-v num" id="ar-live">—</div>
+          <div class="ar-sub" id="ar-live-sub"></div>
+          <div class="ar-hist" id="ar-hist"></div>
+        </div>
+        <div class="ar-col tap" onclick="showTab('pipe')">
+          <div class="ar-h">請求待ち（請求すれば入る金）</div>
+          <div class="ar-v num" id="ar-unbilled">—</div>
+          <div class="ar-sub" id="ar-unbilled-sub"></div>
+        </div>
+      </div>
+      <div class="ar-note" id="ar-note"></div>
+      <!-- 第3波: freee入金消込(paidStatus)との突合 — 「入力遅延なだけ」と「真の未回収」を区別 -->
+      <div class="ar-note2" id="ar-freee" style="display:none"></div>
+    </div>
+
+    <!-- ② 部門別 売上 (3部門 × 当月/当年度) + 集中度バー (2026-07-04 第1波: 最大依存先のライブKPI化) -->
     <div class="card">
       <div class="lbl" style="display:flex;justify-content:space-between;align-items:baseline">部門別 売上 (税込)<span style="color:var(--line2);font-weight:400;letter-spacing:.04em">タップで明細 ›</span></div>
       <div class="dept3-head">
@@ -669,24 +816,8 @@
       </div>
       <!-- 電装 売上予定 (受注済み・未作業完了 — 計上前の確定受注残・2026-06-12c) -->
       <div class="dept3-plan" id="den-plan" style="display:none"></div>
-    </div>
-
-    <!-- 2026-06-13 整理: TOPの利益(freee)カードは売上タブの「freee 実損益」(フルPL・前年度進捗%付き)と重複のため撤去。renderProfitCard は #profit-card 不在で no-op (害なし・呼出は温存)。 -->
-
-    <!-- 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値) — 2026-06-16 3段階化 -->
-    <div class="card" id="be-card">
-      <div class="lbl">損益分岐点 · 全社 <span class="sm ink3" style="font-weight:normal">3段階で監視</span></div>
-      <div class="med num" id="be-daily">—<span class="unit">円</span></div>
-      <div class="unit-sm" style="margin-top:3px">当月の日商 · 売上 ÷ 経過日数</div>
-      <div class="sm" id="be-verdict" style="margin-top:8px">—</div>
-      <div class="bar bar-ticks" style="margin-top:14px"><i id="be-bar" style="width:0%"></i></div>
-      <div class="sm ink3" id="be-sub" style="margin-top:6px">—</div>
-      <div class="be-tiers" id="be-tiers" style="margin-top:11px">
-        <div><span class="dot" style="color:var(--acc)">●</span><span class="be-main">黒字 <b class="num">610万</b>/月</span><span class="be-sub">日20万・レンタカー稼働率50%</span></div>
-        <div><span class="dot" style="color:var(--warn)">●</span><span class="be-main">会計トントン <b class="num">470万</b>/月</span><span class="be-sub">絶対固定費のみ・日15.5万</span></div>
-        <div><span class="dot" style="color:var(--danger)">●</span><span class="be-main">現金下限 <b class="num">425万</b>/月</span><span class="be-sub">借入元金74万込み・日14万</span></div>
-      </div>
-      <div class="sm ink3" id="be-note" style="margin-top:9px">固定費 約545万 ÷ 限界利益率 89.4%（FY2026確定・暦日ベース・年1回見直し）</div>
+      <!-- 集中度バー (経営分析レポートが「盲点」と指摘したKPIの定点観測・タップで分析タブ) -->
+      <div class="conc" id="conc-kpi" style="display:none" onclick="showTab('report')"></div>
     </div>
 
     <!-- ④ 受付件数 (レンタカー + DETALIA 統合 — 旧2カードを1枚に集約) -->
@@ -694,7 +825,11 @@
       <div class="lbl">受付 ペース ・ 件数</div>
       <!-- 受付の勢い (順調判定・公平な前年比) -->
       <div class="recpace" id="rec-pace"></div>
+      <!-- 直近30日の受付=未来の忙しさの先行指標 (突発型ビジネス・2026-07-04 第1波) -->
+      <div class="rec-intake" id="rec-intake"></div>
 
+      <!-- 2026-07-04 第1波: 年度・内訳は details に圧縮 (id はそのまま=renderNow の書込先不変) -->
+      <details class="kd" id="rec-more"><summary>内訳・年度（レンタカー / DETALIA / 電装）</summary>
       <!-- レンタカー -->
       <div class="rec-grp">レンタカー</div>
       <div class="rec-row">
@@ -749,41 +884,11 @@
         <span class="rec-v num" id="den-recy">—</span>
         <span class="rec-cmp" id="den-recyy">—</span>
       </div>
+      </details>
     </div>
 
-    <!-- ⑤ 現況 · 全社 (今動いている3事業 + 当月処理 + 直近2日) -->
-    <div class="card">
-      <div class="lbl">現況 · 全社</div>
-      <div class="now-load">
-        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-rental">—</div><div class="k">レンタカー稼働中</div></div>
-        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-det">—</div><div class="k">DETALIA入庫中</div></div>
-        <div class="nl tap" onclick="showTab('pipe')"><div class="v num" id="cl-den">—</div><div class="k">電装 進行中</div></div>
-      </div>
-      <div class="now-mrow" id="cl-month">当月処理 —</div>
-      <div class="hr" style="margin:12px 0 4px"></div>
-      <div class="duo-grid">
-        <div class="duo">
-          <div class="duo-h">本日 <span class="duo-d" id="duo-today-date">—</span></div>
-          <div class="duo-row"><span class="duo-l">配車予定</span><span class="duo-n num" id="duo-d-today">—</span></div>
-          <div class="duo-row"><span class="duo-l">回収予定</span><span class="duo-n num" id="duo-r-today">—</span></div>
-          <div class="duo-row"><span class="duo-l">新規受付</span><span class="duo-n num" id="duo-n-today">—</span></div>
-        </div>
-        <div class="duo">
-          <div class="duo-h">明日 <span class="duo-d" id="duo-tom-date">—</span></div>
-          <div class="duo-row"><span class="duo-l">配車予定</span><span class="duo-n num" id="duo-d-tom">—</span></div>
-          <div class="duo-row"><span class="duo-l">回収予定</span><span class="duo-n num" id="duo-r-tom">—</span></div>
-          <div class="duo-row"><span class="duo-l">利用終了</span><span class="duo-n num" id="duo-e-tom">—</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ⑥ 先々の埋まり (今後14日・予約実数ベース + 前年同日実績・2026-06-12a) -->
-    <div class="card">
-      <div class="lbl">先々の埋まり · 今後14日</div>
-      <svg class="fwd" id="fwd-chart" viewBox="0 0 320 128" preserveAspectRatio="none"></svg>
-      <div class="fwd-legend"><span><span class="sw"></span>予約・貸出見込み</span><span><span class="swl"></span>前年同日 実績</span></div>
-      <div class="sm ink3" id="fwd-cap" style="text-align:center;margin-top:7px">—</div>
-    </div>
+    <!-- 2026-07-04 第1波: 旧「現況·全社」カードは「今日の現場」カードに統合 (本日/明日duo は3事業合成の残ジョブ表示に置換)。
+         「先々の埋まり(14日)」カードは 稼働タブへ移設 (当日受付→当日配車48%の突発型では占有スナップショットの経営寄与が薄く、TOP最大の縦食いだったため)。 -->
   </section>
 
   <!-- ========== 売上 ========== -->
@@ -800,6 +905,8 @@
     <div class="card">
       <div class="lbl">freee 実損益 <span id="rev-freee-fy" class="sm ink3" style="font-weight:normal"></span></div>
       <table class="kv" id="rev-freee-pl"><tr><td colspan=2 class="ink3">—</td></tr></table>
+      <!-- 第3波 (2026-07-04): B/S ライブ = 現預金・借入金残高 (trial_bs・GAS再デプロイ不要を実査確認済) -->
+      <table class="kv" id="rev-freee-bs" style="margin-top:8px"></table>
       <div class="sm ink3" style="margin-top:4px">会計士の締めを待たない・freeeの確定値ベース。<b>当月までで集計</b>（先日付の計上は含めない）</div>
     </div>
 
@@ -857,6 +964,15 @@
         <div class="sm ink3" style="text-align:center;margin-top:4px"><span class="ng-sw" style="background:var(--acc)"></span>50%↑ 損益分岐点 ・ <span class="ng-sw" style="background:var(--warn)"></span>35–50% 要注意 ・ <span class="ng-sw" style="background:var(--danger)"></span>35%↓ 現金下限</div>
         <div class="sm ink3" style="text-align:center;margin-top:4px">※ 全社の黒字判断は損益分岐点カード（3事業合算）が主軸</div>
       </div>
+    </div>
+
+    <!-- 先々の埋まり (今後14日・予約実数ベース + 前年同日実績・2026-06-12a → 2026-07-04 第1波でTOPから移設) -->
+    <div class="card">
+      <div class="lbl">先々の埋まり · 今後14日</div>
+      <svg class="fwd" id="fwd-chart" viewBox="0 0 320 128" preserveAspectRatio="none"></svg>
+      <div class="fwd-legend"><span><span class="sw"></span>予約・貸出見込み</span><span><span class="swl"></span>前年同日 実績</span></div>
+      <div class="sm ink3" id="fwd-cap" style="text-align:center;margin-top:7px">—</div>
+      <div class="sm ink3" style="text-align:center;margin-top:4px">※ 当日受付→当日配車が約5割の直前埋まり型 — 先の予定が少ない=暇 ではない</div>
     </div>
 
     <!-- クラスグループ別 稼働率 (PC経営分析 2026-05-28c と同方式・稼働順) -->
@@ -924,6 +1040,15 @@
       </div>
       <div class="pipe" id="pipe-denso"></div>
     </div>
+
+    <!-- スタッフ負荷バランス (直近7日の案件操作シェア・第2波)
+         ★ランキング/生産性%/個人別枚数は出さない (監視でなく「偏りすぎていないか」の体制ビュー・TOPには置かない) -->
+    <div class="card" id="staff-card" style="display:none">
+      <div class="lbl">現場の負荷バランス <span class="sm ink3" style="font-weight:normal">直近7日の案件操作</span></div>
+      <div class="stf-bar" id="stf-bar"></div>
+      <div class="stf-names" id="stf-names"></div>
+      <div class="sm ink3" style="margin-top:6px">操作した案件の割合（多い＝偏り注意のサイン・優劣ではありません）</div>
+    </div>
   </section>
 
   <!-- ========== 分析レポート ========== -->
@@ -984,6 +1109,7 @@
         <tr><td>DETALIA</td><td>次郎工業</td><td class="n">68.4%</td><td class="n"><span class="rpt-neg">70.5%</span></td></tr>
         <tr><td>電装</td><td>プロシード</td><td class="n">—</td><td class="n">100%</td></tr>
       </table>
+      <div class="rpt-live" id="rpt-live-conc" style="display:none"></div>
       <div class="rpt-call r"><b>JA共済喪失シミュレーション:</b> JA共済は月平均471万を供給＝全社月商の約61%。これが抜けると月商は<b>約306万に半減</b>し、通常分岐点610万どころか<b>現金下限425万さえ割り込む</b>。最大顧客1社の喪失＝即・赤字転落という単一障害点。</div>
       <div class="rpt-p">損保代車は発注が事故数連動・<b>価格決定力ゼロ（平均単価¥5,484固定）</b>の受動型。自力開拓の成功例＝八重瀬町役場の法人レンタル（年契約・1台で月約9万）の横展開が分散の鍵。</div>
     </div>
@@ -1002,6 +1128,7 @@
         <li>AR最大額 = 西日本自動車共済 <b>¥1,440,000</b>（636日・請求日空欄）</li>
         <li>JA共済の90日超は約160万（3件）。「310万」は全顧客合算。</li>
       </ul>
+      <div class="rpt-live" id="rpt-live-ar" style="display:none"></div>
       <div class="rpt-call"><b>正本はfreee売掛金1,162万。</b>古い案件は入金済へ前進させていないだけ（損保は月次一括請求でstatusが実会計と乖離）。DSOは約36日＝危険水準ではない。<span class="rpt-warn">ただし売掛金が1年で2倍（611→1,162万）＝四半期ごとにfreee実残高で監視を。</span></div>
     </div>
 
@@ -1154,7 +1281,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-06-28';
+const APP_VERSION = '2026-07-04';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1685,7 +1812,8 @@ function currentlyDispatchedCases(){
 // vehicle utilization (PC dashboard 本日稼働中 と一致) — 利用中と同一述語で vehicleId ユニーク数
 function vehicleStats(){
   const today=todayISO();
-  const vehAll=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち');
+  // 社用車も除外 (本体 LIMEOne 2026-07-02d で在庫・稼働率の分母から除外済み — admin も追従・2026-07-04)
+  const vehAll=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車' && v.status!=='売却済' && v.status!=='納車待ち' && v.status!=='社用車');
   const vehIdSet=new Set(vehAll.map(v=>v.id));
   const inUse=new Set();
   rentalCases().filter(isOutToday).forEach(c=>{ if(vehIdSet.has(c.vehicleId)) inUse.add(c.vehicleId); });
@@ -1722,6 +1850,243 @@ function dayActivity(dateISO){
   };
 }
 
+// ===== 神アプリ 第1波 (2026-07-04): 3事業合成ジョブ / AR / 集中度 / 受付先行指標 =====
+// 今日のジョブ (3事業合成) — 配車=損保dispatchAt/一般useStart ・ 回収=損保recoveryCalledAt/一般useEnd (本体モバイル 2026-07-04 確定基準)
+// DETALIA=入庫(arrival当日)+納車(実績delivery当日 / 予定deliveryPlan当日で未納) ・ 電装=workedAt当日 or 未作業でscheduledAt当日
+// 日付キーはローカル日付で組む (toISOString は JST で1日ズレる — todayISO/addDays 経由のみ)
+function todayJobs(dateISO){
+  const d=dateISO||todayISO();
+  const sl=v=>v?String(v).slice(0,10):'';
+  const hm=v=>{const s=String(v||'');return (s.length>=16&&s.charAt(10)==='T')?s.slice(11,16):''};
+  const items=[];
+  const gen=c=>c.category==='一般';
+  // 完了判定: フラグ (dispatchDoneAt/recoveryCompleted) を第一に、状態が先へ進んでいればフラグ欠落でも完了扱い (古い実データ耐性)
+  const DISP_DONE_ST=['利用中','回収連絡','手配書FAX済','返却済','仮請求','請求済','入金済'];
+  const REC_DONE_ST=['返却済','仮請求','請求済','入金済'];
+  const nm=c=>String(c.driverName||c.contractorName||'').trim();
+  activeRental().forEach(c=>{
+    if(c.isHistorical) return;
+    if(sl(gen(c)?c.useStart:c.dispatchAt)===d){
+      const done=!!c.dispatchDoneAt||DISP_DONE_ST.includes(c.status);
+      items.push({kind:'disp',done,time:gen(c)?'':hm(c.dispatchAt),txt:(nm(c)||c.caseNo||'')+(c.dispatchToName?' → '+c.dispatchToName:'')});
+    }
+    if(sl(gen(c)?c.useEnd:c.recoveryCalledAt)===d){
+      const done=!!c.recoveryCompleted||REC_DONE_ST.includes(c.status);
+      items.push({kind:'rec',done,time:'',txt:(nm(c)||c.caseNo||'')+(c.dispatchToName?'（'+c.dispatchToName+'）':'')});
+    }
+  });
+  const now=new Date();
+  detaliaCases().forEach(c=>{
+    const nmD=(String(c.customer||'').trim()+(c.carModel?' '+c.carModel:'')).trim();
+    if(sl(c.arrival)===d) items.push({kind:'det',done:(parseD(c.arrival)||now)<=now,time:hm(c.arrival),txt:'入庫 '+nmD});
+    if(sl(c.delivery)===d) items.push({kind:'det',done:true,time:hm(c.delivery),txt:'納車 '+nmD});
+    else if(!c.delivery&&sl(c.deliveryPlan)===d) items.push({kind:'det',done:false,time:hm(c.deliveryPlan),txt:'納車予定 '+nmD});
+  });
+  const E_DONE=['作業完了','報告済','請求済','入金済'];
+  densoJobs().forEach(j=>{
+    if(!(sl(j.workedAt)===d||(!j.workedAt&&sl(j.scheduledAt)===d))) return;
+    items.push({kind:'den',done:E_DONE.includes(j.status),time:'',txt:(String(j.clientName||'').trim()+(j.jobNo?'（'+j.jobNo+'）':''))});
+  });
+  const agg=k=>{const a=items.filter(i=>i.kind===k);return {n:a.length,done:a.filter(i=>i.done).length}};
+  items.sort((a,b)=>((a.time||'99')<(b.time||'99'))?-1:1);
+  return {date:d,total:items.length,done:items.filter(i=>i.done).length,
+    disp:agg('disp'),rec:agg('rec'),det:agg('det'),den:agg('den'),items};
+}
+// 受付当日に配車する案件の割合 (直近180日・損保のみ) — 「直前埋まり型」の実測。母数20件未満は判定しない
+function sameDayDispatchShare(){
+  const today=todayISO(); const from=addDays(today,-179);
+  let n=0,same=0;
+  activeRental().forEach(c=>{
+    if(c.category==='一般'||c.isHistorical) return;
+    const r=String(c.receivedAt||'').slice(0,10), dd=String(c.dispatchAt||'').slice(0,10);
+    if(!r||!dd||r<from||r>today) return;
+    n++; if(dd<=r) same++;
+  });
+  return n>=20?Math.round(same/n*100):null;
+}
+// 未回収(AR)・請求待ち 3事業合算 — 全て読み取りのみ
+// R=請求済&paidAt空 (isHistorical=2024台帳輸入は別枠・金額=rentalBillAmount=売上系と同式)
+// D=納車済&paidDate空 (30日超を分離。paidDate入力済の年ズレ幽霊はそもそも未入金に入らない)
+// E=請求済 (qty×unitFee×税) ・ 未請求=R返却済/仮請求+E作業完了/報告済 (月またぎ=請求書発行漏れ疑い)
+function arSummary(){
+  const today=todayISO();
+  const S={liveR:0,liveRN:0,liveD:0,liveDN:0,liveE:0,liveEN:0,hist:0,histN:0,
+    over90:0,over90N:0,dOld:0,dOldN:0,unbR:0,unbRN:0,unbE:0,unbEN:0,unbECarry:0,unbECarryN:0};
+  activeRental().forEach(c=>{
+    if(c.status==='請求済'&&!c.paidAt){
+      const a=rentalBillAmount(c).total; if(a<=0) return;
+      if(c.isHistorical){ S.hist+=a; S.histN++; return; }
+      S.liveR+=a; S.liveRN++;
+      const base=String(c.invoiceIssuedAt||c.useEnd||'').slice(0,10);
+      if(base&&daysBetween(base,today)>90){ S.over90+=a; S.over90N++; }
+    } else if((c.status==='返却済'||c.status==='仮請求')&&!c.isHistorical){
+      const a=rentalBillAmount(c).total; if(a>0){ S.unbR+=a; S.unbRN++; }
+    }
+  });
+  const taxR=(DD&&DD.settings&&DD.settings.taxRate)||10;
+  detaliaCases().forEach(c=>{
+    if(!c.delivery||c.paidDate) return;
+    const a=detaliaAmount(c,taxR).total; if(a<=0) return;
+    S.liveD+=a; S.liveDN++;
+    if(daysBetween(String(c.delivery).slice(0,10),today)>30){ S.dOld+=a; S.dOldN++; }
+  });
+  const curYM=today.slice(0,7);
+  densoJobs().forEach(j=>{
+    const a=densoAmount(j);
+    if(j.status==='請求済'){ if(a>0){S.liveE+=a; S.liveEN++;} }
+    else if(['作業完了','報告済'].includes(j.status)&&a>0){
+      S.unbE+=a; S.unbEN++;
+      const wm=densoSalesYM(j);
+      if(wm&&wm<curYM){ S.unbECarry+=a; S.unbECarryN++; }
+    }
+  });
+  S.live=S.liveR+S.liveD+S.liveE; S.liveN=S.liveRN+S.liveDN+S.liveEN;
+  S.unb=S.unbR+S.unbE; S.unbN=S.unbRN+S.unbEN;
+  return S;
+}
+// 顧客集中度 (レンタカー当年度売上に占める最大取引先シェア) — レポート08が「定点観測されていない盲点」と自己指摘したKPIのライブ化
+function concentrationKPI(){
+  const fy=_currentFY(); const today=todayISO();
+  const by={}; let tot=0;
+  billableRental().forEach(c=>{
+    if(!inFYToToday(c.useEnd,fy,today)) return;
+    const a=rentalBillAmount(c).total; if(a<=0) return;
+    tot+=a;
+    if(c.insurerId) by[c.insurerId]=(by[c.insurerId]||0)+a;
+  });
+  if(tot<=0) return null;
+  let maxK=null,maxV=0;
+  Object.keys(by).forEach(k=>{ if(by[k]>maxV){maxV=by[k];maxK=k;} });
+  if(!maxK) return null;
+  const ins=((DR&&DR.insurers)||[]).find(i=>i&&i.id===maxK);
+  return {name:(ins&&ins.name)||'最大取引先', share:Math.round(maxV/tot*1000)/10, amt:maxV, tot};
+}
+// 直近30日の受付ペース vs 前年同一窓 (レンタカー・突発型ビジネスの先行指標)
+function recentIntake(){
+  const today=todayISO(); const from=addDays(today,-29);
+  const pyT=_lastYearSameDate(today), pyF=addDays(pyT,-29);
+  let cur=0,prev=0;
+  activeRental().forEach(c=>{
+    const r=String(c.receivedAt||'').slice(0,10); if(!r) return;
+    if(r>=from&&r<=today) cur++;
+    else if(r>=pyF&&r<=pyT) prev++;
+  });
+  return {cur,prev};
+}
+// 判定帯/気づき 共有ヘルパー (二重実装で閾値がズレるのを防ぐ)
+function _lateRecoveries(){
+  const today=todayISO();
+  return rentalCases().filter(c=>c.status!=='キャンセル'&&c.recoveryCalledAt&&String(c.recoveryCalledAt).slice(0,10)<today&&!c.recoveryCompleted&&['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status));
+}
+function _shakenBuckets(){
+  const today=todayISO();
+  const vehs=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済');
+  const exp=[],soon=[];
+  vehs.forEach(v=>{ const i=(v.inspectionDate||'').slice(0,10); if(!i) return; if(i<today) exp.push(v); else if(daysBetween(today,i)<=60) soon.push(v); });
+  return {exp,soon};
+}
+// 受付/確認中 の新旧分離 (混ぜると狼少年: 実測で見かけ14件→実質3件・残り11件は2025年の放置シェル)
+function _staleIntake(){
+  const cutoff=addDays(todayISO(),-30);
+  const pend=activeRental().filter(c=>['受付','確認中'].includes(c.status)&&!c.isHistorical);
+  return {
+    fresh: pend.filter(c=>String(c.receivedAt||'').slice(0,10)>=cutoff&&!c.dispatchAt),
+    shell: pend.filter(c=>String(c.receivedAt||'').slice(0,10)<cutoff)
+  };
+}
+
+// ===== 神アプリ 第2波 (2026-07-04): 在庫逼迫 / 平常比 / 現場アクション指数 / DETALIA残工数 / スタッフ負荷 =====
+// 在庫逼迫サマリ — 本体 LIMEOne 在庫ボード (2026-07-02d) の occupying 基準を読み取り移植した軽量版。
+// 鉄則: billing status で在庫判定しない (前払いマンスリーの罠)・他社借は自社在庫を消費しない・社用車除外。
+// 実効返却日 = useEnd > (請求済/入金済で未入力→在庫) > 使用期限 > 利用開始+30日。過去日×出庫中は当面占有(+400日)。
+function stockTightness(){
+  const today=todayISO();
+  const fleet=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち'&&v.status!=='社用車');
+  const byClass={}; const vCls={};
+  fleet.forEach(v=>{
+    const c=String(v.vehicleClass||v.class||'').trim().toUpperCase(); if(!c) return;
+    byClass[c]=byClass[c]||{own:0,occ:0}; byClass[c].own++; vCls[v.id]=c;
+  });
+  const OUT=['配車済','利用中','回収連絡','手配書FAX済'];
+  let borrowed=0;
+  activeRental().forEach(c=>{
+    if(c.isDeleted||c.isCancelled||c.recoveryCompleted) return;
+    if(c.status==='返却済') return;
+    const st=c.useStart?String(c.useStart).slice(0,10):''; if(!st||st>today) return;
+    const active=OUT.includes(c.status);
+    let eff=c.useEnd?String(c.useEnd).slice(0,10):'';
+    if(!eff){
+      if(['仮請求','請求済','入金済'].includes(c.status)) return;   // 完了系で返却日未入力=在庫に戻す (居座り防止)
+      eff=c.useDeadline?String(c.useDeadline).slice(0,10):addDays(st,30);
+    }
+    if(eff<today){ if(!active) return; eff=addDays(today,400); }    // 期限超過でまだ出庫中=当面占有
+    if(c.isBorrowed){ borrowed++; return; }
+    const cls=vCls[c.vehicleId]||String(c.vehicleClass||'').trim().toUpperCase();
+    if(!cls||!byClass[cls]) return;
+    byClass[cls].occ++;
+  });
+  const full=[];
+  Object.keys(byClass).sort().forEach(k=>{ const b=byClass[k]; if(b.own>0&&b.occ>=b.own) full.push(k); });
+  const K=byClass['K']||null;
+  return {full, kFree:K?Math.max(0,K.own-K.occ):null, kOwn:K?K.own:0, borrowed};
+}
+// 現場アクション指数 (写真+FAX+配車完了 の日次合成・直近N日) — 現場が実際に動いた量の体温計。判定には使わない
+function actionIndex(days){
+  const today=todayISO(); const keys=[]; const map={};
+  for(let i=days-1;i>=0;i--){ const k=addDays(today,-i); keys.push(k); map[k]=0; }
+  const bump=ts=>{
+    if(!ts) return;
+    let d='';
+    if(typeof ts==='number'){ const t=new Date(ts); const tz=t.getTimezoneOffset()*60000; d=new Date(t-tz).toISOString().slice(0,10); }
+    else d=String(ts).slice(0,10);
+    if(d in map) map[d]++;
+  };
+  rentalCases().forEach(c=>{
+    if(c.status==='キャンセル') return;
+    bump(c.dispatchDoneAt);
+    (Array.isArray(c.checkSheets)?c.checkSheets:[]).forEach(s=>{ if(s) bump(s.photographedAt||s.at||s.takenAt); });
+    (Array.isArray(c.faxHistory)?c.faxHistory:[]).forEach(f=>{ if(f) bump(f.sentAt||f.at); });
+  });
+  return {keys, vals:keys.map(k=>map[k])};
+}
+// DETALIA 工場内 残工数 — workChecks(selected&&!done) × serviceMenu.hours (キーは name・labelでない) ÷ 日次キャパ(staffCount×hoursPerStaff)
+// 入庫30日超は stale(納車入力漏れ疑い=要対応側で扱う) として残工数から除外
+function detaliaWorkload(){
+  const today=todayISO();
+  const menu=((DD&&DD.settings&&DD.settings.serviceMenu)||[]);
+  const hoursOf={}; menu.forEach(m=>{ if(m&&m.name!=null) hoursOf[m.name]=Number(m.hours)||0; });
+  const inShop=detaliaCases().filter(c=>{
+    if(!c.arrival||c.delivery) return false;
+    const a=String(c.arrival).slice(0,10);
+    return a<=today && a>=addDays(today,-30);
+  });
+  let hours=0;
+  inShop.forEach(c=>{
+    (Array.isArray(c.workChecks)?c.workChecks:[]).forEach(w=>{
+      if(w&&w.selected&&!w.done&&hoursOf[w.label]!=null) hours+=hoursOf[w.label];
+    });
+  });
+  const cap=Math.max(1,((DD&&DD.settings&&Number(DD.settings.staffCount))||3)*((DD&&DD.settings&&Number(DD.settings.hoursPerStaff))||7));
+  return {cars:inShop.length, hours:Math.round(hours*10)/10, days:Math.round(hours/cap*10)/10, cap};
+}
+// スタッフ負荷バランス (直近7日の updatedBy 操作シェア・/^システム/ 除外) — 体制の偏りビュー。ランキング/生産性化はしない
+function staffLoad(){
+  const cutoff=addDays(todayISO(),-6);
+  const by={};
+  rentalCases().forEach(c=>{
+    const u=String(c.updatedBy||'').trim();
+    if(!u||/^システム/.test(u)) return;
+    const ts=c.updatedAt; if(!ts) return;
+    let d='';
+    if(typeof ts==='number'){ const t=new Date(ts); const tz=t.getTimezoneOffset()*60000; d=new Date(t-tz).toISOString().slice(0,10); }
+    else d=String(ts).slice(0,10);
+    if(d>=cutoff) by[u]=(by[u]||0)+1;
+  });
+  const rows=Object.keys(by).map(k=>({name:k,n:by[k]})).sort((a,b)=>b.n-a.n);
+  const tot=rows.reduce((s,r)=>s+r.n,0);
+  return {rows,tot};
+}
+
 // ---------- RENDER ----------
 // 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値) — memory project-lime-break-even / 損益分岐点分析_2026-06-16.md
 // 固定費 約545万/月 ÷ 限界利益率 89.4% = 月約610万・暦日ベース 日約20万。freee実額ベースの静的値=年1回見直し。
@@ -1753,6 +2118,214 @@ function renderBreakEven(){
   const bar=document.getElementById('be-bar'); bar.style.width=prog+'%'; bar.className=barCls;
   const rest=Math.max(0, BREAK_EVEN.monthly-mtd);
   document.getElementById('be-sub').innerHTML='当月売上 <b class="num">'+yen(mtd)+'</b>円 ／ 損益分岐点 6,100,000円'+(rest>0?'（あと '+yen(rest)+'円）':'（達成 ✓）');
+  // 受注ランレート = 稼働中案件×日額単価 (売上タブに埋没していた先読み値を分岐点に接続・2026-07-04 第1波)
+  const rr=document.getElementById('be-runrate');
+  if(rr){
+    const dispatched=currentlyDispatchedCases();
+    const runRate=dispatched.reduce((s2,c)=>s2+Number(c.unitPrice||0),0);
+    const rp=Math.round((runRate-BREAK_EVEN.daily)/BREAK_EVEN.daily*100);
+    rr.innerHTML='受注ランレート <b class="num">'+yen(runRate)+'</b>円/日（稼働 '+dispatched.length+'件 × 日額単価）・ 分岐点 <span class="'+(rp>=0?'up':'dn')+'">'+(rp>=0?'+':'')+rp+'%</span>';
+  }
+}
+
+// ===== 判定帯 (3レンズ合成・2026-07-04 第1波) =====
+// お金=損益分岐点4ゾーン / 現場=回収超過+滞留 / リスク=車検+集中+90日超AR。
+// 合成は min則 (最悪レンズの色=総合色)。単一スコアの嘘を避け、根拠実数を必ず併記。
+// fail-honest: データ源が fresh/demo でないレンズは判定保留 (グレー・総合にも算入しない)。
+function renderVerdict(){
+  const card=$('verdict-card'); if(!card) return;
+  const fresh=s=>s==='fresh'||s==='demo';
+  const today=todayISO();
+  const lenses=[],lines=[];
+  // お金
+  let mLv=null;
+  if(fresh(SRC.r)&&fresh(SRC.d)){
+    const s=thisMonthSummary(); const mtd=Math.max(0,Number(s.total)||0);
+    const td=parseD(today); const elapsed=(td?td.getDate():1)||1;
+    const daily=Math.round(mtd/elapsed);
+    mLv= daily>=BREAK_EVEN.daily?0:(daily>=BREAK_EVEN.cashDaily?1:2);
+    const ratio=Math.round(daily/BREAK_EVEN.daily*10)/10;
+    lines.push('日商 '+yen(daily)+'円 ＝ 損益分岐点の '+ratio+' 倍'+(mLv===0?'（黒字ペース）':(mLv===1?'（会計赤字圏 — 要経費圧縮）':'（現金下限割れ）')));
+  } else lines.push('お金：データ取得できず判定保留');
+  lenses.push({k:'お金',lv:mLv});
+  // 現場
+  let gLv=null;
+  if(fresh(SRC.r)){
+    const J=todayJobs(today); const lateRec=_lateRecoveries(); const si=_staleIntake();
+    gLv= lateRec.length?2:(si.fresh.length?1:0);
+    lines.push('今日の残りジョブ '+(J.total-J.done)+'件'+(lateRec.length?' ・ 回収超過 '+lateRec.length+'件':'（回収超過なし）')+(si.fresh.length?' ・ 配車日未定の受付 '+si.fresh.length+'件':''));
+  } else lines.push('現場：データ取得できず判定保留');
+  lenses.push({k:'現場',lv:gLv});
+  // リスク
+  let rLv=null;
+  if(fresh(SRC.r)){
+    const shk=_shakenBuckets(); const k=concentrationKPI(); const ar=arSummary();
+    rLv= shk.exp.length?2:((shk.soon.length||ar.over90>0||(k&&k.share>=60))?1:0);
+    const bits=[];
+    if(k) bits.push('最大依存 '+esc(k.name)+' '+k.share+'%');
+    if(shk.exp.length) bits.push('車検切れ '+shk.exp.length+'台'); else if(shk.soon.length) bits.push('車検60日内 '+shk.soon.length+'台');
+    if(ar.over90>0) bits.push('90日超未回収 '+yen(ar.over90)+'円');
+    lines.push(bits.length?bits.join(' ・ '):'リスク指標に異常なし');
+  } else lines.push('リスク：データ取得できず判定保留');
+  lenses.push({k:'リスク',lv:rLv});
+  const present=lenses.filter(l=>l.lv!=null).map(l=>l.lv);
+  const worst=present.length?Math.max.apply(null,present):null;
+  const MAP={0:{t:'順調',c:'var(--acc)'},1:{t:'注意',c:'var(--warn)'},2:{t:'要対応',c:'var(--danger)'}};
+  const m=(worst==null)?{t:'判定保留',c:'var(--line2)'}:MAP[worst];
+  card.style.display='';
+  card.style.borderLeft='3px solid '+m.c;
+  const b=$('vd-badge'); b.textContent=m.t; b.style.color=m.c;
+  $('vd-lens').innerHTML=lenses.map(l=>{
+    const col=(l.lv==null)?'var(--line2)':MAP[l.lv].c;
+    return '<span><span class="ld" style="background:'+col+'"></span>'+l.k+'</span>';
+  }).join('');
+  $('vd-lines').innerHTML=lines.map(x=>'<div>'+x+'</div>').join('');
+}
+
+// ===== 今日の現場 (3事業合成の残ジョブ・2026-07-04 第1波) =====
+function renderGenba(){
+  const card=$('genba-card'); if(!card) return;
+  const today=todayISO();
+  const J=todayJobs(today), T=todayJobs(addDays(today,1));
+  const dows=['日','月','火','水','木','金','土'];
+  const fmtMD2=iso=>{const dd=parseD(iso);return dd?(dd.getMonth()+1)+'/'+dd.getDate()+'('+dows[dd.getDay()]+')':''};
+  $('gb-date').textContent=fmtMD2(today);
+  const remain=J.total-J.done;
+  const big=$('gb-remain');
+  if(J.total===0){ big.textContent='予定 0'; big.style.color='var(--ink3)'; }
+  else if(remain===0){ big.textContent='✓ 完了'; big.style.color='var(--acc)'; }
+  else { big.textContent='残り '+remain; big.style.color='var(--ink)'; }
+  $('gb-tot').textContent=(J.total===0)?'本日のジョブなし（3事業）':'／ 全 '+J.total+' ジョブ';
+  const row=(cls,label,u)=>{
+    if(!u.n) return '';
+    const left=u.n-u.done;
+    return '<div class="gb-row '+cls+'"><span>'+label+'</span><span class="st '+(left?'left':'done')+'">'+(left?(u.done+'/'+u.n+' ・ 残り '+left):(u.done+'/'+u.n+' 完了 ✓'))+'</span></div>';
+  };
+  $('gb-rows').innerHTML=row('disp','配車',J.disp)+row('rec','回収',J.rec)+row('det','DETALIA 入出庫',J.det)+row('den','電装 作業',J.den);
+  // ── 第2波: 在庫逼迫チップ (本体在庫ボード基準の軽量版・タップで稼働タブ) ──
+  const stEl=$('gb-stock');
+  if(stEl){
+    try{
+      const st=stockTightness();
+      const chips=[];
+      if(st.full.length) chips.push('<span class="gb-chip full">満車 '+st.full.join('·')+'</span>');
+      if(st.kFree!=null) chips.push('<span class="gb-chip ok">K 空き '+st.kFree+'/'+st.kOwn+'</span>');
+      if(st.borrowed) chips.push('<span class="gb-chip mut">他社借 '+st.borrowed+'</span>');
+      stEl.style.display=chips.length?'':'none';
+      stEl.innerHTML=chips.join('');
+    }catch(e){ stEl.style.display='none'; console.warn('stock chip',e); }
+  }
+  // ── 第2波: 平常比チップ (同曜日4週平均・青の濃淡のみ=忙しさは悪ではない・日曜=定休日で0除算回避) ──
+  const nEl=$('gb-norm');
+  if(nEl){
+    try{
+      const dow=(parseD(today)||new Date()).getDay();
+      if(dow===0){ nEl.style.display=''; nEl.textContent='定休日'; nEl.className='gb-norm mut'; }
+      else{
+        let sum=0; for(let w=1;w<=4;w++) sum+=todayJobs(addDays(today,-7*w)).total;
+        const avg=sum/4;
+        if(avg>=1&&J.total>0){
+          const r2=J.total/avg;
+          const t=(r2>=1.8?'繁忙':(r2>=1.3?'やや繁忙':(r2<0.7?'静か':'平常')));
+          nEl.style.display='';
+          nEl.textContent=t+' ・ 同曜日4週比 '+(r2>=1?'+':'')+Math.round((r2-1)*100)+'%';
+          nEl.className='gb-norm'+(r2>=1.3?' hot':'');
+        } else nEl.style.display='none';
+      }
+    }catch(e){ nEl.style.display='none'; }
+  }
+  // ── 第2波: 現場アクション指数スパーク (直近10日・従属表示・判定に使わない) ──
+  const spEl=$('gb-spark');
+  if(spEl){
+    try{
+      const ai=actionIndex(10);
+      const mx=Math.max.apply(null,ai.vals);
+      if(mx>0){
+        spEl.style.display='';
+        const W=150,H=22,bw=W/ai.vals.length;
+        const bars=ai.vals.map((v,ix)=>{
+          const h=Math.max(1,v/mx*(H-4));
+          return '<rect x="'+(ix*bw+1).toFixed(1)+'" y="'+(H-h).toFixed(1)+'" width="'+Math.max(1,bw-2).toFixed(1)+'" height="'+h.toFixed(1)+'"/>';
+        }).join('');
+        spEl.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" class="gb-spark-svg" preserveAspectRatio="none">'+bars+'</svg><span>現場の動き 直近10日（写真+FAX+配車完了 ・ 本日 '+ai.vals[ai.vals.length-1]+'）</span>';
+      } else spEl.style.display='none';
+    }catch(e){ spEl.style.display='none'; }
+  }
+  // 明日プレビュー + 直前埋まり型の注記 (「予定0=暇」の誤読防止・実測share併記)
+  const tomEl=$('gb-tom');
+  const tomIso=addDays(today,1);
+  const tomD=parseD(tomIso); const isSun=tomD&&tomD.getDay()===0;
+  let tom='明日 '+fmtMD2(tomIso)+'：';
+  if(T.total>0){
+    tom+=[T.disp.n?'配車 '+T.disp.n:'',T.rec.n?'回収 '+T.rec.n:'',T.det.n?'DETALIA '+T.det.n:'',T.den.n?'電装 '+T.den.n:''].filter(Boolean).join(' ・ ')+' 件';
+  } else {
+    const share=sameDayDispatchShare();
+    tom+='予定 0'+(isSun?'（定休日）':(share!=null?'（受付当日の配車が'+share+'%の直前埋まり型 — 暇の予告ではありません）':''));
+  }
+  tomEl.style.display=''; tomEl.textContent=tom;
+  // 本日の明細
+  const wrap=$('gb-detail-wrap');
+  if(wrap){
+    wrap.style.display=J.items.length?'':'none';
+    const KIND={disp:['配車','disp'],rec:['回収','rec'],det:['DETALIA','det'],den:['電装','den']};
+    $('gb-detail').innerHTML=J.items.map(it=>{
+      const k=KIND[it.kind]||['',''];
+      return '<div class="gb-it"><span class="gk '+k[1]+'">'+k[0]+'</span><span class="gt">'+(it.time?it.time+' ':'')+esc(it.txt)+'</span>'+(it.done?'<span class="ink3" style="margin-left:auto">✓</span>':'<span class="gb-left">未</span>')+'</div>';
+    }).join('');
+  }
+}
+
+// ===== 未回収・請求待ち (2026-07-04 第1波) =====
+function renderAR(){
+  const card=$('ar-card'); if(!card) return;
+  const a=arSummary();
+  const liveEl=$('ar-live');
+  liveEl.innerHTML=yen(a.live)+'<span class="unit">円</span>';
+  liveEl.classList.toggle('danger', a.over90>0);
+  $('ar-live-sub').innerHTML=
+    'レンタカー '+yen(a.liveR)+'（'+a.liveRN+'件）<br>DETALIA '+yen(a.liveD)+'（'+a.liveDN+'件'+(a.dOld>0?'・納車30日超 '+yen(a.dOld):'')+'）<br>電装 '+yen(a.liveE)+'（'+a.liveEN+'件）'+
+    (a.over90>0?'<br><span class="dn">請求後90日超 '+yen(a.over90)+'円（'+a.over90N+'件）</span>':'');
+  $('ar-hist').textContent=a.hist>0?('別枠: 2024年 台帳輸入分 '+yen(a.hist)+'円（'+a.histN+'件・回収可能性の棚卸し対象）'):'';
+  $('ar-unbilled').innerHTML=yen(a.unb)+'<span class="unit">円</span>';
+  $('ar-unbilled-sub').innerHTML='レンタカー 返却済・仮請求 '+a.unbRN+'件 '+yen(a.unbR)+'<br>電装 作業済み '+a.unbEN+'件 '+yen(a.unbE)+(a.unbECarry>0?'<br><span class="dn">うち月またぎ '+yen(a.unbECarry)+'円 — 発行漏れ疑い</span>':'');
+  const totalAR=a.live+a.hist;
+  const months=Math.round(totalAR/BREAK_EVEN.cash*10)/10;
+  $('ar-note').textContent= totalAR>0 ? ('未回収 計 '+yen(totalAR)+'円 ＝ 現金下限（425万/月）の約 '+months+' ヶ月分が社外に滞留') : '未回収なし ✓';
+  // 第3波: freee消込突合 — 「入力遅延なだけ」と「真の未回収」を区別 (paidStatus=受付Noキー)
+  const fEl=$('ar-freee');
+  if(fEl){
+    if(FREEE_PAID){
+      let n=0,amt=0;
+      activeRental().forEach(c=>{
+        if(c.status==='請求済'&&!c.paidAt&&!c.isHistorical&&c.caseNo&&FREEE_PAID[c.caseNo]){ n++; amt+=rentalBillAmount(c).total; }
+      });
+      fEl.style.display='';
+      fEl.innerHTML= n>0
+        ? ('freee消込突合: うち <b class="num">'+yen(amt)+'</b>円（'+n+'件）は freee側で入金確認済 ＝ 入力待ち（実質回収済）')
+        : 'freee消込突合: ライブ未回収に freee側入金済はなし ＝ 真の未回収';
+    } else fEl.style.display='none';
+  }
+}
+
+// ===== 集中度バー (部門別売上カード末尾・2026-07-04 第1波) =====
+function renderConc(){
+  const el=$('conc-kpi'); if(!el) return;
+  const k=concentrationKPI();
+  if(!k){ el.style.display='none'; return; }
+  el.style.display='';
+  el.innerHTML='<div class="conc-row"><span>最大依存 ・ '+esc(k.name)+'（レンタカー年度売上比）</span><span class="num'+(k.share>=60?' dn':'')+'">'+k.share+'%</span></div>'+
+    '<div class="conc-bar"><i style="width:'+Math.min(100,k.share)+'%"></i><span class="tick" style="left:60%"></span></div>'+
+    '<div class="conc-cap">赤線＝60%警戒 ・ タップで分析タブ ›</div>';
+}
+
+// ===== 受付の先行指標 (直近30日・2026-07-04 第1波) =====
+function renderIntakeNote(){
+  const el=$('rec-intake'); if(!el) return;
+  const i=recentIntake(); const share=sameDayDispatchShare();
+  const pct=i.prev>0?Math.round((i.cur-i.prev)/i.prev*100):null;
+  el.innerHTML='レンタカー 直近30日の受付 <b class="num" style="font-size:12px">'+i.cur+'</b> 件'+
+    (pct!=null?('（前年同一30日 '+i.prev+'件 <span class="'+(pct>=0?'up':'dn')+'">'+(pct>=0?'+':'')+pct+'%</span>）'):'')+
+    (share!=null?('<br>受付当日の配車が '+share+'% の直前埋まり型 — 受付ペースが未来の忙しさの先行指標'):'');
 }
 function renderNow(){
   const s=thisMonthSummary();
@@ -1899,16 +2472,12 @@ function renderNow(){
   $('now-daily').innerHTML=yen(runRate)+'<span class="unit" style="font-size:11px">円</span>';
   $('now-daily-cap').textContent='稼働 '+activeCount+' 件 × 日額単価 合計';
 
-  // 現場 · 本日 / 明日
-  const tomorrow=addDays(today,1);
-  const dows=['日','月','火','水','木','金','土'];
-  const fmtMD=iso=>{const d=parseD(iso);return d?(d.getMonth()+1)+'/'+d.getDate()+'('+dows[d.getDay()]+')':''};
-  $('duo-today-date').textContent=fmtMD(today);
-  $('duo-tom-date').textContent=fmtMD(tomorrow);
-  const tA=dayActivity(today), tB=dayActivity(tomorrow);
-  const setDuo=(id,n)=>{const el=$(id);if(el){el.textContent=n;el.classList.toggle('zero',n===0)}};
-  setDuo('duo-d-today',tA.dispatch); setDuo('duo-r-today',tA.recover); setDuo('duo-n-today',tA.newCase);
-  setDuo('duo-d-tom',tB.dispatch);   setDuo('duo-r-tom',tB.recover);   setDuo('duo-e-tom',tB.useEnd);
+  // 今日の現場 / 判定帯 / 未回収 / 集中度 / 受付先行指標 (2026-07-04 第1波 — 旧 本日/明日duo を3事業合成に置換)
+  try{ renderGenba(); }catch(e){ console.warn('genba failed',e); }
+  try{ renderVerdict(); }catch(e){ console.warn('verdict failed',e); }
+  try{ renderAR(); }catch(e){ console.warn('ar failed',e); }
+  try{ renderConc(); }catch(e){ console.warn('conc failed',e); }
+  try{ renderIntakeNote(); }catch(e){ console.warn('intake failed',e); }
 
 
   // sparkline
@@ -1947,72 +2516,87 @@ function monthPaceYoY(){
   billableDenso().forEach(j=>{ if(densoSalesYM(j)!==yym) return; const d=j.billingMonth?(j.billingMonth+'-01'):(j.workedAt||j.requestedAt); if(dayOf(d)<=N) t+=densoAmount(j); });
   return t;
 }
+// 2026-07-04 第1波: 二層化 — act=今日の要対応 (actionable・常時最大4件) / notes=観測ノート (傾向・安心材料・棚卸し・details既定閉・無制限)
+// 滞留は新旧分離 (_staleIntake)・台帳AR/放置シェルは⚑棚卸しに隔離＝狼少年防止。遊休は vehicleStats が社用車除外済み。
 function computeInsights(){
-  const out=[];
+  const act=[],notes=[];
   const today=todayISO();
-  // ① 売上ペース (当月累計 vs 前年同月の同経過日)
-  const s=thisMonthSummary();
-  const pace=monthPaceYoY();
+  const vnm=v=>(v.name||'').trim()||_vplate(v);
+  const rank={danger:0,warn:1,info:2,good:3};
+  // ── 上段: 今日の要対応 ──
+  const lateRec=_lateRecoveries();
+  if(lateRec.length) act.push({sev:'danger',t:'回収予定日を過ぎた案件 '+lateRec.length+'件',d:lateRec.slice(0,3).map(c=>c.caseNo||c.driverName||'').filter(Boolean).join(' ／ ')+(lateRec.length>3?' 他':''),tab:'pipe'});
+  const shk=_shakenBuckets();
+  if(shk.exp.length) act.push({sev:'danger',t:'車検切れ '+shk.exp.length+'台',d:shk.exp.slice(0,3).map(vnm).join(' ／ ')+(shk.exp.length>3?' 他':''),tab:'ops'});
+  const ar=arSummary();
+  if(ar.over90>0) act.push({sev:'danger',t:'請求後90日超の未回収 '+yen(ar.over90)+'円（'+ar.over90N+'件）',d:'2024年台帳分は別枠（観測ノート⚑）— 未回収カードで内訳',tab:'pipe'});
+  if(ar.unbECarry>0) act.push({sev:'warn',t:'電装 作業済み未請求 '+yen(ar.unbECarry)+'円が月またぎ',d:'請求書の発行漏れ疑い（'+ar.unbECarryN+'件）— 請求すれば入る金',tab:'pipe'});
+  if(ar.unb>3000000) act.push({sev:'warn',t:'請求書の発行待ち '+yen(ar.unb)+'円',d:'返却済・作業済みで未請求 — 事務処理が資金繰りレバー',tab:'pipe'});
+  if(shk.soon.length){
+    // 第2波: 車検×貸出中の突合 — 「回収後そのまま工場へ」の判断材料 (PC版 2026-06-15b と同思想)
+    const outIds=new Set(rentalCases().filter(isOutToday).map(c=>c.vehicleId).filter(Boolean));
+    const outCnt=shk.soon.filter(v=>outIds.has(v.id)).length;
+    act.push({sev:'warn',t:'車検60日以内 '+shk.soon.length+'台'+(outCnt?'（うち貸出中 '+outCnt+'台）':''),d:shk.soon.slice(0,3).map(vnm).join(' ／ ')+(shk.soon.length>3?' 他':'')+(outCnt?' — 回収後そのまま工場へ':''),tab:'ops'});
+  }
+  const si=_staleIntake();
+  if(si.fresh.length) act.push({sev:'warn',t:'配車日未定の受付 '+si.fresh.length+'件（直近30日）',d:'日程を組む要あり',tab:'pipe'});
+  const dLate=detaliaCases().filter(c=>c.arrival&&!c.delivery&&String(c.arrival).slice(0,10)<addDays(today,-30));
+  if(dLate.length) act.push({sev:'warn',t:'DETALIA 入庫30日超で納車未入力 '+dLate.length+'件',d:'納車入力漏れ or 長期滞留 — 工場在庫が実態より多く見えます',tab:'pipe'});
+  act.sort((a,b)=>rank[a.sev]-rank[b.sev]);
+  const actTop=act.slice(0,4);
+  act.slice(4).forEach(i=>notes.push(i));   // あふれた要対応は観測ノート先頭へ (捨てない)
+  // ── 下段: 観測ノート ──
+  const s=thisMonthSummary(); const pace=monthPaceYoY();
   if(pace>0){
     const pct=Math.round((s.total-pace)/pace*100);
-    if(pct<=-10) out.push({sev:'warn',t:'売上ペースが前年を下回っています（'+pct+'%）',d:'当月 '+yen(s.total)+'円 ／ 前年同経過日 '+yen(pace)+'円',tab:'rev'});
-    else if(pct>=15) out.push({sev:'good',t:'売上ペースは前年より好調（+'+pct+'%）',d:'当月 '+yen(s.total)+'円 ／ 前年同経過日 '+yen(pace)+'円',tab:'rev'});
+    notes.push({sev:(pct<=-10?'warn':(pct>=15?'good':'info')),t:'売上ペース 前年同経過日比 '+(pct>0?'+':'')+pct+'%',d:'当月 '+yen(s.total)+'円 ／ 前年同経過日 '+yen(pace)+'円',tab:'rev'});
   }
-  // ② 稼働率の急低下 (本日 vs 直近30日平均)
   const vs=vehicleStats();
   const todayPct=vs.tot?Math.round(vs.inUse*100/vs.tot):0;
-  if(vs.tot && vs.avg>0 && todayPct<=vs.avg-15) out.push({sev:'warn',t:'本日の稼働率が30日平均より低下',d:'本日 '+todayPct+'% ／ 30日平均 '+vs.avg+'%',tab:'ops'});
-  // ③ 回収予定日 超過 (現場の遅れ)
-  const lateRec=rentalCases().filter(c=>c.status!=='キャンセル'&&c.recoveryCalledAt&&String(c.recoveryCalledAt).slice(0,10)<today&&!c.recoveryCompleted&&['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status));
-  if(lateRec.length) out.push({sev:'danger',t:'回収予定日を過ぎた案件 '+lateRec.length+'件',d:lateRec.slice(0,3).map(c=>c.caseNo||c.driverName||'').filter(Boolean).join(' ／ ')+(lateRec.length>3?' 他':''),tab:'pipe'});
-  // ④ 返却日未定の長期貸出 (売上計上が遅れる)
+  if(vs.tot&&vs.avg>0&&todayPct<=vs.avg-15) notes.push({sev:'warn',t:'本日の稼働率が30日平均より低下',d:'本日 '+todayPct+'% ／ 30日平均 '+vs.avg+'%（平均は車両単純平均＝低めに出る）',tab:'ops'});
+  else if(todayPct>=70) notes.push({sev:'good',t:'本日の稼働率 '+todayPct+'% と高水準',d:'稼働 '+vs.inUse+'/'+vs.tot+'台',tab:'ops'});
   const longOpen=rentalCases().filter(c=>isOutToday(c)&&!c.useEnd&&c.useStart<addDays(today,-30));
-  if(longOpen.length) out.push({sev:'info',t:'返却日未定の長期貸出 '+longOpen.length+'台',d:'30日以上 返却予定日が未入力 — 売上計上も遅れます',tab:'pipe'});
-  // ⑤ 車検 (切れ / 60日以内)
-  const vehs=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済');
-  const exp=[],soon=[];
-  vehs.forEach(v=>{ const i=(v.inspectionDate||'').slice(0,10); if(!i) return; if(i<today) exp.push(v); else if(daysBetween(today,i)<=60) soon.push(v); });
-  const vnm=v=>(v.name||'').trim()||_vplate(v);
-  if(exp.length) out.push({sev:'danger',t:'車検切れ '+exp.length+'台',d:exp.slice(0,3).map(vnm).join(' ／ ')+(exp.length>3?' 他':''),tab:'ops'});
-  if(soon.length) out.push({sev:'warn',t:'車検60日以内 '+soon.length+'台',d:soon.slice(0,3).map(vnm).join(' ／ ')+(soon.length>3?' 他':''),tab:'ops'});
-  // ⑥ 売掛 (請求済・入金待ち = 経営者が一番見たい「詰まり」)
-  const ar=rentalUnified().stages[3]+densoUnified().stages[3];
-  if(ar>0) out.push({sev:'info',t:'請求・入金待ち '+ar+'件',d:'レンタカー＋電装の売掛 — 案件タブで内訳',tab:'pipe'});
-  // ⑦ 遊休車 (直近30日 稼働ゼロ)
-  if(vs.idle.length) out.push({sev:'warn',t:'直近30日 稼働ゼロの車 '+vs.idle.length+'台',d:vs.idle.slice(0,3).map(r=>vnm(r.v)).join(' ／ ')+(vs.idle.length>3?' 他':''),tab:'ops'});
-  // ⑧ 受付の鈍化 (前年同期比 -20%以下)
+  if(longOpen.length) notes.push({sev:'info',t:'返却日未定の長期貸出 '+longOpen.length+'台',d:'30日以上 返却予定日が未入力 — 売上計上も遅れます',tab:'pipe'});
+  if(vs.idle.length) notes.push({sev:'warn',t:'直近30日 稼働ゼロの車 '+vs.idle.length+'台',d:vs.idle.slice(0,3).map(r=>vnm(r.v)).join(' ／ ')+(vs.idle.length>3?' 他':''),tab:'ops'});
   const rec=receptionStats();
   [['レンタカー',rec.rental],['DETALIA',rec.detalia],['電装',rec.denso]].forEach(([nm,g])=>{
     if(g.prevMonthSame>0){
       const p=Math.round((g.month-g.prevMonthSame)/g.prevMonthSame*100);
-      if(p<=-20) out.push({sev:'warn',t:nm+'の受付が鈍化（'+p+'%）',d:'今月 '+g.month+'件 ／ 前年同期 '+g.prevMonthSame+'件',tab:'now'});
+      if(p<=-20) notes.push({sev:'warn',t:nm+'の受付が鈍化（'+p+'%）',d:'今月 '+g.month+'件 ／ 前年同期 '+g.prevMonthSame+'件',tab:'now'});
     }
   });
-  const rank={danger:0,warn:1,info:2,good:3};
-  out.sort((a,b)=>rank[a.sev]-rank[b.sev]);
-  return out.slice(0,7);
+  const k=concentrationKPI();
+  if(k&&k.share>=60) notes.push({sev:'warn',t:'最大依存 '+k.name+' が '+k.share+'%（60%超）',d:'レンタカー年度売上比 — 集中リスク（分析タブに詳細）',tab:'report'});
+  const zeros=[]; if(!lateRec.length)zeros.push('回収超過 0'); if(!shk.exp.length)zeros.push('車検切れ 0'); if(!si.fresh.length)zeros.push('滞留受付 0');
+  if(zeros.length===3) notes.push({sev:'good',t:'✓ '+zeros.join(' ・ '),d:'現場運用は健全（ゼロであることの確認）',tab:'pipe'});
+  if(ar.hist>0||si.shell.length) notes.push({sev:'info',t:'⚑ 棚卸し対象（急がない・データ掃除）',d:(ar.hist>0?('2024年台帳の未回収 '+yen(ar.hist)+'円（'+ar.histN+'件）'):'')+(si.shell.length?((ar.hist>0?' ・ ':'')+'30日超前の受付シェル '+si.shell.length+'件'):''),tab:'pipe'});
+  notes.sort((a,b)=>rank[a.sev]-rank[b.sev]);
+  return {act:actTop, notes};
 }
 function renderInsights(){
   const host=$('insights'); if(!host) return;
-  const items=computeInsights();
-  const alarms=items.filter(i=>i.sev!=='good');
+  const r=computeInsights();
   const cnt=$('ins-count');
   if(cnt){
-    const dgr=items.filter(i=>i.sev==='danger').length, wrn=items.filter(i=>i.sev==='warn').length;
+    const dgr=r.act.filter(i=>i.sev==='danger').length, wrn=r.act.filter(i=>i.sev==='warn').length;
     const parts=[];
     if(dgr) parts.push('<span class="dn">要対応 '+dgr+'</span>');
     if(wrn) parts.push('<span style="color:#C99700">注意 '+wrn+'</span>');
     cnt.innerHTML = parts.length? ' · '+parts.join(' ・ ') : '';
   }
-  let html='';
-  if(!alarms.length) html+='<div class="ins-ok">✓ 順調 — 検知された異常はありません</div>';
-  html+=items.map(i=>
+  const row=i=>
     '<div class="ins-row" onclick="showTab(\''+i.tab+'\')">'+
       '<span class="ins-dot '+i.sev+'"></span>'+
       '<span class="ins-bd"><span class="ins-t">'+esc(i.t)+'</span>'+(i.d?'<div class="ins-d">'+esc(i.d)+'</div>':'')+'</span>'+
       '<span class="ins-arw">›</span>'+
-    '</div>').join('');
-  host.innerHTML=html;
+    '</div>';
+  host.innerHTML = r.act.length ? r.act.map(row).join('') : '<div class="ins-ok">✓ 今日やるべき対応はありません</div>';
+  const wrap=$('ins-notes-wrap'), nhost=$('ins-notes'), sum=$('ins-notes-sum');
+  if(wrap&&nhost){
+    wrap.style.display=r.notes.length?'':'none';
+    nhost.innerHTML=r.notes.map(row).join('');
+    if(sum) sum.textContent='観測ノート '+r.notes.length+'件（傾向・安心材料・棚卸し）';
+  }
 }
 
 // ===== 先々の埋まり (今後14日・予約実数ベース・2026-06-12a) =====
@@ -2020,7 +2604,7 @@ function renderInsights(){
 function _lastYearSameDate(iso){ const d=parseD(iso); if(!d) return iso; d.setFullYear(d.getFullYear()-1); return d.toISOString().slice(0,10); }
 function forwardOccupancy(){
   const today=todayISO();
-  const tot=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち').length||1;
+  const tot=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち'&&v.status!=='社用車').length||1;
   const DONE=['返却済','仮請求','請求済','入金済'];
   const cs=rentalCases().filter(c=>c.status!=='キャンセル'&&c.useStart);
   const effOf=c=> c.useEnd || (DONE.includes(c.status)?c.useStart:'9999-12-31');
@@ -2152,6 +2736,63 @@ function freeeFetchPL(force){
     }
   }, em);
 }
+// ===== 第3波 (2026-07-04): freee B/S ライブ (現預金・借入金) + 入金消込突合 (paidStatus) =====
+// GAS freee_deals.gs は report type=bs / paidStatus(受付NoキーのMap) を実装済み (2026-07-04 実査確認・再デプロイ不要)。読み取りのみ。
+let FREEE_BS=null, FREEE_PAID=null, _freeBSfetched=false, _freePaidFetched=false;
+function _parseBS(res){
+  const bs=res&&res.ok&&res.report&&res.report.trial_bs; if(!bs) return null;
+  const bal=bs.balances||[];
+  let cash=0, hasCash=false;
+  bal.forEach(b=>{ if(!b.total_line&&b.account_category_name==='現金・預金'){ cash+=Number(b.closing_balance||0); hasCash=true; } });
+  const loan=(_plItem(bal,'長期借入金')||0)+(_plItem(bal,'短期借入金')||0);
+  return {cash:hasCash?Math.round(cash):null, loan:Math.round(loan)};
+}
+function _jsonpGAS(params,cbPrefix,onDone,parse){
+  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url){ onDone(null); return; }
+  const cb=cbPrefix+'_'+Date.now(); const s=document.createElement('script'); let done=false;
+  const clean=()=>{ try{delete window[cb]}catch(_){window[cb]=undefined} if(s.parentNode)s.parentNode.removeChild(s); };
+  const tmr=setTimeout(()=>{ if(done)return; done=true; clean(); onDone(null); },30000);
+  window[cb]=function(res){ if(done)return; done=true; clearTimeout(tmr); clean(); onDone(parse?parse(res):res); };
+  s.onerror=()=>{ if(done)return; done=true; clearTimeout(tmr); clean(); onDone(null); };
+  s.src=url+'?'+params+'&token='+encodeURIComponent(FREEE_API_TOKEN)+'&callback='+cb;
+  document.head.appendChild(s);
+}
+function freeeFetchBSPaid(force){
+  if(DEMO){
+    if(!FREEE_BS){ FREEE_BS={cash:40460000,loan:54579000}; FREEE_PAID={'demo-TA1':{date:todayISO()}}; }
+    _renderFreeeBS(); try{ renderAR(); }catch(e){}
+    return;
+  }
+  const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url) return;
+  if(!_freeBSfetched||force){ _freeBSfetched=true;
+    _jsonpGAS('action=report&type=bs&fiscal_year='+_currentFY(),'freeeBS',d=>{ if(d){ FREEE_BS=d; _renderFreeeBS(); } else _freeBSfetched=false; },_parseBS);
+  }
+  if(!_freePaidFetched||force){ _freePaidFetched=true;
+    _jsonpGAS('action=paidStatus&since='+addDays(todayISO(),-365),'freeePaid',res=>{
+      if(res&&res.ok&&res.paid){ FREEE_PAID=res.paid; try{ renderAR(); }catch(e){} }
+      else _freePaidFetched=false;
+    });
+  }
+}
+function _renderFreeeBS(){
+  const host=document.getElementById('rev-freee-bs'); if(!host) return;
+  if(!FREEE_BS){ host.innerHTML=''; return; }
+  const rows=['<tr><td colspan=2 style="border-bottom:0"><span class="ink3" style="font-size:9.5px;letter-spacing:.24em;text-transform:uppercase">B/S ライブ（現在残高）</span></td></tr>'];
+  if(FREEE_BS.cash!=null) rows.push('<tr><td>現金・預金</td><td class="num" style="font-weight:700;color:var(--acc)">'+yen(FREEE_BS.cash)+' 円</td></tr>');
+  if(FREEE_BS.loan) rows.push('<tr><td>借入金 残高</td><td class="num">'+yen(FREEE_BS.loan)+' 円</td></tr>');
+  if(FREEE_BS.cash!=null&&FREEE_BS.loan) rows.push('<tr><td>実質有利子負債（借入−現預金）</td><td class="num">'+yen(FREEE_BS.loan-FREEE_BS.cash)+' 円</td></tr>');
+  if(FREEE_BS.cash!=null) rows.push('<tr><td>現預金 ＝ 現金下限（425万/月）の</td><td class="num">約 '+(Math.round(FREEE_BS.cash/BREAK_EVEN.cash*10)/10)+' ヶ月分</td></tr>');
+  host.innerHTML=rows.join('');
+}
+// 分析タブの静的スナップショットに「本日のLIVE実測」を1行ずつ差し込む (第3波 — 陳腐化の解毒)
+function renderReportLive(){
+  const cEl=document.getElementById('rpt-live-conc'), aEl=document.getElementById('rpt-live-ar');
+  try{
+    const k=concentrationKPI();
+    if(cEl){ if(k){ cEl.style.display=''; cEl.innerHTML='<b>LIVE</b>本日の実測: レンタカー最大依存 '+esc(k.name)+' <b class="num">'+k.share+'%</b>（FY'+_currentFY()+'・売上ベース — 部門別売上カードで定点観測中）'; } else cEl.style.display='none'; }
+    if(aEl){ const a=arSummary(); aEl.style.display=''; aEl.innerHTML='<b>LIVE</b>本日の実測: 未回収（請求済） <b class="num">'+yen(a.live)+'</b>円 ＋ 台帳分 '+yen(a.hist)+'円 ・ 請求待ち <b class="num">'+yen(a.unb)+'</b>円 — TOP「未回収・請求待ち」カードが常時最新'; }
+  }catch(e){ console.warn('report live',e); }
+}
 function _renderFreeePL(){
   const host=document.getElementById('rev-freee-pl'); if(!host||!FREEE_PL) return;
   const c=FREEE_PL, p=FREEE_PL_PREV;
@@ -2249,6 +2890,7 @@ function renderRev(){
   if(sumE>0) rowsCat.push(['電装取付',sumE]);
   $('rev-cat').innerHTML=rowsCat.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${yen(v)} 円</td></tr>`).join('') || '<tr><td colspan=2 class="ink3">データなし</td></tr>';
   try{ freeeFetchPL(); }catch(e){}
+  try{ freeeFetchBSPaid(); }catch(e){}   // 第3波: B/Sライブ + 入金消込突合
 }
 
 // 稼働度に応じた焼入れブルーの濃淡 (高稼働=濃 / 遊休=淡)
@@ -2721,10 +3363,27 @@ function _renderUniPipe(elId, u, note){
 }
 function renderPipe(){
   _renderUniPipe('pipe-rental', rentalUnified());
-  _renderUniPipe('pipe-detalia', detaliaUnified());
+  // DETALIA: 工場内の残工数 (第2波 — workChecks×serviceMenu.hours で「あと何日分の仕事があるか」)
+  let wlNote=null;
+  try{
+    const wl=detaliaWorkload();
+    if(wl.cars>0) wlNote='工場内 '+wl.cars+'台'+(wl.hours>0?(' ・ 残工数 ≈ <b class="num" style="font-size:14px;color:var(--acc)">'+wl.hours+'h</b>（キャパ '+wl.cap+'h/日 ≈ '+wl.days+'日分）'):'（工程チェック未入力）');
+  }catch(e){ console.warn('workload',e); }
+  _renderUniPipe('pipe-detalia', detaliaUnified(), wlNote);
   const dfc=densoForecast();
   _renderUniPipe('pipe-denso', densoUnified(),
     dfc.count?('受注済み 売上予定　<b class="num" style="font-size:14px;color:var(--acc)">+'+yen(dfc.total)+'</b> 円（'+dfc.count+'件・未作業）'):null);
+  try{ renderStaffLoad(); }catch(e){ console.warn('staff',e); }
+}
+// スタッフ負荷バランス (第2波・案件タブ最下部) — 2名未満/操作ゼロなら出さない
+function renderStaffLoad(){
+  const card=$('staff-card'); if(!card) return;
+  const s=staffLoad();
+  if(!s.tot||s.rows.length<2){ card.style.display='none'; return; }
+  card.style.display='';
+  const cols=['#1E40AF','#3056C5','#5A7DDB','#8FA6E4','#B9C6EE','#D6DDF5'];
+  $('stf-bar').innerHTML=s.rows.map((r,i)=>'<i style="width:'+(r.n/s.tot*100).toFixed(1)+'%;background:'+(cols[i]||cols[cols.length-1])+'"></i>').join('');
+  $('stf-names').innerHTML=s.rows.map((r,i)=>'<span><span class="sw" style="background:'+(cols[i]||cols[cols.length-1])+'"></span>'+esc(r.name)+' '+Math.round(r.n/s.tot*100)+'%</span>').join('');
 }
 
 function renderSet(){
@@ -2761,6 +3420,7 @@ function renderAll(){
   }
   renderStaleBar();
   renderNow();renderRev();renderOps();renderPipe();renderSet();
+  try{ renderReportLive(); }catch(e){ console.warn('reportLive',e); }   // 第3波: 分析タブLIVE行
 }
 
 // ---------- TABS / CROWN FAB ----------
@@ -2884,8 +3544,31 @@ function DEMO_R(){
     const useStart=dt.toISOString().slice(0,10);
     const useEnd=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()+5+Math.floor(Math.random()*20)).toISOString().slice(0,10);
     const st=monthsBack===0?status[Math.floor(Math.random()*7)]:(monthsBack<=1?status[6+Math.floor(Math.random()*3)]:'入金済');
-    cases.push({id:'R'+i,caseNo:dt.getFullYear()+'-'+pad2(dt.getMonth()+1)+'-'+pad2(i),status:st,receivedAt:useStart,useStart,useEnd,unitPrice:5500+Math.floor(Math.random()*8)*1100,discount:0,vehicleId:'V'+(i%22),category:Math.random()<0.85?'損保':'一般',driverName:'運転者'+i,recoveryCalledAt:useEnd,invoiceIssuedAt:st==='請求済'?useEnd:null,paymentDueAt:st==='請求済'?addDays(useEnd,30):null});
+    cases.push({id:'R'+i,caseNo:dt.getFullYear()+'-'+pad2(dt.getMonth()+1)+'-'+pad2(i),status:st,receivedAt:useStart,useStart,useEnd,unitPrice:5500+Math.floor(Math.random()*8)*1100,discount:0,vehicleId:'V'+(i%22),category:Math.random()<0.85?'損保':'一般',driverName:'運転者'+i,recoveryCalledAt:useEnd,invoiceIssuedAt:st==='請求済'?useEnd:null,paymentDueAt:st==='請求済'?addDays(useEnd,30):null,
+      insurerId: i%10<6?'ins-ja':(i%10<8?'ins-b':'ins-c')});   // 集中度KPI検証: 約6割をJA共済に
   }
+  // ── 神アプリ第1波 検証用シナリオ (2026-07-04): 今日の現場 / 判定帯 / AR / 滞留 ──
+  const tIso=todayISO(), tomIso=addDays(tIso,1);
+  cases.push(
+    // 本日: 配車3件 (完了2/残1)・回収2件 (完了1/残1)
+    {id:'TD1',caseNo:'demo-TD1',status:'配車済',category:'損保',insurerId:'ins-ja',driverName:'本日配車 完了A',receivedAt:tIso,useStart:tIso,useEnd:addDays(tIso,10),unitPrice:5500,dispatchAt:tIso+'T10:00',dispatchDoneAt:tIso+'T10:12',dispatchToName:'デモ工場A',vehicleId:'V1',updatedBy:'金城',updatedAt:Date.now()},
+    {id:'TD2',caseNo:'demo-TD2',status:'配車済',category:'損保',insurerId:'ins-b',driverName:'本日配車 完了B',receivedAt:tIso,useStart:tIso,useEnd:addDays(tIso,7),unitPrice:6600,dispatchAt:tIso+'T11:30',dispatchDoneAt:tIso+'T11:41',dispatchToName:'デモ工場B',vehicleId:'V2',updatedBy:'末吉',updatedAt:Date.now()},
+    {id:'TD3',caseNo:'demo-TD3',status:'配車予定',category:'損保',insurerId:'ins-ja',driverName:'本日配車 残C',receivedAt:tIso,useStart:tIso,useEnd:addDays(tIso,5),unitPrice:5500,dispatchAt:tIso+'T15:00',dispatchToName:'デモ工場C',vehicleId:'V3',updatedBy:'金城',updatedAt:Date.now()},
+    {id:'TR1',caseNo:'demo-TR1',status:'返却済',category:'損保',insurerId:'ins-ja',driverName:'本日回収 完了D',receivedAt:addDays(tIso,-12),useStart:addDays(tIso,-12),useEnd:tIso,unitPrice:5500,recoveryCalledAt:tIso,recoveryCompleted:true,vehicleId:'V4',updatedBy:'川武',updatedAt:Date.now()},
+    {id:'TR2',caseNo:'demo-TR2',status:'回収連絡',category:'損保',insurerId:'ins-c',driverName:'本日回収 残E',receivedAt:addDays(tIso,-9),useStart:addDays(tIso,-9),unitPrice:5500,recoveryCalledAt:tIso,vehicleId:'V5',updatedBy:'金城',updatedAt:Date.now()},
+    // 回収予定日超過 (判定帯=現場dangerの検証)
+    {id:'TL1',caseNo:'demo-TL1',status:'回収連絡',category:'損保',insurerId:'ins-ja',driverName:'回収超過F',receivedAt:addDays(tIso,-20),useStart:addDays(tIso,-20),unitPrice:5500,recoveryCalledAt:addDays(tIso,-3),vehicleId:'V6'},
+    // 明日: 配車1件
+    {id:'TM1',caseNo:'demo-TM1',status:'配車予定',category:'損保',insurerId:'ins-ja',driverName:'明日配車G',receivedAt:tIso,useStart:tomIso,useEnd:addDays(tomIso,8),unitPrice:5500,dispatchAt:tomIso+'T09:30',dispatchToName:'デモ工場D',vehicleId:'V7'},
+    // 滞留: 直近受付で配車日未定
+    {id:'TS1',caseNo:'demo-TS1',status:'受付',category:'損保',insurerId:'ins-b',driverName:'滞留H',receivedAt:addDays(tIso,-8),unitPrice:0},
+    // 放置シェル (棚卸し対象)
+    {id:'TS2',caseNo:'demo-TS2',status:'受付',category:'損保',driverName:'',receivedAt:addDays(tIso,-200),unitPrice:0},
+    // 2024年 台帳輸入AR (別枠検証)
+    {id:'TH1',caseNo:'demo-TH1',status:'請求済',category:'損保',insurerId:'ins-ja',isHistorical:true,driverName:'台帳I',receivedAt:'2024-06-01',useStart:'2024-06-01',useEnd:'2024-06-20',unitPrice:8000,invoiceIssuedAt:'2024-06-21'},
+    // 90日超ライブAR
+    {id:'TA1',caseNo:'demo-TA1',status:'請求済',category:'損保',insurerId:'ins-c',driverName:'長期未回収J',receivedAt:addDays(tIso,-140),useStart:addDays(tIso,-140),useEnd:addDays(tIso,-120),unitPrice:6000,invoiceIssuedAt:addDays(tIso,-118)}
+  );
   const vehicles=[];const demoCls=['K','K','K','K','K','S','S','S','SH','SV','MH','WA','WS','P','VK','TK','K','S','SH','K','S','P'];
   for(let i=0;i<22;i++){
     // 車検日: 一部を 60日以内 / 1台は期限切れ にして警告バッジを検証可能に
@@ -2901,7 +3584,8 @@ function DEMO_R(){
       inspectionDate: insp
     });
   }
-  return {cases,vehicles,settings:{taxRate:10}};
+  const insurers=[{id:'ins-ja',name:'JA共済（デモ）'},{id:'ins-b',name:'共済B（デモ）'},{id:'ins-c',name:'損保C（デモ）'}];
+  return {cases,vehicles,insurers,settings:{taxRate:10}};
 }
 function DEMO_D(){
   const cases=[];const sizes=['S','M','L','LL'];const plans=['新車プラン','スタンダード','ガラスコーティング','セラミック'];
@@ -2918,6 +3602,14 @@ function DEMO_D(){
     const cust = isGeneral?('顧客'+i):(Math.random()<0.9?'株式会社次郎工業':('業販'+i));
     cases.push({id:'D'+i,category:cat,customer:cust,receptionDate:isoDay,arrival:isoDay+'T10:00',delivery:monthsBack===0&&i%3===0?null:isoDay,paidDate:monthsBack>0||i%5===0?isoDay:null,billMonth:(dt.getMonth()+1)+'月',plan:plans[i%4],size:sizes[i%4],optExt:[30000,50000,100000,200000][i%4],optInt:[0,20000,0,0][i%4],optOther:0,discount:0,carModel:'車両'+i,deleted:false});
   }
+  // ── 神アプリ第1波 検証用 (2026-07-04): 今日の入出庫 / 古い未入金 / 納車入力漏れ ──
+  const tIso=todayISO();
+  cases.push(
+    {id:'DT1',category:'業販',customer:'株式会社次郎工業',carModel:'プリウス',receptionDate:tIso,arrival:tIso+'T11:00',delivery:null,paidDate:null,plan:'セラミック',size:'M',optExt:120000,optInt:0,optOther:0,discount:0,deleted:false},
+    {id:'DT2',category:'一般',customer:'本日納車予定K',carModel:'ワゴンR',receptionDate:addDays(tIso,-6),arrival:addDays(tIso,-6)+'T10:00',deliveryPlan:tIso+'T16:00',delivery:null,paidDate:null,plan:'スタンダード',size:'S',optExt:50000,optInt:0,optOther:0,discount:0,deleted:false},
+    {id:'DT3',category:'業販',customer:'古い未入金L',carModel:'ノア',receptionDate:addDays(tIso,-50),arrival:addDays(tIso,-50)+'T09:00',delivery:addDays(tIso,-42),paidDate:null,plan:'ガラスコーティング',size:'L',optExt:80000,optInt:0,optOther:0,discount:0,deleted:false},
+    {id:'DT4',category:'一般',customer:'納車未入力M',carModel:'タント',receptionDate:addDays(tIso,-48),arrival:addDays(tIso,-45)+'T13:00',delivery:null,paidDate:null,plan:'スタンダード',size:'S',optExt:40000,optInt:0,optOther:0,discount:0,deleted:false}
+  );
   return {cases,settings:{taxRate:10}};
 }
 function DEMO_E(){
@@ -2932,10 +3624,15 @@ function DEMO_E(){
     jobs.push({id:'E'+i,jobNo:'D-'+(100+i),status:stat[Math.floor(Math.random()*stat.length)],requestedAt:iso,workedAt:iso,billingMonth:iso.slice(0,7),qty:1+Math.floor(Math.random()*3),unitFee:[15000,28000,42000,60000][i%4],parts:[],clientName:'工場'+i});
   }
   // 受注済み・未作業 (売上予定の検証用)
-  const tIso=today.toISOString().slice(0,10);
+  const tIso=todayISO();
   ['受注','部品手配','作業中'].forEach((st,i)=>{
     jobs.push({id:'EP'+i,jobNo:'D-'+(200+i),status:st,requestedAt:tIso,workedAt:'',billingMonth:'',qty:1,unitFee:[33000,52000,28000][i],parts:[],clientName:'工場P'+i});
   });
+  // 神アプリ第1波 検証用 (2026-07-04): 本日作業予定 (今日の現場カード) + 月またぎ未請求 (要対応)
+  jobs.push(
+    {id:'ET1',jobNo:'D-301',status:'着荷済',requestedAt:addDays(tIso,-3),scheduledAt:tIso,workedAt:'',billingMonth:'',qty:1,unitFee:36000,parts:[],clientName:'本日作業デモ'},
+    {id:'ET2',jobNo:'D-302',status:'報告済',requestedAt:addDays(tIso,-40),workedAt:addDays(tIso,-35),billingMonth:'',qty:1,unitFee:180000,parts:[],clientName:'月またぎ未請求デモ'}
+  );
   return {jobs,settings:{taxRate:10}};
 }
 
