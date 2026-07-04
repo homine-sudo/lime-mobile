@@ -1254,12 +1254,7 @@
         <div class="cf-hero-l">現預金 残高</div>
         <div class="cf-hero-v num" id="cf-cash">—<span class="unit">円</span></div>
       </div>
-      <div class="cf-grid">
-        <div><span class="cf-k">車両仕入で減る額（納車待ち・現金）</span><span class="cf-v num dn" id="cf-capex">—</span></div>
-        <div><span class="cf-k">仕入後の手元現金（見込み）</span><span class="cf-v num" id="cf-after">—</span></div>
-        <div><span class="cf-k">借入金 残高</span><span class="cf-v num" id="cf-loan">—</span></div>
-        <div><span class="cf-k">実質有利子負債（借入−現預金）</span><span class="cf-v num" id="cf-netdebt">—</span></div>
-      </div>
+      <div class="cf-grid" id="cf-pos-grid"></div>
       <div class="cf-runway" id="cf-runway"></div>
     </div>
 
@@ -1344,7 +1339,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-04';
+const APP_VERSION = '2026-07-04a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2165,6 +2160,11 @@ const BREAK_EVEN = {
 //   現状は空 (推測で税額を入れて資金繰りを誤らせない)。UIに「未設定・要入力」と明示する。
 const CASH_CFG = { loanRepay: 740000, opCFfallback: 1400000, floor: 4250000 };
 const CASH_SPECIAL = {}; // 例) '2027-05': 2500000  ← 法人税・消費税・賞与の予定を入れる
+// 資金イベント (借入実行・車両以外の設備投資) — 月キー YYYY-MM → 額
+const CASH_LOAN_DRAWS  = { '2026-07': 15000000 };                              // 海邦銀行 借入 1,500万 (7月実行)
+const CASH_EXTRA_CAPEX = { '2026-07': { amount: 1800000, label: 'プレハブ' } };// 設備投資(車両以外)。プレハブ 180万
+// 新規借入の返済 (仮条件=7年・元金均等・据置なし → 月約17.9万)。★実際の返済条件が分かり次第 months/startYM/金利 を更新
+const CASH_NEW_LOAN = { amount: 15000000, startYM: '2026-08', months: 84, label: '海邦銀行', assumed: true };
 function renderBreakEven(){
   const card=document.getElementById('be-card'); if(!card) return;
   const s=thisMonthSummary();
@@ -2406,42 +2406,60 @@ function cashFlowPlan(){
   // 月次営業CF = freee 営業利益 ÷ 経過月 (4月起点)。減価償却は期中ほぼ未計上=営業利益≒営業キャッシュ。fallback 定数。
   let opCF = CASH_CFG.opCFfallback, opCFlive=false;
   if(FREEE_PL && FREEE_PL.op!=null && FREEE_PL.em){ const mo=Math.max(1,FREEE_PL.em-3); opCF=Math.round(FREEE_PL.op/mo); opCFlive=true; }
-  const repay = CASH_CFG.loanRepay;
+  const baseRepay = CASH_CFG.loanRepay;
   // 車両仕入 (納車待ち・全額現金・今月=index0 に計上=最も現金が下がる保守的置き方)
   const pend = vehiclesPending();
   const capex = pend.reduce((s,v)=>s+Number(v.vehiclePrice||0),0);
+  // 新規借入(海邦銀行等)の月々元金 (元金均等・仮条件)
+  const newLoanMo = (CASH_NEW_LOAN.amount>0 && CASH_NEW_LOAN.months>0) ? Math.round(CASH_NEW_LOAN.amount/CASH_NEW_LOAN.months) : 0;
+  const _ymDiff=(a,b)=>{const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);return (ay-by)*12+(am-bm);};
+  // 資金イベント合計 (表示用)
+  const loanDrawTotal=Object.values(CASH_LOAN_DRAWS).reduce((s,v)=>s+Number(v||0),0);
+  const extraCapexTotal=Object.values(CASH_EXTRA_CAPEX).reduce((s,v)=>s+Number((v&&v.amount)||0),0);
   // 12ヶ月投影 (当月起点)
-  const now=new Date(); const rows=[]; let c=openCash; let trough={close:Infinity,idx:-1};
+  const now=new Date(); const rows=[]; let c=openCash; let trough={close:Infinity,idx:-1}; let loanBal=loan+loanDrawTotal;
   for(let i=0;i<12;i++){
     const d=new Date(now.getFullYear(), now.getMonth()+i, 1);
     const key=d.getFullYear()+'-'+pad2(d.getMonth()+1);
-    const cap=(i===0)?capex:0;
+    const veh=(i===0)?capex:0;
+    const exCap=CASH_EXTRA_CAPEX[key]?Number(CASH_EXTRA_CAPEX[key].amount||0):0;
+    const invest=veh+exCap;
+    const loanDraw=Number(CASH_LOAN_DRAWS[key]||0);
+    let repay=baseRepay;
+    if(newLoanMo>0 && key>=CASH_NEW_LOAN.startYM){ const el=_ymDiff(key,CASH_NEW_LOAN.startYM); if(el>=0&&el<CASH_NEW_LOAN.months) repay+=newLoanMo; }
     const sp=Number(CASH_SPECIAL[key]||0);
     const open=c;
-    const close=open+opCF-repay-cap-sp;
-    rows.push({key, label:(d.getMonth()+1)+'月', open, cf:opCF, repay, capex:cap, special:sp, close, vsFloor:close-CASH_CFG.floor});
+    const close=open+opCF+loanDraw-repay-invest-sp;
+    rows.push({key, label:(d.getMonth()+1)+'月', open, cf:opCF, loanDraw, repay, veh, exCap, invest, special:sp, close, vsFloor:close-CASH_CFG.floor});
     if(close<trough.close){ trough={close, idx:i, label:(d.getMonth()+1)+'月'}; }
     c=close;
   }
-  return {openCash, loan, opCF, opCFlive, repay, capex, pendCount:pend.length, rows, trough, floor:CASH_CFG.floor,
-    hasSpecial:Object.keys(CASH_SPECIAL).length>0};
+  return {openCash, loan, loanAfter:loan+loanDrawTotal, opCF, opCFlive, baseRepay, newLoanMo, capex, extraCapexTotal, loanDrawTotal,
+    pendCount:pend.length, rows, trough, floor:CASH_CFG.floor,
+    hasSpecial:Object.keys(CASH_SPECIAL).length>0, newLoanAssumed:!!CASH_NEW_LOAN.assumed};
 }
 function renderCash(){
   const card=$('cf-pos-card'); if(!card) return;
   const p=cashFlowPlan();
   const man=n=>Math.round(n/10000).toLocaleString(); // 万円
-  // 現金ポジション
+  const july=p.rows[0]; // 当月(=借入/設備投資が起きる月)
+  // 現金ポジション (借入・設備投資を織り込んだ動的グリッド)
   $('cf-cash').innerHTML=yen(p.openCash)+'<span class="unit">円</span>';
-  $('cf-capex').textContent=(p.capex>0?'−':'')+yen(p.capex)+' 円';
-  $('cf-after').textContent=yen(p.openCash-p.capex)+' 円';
-  $('cf-loan').textContent=yen(p.loan)+' 円';
-  $('cf-netdebt').textContent=yen(Math.max(0,p.loan-p.openCash))+' 円';
-  // 余裕 = (現在現預金 − 現金下限) ÷ 月次純減耗... ここでは車両仕入後でも下限まで何ヶ月かを示す
-  const afterCap=p.openCash-p.capex;
-  const monthsToFloor = (p.opCF-p.repay)>=0 ? '∞（毎月プラス）' : Math.floor((afterCap-p.floor)/((p.repay-p.opCF)))+' ヶ月';
-  $('cf-runway').innerHTML='車両 '+p.pendCount+'台（'+yen(p.capex)+'円）を現金で仕入れても、手元現金は '+yen(afterCap)+'円。'+
-    '現金下限（'+man(p.floor)+'万）まで <b>'+yen(afterCap-p.floor)+'円</b> の余裕。'+
-    (p.opCF>p.repay?' 営業CFが返済を上回るため以後は毎月プラス。':' ');
+  const grid=$('cf-pos-grid');
+  const investTotal=p.capex+p.extraCapexTotal;
+  if(grid){
+    let rows='';
+    if(p.loanDrawTotal>0) rows+='<div><span class="cf-k">海邦銀行 借入（今月実行）</span><span class="cf-v num" style="color:var(--acc)">+'+yen(p.loanDrawTotal)+'</span></div>';
+    rows+='<div><span class="cf-k">設備投資（車両'+p.pendCount+'台'+(p.extraCapexTotal>0?'＋プレハブ':'')+'・現金）</span><span class="cf-v num dn">−'+yen(investTotal)+'</span></div>';
+    rows+='<div><span class="cf-k">今月末 手元現金（見込み）</span><span class="cf-v num'+(july.close<p.floor?' dn':'')+'">'+yen(july.close)+'</span></div>';
+    rows+='<div><span class="cf-k">借入金 残高'+(p.loanDrawTotal>0?'（実行後 見込み）':'')+'</span><span class="cf-v num">'+yen(p.loanAfter)+'</span></div>';
+    rows+='<div><span class="cf-k">実質有利子負債（借入後−手元現金）</span><span class="cf-v num">'+yen(Math.max(0,p.loanAfter-july.close))+'</span></div>';
+    grid.innerHTML=rows;
+  }
+  $('cf-runway').innerHTML='設備投資 '+yen(investTotal)+'円（車両'+p.pendCount+'台'+(p.extraCapexTotal>0?'＋プレハブ'+man(p.extraCapexTotal)+'万':'')+'）'+
+    (p.loanDrawTotal>0?'を、海邦銀行 借入'+man(p.loanDrawTotal)+'万で手元を厚くしつつ実行。':'を現金で実行。')+
+    ' 最も下がる '+p.trough.label+'でも <b>'+yen(p.trough.close)+'円</b>（現金下限'+man(p.floor)+'万まで +'+yen(p.trough.close-p.floor)+'円）。'+
+    (p.opCF>p.baseRepay+p.newLoanMo?' 営業CFが返済を上回り以後は毎月プラス。':'');
   // チャート (月末現金 12本 + 下限ライン)
   const svg=$('cf-chart');
   if(svg){
@@ -2475,13 +2493,14 @@ function renderCash(){
   // 月次テーブル (万円)
   const t=$('cf-table');
   if(t){
-    const head='<tr><th class="mo">月</th><th>期首</th><th>営業CF</th><th>返済</th><th>車両</th><th>税賞与</th><th>期末</th><th>下限差</th></tr>';
+    const head='<tr><th class="mo">月</th><th>期首</th><th>営業CF</th><th>借入</th><th>返済</th><th>投資</th><th>税賞与</th><th>期末</th><th>下限差</th></tr>';
     const body=p.rows.map((r,i)=>'<tr'+(i===p.trough.idx?' class="trough"':'')+'>'+
       '<td class="mo">'+r.label+'</td>'+
       '<td>'+man(r.open)+'</td>'+
       '<td>+'+man(r.cf)+'</td>'+
+      '<td>'+(r.loanDraw?'+'+man(r.loanDraw):'0')+'</td>'+
       '<td class="dn">−'+man(r.repay)+'</td>'+
-      '<td class="dn">'+(r.capex?'−'+man(r.capex):'0')+'</td>'+
+      '<td class="dn">'+(r.invest?'−'+man(r.invest):'0')+'</td>'+
       '<td'+(r.special?' class="dn"':'')+'>'+(r.special?'−'+man(r.special):'0')+'</td>'+
       '<td class="close">'+man(r.close)+'</td>'+
       '<td'+(r.vsFloor<0?' class="dn"':'')+'>'+(r.vsFloor>=0?'+':'')+man(r.vsFloor)+'</td>'+
@@ -2489,10 +2508,13 @@ function renderCash(){
     t.innerHTML=head+body;
   }
   // 前提
-  $('cf-assump').innerHTML='【前提】期首現金・借入残＝freee'+(FREEE_BS?'ライブ':'（前回値）')+
+  let assump='【前提】期首現金・借入残＝freee'+(FREEE_BS?'ライブ':'（前回値）')+
     '。 月次営業CF ＝ '+yen(p.opCF)+'円'+(p.opCFlive?'（freee営業利益 4〜当月 ÷ 経過月）':'（概算）')+
-    '。 借入元金返済 ＝ '+yen(p.repay)+'円/月。 車両仕入 ＝ 納車待ち'+p.pendCount+'台を今月に全額現金計上。'+
-    (p.hasSpecial?'':'<br><span style="color:var(--warn)">※ 税金（法人税・消費税）・賞与は未設定（0）。予定額を教えてもらえれば「税賞与」列に反映します。入れるとさらに下がります。</span>');
+    '。 既存の借入元金返済 ＝ '+yen(p.baseRepay)+'円/月。 投資 ＝ 納車待ち車両'+p.pendCount+'台'+(p.extraCapexTotal>0?'＋プレハブ'+man(p.extraCapexTotal)+'万':'')+'を今月に全額現金計上。';
+  if(p.loanDrawTotal>0) assump+=' 借入 ＝ 海邦銀行 '+man(p.loanDrawTotal)+'万を今月実行。';
+  if(p.newLoanMo>0) assump+='<br><span style="color:var(--warn)">※ 新規借入'+man(p.loanDrawTotal)+'万の返済は仮条件（7年・元金均等 ＝ 月約'+man(p.newLoanMo)+'万・翌月開始）で計上中。実際の返済期間・金利・据置を教えてもらえれば正確に反映します。</span>';
+  if(!p.hasSpecial) assump+='<br><span style="color:var(--warn)">※ 税金（法人税・消費税）・賞与は未設定（0）。予定額を教えてもらえれば「税賞与」列に反映します。</span>';
+  $('cf-assump').innerHTML=assump;
 }
 function renderNow(){
   const s=thisMonthSummary();
