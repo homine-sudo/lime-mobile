@@ -1939,7 +1939,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-03b';
+const APP_VERSION = '2026-07-04';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3345,7 +3345,11 @@ function renderHome(){
   const dispDone  = dispToday.filter(c => c.dispatchDoneAt).length;
   const dispLeft  = Math.max(0, dispToday.length - dispDone);
   // 今日の回収: 同上 (残り件数 → 完了で0)
-  const recToday  = cases.filter(c => (c.recoveryCalledAt||'').startsWith(today));
+  // ★2026-07-04: 母集団を回収リスト「今日」タブと完全に同じ基準に統一
+  //   (一般貸渡=返却日useEnd / 損保等=回収予定日recoveryCalledAt)。
+  //   これで「ホームの残りN件 == 今日タブの表示N件」が常に一致する (ユーザー要望)。
+  const _recDayKey = c => c.category === '一般' ? (c.useEnd||'') : (c.recoveryCalledAt||'');
+  const recToday  = cases.filter(c => _recDayKey(c).startsWith(today));
   const recDone   = recToday.filter(c => c.recoveryCompleted).length;
   const recLeft   = Math.max(0, recToday.length - recDone);
   // 予定 = 予定日が入っている未完了の配車・回収 (今日以降の予定 + 過去の遅れ) を配車/回収で分けて表示。
@@ -3716,11 +3720,11 @@ function getRecoveryCases(tab){
   // ★2026-05-22 α方針: 一般貸渡は recoveryCalledAt が空 (回収予定の登録なし) のため
   //   useEnd(返却日) で today/upcoming に拾う。pending には載せない (PC専用管理)。
   const dayKey = c => c.category === '一般' ? (c.useEnd||'') : (c.recoveryCalledAt||'');
-  // 完了済みの案件も表示する (カードに done クラスがついて薄表示になる)
+  // ★2026-07-04 「今日」タブは未完了のみ (ユーザー「残り3だから3件のみ表示して」)。
+  //   ホームKPIの「残り」と件数が常に一致する。完了済みはKPIの「完了N/全M」と履歴タブで確認。
   if(tab === 'today'){
-    return cases.filter(c => dayKey(c).startsWith(today))
-      .sort((a,b) => Number(!!a.recoveryCompleted) - Number(!!b.recoveryCompleted)
-        || dayKey(a).localeCompare(dayKey(b)));
+    return cases.filter(c => dayKey(c).startsWith(today) && !c.recoveryCompleted)
+      .sort((a,b) => dayKey(a).localeCompare(dayKey(b)));
   }
   if(tab === 'upcoming'){
     const limit = new Date(); limit.setDate(limit.getDate()+7);
