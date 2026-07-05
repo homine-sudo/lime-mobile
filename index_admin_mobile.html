@@ -41,6 +41,11 @@
     --serif:'Cormorant Garamond','EB Garamond','Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif;
     --display:'Italiana','Cormorant Garamond',serif;
     --sans:'Inter','Helvetica Neue','Hiragino Kaku Gothic ProN','Yu Gothic',system-ui,sans-serif;
+    /* 神モード: HERO + 判定帯 の黒スケルトン (スモークサファイア) — 2026-07-05 */
+    --kami-bg1:#20283a; --kami-bg2:#161d2c; --kami-bg3:#0b0f18;
+    --kami-line:#38455f; --kami-line2:#2c3648;
+    --kami-ink:#f4f6fa; --kami-ink2:#c3ccdd; --kami-ink3:#8791a8;
+    --kami-blue:#8fb0ea; --kami-blue2:#4d6bc4; --kami-gold:#c8a86a; --kami-warn:#e0b055; --kami-danger:#e5707e;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;letter-spacing:.01em;font-weight:300;
@@ -533,6 +538,49 @@
   /* corner ticks 廃止 (互換) */
   .card.hero .corner-tick,.card.hero .auto-label{display:none}
 
+  /* ===== 神モード: HERO を黒スケルトン (オープンワーク) に (2026-07-05) ===== */
+  .card.hero{
+    background:radial-gradient(120% 92% at 50% 26%, var(--kami-bg1) 0%, var(--kami-bg2) 48%, var(--kami-bg3) 100%);
+    border:1px solid #2c3648;
+    box-shadow:0 8px 26px rgba(6,10,20,.30), inset 0 1px 0 rgba(255,255,255,.05);
+    overflow:hidden; isolation:isolate;
+  }
+  .card.hero > :not(.hero-ow){position:relative;z-index:1}
+  .card.hero::before{ border:1px solid rgba(255,255,255,.09); border-top:1.5px solid var(--kami-blue); border-bottom:1.5px solid var(--kami-blue); z-index:1; }
+  /* オープンワーク層 (歯車のヘアライン・焼入れビス) */
+  .hero-ow{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+  /* HERO 内テキストを白基調へ */
+  .card.hero .lbl{color:var(--kami-ink3)}
+  .card.hero .big,.card.hero .big.num{color:var(--kami-ink);text-shadow:0 0 24px rgba(90,125,219,.34)}
+  .card.hero .big .unit{color:var(--kami-ink3)}
+  .card.hero .med,.card.hero .med.num{color:var(--kami-ink)}
+  .card.hero .med .unit{color:var(--kami-ink3)}
+  .card.hero .delta{color:var(--kami-blue)}
+  .card.hero .delta.up{color:var(--kami-blue)}
+  .card.hero .delta.dn{color:var(--kami-danger)}
+  .card.hero .delta.ink3{color:var(--kami-ink3)}
+  .card.hero .ytd-divider{background:rgba(255,255,255,.11)}
+  .card.hero .subdial-val,.card.hero .subdial-val.num{color:var(--kami-blue)}
+  .card.hero .subdial-cap{color:var(--kami-ink3)}
+  .card.hero .subdial .sd-rim{stroke:var(--kami-line)}
+  .card.hero .subdial .sd-face{fill:rgba(255,255,255,.02);stroke:var(--kami-line)}
+  .card.hero .subdial .sd-gui{stroke:rgba(255,255,255,.06)}
+  .card.hero .subdial .sd-ticks line{stroke:var(--kami-ink3)}
+  .card.hero .subdial .sd-needle line{stroke:var(--kami-blue)}
+  .card.hero .subdial .sd-needle line.tail{stroke:var(--kami-blue2);opacity:.7}
+  .card.hero .subdial .sd-pivot{fill:var(--kami-gold)}
+
+  /* ===== 神モード: 判定帯 も黒地に (HEROと対で魅せる) ===== */
+  .verdict-card{
+    background:radial-gradient(130% 130% at 50% 0%, var(--kami-bg1) 0%, var(--kami-bg2) 55%, var(--kami-bg3) 100%);
+    border:1px solid #2c3648;
+    box-shadow:0 6px 20px rgba(6,10,20,.26);
+    overflow:hidden;
+  }
+  .verdict-card .vd-badge{font-family:var(--serif)}
+  .verdict-card .vd-lens{color:var(--kami-ink2)}
+  .verdict-card .vd-lines{color:var(--kami-ink2);border-top:1px dotted rgba(255,255,255,.14)}
+
   /* ===== 気づき (自動インサイト・2026-06-12a) ===== */
   .ins-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dotted var(--line);cursor:pointer}
   .ins-row:last-child{border-bottom:0}
@@ -712,8 +760,26 @@
       <div class="vd-lines" id="vd-lines"></div>
     </div>
 
-    <!-- ① HERO: IWC Portugieser 7 Days ダイヤルに忠実 -->
+    <!-- ① HERO: IWC Portugieser 7 Days ダイヤルに忠実 → 2026-07-05 神モード(黒スケルトン/オープンワーク) -->
     <div class="card hero">
+      <!-- オープンワーク層: 文字盤下の"機械"(データの動き)を透かすヘアライン歯車 + 焼入れビス -->
+      <svg class="hero-ow" viewBox="0 0 300 440" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <g fill="none" stroke="#38455f" stroke-width="1" opacity="0.5">
+          <circle cx="150" cy="262" r="122"/><circle cx="150" cy="262" r="110"/>
+          <circle cx="54" cy="342" r="46"/><circle cx="250" cy="188" r="34"/><circle cx="240" cy="368" r="26"/>
+        </g>
+        <g fill="none" stroke="#4d6bc4" stroke-width="1" opacity="0.45">
+          <path d="M54 296 A46 46 0 0 1 100 342"/>
+          <path d="M250 154 A34 34 0 0 1 284 188"/>
+          <path d="M240 342 A26 26 0 0 1 266 368"/>
+        </g>
+        <g stroke="#2c3648" stroke-width="1" opacity="0.6">
+          <line x1="150" y1="140" x2="150" y2="152"/><line x1="272" y1="262" x2="260" y2="262"/>
+          <line x1="150" y1="384" x2="150" y2="372"/><line x1="28" y1="262" x2="40" y2="262"/>
+        </g>
+        <g fill="#4d6bc4" opacity="0.85"><circle cx="54" cy="342" r="2.6"/><circle cx="250" cy="188" r="2.6"/><circle cx="240" cy="368" r="2.6"/></g>
+        <circle cx="150" cy="262" r="2.4" fill="#c8a86a" opacity="0.7"/>
+      </svg>
       <!-- 当月 合算売上 (主役) -->
       <div class="lbl" style="text-align:center;margin-bottom:8px;margin-top:4px">当月 合算売上 · 税込</div>
       <div class="big num tap" id="now-total" style="text-align:center" onclick="showTab('rev')">—<span class="unit">円</span></div>
@@ -1339,7 +1405,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-04a';
+const APP_VERSION = '2026-07-05';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2239,8 +2305,9 @@ function renderVerdict(){
   lenses.push({k:'リスク',lv:rLv});
   const present=lenses.filter(l=>l.lv!=null).map(l=>l.lv);
   const worst=present.length?Math.max.apply(null,present):null;
-  const MAP={0:{t:'順調',c:'var(--acc)'},1:{t:'注意',c:'var(--warn)'},2:{t:'要対応',c:'var(--danger)'}};
-  const m=(worst==null)?{t:'判定保留',c:'var(--line2)'}:MAP[worst];
+  // 神モード(黒地)で映える明色。順調=淡ブルー/注意=金/要対応=淡レッド
+  const MAP={0:{t:'順調',c:'var(--kami-blue)'},1:{t:'注意',c:'var(--kami-warn)'},2:{t:'要対応',c:'var(--kami-danger)'}};
+  const m=(worst==null)?{t:'判定保留',c:'var(--kami-ink3)'}:MAP[worst];
   card.style.display='';
   card.style.borderLeft='3px solid '+m.c;
   const b=$('vd-badge'); b.textContent=m.t; b.style.color=m.c;
