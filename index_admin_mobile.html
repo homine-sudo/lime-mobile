@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#F5F5F6">
+<meta name="theme-color" content="#0c111c">
 <title>Hari Terrace 経営ダッシュボード</title>
 <link rel="apple-touch-icon" sizes="180x180" href="ht_logo.png">
 <link rel="apple-touch-icon" sizes="1024x1024" href="ht_logo.png">
@@ -17,27 +17,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:wght@400;500&family=Italiana&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* IWC Portugieser 42 silvered dial palette — pure WHITE (not cream) */
-    --bg:#ECEDEE;            /* cool silver page */
-    --bg2:#F5F5F6;
-    --panel:#FFFFFF;         /* pure silvered dial face */
-    --panel2:#F4F4F5;        /* subdial (slightly darker cool grey) */
-    --panel-hi:#FFFFFF;      /* polished highlight */
-    --line:#D6D7D9;          /* hairline minute track (cool grey) */
-    --line2:#9B9DA0;         /* heavier hairline / chapter ring */
-    --line3:#6F7174;         /* deepest hairline */
-    --ink:#0B1729;           /* deep blued steel ink (unchanged) */
-    --ink2:#34425A;          /* secondary text */
-    --ink3:#66686C;          /* cool grey labels — on-white 5.5:1 でAA確保 (旧#7A7C80は4.18:1でAA未達) */
-    --acc:#1E40AF;           /* IWC 焼入れブルー (実物 blued steel) — 鮮やかな royal blue */
-    --acc2:#3056C5;
-    --acc-hi:#5A7DDB;
-    --gold:#9A8454;          /* gold は最小限のアクセントのみ */
-    --gold-hi:#C7B07A;
-    --red:#9D1626;
-    --warn:#8E6219;
-    --danger:#9D1626;
-    --ok:#1C355F;
+    /* 2026-07-05 神モード全面統一: 黒スケルトン(スモークサファイア)ダーク盤に反転 (旧・白盤IWCの値はバックアップ .bak-darkunify-2026-07-05) */
+    --bg:#0c111c;            /* 盤面の外周 (最暗) */
+    --bg2:#141b28;
+    --panel:#161d2c;         /* カード面 (kami-bg2) */
+    --panel2:#1b2233;        /* サブダイヤル等 やや明 */
+    --panel-hi:#212a3d;      /* ハイライト面 (kami-bg1) */
+    --line:#2c3648;          /* ヘアライン (kami-line2) */
+    --line2:#3b4a63;         /* 太ヘアライン / チャプターリング */
+    --line3:#4d5e7c;         /* 最深ヘアライン → ダークでは最明ライン */
+    --ink:#f4f6fa;           /* 主テキスト (白基調) */
+    --ink2:#c3ccdd;          /* 副テキスト */
+    --ink3:#8791a8;          /* ラベル (暗地でAA) */
+    --acc:#6f97e6;           /* 焼入れブルー(暗地で映える明度) */
+    --acc2:#5f86dc;
+    --acc-hi:#9bb6ee;
+    --gold:#c8a86a;          /* シャンパン金 */
+    --gold-hi:#dcc38a;
+    --red:#e5707e;
+    --warn:#e0b055;
+    --danger:#e5707e;
+    --ok:#8fb0ea;
     --serif:'Cormorant Garamond','EB Garamond','Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif;
     --display:'Italiana','Cormorant Garamond',serif;
     --sans:'Inter','Helvetica Neue','Hiragino Kaku Gothic ProN','Yu Gothic',system-ui,sans-serif;
@@ -51,7 +51,7 @@
   html,body{margin:0;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;letter-spacing:.01em;font-weight:300;
     /* シルバー化 ダイヤルのような warm gradient (center高輝度→edge深め) */
     background:
-      radial-gradient(ellipse 120% 80% at 50% 25%, var(--bg2) 0%, var(--bg) 55%, #D8DADC 100%) fixed;
+      radial-gradient(ellipse 120% 80% at 50% 18%, var(--bg2) 0%, var(--bg) 58%, #070a11 100%) fixed;
     -webkit-font-smoothing:antialiased;
   }
   body{padding:0;padding-bottom:env(safe-area-inset-bottom,0)}
@@ -65,7 +65,7 @@
   .ph{padding:14px 16px}
   /* ----- header ----- (chapter ring風の細いライン) */
   /* IWC = quiet. ヘッダは hairline 1本だけで仕切る */
-  .hdr{position:sticky;top:0;z-index:5;background:rgba(245,245,246,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line2);padding:env(safe-area-inset-top,0) 0 0 0}
+  .hdr{position:sticky;top:0;z-index:5;background:rgba(14,20,32,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--line2);padding:env(safe-area-inset-top,0) 0 0 0}
   .hdr-row{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;padding:15px 16px 12px;position:relative}
   .brand{font-family:var(--display);font-size:17px;letter-spacing:.40em;text-transform:uppercase;font-weight:400;color:var(--ink);white-space:nowrap;line-height:1}
   .ver{font-size:8.5px;color:var(--ink3);letter-spacing:.22em;text-transform:lowercase;white-space:nowrap;font-style:italic;font-family:var(--serif);font-weight:400;line-height:1}
@@ -211,9 +211,9 @@
   .pipe-head{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 7px;padding-bottom:6px;border-bottom:1px solid var(--line)}
   .pipe-head b{font-family:var(--serif);font-size:19px;font-weight:500;color:var(--ink)}
   .pipe-head .ink3{font-size:12px}
-  .pipe .row.alert .nm{color:#9A3B00;font-weight:600}
+  .pipe .row.alert .nm{color:#e0b055;font-weight:600}
   .pipe .row.alert .bar2 > i{background:#E69E50}
-  .pipe .yousotai{font-size:9px;padding:1px 5px;border-radius:8px;background:#FBEEE6;color:#9A3B00;font-weight:700;margin-left:5px;font-family:var(--sans,inherit);white-space:nowrap;display:inline-block}
+  .pipe .yousotai{font-size:9px;padding:1px 5px;border-radius:8px;background:#33242b;color:#e0b055;font-weight:700;margin-left:5px;font-family:var(--sans,inherit);white-space:nowrap;display:inline-block}
   /* list */
   .list .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
   .list .item:last-child{border-bottom:0}
@@ -235,7 +235,7 @@
   .spark text{fill:var(--ink3);font-size:8.5px;font-family:var(--serif);letter-spacing:.08em;font-style:italic}
   /* buttons */
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;border:1px solid var(--line2);background:transparent;color:var(--ink);font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:400}
-  .btn.primary{background:var(--acc);color:#FCFBF6;border-color:var(--acc)}
+  .btn.primary{background:var(--acc);color:#0c111c;border-color:var(--acc)}
   .btn.ghost{color:var(--ink3);border-color:var(--line)}
   .btn.full{width:100%}
   .btn:active{transform:translateY(1px)}
@@ -351,7 +351,7 @@
 
   /* ===== 生涯ROI 戦略判断 (2026-06-10) ===== */
   .life-sum{display:flex;gap:6px;margin:4px 0 8px}
-  .ls-item{flex:1;text-align:center;background:#F6F8FB;border-radius:8px;padding:7px 3px}
+  .ls-item{flex:1;text-align:center;background:#1b2233;border-radius:8px;padding:7px 3px}
   .ls-n{font-family:var(--serif);font-size:21px;font-weight:600;line-height:1.05}
   .ls-l{font-size:9.5px;color:var(--ink3);letter-spacing:.02em;margin-top:2px}
   .lbl2{font-size:11px;font-weight:700;color:var(--acc);margin:8px 0 4px}
@@ -587,15 +587,15 @@
   .ins-row:active{opacity:.6}
   .ins-dot{flex:0 0 7px;width:7px;height:7px;border-radius:50%;margin-top:5px}
   .ins-dot.danger{background:var(--danger)}
-  .ins-dot.warn{background:#C99700}
+  .ins-dot.warn{background:#e0b055}
   .ins-dot.info{background:var(--acc)}
-  .ins-dot.good{background:#2D7D33}
+  .ins-dot.good{background:#8fd08c}
   .ins-bd{flex:1;min-width:0}
   .ins-t{font-size:13px;color:var(--ink);letter-spacing:.01em;line-height:1.4}
   .ins-row .ins-t b{font-family:var(--serif);font-weight:600}
   .ins-d{font-size:10.5px;color:var(--ink3);margin-top:2px;letter-spacing:.02em;line-height:1.5}
   .ins-arw{flex:0 0 auto;color:var(--line2);font-size:13px;margin-top:2px}
-  .ins-ok{display:flex;align-items:center;gap:10px;padding:8px 0;font-family:var(--serif);font-size:14.5px;color:#2D7D33;letter-spacing:.03em}
+  .ins-ok{display:flex;align-items:center;gap:10px;padding:8px 0;font-family:var(--serif);font-size:14.5px;color:#8fd08c;letter-spacing:.03em}
 
   /* ===== 神アプリ 第1波 (2026-07-04): 判定帯 / 今日の現場 / 未回収・請求待ち / 集中度 / 観測ノート ===== */
   .verdict-card{border-left:3px solid var(--acc)}
@@ -617,8 +617,8 @@
   .gb-it{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px dotted var(--line);font-size:11.5px;color:var(--ink2)}
   .gb-it:last-child{border-bottom:0}
   .gb-it .gk{flex:0 0 auto;font-size:9px;letter-spacing:.1em;padding:1px 6px;border:1px solid var(--line2);color:var(--ink3);white-space:nowrap}
-  .gb-it .gk.disp{color:#185FA5;border-color:#8FB3DC}
-  .gb-it .gk.rec{color:var(--danger);border-color:#D9A0A8}
+  .gb-it .gk.disp{color:#9bb6ee;border-color:#3a4d72}
+  .gb-it .gk.rec{color:var(--danger);border-color:#6a3b42}
   .gb-it .gt{flex:1 1 auto;min-width:0}
   .gb-it .gb-left{margin-left:auto;color:var(--danger);font-size:10px;font-weight:600;white-space:nowrap}
   details.kd{margin-top:9px}
@@ -641,7 +641,7 @@
   .conc-row{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;color:var(--ink2)}
   .conc-row .num{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink)}
   .conc-row .num.dn{color:var(--danger)}
-  .conc-bar{position:relative;height:3px;background:#E2E3E5;margin-top:6px}
+  .conc-bar{position:relative;height:3px;background:#2c3648;margin-top:6px}
   .conc-bar>i{position:absolute;left:0;top:0;height:3px;background:var(--acc)}
   .conc-bar .tick{position:absolute;top:-3px;width:2px;height:9px;background:var(--danger)}
   .conc-cap{font-size:9px;color:var(--ink3);margin-top:4px;letter-spacing:.04em}
@@ -649,23 +649,23 @@
   /* 第2波: 在庫逼迫チップ / 平常比 / 現場スパーク / スタッフ負荷 */
   .gb-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
   .gb-chip{font-size:10px;padding:2px 8px;letter-spacing:.05em;border:1px solid var(--line2);color:var(--ink2);white-space:nowrap}
-  .gb-chip.full{color:var(--danger);border-color:#D9A0A8;background:#FBF3F4}
-  .gb-chip.ok{color:#0C447C;border-color:#8FB3DC;background:#F2F7FC}
+  .gb-chip.full{color:var(--danger);border-color:#6a3b42;background:#33242b}
+  .gb-chip.ok{color:#9bb6ee;border-color:#3a4d72;background:#1c2740}
   .gb-chip.mut{color:var(--ink3)}
-  .gb-norm{margin-left:auto;font-size:9.5px;letter-spacing:.04em;color:#185FA5;background:#EDF3FA;border:1px solid #C8D9EC;padding:2px 8px;white-space:nowrap}
-  .gb-norm.hot{background:#DCE8F6;color:#0C447C;font-weight:600}
+  .gb-norm{margin-left:auto;font-size:9.5px;letter-spacing:.04em;color:#9bb6ee;background:#1c2740;border:1px solid #33425f;padding:2px 8px;white-space:nowrap}
+  .gb-norm.hot{background:#243356;color:#9bb6ee;font-weight:600}
   .gb-norm.mut{background:transparent;border-color:var(--line2);color:var(--ink3)}
   .gb-spark{display:flex;align-items:center;gap:8px;margin-top:10px}
   .gb-spark-svg{width:150px;height:22px;flex:0 0 auto}
   .gb-spark-svg rect{fill:#B9C9E4}
   .gb-spark-svg rect:last-child{fill:var(--acc)}
   .gb-spark>span{font-size:9px;color:var(--ink3);letter-spacing:.04em;line-height:1.5}
-  .stf-bar{display:flex;height:10px;margin-top:6px;background:#E9EAEC}
+  .stf-bar{display:flex;height:10px;margin-top:6px;background:#2c3648}
   .stf-bar>i{display:block;height:100%}
   .stf-names{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:10.5px;color:var(--ink2);margin-top:7px}
   .stf-names .sw{display:inline-block;width:8px;height:8px;margin-right:4px}
   /* 第3波: 分析タブLIVE行 / AR freee突合 */
-  .rpt-live{margin:9px 0;padding:7px 9px;border-left:2px solid var(--acc);background:#F4F6FB;font-size:10.5px;color:var(--ink2);line-height:1.7}
+  .rpt-live{margin:9px 0;padding:7px 9px;border-left:2px solid var(--acc);background:#1a2231;font-size:10.5px;color:var(--ink2);line-height:1.7}
   .rpt-live b:first-child{color:var(--acc);font-size:8.5px;letter-spacing:.24em;margin-right:6px;font-family:var(--sans)}
   .ar-note2{font-size:10px;color:var(--ink2);margin-top:6px;line-height:1.6}
   .ar-note2 b{color:var(--acc)}
@@ -678,7 +678,7 @@
   .cf-grid .cf-k{color:var(--ink2)}
   .cf-grid .cf-v{font-family:var(--serif);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
   .cf-grid .cf-v.dn{color:var(--danger)}
-  .cf-runway{margin-top:11px;padding:8px 10px;border-left:3px solid var(--acc);background:#F4F6FB;font-size:11px;color:var(--ink2);line-height:1.6}
+  .cf-runway{margin-top:11px;padding:8px 10px;border-left:3px solid var(--acc);background:#1a2231;font-size:11px;color:var(--ink2);line-height:1.6}
   .cf-chart{width:100%;height:150px;display:block}
   .cf-chart .cf-bar{fill:var(--acc-hi)}
   .cf-chart .cf-bar.trough{fill:var(--acc)}
@@ -695,7 +695,7 @@
   .cf-tbl td.mo,.cf-tbl th.mo{text-align:left;color:var(--ink2);font-weight:500;position:sticky;left:0;background:var(--panel)}
   .cf-tbl td.dn{color:var(--danger)}
   .cf-tbl td.close{font-weight:600;color:var(--ink)}
-  .cf-tbl tr.trough td{background:#F2F6FC}
+  .cf-tbl tr.trough td{background:#1e2942}
   .ins-count{font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none}
 
   /* ===== 先々の埋まり (今後14日) ===== */
@@ -730,7 +730,7 @@
   .ptr.show{opacity:1;transform:translate(-50%,60px)}
   .ptr.ready{color:var(--acc);border-color:var(--acc)}
   /* 古いデータ/取得失敗の常設バー */
-  .stale-bar{background:#FBEEE6;color:#9A3B00;border-bottom:1px solid #E0B89A;font-size:11px;letter-spacing:.03em;padding:8px 14px;text-align:center;line-height:1.5}
+  .stale-bar{background:#33242b;color:#e0b055;border-bottom:1px solid #5a4a34;font-size:11px;letter-spacing:.03em;padding:8px 14px;text-align:center;line-height:1.5}
 </style>
 </head>
 <body>
@@ -868,7 +868,7 @@
     <!-- ③b 未回収 · 請求待ち (お金の詰まり・2026-07-04 第1波)
          左=請求済で未入金(ライブ/2024台帳分は別枠) 右=請求書発行待ち(返却済・仮請求+電装作業済) -->
     <div class="card" id="ar-card">
-      <div class="lbl" style="display:flex;justify-content:space-between;align-items:baseline">未回収 · 請求待ち<span style="color:var(--line2);font-weight:400;letter-spacing:.04em">タップで案件 ›</span></div>
+      <div class="lbl" style="display:flex;justify-content:space-between;align-items:baseline">未回収 · 請求待ち<span style="color:var(--ink3);font-weight:400;letter-spacing:.04em">タップで案件 ›</span></div>
       <div class="ar-grid">
         <div class="ar-col tap" onclick="showTab('pipe')">
           <div class="ar-h">未回収（請求済）</div>
@@ -889,7 +889,7 @@
 
     <!-- ② 部門別 売上 (3部門 × 当月/当年度) + 集中度バー (2026-07-04 第1波: 最大依存先のライブKPI化) -->
     <div class="card">
-      <div class="lbl" style="display:flex;justify-content:space-between;align-items:baseline">部門別 売上 (税込)<span style="color:var(--line2);font-weight:400;letter-spacing:.04em">タップで明細 ›</span></div>
+      <div class="lbl" style="display:flex;justify-content:space-between;align-items:baseline">部門別 売上 (税込)<span style="color:var(--ink3);font-weight:400;letter-spacing:.04em">タップで明細 ›</span></div>
       <div class="dept3-head">
         <span></span><span class="d3-h">当月</span><span class="d3-h">当年度</span>
       </div>
@@ -1405,7 +1405,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-05';
+const APP_VERSION = '2026-07-05a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2837,7 +2837,7 @@ function renderInsights(){
     const dgr=r.act.filter(i=>i.sev==='danger').length, wrn=r.act.filter(i=>i.sev==='warn').length;
     const parts=[];
     if(dgr) parts.push('<span class="dn">要対応 '+dgr+'</span>');
-    if(wrn) parts.push('<span style="color:#C99700">注意 '+wrn+'</span>');
+    if(wrn) parts.push('<span style="color:#e0b055">注意 '+wrn+'</span>');
     cnt.innerHTML = parts.length? ' · '+parts.join(' ・ ') : '';
   }
   const row=i=>
@@ -2924,14 +2924,14 @@ function drawSpark(id,values,labels){
   svg.innerHTML=`
     <defs>
       <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1C355F" stop-opacity=".18"/>
-        <stop offset="100%" stop-color="#1C355F" stop-opacity="0"/>
+        <stop offset="0%" stop-color="#6f97e6" stop-opacity=".18"/>
+        <stop offset="100%" stop-color="#6f97e6" stop-opacity="0"/>
       </linearGradient>
     </defs>
     <path class="area" d="${area}"/>
     <path class="line" d="${line}"/>
     <circle class="pt" cx="${last[0]}" cy="${last[1]}" r="2.8"/>
-    <circle cx="${last[0]}" cy="${last[1]}" r="5" fill="none" stroke="#1C355F" stroke-width=".5" opacity=".4"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="5" fill="none" stroke="#6f97e6" stroke-width=".5" opacity=".4"/>
     <line class="ax" x1="${L}" y1="${T+h}" x2="${L+w}" y2="${T+h}"/>
     ${xTicks}
     <text x="${L-6}" y="${T+8}" text-anchor="end">${(max/10000).toFixed(0)}万</text>
@@ -3058,7 +3058,7 @@ function _renderFreeePL(){
     const prog=(p.op>0&&c.op!=null)?Math.round(c.op/p.op*100):null;
     html += `<tr><td colspan=2 style="padding-top:14px;border-bottom:0"><span class="ink3" style="font-size:9.5px;letter-spacing:.24em;text-transform:uppercase">前年度通期 (第${p.fy-2016}期 確定)</span></td></tr>`+
       r('売上高',p.uri)+r('営業利益',p.op)+(p.mg!=null?`<tr><td>粗利率</td><td class="num">${p.mg}%</td></tr>`:'')+r('当期純利益',p.net)+
-      (prog!=null?`<tr><td>営業利益 進捗</td><td class="num" style="color:${prog>=100?'#2D7D33':'var(--acc)'}">${prog}%</td></tr>`:'');
+      (prog!=null?`<tr><td>営業利益 進捗</td><td class="num" style="color:${prog>=100?'#8fd08c':'var(--acc)'}">${prog}%</td></tr>`:'');
   }
   host.innerHTML=html;
 }
@@ -3071,7 +3071,7 @@ function renderProfitCard(){
   document.getElementById('pf-fy').textContent = c.em ? _fyPeriodLabel(c.fy,c.em) : `第${c.fy-2016}期 ${c.fy}年度`;
   const opEl=document.getElementById('pf-op');
   opEl.innerHTML=yen(c.op)+'<span class="unit" style="font-size:10px">円</span>';
-  opEl.style.color = c.op>=0 ? 'var(--ink)' : '#C0392B';
+  opEl.style.color = c.op>=0 ? 'var(--ink)' : '#e5707e';
   const subs=[];
   if(c.mg!=null) subs.push('粗利率 '+c.mg+'%');
   if(c.om!=null) subs.push('営業利益率 '+c.om+'%');
@@ -3082,7 +3082,7 @@ function renderProfitCard(){
     const pct=Math.round(c.op/p.op*100);
     bar.style.width=Math.max(0,Math.min(100,pct))+'%';
     bar.className=pct>=0?'':'danger';
-    prog.innerHTML='前年度通期 営業利益 '+yen(p.op)+'円 に対し <b class="num" style="font-size:13px;color:'+(pct>=100?'#2D7D33':'var(--acc)')+'">'+pct+'%</b> 進捗';
+    prog.innerHTML='前年度通期 営業利益 '+yen(p.op)+'円 に対し <b class="num" style="font-size:13px;color:'+(pct>=100?'#8fd08c':'var(--acc)')+'">'+pct+'%</b> 進捗';
   } else { bar.style.width='0%'; prog.textContent='前年度データ取得中…'; }
 }
 
@@ -3151,11 +3151,11 @@ function renderRev(){
 
 // 稼働度に応じた焼入れブルーの濃淡 (高稼働=濃 / 遊休=淡)
 function utilColor(rate){
-  if(rate>=50) return '#1E40AF';
-  if(rate>=35) return '#3056C5';
-  if(rate>=20) return '#5A7DDB';
-  if(rate>=8)  return '#9BB0E0';
-  return '#C5D0EC';
+  if(rate>=50) return '#a9c6f5';
+  if(rate>=35) return '#7f9fe0';
+  if(rate>=20) return '#5f86dc';
+  if(rate>=8)  return '#46608f';
+  return '#38455f';
 }
 // メーター角度: 0%→-135°(左下) 〜 100%→+135°(右下) の 270°スイープ
 function gaugeAngle(pct){ return -135 + Math.max(0,Math.min(100,pct))/100*270; }
@@ -3314,20 +3314,20 @@ function renderVehicleROI(){
   };
   const rh=x=>{
     const mg  = x.margin==null ? '—' : (x.margin>=0?'+':'')+x.margin+'%';
-    const mgc = x.margin==null ? 'var(--ink3)' : (x.margin>=0?'var(--acc)':'#C0392B');
+    const mgc = x.margin==null ? 'var(--ink3)' : (x.margin>=0?'var(--acc)':'#e5707e');
     const pd  = x.perDay==null ? '—' : (x.perDay>=0?'+':'')+f(x.perDay);
     return `<tr><td>`+
       `<b>${esc(x.name)}</b>${x.plate?` <span class="ink3" style="font-size:10px">${esc(x.plate)}</span>`:''} <span class="ink3" style="font-size:10px">${esc(x.kind)}</span>${inspBadge(x)}`+
       `<div class="ink3" style="font-size:10px">売上 ${f(x.r)} − 費用 ${f(x.cost)}${(x.kinjo||x.apportion)?` <span style="font-size:9px">(減${f(x.baseCost)}${x.kinjo?'＋整'+f(x.kinjo):''}${x.apportion?'＋保税'+f(x.apportion):''})</span>`:''}</div>`+
       `<div class="ink3" style="font-size:10px">稼働 ${x.usedD}日 · 採算率 <span style="color:${mgc}">${mg}</span> · 日あたり ${pd}</div>`+
-      `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.roi>=0?'var(--acc)':'#C0392B'}">${x.roi>=0?'+':''}${f(x.roi)} 円</td></tr>`;
+      `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.roi>=0?'var(--acc)':'#e5707e'}">${x.roi>=0?'+':''}${f(x.roi)} 円</td></tr>`;
   };
   const top=rows.slice(0,6);
   const bot=rows.slice(-5).reverse().filter(x=>top.indexOf(x)<0);
   host.innerHTML =
-    '<tr><td colspan=2 style="background:#EEF5E8;color:#2D5F1F;font-size:11px;font-weight:700">▲ 黒字頭</td></tr>' +
+    '<tr><td colspan=2 style="background:#20301f;color:#8fd08c;font-size:11px;font-weight:700">▲ 黒字頭</td></tr>' +
     top.map(rh).join('') +
-    (bot.length?'<tr><td colspan=2 style="background:#FBEEE6;color:#9A3B00;font-size:11px;font-weight:700">▼ 低採算・赤字</td></tr>'+bot.map(rh).join(''):'');
+    (bot.length?'<tr><td colspan=2 style="background:#33242b;color:#e0b055;font-size:11px;font-weight:700">▼ 低採算・赤字</td></tr>'+bot.map(rh).join(''):'');
   const srcEl=document.getElementById('ops-roi-src'); if(srcEl) srcEl.textContent=_fdSource();
 }
 
@@ -3421,15 +3421,15 @@ function renderVehicleLifetime(){
   const paid=active.filter(x=>x.recov!=null&&x.recov>=100).length;
   if(sumEl) sumEl.innerHTML =
     `<div class="ls-item"><div class="ls-n">${active.length}</div><div class="ls-l">保有</div></div>`+
-    `<div class="ls-item"><div class="ls-n" style="color:#2D7D33">${paid}</div><div class="ls-l">💰回収済み</div></div>`+
+    `<div class="ls-item"><div class="ls-n" style="color:#8fd08c">${paid}</div><div class="ls-l">💰回収済み</div></div>`+
     `<div class="ls-item"><div class="ls-n" style="color:var(--acc)">${cand.length}</div><div class="ls-l">🔵売却候補</div></div>`+
     `<div class="ls-item"><div class="ls-n">${cover}<span style="font-size:13px">%</span></div><div class="ls-l">データ特定率</div></div>`;
-  if(covEl) covEl.innerHTML = cover<60?`<b style="color:#C99700">特定率${cover}%</b>＝2024-2025は車両記録が乏しく累計売上は控えめ（特に古い車・売却済）。2026年以降は正確。`:'';
+  if(covEl) covEl.innerHTML = cover<60?`<b style="color:#e0b055">特定率${cover}%</b>＝2024-2025は車両記録が乏しく累計売上は控えめ（特に古い車・売却済）。2026年以降は正確。`:'';
   if(candEl){
     candEl.innerHTML = !cand.length ? '<div class="ink3 sm" style="margin-top:6px">いま売り時の車両はありません（車検・リース満了・低稼働の該当なし）。</div>'
     : '<div class="lbl2">🔵 売却候補（戦略アクション）</div>'+cand.slice(0,8).map(c=>{
         const x=c.x;
-        const rec = x.recov==null?'':`<span class="badge" style="background:${x.recov>=100?'#E3F0DA':'#FBEEE6'};color:${x.recov>=100?'#2D7D33':'#9A3B00'};font-size:9px;padding:1px 5px">回収${x.recov}%</span>`;
+        const rec = x.recov==null?'':`<span class="badge" style="background:${x.recov>=100?'#20301f':'#33242b'};color:${x.recov>=100?'#8fd08c':'#e0b055'};font-size:9px;padding:1px 5px">回収${x.recov}%</span>`;
         let adv;
         if(x.lease && x.leaseLeft!=null && x.leaseLeft<=6) adv='稼働中なら満了まで使い切り→残価で買取り判断／遊休なら早期精算';
         else if(x.usedD<=20) adv='遊休→売却で固定費の垂れ流しを停止';
@@ -3447,22 +3447,22 @@ function renderVehicleLifetime(){
   const rh=x=>{
     const rc= x.recov==null?'—':x.recov+'%';
     const barW= x.recov==null?0:Math.min(100,x.recov);
-    const bc= x.recov==null?'var(--ink3)':(x.recov>=100?'#2D7D33':(x.recov>=50?'var(--acc)':'#C99700'));
+    const bc= x.recov==null?'var(--ink3)':(x.recov>=100?'#8fd08c':(x.recov>=50?'var(--acc)':'#e0b055'));
     let tag='';
     if(x.sold_st) tag=' <span class="badge" style="background:#EEE;color:#777;font-size:9px;padding:1px 5px">売却済</span>';
-    else if(x.recov!=null&&x.recov>=100) tag=' <span class="badge" style="background:#E3F0DA;color:#2D7D33;font-size:9px;padding:1px 5px">💰回収済</span>';
+    else if(x.recov!=null&&x.recov>=100) tag=' <span class="badge" style="background:#20301f;color:#8fd08c;font-size:9px;padding:1px 5px">💰回収済</span>';
     else if(x.usedD<=20) tag=' <span class="badge warn" style="font-size:9px;padding:1px 5px">💤遊休</span>';
-    if(x.isLease) tag+=' <span class="badge" style="background:#EAF0FB;color:#1E40AF;font-size:9px;padding:1px 5px">リース</span>';
+    if(x.isLease) tag+=' <span class="badge" style="background:#1c2740;color:#9bb6ee;font-size:9px;padding:1px 5px">リース</span>';
     return `<tr><td>`+
       `<b>${esc(x.name)}</b> <span class="ink3" style="font-size:10px">${esc(x.plate)}</span>${tag}`+
       `<div class="ink3" style="font-size:10px">累計 ${f(x.total)} ／ ${x.isLease?'投下資本 '+f(x.invest)+'<span style="font-size:9px">(リース総額'+f(x.leaseFeeTotal)+'+残価'+f(x.residual)+')</span>':'取得 '+(x.price?f(x.price):'—')}${x.runCost?' ／ 維持 '+f(x.runCost):''}${(!x.isLease&&x.sold)?' ／ 売却 '+f(x.sold):''}</div>`+
       `<div class="life-bar"><div class="life-track"><i style="width:${barW}%;background:${bc}"></i></div><span style="color:${bc}">${rc}</span></div>`+
-      `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.gross>=0?'var(--acc)':'#C0392B'}">${x.gross>=0?'+':''}${f(x.gross)}<div class="ink3" style="font-size:9px;font-weight:400">生涯ROI</div></td></tr>`;
+      `</td><td class="num" style="font-weight:700;white-space:nowrap;color:${x.gross>=0?'var(--acc)':'#e5707e'}">${x.gross>=0?'+':''}${f(x.gross)}<div class="ink3" style="font-size:9px;font-weight:400">生涯ROI</div></td></tr>`;
   };
   host.innerHTML =
-    '<tr><td colspan=2 style="background:#EEF5E8;color:#2D5F1F;font-size:11px;font-weight:700">▲ 稼ぎ頭（累計売上）</td></tr>'+
+    '<tr><td colspan=2 style="background:#20301f;color:#8fd08c;font-size:11px;font-weight:700">▲ 稼ぎ頭（累計売上）</td></tr>'+
     top.map(rh).join('')+
-    (bot.length?'<tr><td colspan=2 style="background:#FBEEE6;color:#9A3B00;font-size:11px;font-weight:700">▼ 低調・お荷物</td></tr>'+bot.map(rh).join(''):'');
+    (bot.length?'<tr><td colspan=2 style="background:#33242b;color:#e0b055;font-size:11px;font-weight:700">▼ 低調・お荷物</td></tr>'+bot.map(rh).join(''):'');
   const srcEl2=document.getElementById('life-src'); if(srcEl2) srcEl2.textContent=_fdSource();
   // クラス別 もうけ (投資回収率 = 累計売上 ÷ 取得額)
   if(clsEl){
@@ -3474,7 +3474,7 @@ function renderVehicleLifetime(){
     clsEl.innerHTML= arr.length? arr.map(a=>`
       <div class="cls-row">
         <div class="cls-nm">${esc(a.k)}<span class="cls-cnt">${a.n}台</span></div>
-        <div class="cls-bar"><i style="width:${Math.max(2,Math.round(a.roi/maxRoi*100))}%;background:${a.roi>=100?'#2D7D33':'var(--acc)'}"></i></div>
+        <div class="cls-bar"><i style="width:${Math.max(2,Math.round(a.roi/maxRoi*100))}%;background:${a.roi>=100?'#8fd08c':'var(--acc)'}"></i></div>
         <div class="cls-rate num">${a.roi}<span class="ink3" style="font-size:11px">%</span></div>
       </div>`).join('') : '<div class="ink3 sm">データなし</div>';
   }
@@ -3485,13 +3485,13 @@ function renderVehicleLifetime(){
     if(!sr.length){ soldEl.innerHTML=''; }
     else{
       const tot=sr.reduce((a,x)=>a+x.roi,0);
-      soldEl.innerHTML='<div class="lbl2" style="color:#777">売却した車の生涯成績 — '+sr.length+'台 ・ 合計 <b style="color:'+(tot>=0?'#2D7D33':'#C0392B')+'">'+(tot>=0?'+':'')+f(tot)+'</b></div>'+
+      soldEl.innerHTML='<div class="lbl2" style="color:#777">売却した車の生涯成績 — '+sr.length+'台 ・ 合計 <b style="color:'+(tot>=0?'#8fd08c':'#e5707e')+'">'+(tot>=0?'+':'')+f(tot)+'</b></div>'+
         sr.map(s=>{
           const rev0=s.total<=0;
           const recovW=s.invest>0?Math.min(100,Math.max(2,Math.round(s.total/s.invest*100))):2;
           return '<div class="sc-row"><b>'+esc(s.model||s.plate)+'</b> <span class="ink3" style="font-size:10px">'+esc(s.plate)+'</span> <span class="ink3" style="font-size:9px">'+esc(s.soldYM)+'売却</span>'+(s.lease?' <span class="badge" style="font-size:9px;padding:1px 5px;background:#EEF;color:#3355AA">リース</span>':'')+
-            '<div class="ink3" style="font-size:10px">累計売上 '+f(s.total)+(rev0?' <span style="color:#C99700">(貸渡分なし=売却損益のみ)</span>':'')+' ＋売却 '+f(s.sale)+' −投下資本 '+f(s.invest)+(s.lease&&s.buyout?'<span style="font-size:9px">(買取'+f(s.buyout)+(s.leasePaid?'+リース'+f(s.leasePaid):'')+')</span>':'')+(s.kinjo?' −整備 '+f(s.kinjo):'')+'</div>'+
-            '<div class="life-bar"><div class="life-track"><i style="width:'+recovW+'%;background:#999"></i></div><span class="num" style="font-size:12px;font-weight:700;color:'+(s.roi>=0?'var(--acc)':'#C0392B')+'">'+(s.roi>=0?'+':'')+f(s.roi)+'</span></div>'+
+            '<div class="ink3" style="font-size:10px">累計売上 '+f(s.total)+(rev0?' <span style="color:#e0b055">(貸渡分なし=売却損益のみ)</span>':'')+' ＋売却 '+f(s.sale)+' −投下資本 '+f(s.invest)+(s.lease&&s.buyout?'<span style="font-size:9px">(買取'+f(s.buyout)+(s.leasePaid?'+リース'+f(s.leasePaid):'')+')</span>':'')+(s.kinjo?' −整備 '+f(s.kinjo):'')+'</div>'+
+            '<div class="life-bar"><div class="life-track"><i style="width:'+recovW+'%;background:#999"></i></div><span class="num" style="font-size:12px;font-weight:700;color:'+(s.roi>=0?'var(--acc)':'#e5707e')+'">'+(s.roi>=0?'+':'')+f(s.roi)+'</span></div>'+
           '</div>';
         }).join('');
     }
@@ -3637,7 +3637,7 @@ function renderStaffLoad(){
   const s=staffLoad();
   if(!s.tot||s.rows.length<2){ card.style.display='none'; return; }
   card.style.display='';
-  const cols=['#1E40AF','#3056C5','#5A7DDB','#8FA6E4','#B9C6EE','#D6DDF5'];
+  const cols=['#9bb6ee','#7f9fe0','#6f97e6','#5f7fc0','#4a6198','#3a4d72'];
   $('stf-bar').innerHTML=s.rows.map((r,i)=>'<i style="width:'+(r.n/s.tot*100).toFixed(1)+'%;background:'+(cols[i]||cols[cols.length-1])+'"></i>').join('');
   $('stf-names').innerHTML=s.rows.map((r,i)=>'<span><span class="sw" style="background:'+(cols[i]||cols[cols.length-1])+'"></span>'+esc(r.name)+' '+Math.round(r.n/s.tot*100)+'%</span>').join('');
 }
