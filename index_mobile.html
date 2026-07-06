@@ -1939,7 +1939,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-04';
+const APP_VERSION = '2026-07-06';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2607,23 +2607,44 @@ function _journalRecord(dataObj){
 // targetObj(disk由来のマージ結果 or ロード直後のDATA) にジャーナル案件が id ごと存在しなければ復元。
 //   復元は snap をそのまま注入 (updatedAt は元のまま=より新しい生存版がフィールドマージで勝てる)。
 //   戻り値=復元した案件の配列 (呼び出し側でトースト表示)。
+// 2026-07-06 拡張 (PC と同一ロジック): id はあるが「この端末がdiskで確認済みの版より updatedAt が
+//   後退」した案件も確認済みスナップで置換 (Dropbox競合コピー格下げ/stale上書きの巻き戻り自動修復。
+//   0106値引き消失の再発防止。正当な編集は必ず updatedAt=now を刻むので後退＝異常と断定できる。
+//   ※直編集メンテで意図的に古い状態へ戻す時は updatedAt=now を刻むか journalEpoch を +1 すること)
 function _journalHeal(targetObj){
   if(isDemoMode() || !targetObj || !Array.isArray(targetObj.cases)) return [];
   const j = _journalLoad();
   const diskEpoch = Number(targetObj.journalEpoch || 0);
   if(j.epoch !== diskEpoch){ j.epoch = diskEpoch; j.entries = {}; _journalStore(j); return []; }
   const purged = (targetObj.settings && targetObj.settings.purgedIds) || {};
-  const have = new Set(targetObj.cases.filter(c => c && c.id).map(c => c.id));
+  const idxById = new Map();
+  targetObj.cases.forEach((c, i) => { if(c && c.id) idxById.set(c.id, i); });
   const healed = [];
   Object.keys(j.entries).forEach(id => {
-    if(have.has(id) || purged[id]) return;
+    if(purged[id]) return;
     const ent = j.entries[id];
     if(!ent || !ent.snap || !ent.snap.id) return;
-    targetObj.cases.push(JSON.parse(JSON.stringify(ent.snap)));
-    healed.push(ent);
+    if(!idxById.has(id)){
+      // ①id消失 → snapのまま注入 (従来動作)
+      targetObj.cases.push(JSON.parse(JSON.stringify(ent.snap)));
+      healed.push({ ...ent, healKind: '消失' });
+    } else {
+      // ②updatedAt後退 (=巻き戻り) → 確認済みスナップで置換 (内容が同じなら触らない)
+      const cur = targetObj.cases[idxById.get(id)];
+      if(Number(cur.updatedAt || 0) < Number(ent.updatedAt || 0)){
+        const curCmp = { ...cur }; delete curCmp._conflictHistory; delete curCmp.updatedAt;
+        const snapCmp = { ...ent.snap }; delete snapCmp.updatedAt;
+        if(JSON.stringify(curCmp) !== JSON.stringify(snapCmp)){  // updatedAt以外の実内容が違う時だけ復元 (無駄な保存/トーストを防ぐ)
+          const rep = JSON.parse(JSON.stringify(ent.snap));
+          if(cur._conflictHistory) rep._conflictHistory = cur._conflictHistory;  // 診断履歴は温存
+          targetObj.cases[idxById.get(id)] = rep;
+          healed.push({ ...ent, healKind: '巻き戻り' });
+        }
+      }
+    }
   });
   if(healed.length){
-    console.warn('[journal] 消失案件を復元:', healed.map(h => h.caseNo + '/' + h.id));
+    console.warn('[journal] 自動復元:', healed.map(h => (h.healKind||'') + ':' + h.caseNo + '/' + h.id));
   }
   return healed;
 }
@@ -2659,7 +2680,7 @@ async function loadFromDropbox(silent){
       try { _journalRecord(DATA); } catch(e){}
       updateSyncStatus('ok','同期OK');
       if(_healed.length){
-        toast('🛟 消失していた案件を復元: ' + _healed.map(h => h.caseNo).join(', ') + ' (次の保存で確定)', 'error');
+        toast('🛟 消失/巻き戻りを自動復元: ' + _healed.map(h => (h.healKind==='巻き戻り'?'↩':'')+h.caseNo).join(', ') + ' (次の保存で確定)', 'error');
         // 復元を disk に永続化 (fire-and-forget。失敗しても次の自然な保存で確定する)
         try { saveToDropbox().catch(()=>{}); } catch(e){}
       }
@@ -2802,7 +2823,7 @@ async function _doSaveCycle(){
       } catch(e){}
       try { _journalRecord(DATA); } catch(e){}
       if(_healed.length){
-        toast('🛟 消失していた案件を復元して保存: ' + _healed.map(h => h.caseNo).join(', '), 'error');
+        toast('🛟 消失/巻き戻りを自動復元して保存: ' + _healed.map(h => (h.healKind==='巻き戻り'?'↩':'')+h.caseNo).join(', '), 'error');
       }
       // ★受付No自動修正の訂正LINE (2026-07-03): 改番は保存確定後に必ずグループへ知らせる
       //   (以前のLINE通知の受付Noが旧番号のまま残るため。凍結でなく「修復+正直に訂正」方式)

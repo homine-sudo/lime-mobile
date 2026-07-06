@@ -3065,7 +3065,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-03b';
+const APP_VERSION = '2026-07-06';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3926,7 +3926,7 @@ async function tryLoadFromDir(){
       const _healed = _journalHeal(DATA);
       if(_healed.length){
         invalidateIndexes();
-        toast('🛟 消失していた案件を復元: ' + _healed.map(h => h.caseNo).join(', '), 'error');
+        toast('🛟 消失/巻き戻りを自動復元: ' + _healed.map(h => (h.healKind==='巻き戻り'?'↩':'')+h.caseNo).join(', '), 'error');
       }
     } catch(e){ console.warn('[journal] heal失敗:', e); }
     if(typeof captureSyncSnapshot === 'function') captureSyncSnapshot(DATA);  // v2026.04.29cu: ロード時スナップショット
@@ -4038,25 +4038,128 @@ function _journalRecord(dataObj){
   _journalStore(j);
 }
 // targetObj にジャーナル案件が id ごと存在しなければ復元 (snapのまま注入=updatedAt保持)。戻り値=復元エントリ配列。
+// 2026-07-06 拡張: id はあるが「この端末がdiskで確認済みの版より updatedAt が後退」した案件も
+//   確認済みスナップで置換 (Dropbox競合コピー格下げ/stale上書きでフィールドが巻き戻る事故の自動修復。
+//   0106値引き消失の再発防止。正当な編集は必ず updatedAt=now を刻むので後退＝異常と断定できる。
+//   ※data.json 直編集メンテで案件を意図的に古い状態へ戻す時は updatedAt=now を刻むか journalEpoch を +1 すること)
 function _journalHeal(targetObj){
   if(!targetObj || !Array.isArray(targetObj.cases)) return [];
   const j = _journalLoad();
   const diskEpoch = Number(targetObj.journalEpoch || 0);
   if(j.epoch !== diskEpoch){ j.epoch = diskEpoch; j.entries = {}; _journalStore(j); return []; }
   const purged = (targetObj.settings && targetObj.settings.purgedIds) || {};
-  const have = new Set(targetObj.cases.filter(c => c && c.id).map(c => c.id));
+  const idxById = new Map();
+  targetObj.cases.forEach((c, i) => { if(c && c.id) idxById.set(c.id, i); });
   const healed = [];
   Object.keys(j.entries).forEach(id => {
-    if(have.has(id) || purged[id]) return;
+    if(purged[id]) return;
     const ent = j.entries[id];
     if(!ent || !ent.snap || !ent.snap.id) return;
-    targetObj.cases.push(JSON.parse(JSON.stringify(ent.snap)));
-    healed.push(ent);
+    if(!idxById.has(id)){
+      // ①id消失 → snapのまま注入 (従来動作)
+      targetObj.cases.push(JSON.parse(JSON.stringify(ent.snap)));
+      healed.push({ ...ent, healKind: '消失' });
+    } else {
+      // ②updatedAt後退 (=巻き戻り) → 確認済みスナップで置換 (内容が同じなら触らない)
+      const cur = targetObj.cases[idxById.get(id)];
+      if(Number(cur.updatedAt || 0) < Number(ent.updatedAt || 0)){
+        const curCmp = { ...cur }; delete curCmp._conflictHistory; delete curCmp.updatedAt;
+        const snapCmp = { ...ent.snap }; delete snapCmp.updatedAt;
+        if(JSON.stringify(curCmp) !== JSON.stringify(snapCmp)){  // updatedAt以外の実内容が違う時だけ復元 (無駄な保存/トーストを防ぐ)
+          const rep = JSON.parse(JSON.stringify(ent.snap));
+          if(cur._conflictHistory) rep._conflictHistory = cur._conflictHistory;  // 診断履歴は温存
+          targetObj.cases[idxById.get(id)] = rep;
+          healed.push({ ...ent, healKind: '巻き戻り' });
+        }
+      }
+    }
   });
   if(healed.length){
-    console.warn('[journal] 消失案件を復元:', healed.map(h => h.caseNo + '/' + h.id));
+    console.warn('[journal] 自動復元:', healed.map(h => (h.healKind||'') + ':' + h.caseNo + '/' + h.id));
   }
   return healed;
+}
+
+// ============================================================
+// Dropbox競合コピー自動回収 (2026-07-06 新設・0106値引き消失の再発防止)
+//   Dropboxデスクトップ同期がこのPCのファイル書込とクラウド版を衝突させると、保存した内容が
+//   「data (◯◯ の競合コピー YYYY-MM-DD).json」へフォークされ本体 data.json から消える。
+//   アプリの保存自体は成功しているため fail-closed 保存ガードでは防げない (Dropbox層の事故)。
+//   → 共有フォルダを定期スキャン (checkExternalChange 経由・5分スロットル) し、競合コピー内で
+//     本体より updatedAt が新しい案件を自動で DATA に取り込み保存する。
+//   ・競合コピーファイルは消さない/動かさない (読み取りのみ。掃除は従来どおり月次 §4.3)
+//   ・対象=cases のみ (車両/マスタはハード削除経路があるため自動注入しない)
+//   ・journalEpoch が本体と異なるコピー (パージ前の古い世代) は丸ごとスキップ
+//   ・処理済みは name+mtime+size で記録し再処理しない (再走しても updatedAt 比較で差分0=無害)
+// ============================================================
+const HARVEST_LS_KEY = LS_KEY + '_harvested';
+const HARVEST_INTERVAL_MS = 5 * 60 * 1000;
+let _harvestLastRun = 0;
+// 純粋なマージ核 (単体テスト可能に分離): copyData の cases を dataObj に取り込み、回収ラベル配列を返す
+function _harvestMergeCases(dataObj, copyData){
+  const restored = [];
+  if(!dataObj || !Array.isArray(dataObj.cases) || !copyData || !Array.isArray(copyData.cases)) return restored;
+  if(Number(copyData.journalEpoch || 0) !== Number(dataObj.journalEpoch || 0)) return restored;
+  const purged = (dataObj.settings && dataObj.settings.purgedIds) || {};
+  const idxById = new Map();
+  dataObj.cases.forEach((c, i) => { if(c && c.id) idxById.set(c.id, i); });
+  copyData.cases.forEach(cc => {
+    if(!cc || !cc.id || purged[cc.id]) return;
+    if(!idxById.has(cc.id)){
+      // 本体に無い = 消失案件 → 復元 (案件は全ソフト削除なので id が正当に消える経路はない)
+      dataObj.cases.push(JSON.parse(JSON.stringify(cc)));
+      restored.push((cc.caseNo || cc.id) + '(消失)');
+    } else {
+      const cur = dataObj.cases[idxById.get(cc.id)];
+      if(Number(cc.updatedAt || 0) > Number(cur.updatedAt || 0)){
+        const rep = JSON.parse(JSON.stringify(cc));
+        if(cur._conflictHistory && !rep._conflictHistory) rep._conflictHistory = cur._conflictHistory;
+        dataObj.cases[idxById.get(cc.id)] = rep;
+        restored.push(cc.caseNo || cc.id);
+      }
+    }
+  });
+  return restored;
+}
+async function _harvestConflictCopies(){
+  if(!dirHandle || !DATA || !Array.isArray(DATA.cases)) return;
+  const now = Date.now();
+  if(now - _harvestLastRun < HARVEST_INTERVAL_MS) return;
+  _harvestLastRun = now;
+  let reg = {};
+  try { reg = JSON.parse(localStorage.getItem(HARVEST_LS_KEY) || '{}') || {}; } catch(e){}
+  const restored = [];
+  try {
+    for await (const entry of dirHandle.values()){
+      if(entry.kind !== 'file') continue;
+      const name = entry.name;
+      if(!/^data .*(競合コピー|conflicted copy).*\.json$/i.test(name)) continue;
+      let file;
+      try { file = await entry.getFile(); } catch(e){ continue; }
+      const key = name + '|' + file.lastModified + '|' + file.size;
+      if(reg[key]) continue;
+      reg[key] = now;
+      let d = null;
+      try { d = JSON.parse(await file.text()); } catch(e){ continue; }  // 破損コピーはスキップ (削除しない)
+      const got = _harvestMergeCases(DATA, d);
+      if(got.length) restored.push({ file: name, cases: got });
+    }
+  } catch(e){ console.warn('[競合コピー回収] スキャン失敗:', e); }
+  // 処理済みレジストリを保存 (古い順に間引いて最大200)
+  try {
+    const keys = Object.keys(reg);
+    if(keys.length > 200){ keys.sort((a,b) => reg[a] - reg[b]).slice(0, keys.length - 200).forEach(k => delete reg[k]); }
+    localStorage.setItem(HARVEST_LS_KEY, JSON.stringify(reg));
+  } catch(e){}
+  if(restored.length){
+    invalidateIndexes();
+    try { _journalRecord(DATA); } catch(e){}
+    save();  // 共有モードなら saveToDir → mergeWithDisk で回収フィールドが勝って本体へ書き戻る
+    const names = restored.flatMap(r => r.cases);
+    console.warn('[競合コピー回収]', restored);
+    toast('🛟 Dropbox競合コピーから更新を回収: ' + names.join(', ') + '（コピーファイルは確認後に削除可）', 'error');
+    try { showPage(_navCurrent || 'dashboard', true); } catch(e){}
+  }
 }
 
 // v2026.04.29cv/cx: 汎用 3-way merge — 衝突時は勝者に _conflictHistory を付与
@@ -4438,7 +4541,7 @@ async function saveToDirImmediate(){
       try {
         const _healed = _journalHeal(toWrite);
         if(_healed.length){
-          toast('🛟 消失していた案件を復元して保存: ' + _healed.map(h => h.caseNo).join(', '), 'error');
+          toast('🛟 消失/巻き戻りを自動復元して保存: ' + _healed.map(h => (h.healKind==='巻き戻り'?'↩':'')+h.caseNo).join(', '), 'error');
         }
       } catch(e){ console.warn('[journal] heal失敗:', e); }
     }
@@ -4673,7 +4776,7 @@ async function checkExternalChange(){
         try {
           const _healed = _journalHeal(DATA);
           if(_healed.length){
-            toast('🛟 消失していた案件を復元: ' + _healed.map(h => h.caseNo).join(', '), 'error');
+            toast('🛟 消失/巻き戻りを自動復元: ' + _healed.map(h => (h.healKind==='巻き戻り'?'↩':'')+h.caseNo).join(', '), 'error');
           }
         } catch(e){ console.warn('[journal] heal失敗:', e); }
         invalidateIndexes(); // ★必須: DATA置換後は索引キャッシュを破棄
@@ -4692,6 +4795,8 @@ async function checkExternalChange(){
     }
     // v2026.04.29be: ポーリング時のlock更新は廃止 (saveToDir直前のみtouch)。
     //   従来はポーリングで毎回lockを更新するため、複数PC稼働時にデッドロックしていた。
+    // ★Dropbox競合コピー自動回収 (2026-07-06): 5分スロットル内蔵・fire-and-forget
+    try { _harvestConflictCopies().catch(e => console.warn('[競合コピー回収]', e)); } catch(e){}
     // UI更新(他PCロック表示用)
     updateSyncStatus();
   }catch(e){
