@@ -1939,7 +1939,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-06';
+const APP_VERSION = '2026-07-07';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -6949,6 +6949,123 @@ async function openCaseDetail(caseId){
   await renderCaseDetail(c);
 }
 
+// ============================================================
+// 車両を乗り換え = 継続案件を作成 (2026-07-07)
+//   配車済みの車を途中で別の車に替える時、既存レコードの車両欄を上書きすると
+//   前の車の記録(期間/単価/メーター/写真/FAX)が消える (0102 消失の原因)。
+//   代わりに「今の車を返却で締めて、同じ顧客・事故で継続案件(連番 -1/-2)を作る」。
+//   → 車ごとに記録が分かれ、請求・走行距離・ROI・写真が正しく残る。新しい車は配車フローで割当。
+// ============================================================
+async function swapVehicleContinue(){
+  const c = findCaseById(_activeCaseId);
+  if(!c){ toast('案件が見つかりません', 'error'); return; }
+  if(c.category === '一般'){ toast('一般貸渡はPCで対応してください', 'error'); return; }
+  if(c.recoveryCompleted){ toast('すでに返却済みの案件です', 'error'); return; }
+  if(!(c.vehicleId || c.vehicleName)){ toast('この案件はまだ車両が割り当てられていません', 'error'); return; }
+
+  const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  const curVehLabel = [c.vehicleName || '', plate].filter(Boolean).join(' ') || c.vehicleClass || '車両';
+  // 番号: 標準形式 YYYY-MM-NNNN を base とし、その後ろの -N が乗り換え連番。
+  //   ★注意: caseNo 自体が -NNNN で終わるので /-\d+$/ で末尾を削ると基幹番号まで消える。
+  //   標準形式を明示パースして base と既存連番を分離する。
+  const _m0 = String(c.caseNo || '').match(/^(\d{4}-\d{2}-\d{4})(?:-(\d+))?$/);
+  const baseNo = _m0 ? _m0[1] : String(c.caseNo || '');
+  const esc4re = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const famRe = new RegExp('^' + esc4re(baseNo) + '-(\\d+)$');
+  let maxSuf = 0;
+  (DATA.cases || []).forEach(x => {
+    if(!x || !x.caseNo) return;
+    if(x.caseNo === baseNo) maxSuf = Math.max(maxSuf, 1);
+    else { const m = String(x.caseNo).match(famRe); if(m) maxSuf = Math.max(maxSuf, Number(m[1])); }
+  });
+  const willRename = (c.caseNo === baseNo);            // 初回分割 → 元を -1 に改番
+  const oldNo = c.caseNo;
+  const newCurNo = willRename ? (baseNo + '-1') : c.caseNo;
+  const contNo = baseNo + '-' + (maxSuf + 1);
+
+  const okSwap = await confirmModal('🚗 車両を乗り換え',
+    `今の車〈<b>${esc(curVehLabel)}</b>〉を<b>返却で締めて</b>、<br>` +
+    `新しい車で<b>継続案件〈${esc(contNo)}〉</b>を作成します。<br><br>` +
+    (willRename ? `この案件の番号は <b>${esc(oldNo)} → ${esc(newCurNo)}</b> になります。<br><br>` : '') +
+    `作成後、続けて新しい車を選んで配車できます。よろしいですか?`,
+    '乗り換えて継続案件を作成', 'm-btn-primary');
+  if(!okSwap) return;
+
+  const today = todayISO();
+  const now = Date.now();
+  const snap = JSON.parse(JSON.stringify(c));  // ロールバック用スナップショット
+
+  // 1) 今の案件(=前の車)を返却で締める。記録は全て残す。
+  if(willRename) c.caseNo = newCurNo;
+  if(!c.useEnd) c.useEnd = today;
+  if(!c.recoveryCalledAt) c.recoveryCalledAt = today;
+  c.recoveryCompleted = true;
+  c.status = '返却済';
+  c.internalMemo = ((c.internalMemo || '') + (c.internalMemo ? '\n' : '') +
+    `【車両乗り換え ${today}】この車を返却し ${contNo} で継続。返却メーターは必要なら後で入力。`).trim();
+  _stampUpdated(c);
+
+  // 2) 継続案件(=新しい車)を作成。顧客/保険/事故/配車先を引き継ぎ、車両・期間・請求・写真・FAXはリセット。
+  const cont = { ...snap };
+  cont.id = _genMobileCaseId();
+  cont.caseNo = contNo;
+  cont.receivedAt = snap.receivedAt || today;   // 同じ事故=受付は元のまま
+  cont.status = '受付';                          // 配車フローで新しい車を割当→手配書FAX
+  cont.vehicleId = ''; cont.vehicleName = '';
+  cont.plateArea = ''; cont.plateNo = ''; cont.plateKana = ''; cont.plateTail = '';
+  // vehicleClass は保険承認クラスのヒントとして残す (新車両選択時に上書きされる)
+  cont.unitPrice = 0;
+  cont.useStart = today; cont.useEnd = ''; cont.useDeadline = '';
+  cont.dispatchAt = ''; cont.dispatchNote = ''; cont.dispatchDoneAt = ''; cont.dispatchDoneNote = '';
+  cont.dispatchTimePending = false; cont.dispatchTimePendingDriver = false;
+  cont.departedAt = '';
+  cont.recoveryCalledAt = ''; cont.recoveryCompleted = false;
+  cont.confirmCalledAt = ''; cont.faxSentAtDispatch = ''; cont.faxSentAtReturn = '';
+  cont.invoiceNo = ''; cont.invoiceIssuedAt = ''; cont.paymentDueAt = ''; cont.paymentMethod = '';
+  cont.paidAt = ''; cont.paidAmount = ''; cont.salesYear = ''; cont.salesMonth = '';
+  cont.discount = ''; cont.discountDays = ''; cont.discountNote = '';
+  cont.meterAtDispatch = null; cont.meterAtReturn = null;
+  cont.faxHistory = []; cont.checkSheets = [];
+  cont.internalMemo = `【継続案件 ${today}】${newCurNo} からの車両乗り換え。前の車を返却し、この案件で新しい車を配車。`;
+  cont.negotiationLog = '';
+  delete cont.freeeExportedAt; delete cont.freeeExportedAmount;
+  cont.createdAt = now;
+  cont.createdBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
+  _stampUpdated(cont);
+
+  DATA.cases.push(cont);
+
+  showSpinner('継続案件を作成中...');
+  let ok = false;
+  try { ok = await saveToDropbox(); } catch(e){ ok = false; }
+  hideSpinner();
+  if(!ok){
+    // ロールバック: 継続案件を除去し、元案件をスナップショットへ戻す
+    DATA.cases = DATA.cases.filter(x => x.id !== cont.id);
+    const cur = findCaseById(snap.id);
+    if(cur){
+      Object.keys(cur).forEach(k => { if(!(k in snap)) delete cur[k]; });
+      Object.assign(cur, snap);
+    }
+    toast('❌ 保存できませんでした。乗り換えは未実行です。「🔄同期」してから再度お試しください', 'error');
+    return;
+  }
+  // 確定番号で通知/再描画 (保存サイクル内の自己修復で改番されうる)
+  const contLive = findCaseById(cont.id) || cont;
+  const curLive = findCaseById(snap.id) || c;
+  // 1本の案内LINE (カレンダーは触らない。新しい車の配車完了で自然に通知される)
+  try {
+    const ins = curLive.insurerId ? (findInsurer(curLive.insurerId) || {}) : {};
+    const drv = curLive.driverName || curLive.contractorName || '';
+    const txt = `🔄 車両乗り換え\n${curLive.caseNo} 〈${curVehLabel}〉を返却締め\n→ ${contLive.caseNo} で新しい車を配車します\n` +
+      [drv ? drv + '様' : '', ins.name || ''].filter(Boolean).join(' / ');
+    await sendExternalNotify('updateCase', { line: { text: txt }, calendar: null });
+  } catch(e){}
+  toast(`✅ 継続案件 ${contLive.caseNo} を作成しました。新しい車を選んで配車してください`, 'success');
+  // 継続案件を開く → 「配車フローへ進む」で新しい車を割当→手配書FAX
+  await openCaseDetail(contLive.id);
+}
+
 async function renderCaseDetail(c){
   // 1. 案件情報 (renderInfoBox を流用 / 社内メモ行はタップで編集できる)
   renderInfoBox(c, 'm-cd-info', 'dispatch');
@@ -7016,7 +7133,13 @@ async function renderCaseDetail(c){
   if(canRecovery) acts.push(`<button class="m-btn m-btn-success m-btn-block" onclick="enterRecoveryFlow('${c.id}')">${_svg('<path d="M7 7l10 10"/><path d="M16 17H7V8"/>')}回収フローへ進む</button>`);
   if(canEdit){
     acts.push(`<button class="m-btn m-btn-primary m-btn-block" onclick="openNewCaseModal('${c.id}')">${_svg('<path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/>')}案件を編集</button>`);
-    acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="openVehiclePicker()">${_svg('<path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/>')}車両を変更</button>`);
+    // 車が既に出ている(配車済〜)なら「乗り換え=継続案件」、まだ出ていないなら在庫の付け替え(修正)。
+    const _alreadyOut = ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && (c.vehicleId || c.vehicleName);
+    if(_alreadyOut){
+      acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="swapVehicleContinue()">${_svg('<path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/>')}車両を乗り換え（継続案件を作成）</button>`);
+    } else {
+      acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="openVehiclePicker()">${_svg('<path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/>')}車両を変更</button>`);
+    }
   }
   if(c.dispatchToTel || c.driverTel){
     const tel = c.dispatchToContactTel || c.dispatchToTel || c.driverTel;
