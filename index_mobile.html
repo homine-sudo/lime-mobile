@@ -721,6 +721,19 @@ a{color:var(--info);text-decoration:none}
 .m-week-cnt.disp{color:#2A6FCB}
 .m-week-cnt.rec{color:#C53030}
 .m-week-empty{font-size:10px;opacity:.55;font-weight:600}
+/* その日の予定シート */
+.m-day-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.m-day-head h2{font-size:17px;color:var(--navy);text-align:left}
+.m-day-close{background:none;border:none;color:var(--muted);padding:6px;margin:-6px;cursor:pointer;display:flex}
+.m-day-sec{margin-bottom:16px}
+.m-day-sec:last-child{margin-bottom:0}
+.m-day-sec-hd{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+.m-day-sec-hd.disp{color:#2A6FCB}
+.m-day-sec-hd.rec{color:#C53030}
+.m-day-sec-hd .n{margin-left:auto;font-size:12px;color:var(--muted);font-weight:700}
+.m-day-empty{text-align:center;padding:34px 12px;color:var(--muted)}
+.m-day-empty .ico{font-size:30px;margin-bottom:8px}
+.m-day-empty .ttl{font-size:14px;font-weight:700}
 .m-home-quick h3{font-size:13px;color:var(--navy);margin-bottom:12px;font-weight:700;letter-spacing:.02em}
 .m-quick-row{display:flex;gap:8px}
 .m-quick-row .m-btn{flex:1;min-height:64px;flex-direction:column;gap:3px;font-size:12px;padding:8px;border-radius:11px}
@@ -1856,6 +1869,17 @@ a{color:var(--info);text-decoration:none}
   </div>
 </div>
 
+<!-- その日の予定 (週カレンダーの日付タップで開く) -->
+<div class="m-modal" id="m-day-modal">
+  <div class="m-modal-body" style="max-height:88%">
+    <div class="m-day-head">
+      <h2 id="m-day-title" style="margin:0"></h2>
+      <button class="m-day-close" onclick="closeDayModal()" aria-label="閉じる"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="m-day-body"></div>
+  </div>
+</div>
+
 <!-- 社内メモ 編集モーダル -->
 <div class="m-modal" id="m-memo-edit-modal">
   <div class="m-modal-body">
@@ -1939,7 +1963,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-07';
+const APP_VERSION = '2026-07-07a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3477,25 +3501,47 @@ function renderHomeCalendar(){
   `;
   wrap.innerHTML = html;
 }
-// 日付タップ: 配車/回収のどちらか件数の多い方へ遷移 (今日/明日は対応タブが選ばれる)
+// 日付タップ: その日の配車・回収案件をまとめて表示 (ボトムシート)。
+//   旧: 未対応タブ等へ遷移するだけで「その日」が見えなかった → 日付シートで直接表示。
+//   配車/回収の日付キーはリストと同一 (損保=dispatchAt/recoveryCalledAt・一般=useStart/useEnd)。
 function openWeekDay(iso){
-  if(!DATA){ showScreen('dispatch'); return; }
-  const cases = (DATA.cases || []).filter(_isActive);
-  const dispCount = cases.filter(c => (c.dispatchAt||'').startsWith(iso) && !c.dispatchDoneAt).length;
-  const recCount = cases.filter(c => (c.recoveryCalledAt||'').startsWith(iso) && !c.recoveryCompleted).length;
-  const today = todayISO();
-  const tomorrow = tomorrowISO();
-  // 配車優先 (件数が同じか配車のほうが多い場合)
-  if(dispCount >= recCount){
-    if(iso === today) localStorage.setItem(LS_KEYS.dispTab, 'today');
-    else if(iso === tomorrow) localStorage.setItem(LS_KEYS.dispTab, 'tomorrow');
-    else localStorage.setItem(LS_KEYS.dispTab, 'pending');
-    showScreen('dispatch');
-  } else {
-    if(iso === today) localStorage.setItem(LS_KEYS.recTab, 'today');
-    else localStorage.setItem(LS_KEYS.recTab, 'upcoming');
-    showScreen('recovery');
+  renderDaySheet(iso);
+  $('m-day-modal').classList.add('active');
+}
+function closeDayModal(){ $('m-day-modal').classList.remove('active'); }
+function renderDaySheet(iso){
+  const dispDay = c => (c.category === '一般' ? (c.useStart||'') : (c.dispatchAt||''));
+  const recDay  = c => (c.category === '一般' ? (c.useEnd||'')   : (c.recoveryCalledAt||''));
+  const cases = (DATA?.cases || []).filter(_isActive);
+  // 未完了→完了 の順 (完了はカード側で薄く表示)、同順は時刻
+  const disp = cases.filter(c => dispDay(c).startsWith(iso))
+    .sort((a,b) => Number(!!a.dispatchDoneAt) - Number(!!b.dispatchDoneAt) || dispDay(a).localeCompare(dispDay(b)));
+  const rec  = cases.filter(c => recDay(c).startsWith(iso))
+    .sort((a,b) => Number(!!a.recoveryCompleted) - Number(!!b.recoveryCompleted) || recDay(a).localeCompare(recDay(b)));
+
+  // 見出し: M/D(曜) の予定
+  const d = new Date(iso + 'T00:00:00');
+  const dow = ['日','月','火','水','木','金','土'][d.getDay()];
+  const todayLbl = iso === todayISO() ? '今日 ' : (iso === tomorrowISO() ? '明日 ' : '');
+  $('m-day-title').textContent = `${todayLbl}${d.getMonth()+1}/${d.getDate()}(${dow}) の予定`;
+
+  const dispSvg = '<svg class="m-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17"/><path d="M8 7h9v9"/></svg>';
+  const recSvg  = '<svg class="m-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10"/><path d="M16 17H7V8"/></svg>';
+  let html = '';
+  if(disp.length){
+    html += `<div class="m-day-sec"><div class="m-day-sec-hd disp">${dispSvg}配車<span class="n">${disp.length}件</span></div>${disp.map(c => renderDispatchCard(c)).join('')}</div>`;
   }
+  if(rec.length){
+    html += `<div class="m-day-sec"><div class="m-day-sec-hd rec">${recSvg}回収<span class="n">${rec.length}件</span></div>${rec.map(c => renderRecoveryCard(c)).join('')}</div>`;
+  }
+  if(!disp.length && !rec.length){
+    html = `<div class="m-day-empty"><div class="ico">✨</div><div class="ttl">この日の配車・回収予定はありません</div></div>`;
+  }
+  const body = $('m-day-body');
+  body.innerHTML = html;
+  // カードをタップしたらシートを閉じてからフローへ (カード自身の onclick=enterXFlow は残す)
+  body.querySelectorAll('.m-card').forEach(el =>
+    el.addEventListener('click', () => closeDayModal(), { capture: true }));
 }
 
 // ホーム グローバル検索 (空欄なら統計グリッド表示、入力中は検索結果のみ)
