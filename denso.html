@@ -454,7 +454,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-06-22';
+const APP_VERSION = '2026-07-08';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1706,7 +1706,7 @@ function openInvoiceWindow(client,jobs,month,invNo,extras){
     .breakdown tr.small td{font-size:10.5px;color:#64748b;font-weight:400;padding:5px 12px}
     .breakdown tr.total td{background:#334155;color:#fff;font-weight:700;font-size:14px;border-color:#334155}
     .note{margin-top:14px;font-size:10.5px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:9px;line-height:1.6}
-    @media print{.noprint{display:none}}
+    @media print{.noprint{display:none !important}}
     .noprint{text-align:center;margin-top:24px}
     .noprint button{padding:12px 28px;font-size:15px;background:#2563EB;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}
   </style></head><body>
@@ -1913,7 +1913,7 @@ function openQuoteWindow(id){
     .breakdown tr.small td{font-size:10.5px;color:#64748b;font-weight:400;padding:5px 12px}
     .breakdown tr.total td{background:#334155;color:#fff;font-weight:700;font-size:14px;border-color:#334155}
     .note{margin-top:14px;font-size:10.5px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:9px;line-height:1.6}
-    @media print{.noprint{display:none}}
+    @media print{.noprint{display:none !important}}
     .noprint{text-align:center;margin-top:24px}
     .noprint button{padding:12px 28px;font-size:15px;background:#2563EB;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}
   </style></head><body>
@@ -2044,7 +2044,7 @@ function openPrintWindow(title,bodyHtml,extraCss){
     .doc-sec::before{content:'';width:4px;height:14px;background:#334155;border-radius:2px}
     .doc-box{border:1px solid #d7dde5;border-radius:7px;padding:12px 14px;min-height:42px;white-space:pre-wrap;background:#fafbfc}
     .doc-box.big{font-size:17px;font-weight:700;min-height:54px;background:#fff}
-    @media print{.noprint,.topbar{display:none}}
+    @media print{.noprint,.topbar{display:none !important}}
     ${extraCss||''}
   </style></head><body><div class="topbar noprint"><button class="close" onclick="window.close()">✕ 閉じる</button><button class="pr" onclick="window.print()">🖨 印刷 / PDF保存</button></div>${bodyHtml}<div class="noprint"><button onclick="window.print()">🖨 印刷 / PDF保存</button></div></body></html>`);
   w.document.close(); return w;
