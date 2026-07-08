@@ -1963,7 +1963,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-07a';
+const APP_VERSION = '2026-07-07b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4134,7 +4134,7 @@ function renderAvailBoard(){
       </div>
       <div style="display:flex;gap:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">
         ${fl.map((f,i)=>{ const c=cellCol(f.free),t0=(i===0); const mk=(f.ret.length?`<span style="color:#C53030">＋${f.ret.length}</span>`:'')+(f.dep.length?`<span style="color:#185FA5">－${f.dep.length}</span>`:''); const w=wdOf(days[i]); const wc=w==='日'?'#C0392B':w==='土'?'#2C5282':'#AAA';
-          return `<div onclick="mAvailDayDetail('${esc(cls)}',${i})" style="flex:none;width:42px;text-align:center;cursor:pointer">
+          return `<div onclick="${t0?`mAvailStock('${esc(cls)}')`:`mAvailDayDetail('${esc(cls)}',${i})`}" style="flex:none;width:42px;text-align:center;cursor:pointer">
             <div style="font-size:9px;color:${t0?'#333':'#999'}">${t0?'今日':fmtMD(days[i])}</div>
             <div style="font-size:8px;color:${wc};margin-bottom:2px">${w}</div>
             <div style="background:${c.bg};border:1px solid ${c.bd};border-radius:4px;padding:5px 0"><b style="font-size:15px;color:${c.fg}">${f.free}</b></div>
@@ -4145,18 +4145,18 @@ function renderAvailBoard(){
   });
   if(small.length){
     const smallSorted=small.slice().sort((a,b)=>(flowsByCls[a][0].free-flowsByCls[b][0].free)||(own[b]-own[a])||a.localeCompare(b));
-    html+=`<div style="margin-top:12px;font-size:11px;color:#888;padding:0 2px;margin-bottom:6px">その他のクラス（保有${MANAGED_MIN-1}台以下・タップで内訳）</div>`;
+    html+=`<div style="margin-top:12px;font-size:11px;color:#888;padding:0 2px;margin-bottom:6px">その他のクラス（保有${MANAGED_MIN-1}台以下・タップで貸せる車両）</div>`;
     html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:7px;padding:0 2px">`;
     html+=smallSorted.map(cls=>{ const fl=flowsByCls[cls]; const av=fl.map(f=>f.free); const todayFree=av[0]; const min=Math.min.apply(null,av),minIdx=av.indexOf(min); const c=cellCol(todayFree);
       const chip=todayFree<=0?`<span style="background:#FCEBEB;color:#A32D2D;font-size:10px;padding:1px 7px;border-radius:8px">満車</span>`:(todayFree===1&&own[cls]>=2?`<span style="background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 7px;border-radius:8px">残1</span>`:(min<todayFree?`<span style="color:#999;font-size:10px">最少${min}(${fmtMD(days[minIdx])})</span>`:`<span style="color:#3B6D11;font-size:10px">余裕</span>`));
-      return `<div onclick="mAvailDayDetail('${esc(cls)}',0)" style="cursor:pointer;background:#fff;border:1px solid #E6E5E0;border-left:3px solid ${c.bd};border-radius:7px;padding:7px 9px">
+      return `<div onclick="mAvailStock('${esc(cls)}')" style="cursor:pointer;background:#fff;border:1px solid #E6E5E0;border-left:3px solid ${c.bd};border-radius:7px;padding:7px 9px">
         <div style="font-size:13px;font-weight:bold">${esc(cls)}${nameMap[cls]?`<div style="color:#999;font-size:9px;font-weight:normal">${esc(nameMap[cls])}</div>`:''}</div>
         <div style="margin:3px 0 4px"><b style="font-size:20px;color:${c.fg}">${todayFree}</b><span style="color:#999;font-size:10px"> 空/${own[cls]}</span></div>
         <div>${chip}</div>
       </div>`; }).join('');
     html+=`</div>`;
   }
-  html+=`<div style="margin-top:10px;font-size:10px;color:#999;padding:0 2px;line-height:1.5">数字=空き台数 ・ <span style="color:#C53030">＋帰り</span> <span style="color:#185FA5">－予約</span> ・ <b>日付をタップでその日に動く案件</b> ・ 帰りの多くは「利用開始日から30日」の見込み。</div>`;
+  html+=`<div style="margin-top:10px;font-size:10px;color:#999;padding:0 2px;line-height:1.5">数字=空き台数 ・ <span style="color:#C53030">＋帰り</span> <span style="color:#185FA5">－予約</span> ・ <b>今日の数字をタップで貸せる車両／先の日付でその日に動く案件</b> ・ 帰りの多くは「利用開始日から30日」の見込み。</div>`;
   body.innerHTML=html;
   if(sub){ const tightCls=managed.filter(k=>Math.min.apply(null,flowsByCls[k].map(f=>f.free))<=1); sub.textContent=(managed.length?(tightCls.length?`⚠ ${tightCls.join(' / ')} が逼迫`:'よく出るクラスは余裕あり'):'')+` ・ ${today}`; }
 }
@@ -4178,6 +4178,19 @@ function mAvailDayDetail(cls,i){
   if(f.dep.length){ h+=`<div style="color:#185FA5;font-weight:bold;font-size:12px;margin-top:4px">－ 出る ${f.dep.length}件</div>${f.dep.map(id=>link(id)).join('')}`; }
   if(f.ret.length){ h+=`<div style="color:#C53030;font-weight:bold;font-size:12px;margin-top:4px">＋ 帰る ${f.ret.length}件</div>${f.ret.map(id=>link(id,'('+retBasis(byId(id))+')')).join('')}`; }
   if(!f.dep.length&&!f.ret.length){ if(f.occ){ h+=`<div style="font-size:12px;color:#666;margin-top:4px">出入りなし。稼働中 ${f.occ}台:</div>${f.occIds.slice(0,8).map(id=>link(id)).join('')}${f.occIds.length>8?`<div style="color:#999;font-size:11px">…他 ${f.occIds.length-8}件</div>`:''}`; } else { h+=`<div style="font-size:12px;color:#3B6D11;margin-top:4px">この日は全台空き</div>`; } }
+  h+=`</div>`;
+  cont.innerHTML=h;
+}
+// 🅿️ 在庫ボードの「今日の空き数字」タップ (2026-07-07b): そのクラスの 今すぐ貸せる実車 (稼働可・出払っていない) をリスト表示
+function mAvailStock(cls){
+  const cont=$('m-avail-detail'); if(!cont) return;
+  const clsOf=v=>(((v&&(v.vehicleClass||v.class))||'—').toString().trim().toUpperCase())||'—';
+  const list=_availableVehicles().filter(v=>clsOf(v)===cls).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const nameMap={}; (DATA.vehicleClasses||[]).forEach(x=>{ if(x&&x.code) nameMap[x.code.toUpperCase()]=x.name||''; });
+  const row=v=>{const pl=v.plate||{};const plate=[pl.area,pl.no,pl.kana,pl.tail].filter(Boolean).join(' ');return `<div style="padding:7px 2px;border-bottom:1px solid #F0EFEA;font-size:13px"><b>${esc(v.name||v.maker||'(車種名なし)')}</b>${plate?`<br><span style="color:#666;font-size:12px">${esc(plate)}</span>`:''}</div>`;};
+  let h=`<div style="border:1px solid #E0E0DC;border-radius:8px;padding:9px 10px;background:#FBFBF9;margin-top:8px">
+    <div style="font-weight:bold;font-size:13px;margin-bottom:4px">${esc(cls)}${nameMap[cls]?` <span style="color:#999;font-weight:normal;font-size:11px">${esc(nameMap[cls])}</span>`:''} ・ 今すぐ貸せる <span style="color:#3B6D11">${list.length}</span>台<span onclick="var d=document.getElementById('m-avail-detail');if(d)d.innerHTML='';" style="float:right;color:#999">✕</span></div>`;
+  if(list.length){ h+=list.map(row).join(''); } else { h+=`<div style="font-size:12px;color:#A32D2D;margin-top:4px">今すぐ貸せる実車はありません（全台出払い / 点検入庫中）</div>`; }
   h+=`</div>`;
   cont.innerHTML=h;
 }
