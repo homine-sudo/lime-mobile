@@ -3065,7 +3065,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-07';
+const APP_VERSION = '2026-07-09';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -4458,6 +4458,102 @@ function restoreConflictSnapshot(caseId, historyIdx){
   if(editingCaseId === caseId) openCaseModal(caseId);
 }
 
+// ============================================================
+// 🗂 per-case 影書き (1案件1ファイル化・移行フェーズ1 / 2026-07-09)
+//   settings.caseStoreMode === 'dual' のときだけ、本保存(data.json全体)の成功後に
+//   「今回の保存で変わった案件」を dirHandle 配下 cases/YYYY/MM/<id>.json にも書く。
+//   ・正本は引き続き data.json (読込は一切変えない)。cases/ は切替前の慣らし+検証用シャドウ。
+//   ・ベストエフォート: 失敗しても本保存/FAX/通知には一切影響しない (localStorage limeOne_pcShadow にログ)
+//   ・フラグ未設定(既定=mono)では何もしない。🚨 split(正本切替)は全端末更新+日曜一斉切替で別途。
+//   ・マージロジックは percase-tool/store-core.js および モバイル index_mobile.html の同名関数と完全一致必須。
+// ============================================================
+const PC_APPEND_ARRAYS = ['faxHistory','checkSheets','_conflictHistory'];
+function _pcSafeId(id){ return String(id).replace(/[^A-Za-z0-9_-]/g,'_'); }
+function _pcBucket(c){
+  const m = String(c.caseNo||'').match(/^(\d{4})-(\d{2})/); if(m) return m[1]+'/'+m[2];
+  const r = String(c.receivedAt||'').match(/^(\d{4})-(\d{2})/); if(r) return r[1]+'/'+r[2];
+  return 'unknown/00';
+}
+function _pcUnionAppend(a,b){
+  const seen=new Set(), out=[];
+  for(const arr of [a||[],b||[]]) for(const el of arr){ const k=JSON.stringify(el); if(!seen.has(k)){ seen.add(k); out.push(el); } }
+  return out;
+}
+// 3-wayフィールド単位マージ (追記配列は和集合=絶対に縮まない)。base無しは updatedAt 後勝ち。
+function _pcMergeCaseRecord(base, mine, disk){
+  if(!disk) return mine; if(!mine) return disk;
+  const s = base || null, merged = {};
+  const keys = new Set([...Object.keys(mine), ...Object.keys(disk), ...(s?Object.keys(s):[])]);
+  const lt = Number(mine.updatedAt||0), dt = Number(disk.updatedAt||0);
+  for(const k of keys){
+    if(PC_APPEND_ARRAYS.indexOf(k)>=0){ merged[k]=_pcUnionAppend(mine[k],disk[k]); continue; }
+    const lv=mine[k], dv=disk[k], sv=s?s[k]:undefined;
+    const lS=JSON.stringify(lv), dS=JSON.stringify(dv), sS=JSON.stringify(sv);
+    let pick;
+    if(!s) pick=(lt>=dt)?lv:dv;
+    else if(lS===dS) pick=lv;
+    else if(lS===sS) pick=dv;
+    else if(dS===sS) pick=lv;
+    else pick=(lt>=dt)?lv:dv;
+    if(pick!==undefined) merged[k]=pick;
+  }
+  return merged;
+}
+// 今回の保存で変わった案件 = toWrite(書き込んだ最終形) と diskData(保存前) のJSON差分 (id単位)
+function _pcChangedCases(mergedDoc, diskDoc){
+  const dBy={}; ((diskDoc&&diskDoc.cases)||[]).forEach(c=>{ if(c&&c.id) dBy[c.id]=JSON.stringify(c); });
+  return ((mergedDoc&&mergedDoc.cases)||[]).filter(c=> c && c.id && dBy[c.id]!==JSON.stringify(c));
+}
+const _pcInFlight = new Set();
+function _pcShadowLog(entry){
+  try{
+    const k='limeOne_pcShadow';
+    const log=JSON.parse(localStorage.getItem(k)||'[]');
+    log.push(Object.assign({t:new Date().toISOString().slice(0,19)},entry));
+    while(log.length>80) log.shift();
+    localStorage.setItem(k,JSON.stringify(log));
+  }catch(e){}
+}
+async function _pcShadowWriteOne(c){
+  // dirHandle 配下 cases/YYYY/MM/<id>.json へ書く (createWritable=close時アトミック)
+  const parts = _pcBucket(c).split('/');
+  let dir = await dirHandle.getDirectoryHandle('cases', {create:true});
+  for(const p of parts) dir = await dir.getDirectoryHandle(p, {create:true});
+  const name = _pcSafeId(c.id)+'.json';
+  let diskCase = null;
+  try {
+    const fh0 = await dir.getFileHandle(name, {create:false});
+    const f0 = await fh0.getFile();
+    try { diskCase = JSON.parse(await f0.text()); } catch(_){ diskCase = null; }
+  } catch(_){ diskCase = null; }   // NotFound = 新規
+  const merged = _pcMergeCaseRecord(null, c, diskCase);
+  const fh = await dir.getFileHandle(name, {create:true});
+  const w = await fh.createWritable();
+  await w.write(JSON.stringify(merged, null, 2));
+  await w.close();
+  return true;
+}
+function _pcShadowAfterSave(mergedDoc, diskDoc){
+  try{
+    if(!dirHandle) return;
+    const mode=(mergedDoc && mergedDoc.settings && mergedDoc.settings.caseStoreMode)||'';
+    if(mode!=='dual') return;
+    let changed=_pcChangedCases(mergedDoc,diskDoc);
+    if(!changed.length) return;
+    if(changed.length>20){ _pcShadowLog({skip:changed.length-20,note:'cap20'}); changed=changed.slice(0,20); }
+    // fire-and-forget: 本保存・FAX・通知を一切ブロックしない
+    (async()=>{
+      for(const c of changed){
+        if(_pcInFlight.has(c.id)) continue;
+        _pcInFlight.add(c.id);
+        try{ await _pcShadowWriteOne(c); _pcShadowLog({ok:1,id:c.id,no:c.caseNo}); }
+        catch(e){ _pcShadowLog({ng:1,id:c.id,no:c.caseNo,err:String(e.message||e).slice(0,80)}); }
+        finally{ _pcInFlight.delete(c.id); }
+      }
+    })();
+  }catch(e){ console.warn('[percase-shadow]',e); }
+}
+
 async function saveToDirImmediate(){
   if(!dirHandle) return;
   try{
@@ -4584,6 +4680,8 @@ async function saveToDirImmediate(){
     const f2 = await (await dirHandle.getFileHandle('data.json')).getFile();
     dirDataMtime = f2.lastModified;
     updateSyncStatus('✔ 共有フォルダに同期: '+new Date().toLocaleTimeString('ja-JP'));
+    // 🗂 per-case 影書き (dual モード時のみ・fire-and-forget・本保存に影響ゼロ)
+    try { _pcShadowAfterSave(toWrite, diskData); } catch(_){}
     // ★復元/修復の明示経路 (_forceWriteOnce) は1回で解除しジャーナルも破棄 (2026-07-03)
     if(_isForceWriteOnce()){
       _clearForceWriteOnce();
