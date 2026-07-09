@@ -731,6 +731,12 @@
   .ptr.ready{color:var(--acc);border-color:var(--acc)}
   /* 古いデータ/取得失敗の常設バー */
   .stale-bar{background:#33242b;color:#e0b055;border-bottom:1px solid #5a4a34;font-size:11px;letter-spacing:.03em;padding:8px 14px;text-align:center;line-height:1.5}
+  /* アップデートバナー (2026-07-09b・index_mobile と同機構) — 暗タント青 + var() のみ */
+  .upd-bar{display:none;align-items:center;gap:10px;background:#1c2740;color:var(--ink);border-bottom:1px solid #33425f;font-size:11.5px;letter-spacing:.03em;padding:9px 14px;line-height:1.4}
+  .upd-bar.active{display:flex}
+  .upd-bar .u-msg{flex:1}
+  .upd-bar button{border:1px solid #3a4d72;background:transparent;color:var(--ink2);border-radius:8px;font-size:11px;padding:5px 10px}
+  .upd-bar button.primary{background:var(--acc);border-color:var(--acc);color:#0c111c;font-weight:700}
 </style>
 </head>
 <body>
@@ -746,6 +752,7 @@
     </div>
   </header>
   <div id="ptr" class="ptr"></div>
+  <div id="upd-bar" class="upd-bar"><span>🆕</span><span class="u-msg">新しいバージョンがあります</span><button class="primary" onclick="forceAppUpdate()">更新</button><button onclick="dismissUpdateBanner()" aria-label="閉じる">✕</button></div>
   <div id="stale-bar" class="stale-bar" style="display:none"></div>
 
   <!-- ========== 今月 — これ1画面で全部わかる ========== -->
@@ -1421,7 +1428,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-09a';
+const APP_VERSION = '2026-07-09b';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3753,6 +3760,38 @@ function setupTabs(){
   };
   setupUX();
 }
+
+// ===== アップデートチェック (2026-07-09b・index_mobile と同機構) =====
+// GitHub Pages から自分自身のHTMLを cache:no-store で取得し APP_VERSION を比較。
+// 新版検出でヘッダ下にバナー表示 → 「更新」= ?v=timestamp 付き reload でキャッシュバイパス。
+let _updChecking=false;
+async function checkForUpdate(){
+  if(_updChecking||location.protocol==='file:') return;
+  _updChecking=true;
+  try{
+    const res=await fetch(location.pathname+'?_ucheck='+Date.now(),{cache:'no-store'});
+    if(!res.ok) return;
+    const m=(await res.text()).match(/const\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    if(!m) return;
+    const remote=m[1], dismissed=localStorage.getItem('limeAdm_updateDismissed')||'';
+    const bar=$('upd-bar');
+    if(bar&&remote&&remote!==APP_VERSION&&remote!==dismissed){
+      bar.querySelector('.u-msg').textContent='新しいバージョンがあります ('+remote+')';
+      bar.classList.add('active');
+    }
+  }catch(_){/* オフライン等は静かに無視 */}
+  finally{_updChecking=false;}
+}
+function forceAppUpdate(){ location.replace(location.pathname+'?v='+Date.now()); }
+function dismissUpdateBanner(){
+  const bar=$('upd-bar'); if(!bar) return;
+  const m=(bar.querySelector('.u-msg').textContent||'').match(/\(([^)]+)\)/);
+  if(m) localStorage.setItem('limeAdm_updateDismissed',m[1]);
+  bar.classList.remove('active');
+}
+setTimeout(checkForUpdate,5000);
+setInterval(checkForUpdate,30*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkForUpdate(); });
 
 // ===== 操作性 (2026-06-12a): スワイプでタブ移動 / 引っ張って更新 / 復帰時 自動更新 =====
 const TAB_ORDER=['now','rev','ops','kane','pipe','report','set'];
