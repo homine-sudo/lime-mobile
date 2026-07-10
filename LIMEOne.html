@@ -3098,7 +3098,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-10b';
+const APP_VERSION = '2026-07-10c';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7971,7 +7971,6 @@ function renderAvailabilityBoard(){
   window._availFlows = flowsByCls; window._availDaysArr = days;   // クリック内訳用に保持
 
   const managed = Object.keys(own).filter(k=> own[k] >= MANAGED_MIN).sort((a,b)=> (own[b]-own[a]) || a.localeCompare(b));
-  const small   = Object.keys(own).filter(k=> own[k] < MANAGED_MIN).sort((a,b)=> (own[b]-own[a]) || a.localeCompare(b));
 
   let html = '';
   if(!managed.length){ html += `<div class="text-muted text-sm">保有${MANAGED_MIN}台以上のクラスがありません</div>`; }
@@ -7999,12 +7998,15 @@ function renderAvailabilityBoard(){
       </div>
     </div>`;
   });
-  // その他のクラス(保有MANAGED_MIN未満): 白基調カードのグリッド(今日空きを大きく・左アクセント色・逼迫順・クリックで内訳)
-  if(small.length){
-    const smallSorted = small.slice().sort((a,b)=> (flowsByCls[a][0].free - flowsByCls[b][0].free) || (own[b]-own[a]) || a.localeCompare(b));
-    html += `<div style="margin-top:12px;font-size:11px;color:#888;margin-bottom:6px">その他のクラス（保有${MANAGED_MIN-1}台以下・クリックで貸せる車両）</div>`;
+  // クラス別カード: 白基調カードのグリッド(今日空きを大きく・左アクセント色・逼迫順・クリックで貸せる車両)
+  //   2026-07-10: 管理クラス(K/S/SH 等 14日ストリップを出したクラス)も下のカードに並べる。
+  //   上=推移が見たいクラスのストリップ / 下=全クラスの今日の空きを一覧、という二段構え。
+  const cardCls = Object.keys(own);
+  if(cardCls.length){
+    const cardSorted = cardCls.slice().sort((a,b)=> (flowsByCls[a][0].free - flowsByCls[b][0].free) || (own[b]-own[a]) || a.localeCompare(b));
+    html += `<div style="margin-top:12px;font-size:11px;color:#888;margin-bottom:6px">クラス別の空き（全クラス・逼迫順・クリックで貸せる車両）</div>`;
     html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">`;
-    html += smallSorted.map(cls=>{
+    html += cardSorted.map(cls=>{
       const fl=flowsByCls[cls]; const av=fl.map(f=>f.free); const todayFree=av[0];
       const min=Math.min.apply(null,av), minIdx=av.indexOf(min); const c=cellCol(todayFree);
       const chip = todayFree<=0 ? `<span style="background:#FCEBEB;color:#A32D2D;font-size:10px;padding:1px 7px;border-radius:8px">満車</span>`
