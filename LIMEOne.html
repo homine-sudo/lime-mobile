@@ -167,6 +167,24 @@ td.right{text-align:right}
 /* 案件状態バッジ(より視覚的に目立つ仕様) */
 .status-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:bold;white-space:nowrap;border:1.5px solid;letter-spacing:.02em;min-width:68px;justify-content:center}
 .status-pill .sp-dot{display:none}
+/* 🚙 車両一覧: クイックチップ / 件数 / クラス折りたたみ / 見出し固定 (2026-07-10b) */
+.veh-count{font-size:12px;color:#666;font-weight:600;white-space:nowrap;margin-right:4px}
+.veh-count b{color:var(--navy)}
+.veh-retired-toggle{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#555;cursor:pointer;white-space:nowrap;padding:4px 8px;border:1px solid var(--line,#D9DEE7);border-radius:6px;background:#fff}
+.veh-retired-toggle input{cursor:pointer}
+.veh-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 10px}
+.veh-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:14px;border:1px solid var(--line,#D9DEE7);background:#fff;color:#444;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.veh-chip:hover{background:#EAF5DC}
+.veh-chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.veh-chip .n{font-size:11px;opacity:.75;font-weight:600}
+.veh-chip.on .n{opacity:.9}
+.veh-tbl-wrap{max-height:64vh;overflow:auto}
+.veh-tbl-wrap thead th{position:sticky;top:0;z-index:2}
+tr.veh-grp{cursor:pointer;background:#F4F6FB}
+tr.veh-grp:hover td{background:#EAF5DC}
+tr.veh-grp td{background:#F4F6FB;font-weight:800;color:var(--navy);font-size:12px;padding:6px 10px;border-top:2px solid #D9DEE7;text-align:left}
+tr.veh-grp .caret{display:inline-block;width:12px;color:#7286B0}
+tr.veh-grp .gn{font-weight:600;color:#666;margin-left:6px;font-size:11px}
 /* 案件状態ピル (v2026.05: 同系色の重複を解消し 12ステータスを完全に判別可能に)
  *  workflow: 受付(灰)→確認中(黄)→配車予定(鮮青)→配車済(鮮橙)→手配書FAX済(茶)
  *           →利用中(緑)→回収連絡(桃)→返却済(紺)→仮請求(ローズ)→請求済(紫)→入金済(ティール)
@@ -1203,6 +1221,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   <div class="card">
     <div class="toolbar">
       <div class="card-title" style="margin:0">🚙 登録車両</div>
+      <span id="veh-count" class="veh-count"></span>
       <select id="veh-filter-class" onchange="renderVehicles()"><option value="">クラス(全て)</option></select>
       <select id="veh-filter-status" onchange="renderVehicles()" title="登録ステータスで絞り込み">
         <option value="">ステータス(全て)</option>
@@ -1213,6 +1232,9 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <option>稼働中</option><option>仮予約</option><option>空車</option><option>点検入庫中</option>
       </select>
       <input id="veh-search" placeholder="🔍 ナンバー下4桁 / 車種 / メーカー / カラー" oninput="dbRenderVehicles()">
+      <label class="veh-retired-toggle" title="売却済・廃車も一覧に表示する (既定は非表示)">
+        <input type="checkbox" id="veh-show-retired" onchange="renderVehicles()"> 🗄 売却済・廃車も表示
+      </label>
       <div style="flex:1"></div>
       <button class="btn btn-outline btn-sm" onclick="showPage('sales');setTimeout(()=>{const el=[...document.querySelectorAll('.card-title')].find(x=>x.textContent.includes('車両稼働率'));if(el)el.scrollIntoView({behavior:'smooth'});},200)">📊 稼働率を見る</button>
       <label class="btn btn-outline btn-sm" style="cursor:pointer" title="レンタカー侍等からExcel/CSVを取込、4桁ナンバーで照合して車検満了日・直近点検日を更新">
@@ -1221,7 +1243,8 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       </label>
       <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 車両を追加</button>
     </div>
-    <div class="tbl-wrap">
+    <div class="veh-chips" id="veh-chips"></div>
+    <div class="tbl-wrap veh-tbl-wrap">
       <table>
         <thead><tr>
           <th>ナンバー</th><th>クラス</th><th>日額(税込)</th><th>メーカー</th><th>車種/グレード</th><th>カラー</th>
@@ -3075,7 +3098,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-10a';
+const APP_VERSION = '2026-07-10b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -14841,9 +14864,72 @@ function defaultVehicle(){ return { id:uid('v-'), plate:{area:'沖縄',no:'',kan
 const VEHICLE_FIELDS = ['maker','name','grade','color','firstRegistrationRaw','vin','status','inspectionDate','lastInspectionAt','purchaseDate','vehiclePrice','leasePeriod','leaseFee','leaseTotal','residualValue','lessor','dealer','mileage','notes','repairHistory','soldAt','soldPrice','soldTo','saleNote'];
 function plateString(p){ if(!p) return ''; return [p.area,p.no,p.kana,p.tail].filter(Boolean).join(' '); }
 
+// ============================================================
+// 🚙 車両一覧の見やすさ (2026-07-10b)
+//   ①退役車(売却済/廃車)は消さずに既定で隠す ②クイックチップでワンタップ絞り込み
+//   ③クラス別グループ見出しで折りたたみ (稼働可72台のスクロール緩和)
+//   ※売却済は「削除」しない: 案件が vehicleId で参照し、売却日/売却価格の記録もここにある。
+// ============================================================
+const _VEH_RETIRED = ['売却済','廃車'];
+let _vehQuick = '';                    // '' | 'available' | 'inuse' | 'maint' | 'due' | 'retired'
+const _vehCollapsed = new Set();       // 折りたたみ中のクラスコード
+
+// その車が車検60日以内(超過含む)か
+function _vehDueSoon(v){
+  if(!v.inspectionDate) return false;
+  const dl = Math.floor((parseDate(v.inspectionDate) - new Date()) / 86400000);
+  return dl < 60;
+}
+function _vehMatchesQuick(v, opMap){
+  const op = (opMap[v.id] || {label:'空車'}).label;
+  const isMaint = v.status==='点検入庫中' || v.status==='整備中';
+  switch(_vehQuick){
+    case 'available': return v.status==='稼働可' && op==='空車';
+    case 'inuse':     return op==='稼働中';
+    case 'maint':     return isMaint;
+    case 'due':       return _vehDueSoon(v) && !_VEH_RETIRED.includes(v.status);
+    case 'retired':   return _VEH_RETIRED.includes(v.status);
+    default:          return true;
+  }
+}
+function setVehQuick(k){ _vehQuick = (_vehQuick===k) ? '' : k; renderVehicles(); }
+function toggleVehGroup(code){
+  if(_vehCollapsed.has(code)) _vehCollapsed.delete(code); else _vehCollapsed.add(code);
+  renderVehicles();
+}
+function toggleAllVehGroups(){
+  const codes = [...new Set(DATA.vehicles.map(v=>v.vehicleClass||'(未設定)'))];
+  if(_vehCollapsed.size) _vehCollapsed.clear(); else codes.forEach(c=>_vehCollapsed.add(c));
+  renderVehicles();
+}
+function _renderVehChips(opMap){
+  const host = $('veh-chips'); if(!host) return;
+  const all = DATA.vehicles;
+  const live = all.filter(v => !_VEH_RETIRED.includes(v.status));
+  const n = {
+    available: live.filter(v => v.status==='稼働可' && (opMap[v.id]||{label:'空車'}).label==='空車').length,
+    inuse:     live.filter(v => (opMap[v.id]||{label:'空車'}).label==='稼働中').length,
+    maint:     all.filter(v => v.status==='点検入庫中'||v.status==='整備中').length,
+    due:       live.filter(_vehDueSoon).length,
+    retired:   all.filter(v => _VEH_RETIRED.includes(v.status)).length
+  };
+  const chip = (k, label, cnt) =>
+    `<button type="button" class="veh-chip ${_vehQuick===k?'on':''}" onclick="setVehQuick('${k}')">${label}<span class="n">${cnt}</span></button>`;
+  host.innerHTML =
+    `<button type="button" class="veh-chip ${_vehQuick===''?'on':''}" onclick="setVehQuick('')">すべて<span class="n">${live.length}</span></button>` +
+    chip('available','🟢 貸出可', n.available) +
+    chip('inuse','🚗 稼働中', n.inuse) +
+    chip('maint','🔧 点検中', n.maint) +
+    chip('due','📅 車検60日内', n.due) +
+    (n.retired ? chip('retired','🗄 売却済・廃車', n.retired) : '') +
+    `<div style="flex:1"></div>` +
+    `<button type="button" class="veh-chip" onclick="toggleAllVehGroups()" title="クラス見出しを一括で開閉">${_vehCollapsed.size?'▼ すべて開く':'▶ クラスを畳む'}</button>`;
+}
+
 function renderVehicles(){
   // capture current filter values BEFORE rebuilding (to preserve selection)
   const fs = $('veh-filter-status').value, fc = $('veh-filter-class').value, fo = ($('veh-filter-op')||{}).value||'', q = ($('veh-search').value||'').toLowerCase();
+  const _showRetired = !!($('veh-show-retired')||{}).checked;
   // populate class options once or refresh content while keeping value
   const sel = $('veh-filter-class');
   const newHTML = '<option value="">クラス(全て)</option>' + DATA.vehicleClasses.map(v=>`<option value="${esc(v.code)}">${esc(v.code)} ${esc(v.name||'')}</option>`).join('');
@@ -14861,7 +14947,8 @@ function renderVehicles(){
     else rows = rows.filter(v=>v.status===fs);
   }
   if(fc) rows = rows.filter(v=>v.vehicleClass===fc);
-  if(fo){ const _opMap = computeVehicleOperationMap(); rows = rows.filter(v => (_opMap[v.id]||{label:'空車'}).label === fo); }
+  const _opMapAll = computeVehicleOperationMap();
+  if(fo){ rows = rows.filter(v => (_opMapAll[v.id]||{label:'空車'}).label === fo); }
   if(q){
     const last4 = q.match(/^\d{4}$/);
     if(last4){
@@ -14869,6 +14956,19 @@ function renderVehicles(){
     } else {
       rows = rows.filter(v=> vehicleSearchBlob(v).includes(q));
     }
+  }
+  // 🚙 2026-07-10b: クイックチップ絞り込み + 売却済/廃車の既定非表示
+  //   売却済/廃車は「消さずに隠す」(案件3件が参照・売却日/売却価格の記録あり)。
+  //   ステータスで明示選択 or 🗄チップ or チェックONの時だけ出す。
+  if(_vehQuick) rows = rows.filter(v => _vehMatchesQuick(v, _opMapAll));
+  const _retiredShown = _showRetired || _vehQuick==='retired' || fs==='売却済' || fs==='廃車';
+  if(!_retiredShown) rows = rows.filter(v => !_VEH_RETIRED.includes(v.status));
+  // クイックチップ + 件数
+  _renderVehChips(_opMapAll);
+  const _cnt = $('veh-count');
+  if(_cnt){
+    const hidden = DATA.vehicles.length - rows.length;
+    _cnt.innerHTML = `表示 <b>${rows.length}</b> 台 / 全 ${DATA.vehicles.length} 台` + (hidden>0 ? ` <span style="color:#999">(${hidden}台 非表示)</span>` : '');
   }
 
   // KPI
@@ -14889,8 +14989,8 @@ function renderVehicles(){
   `;
 
   // 稼働状況マップ: 稼働中/仮予約/空車
-  const vehOpMap = computeVehicleOperationMap();
-  $('veh-tbody').innerHTML = rows.map(v=>{
+  const vehOpMap = _opMapAll;
+  const _rowHtml = v => {
     const isMaint = v.status==='点検入庫中' || v.status==='整備中';
     const stBadge = v.status==='稼働可'?'badge-green': isMaint?'badge-orange':'badge-gray';
     const stLabel = isMaint? '点検入庫中' : (v.status||'');
@@ -14917,7 +15017,28 @@ function renderVehicles(){
       <td class="left text-sm">${esc(v.lessor||'')}${v.dealer?`<div class="text-muted text-sm">${esc(v.dealer)}</div>`:''}</td>
       <td onclick="event.stopPropagation()" class="nowrap"><div class="veh-actions">${maintBtn}<button class="veh-act" onclick="openVehicleHistoryModal('${v.id}')" title="この車両の貸出履歴">📋</button></div></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="14" class="empty-state">車両が未登録です。「＋ 車両を追加」から登録してください。</td></tr>';
+  };
+  // クラス別グループ見出し (クリックで折りたたみ)。rows は既にクラス順→ナンバー順にソート済み。
+  let _tbodyHtml = '';
+  if(rows.length){
+    let _cur = null;
+    rows.forEach(v => {
+      const code = v.vehicleClass || '(未設定)';
+      if(code !== _cur){
+        _cur = code;
+        const n = rows.filter(x => (x.vehicleClass||'(未設定)') === code).length;
+        const cinfo = findClass(code);
+        const collapsed = _vehCollapsed.has(code);
+        _tbodyHtml += `<tr class="veh-grp" onclick="toggleVehGroup('${esc(code)}')" title="クリックで開閉">
+          <td colspan="14"><span class="caret">${collapsed?'▶':'▼'}</span> ${classBadge(code)} ${esc((cinfo&&cinfo.name)||'')}<span class="gn">${n}台</span></td>
+        </tr>`;
+      }
+      if(!_vehCollapsed.has(code)) _tbodyHtml += _rowHtml(v);
+    });
+  } else {
+    _tbodyHtml = '<tr><td colspan="14" class="empty-state">該当する車両がありません。絞り込みを変えてください。</td></tr>';
+  }
+  $('veh-tbody').innerHTML = _tbodyHtml;
 
   $('veh-alerts').innerHTML = alerts.length? alerts.map(a=>`<tr onclick="openVehicleModal('${a.vehicleId}')"><td><b>${esc(a.plate)}</b></td><td class="left">${esc(a.name)}</td><td>${esc(a.kind)}</td><td>${fmtDate(a.date)}</td><td>${a.daysLeft<0? `<span class="badge badge-red">${-a.daysLeft}日超過</span>` : `<span class="badge ${a.daysLeft<30?'badge-red':'badge-orange'}">あと${a.daysLeft}日</span>`}</td><td class="left text-sm">${esc(a.note||'')}</td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">期限アラートはありません</td></tr>';
 }
