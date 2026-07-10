@@ -906,6 +906,13 @@ a{color:var(--info);text-decoration:none}
   padding:7px 11px;border-left:4px solid var(--green);
   margin:18px 0 10px;border-radius:0 6px 6px 0;letter-spacing:.04em;
 }
+/* 🏁 回収先セクションの補足 (配車先と違う時だけ入力) */
+.m-nc-rec-hint{
+  font-size:11px;color:#6B6B66;line-height:1.5;
+  background:#FAF7FD;border-left:3px solid #C9A9E0;
+  padding:7px 10px;border-radius:0 6px 6px 0;margin:-4px 0 10px;
+}
+.m-nc-rec-hint b{color:var(--navy)}
 /* 入力欄＋選択ボタンの行 (高さ・角丸を入力欄に厳密一致させる) */
 .m-inrow{display:flex;gap:8px;align-items:stretch}
 .m-inrow > input{flex:1;min-width:0}
@@ -1689,6 +1696,24 @@ a{color:var(--info);text-decoration:none}
       <label>担当者 TEL</label>
       <input type="tel" id="m-nc-dispatchContactTel" placeholder="090-xxx-xxxx">
     </div>
+    <!-- 🏁 回収先: 配車先と違う時だけ入力 (例 自宅へ配車→回収は工場)。空欄なら配車先と同じ扱い -->
+    <div class="m-section-divider"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M4 15V4h6l1 2h8v9H9l-1-2H4z"/><path d="M4 22v-7"/></svg>回収先（配車先と違う時だけ）</div>
+    <div class="m-nc-rec-hint">空欄なら<b>配車先と同じ</b>です。自宅へ配車→回収は工場、のような時だけ入力してください。</div>
+    <div class="m-form-grp">
+      <label>回収先名</label>
+      <div class="m-inrow">
+        <input type="text" id="m-nc-recoveryToName" placeholder="例: カーメンテナンス玉機">
+        <button type="button" class="m-pick-btn" onclick="openMncFactoryPicker('recovery')" title="工場マスタから選ぶ"><svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V8l5 3V8l5 3V8l4 2v11"/></svg></button>
+      </div>
+    </div>
+    <div class="m-form-grp">
+      <label>回収先住所</label>
+      <input type="text" id="m-nc-recoveryToAddr" placeholder="空欄なら配車先住所">
+    </div>
+    <div class="m-form-grp">
+      <label>回収先 TEL</label>
+      <input type="tel" id="m-nc-recoveryToTel" placeholder="空欄なら配車先TEL">
+    </div>
     <div class="m-section-divider"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg>配車予約・車両</div>
     <div class="m-form-grp">
       <label>配車予約日時</label>
@@ -1963,7 +1988,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-10a';
+const APP_VERSION = '2026-07-10b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5268,6 +5293,9 @@ function openNewCaseModal(editCaseId){
     setV('m-nc-dispatchToTel', editC.dispatchToTel);
     setV('m-nc-dispatchContact', editC.dispatchToContact);
     setV('m-nc-dispatchContactTel', editC.dispatchToContactTel);
+    setV('m-nc-recoveryToName', editC.recoveryToName);
+    setV('m-nc-recoveryToAddr', editC.recoveryToAddress);
+    setV('m-nc-recoveryToTel', editC.recoveryToTel);
     setV('m-nc-dispatchAt', editC.dispatchAt);
     setV('m-nc-dispatchNote', editC.dispatchNote);
     setV('m-nc-vehicleClass', editC.vehicleClass || '');
@@ -5292,6 +5320,7 @@ function openNewCaseModal(editCaseId){
     ['m-nc-contractor','m-nc-driver','m-nc-driverTel','m-nc-insurerContact','m-nc-insurerContactTel',
      'm-nc-insurerContactFax','m-nc-accidentNo','m-nc-accidentDate',
      'm-nc-dispatchTo','m-nc-dispatchToAddr','m-nc-dispatchToTel','m-nc-dispatchContact','m-nc-dispatchContactTel',
+     'm-nc-recoveryToName','m-nc-recoveryToAddr','m-nc-recoveryToTel',
      'm-nc-dispatchNote','m-nc-useStart','m-nc-useEnd','m-nc-unitPrice','m-nc-memo','m-nc-negotiationLog'
     ].forEach(id => { const el=$(id); if(el) el.value = ''; });
     // 自社担当者は編集者名を初期値に
@@ -5377,8 +5406,12 @@ function pickMncInsurer(id){
   $('m-ins-picker-modal').classList.remove('active');
   toast('🏢 保険会社を設定: '+(ins.name||''), 'success');
 }
-function openMncFactoryPicker(){
-  $('m-fp-search').value = ($('m-nc-dispatchToTel')?.value || '').trim();
+// 工場ピッカーの選択先: 'dispatch'(配車先・既定) or 'recovery'(回収先)
+let _mncFacTarget = 'dispatch';
+function openMncFactoryPicker(target){
+  _mncFacTarget = (target === 'recovery') ? 'recovery' : 'dispatch';
+  const seedId = (_mncFacTarget === 'recovery') ? 'm-nc-recoveryToTel' : 'm-nc-dispatchToTel';
+  $('m-fp-search').value = ($(seedId)?.value || '').trim();
   renderMncFactoryPicker();
   $('m-fac-picker-modal').classList.add('active');
 }
@@ -5400,6 +5433,14 @@ function renderMncFactoryPicker(){
 }
 function pickMncFactory(id){
   const f = (DATA?.factories || []).find(x => x.id === id); if(!f) return;
+  if(_mncFacTarget === 'recovery'){
+    $('m-nc-recoveryToName').value = f.name||'';
+    $('m-nc-recoveryToAddr').value = f.address||'';
+    $('m-nc-recoveryToTel').value  = f.tel||'';
+    $('m-fac-picker-modal').classList.remove('active');
+    toast('🏁 回収先を設定: '+(f.name||''), 'success');
+    return;
+  }
   $('m-nc-dispatchTo').value = f.name||'';
   $('m-nc-dispatchToAddr').value = f.address||'';
   $('m-nc-dispatchToTel').value = f.tel||'';
@@ -5893,6 +5934,11 @@ async function _saveNewCaseBody(enterFlow){
     ec.dispatchToTel = _v('m-nc-dispatchToTel');
     ec.dispatchToContact = _v('m-nc-dispatchContact');
     ec.dispatchToContactTel = _v('m-nc-dispatchContactTel');
+    // 🏁 回収先 (配車先と違う時だけ入力・空欄=配車先と同じ)。
+    //   _keys(通知対象)には入れない=静かに保存。回収先は recoveryDateSet/recoveryDone のLINEに載る。
+    ec.recoveryToName = _v('m-nc-recoveryToName');
+    ec.recoveryToAddress = _v('m-nc-recoveryToAddr');
+    ec.recoveryToTel = _v('m-nc-recoveryToTel');
     ec.dispatchAt = dispatchAt || '';
     ec.dispatchNote = _v('m-nc-dispatchNote');
     ec.dispatchTimePending = !!($('m-nc-dispatchTimePending')?.checked);
@@ -5984,7 +6030,8 @@ async function _saveNewCaseBody(enterFlow){
     recoveryCompleted: false,
     confirmCalledAt:'', faxSentAtDispatch:'', faxSentAtReturn:'',
     recoveryCalledAt:'', dispatchDoneAt:'', dispatchDoneNote:'',
-    recoveryToName:'', recoveryToAddress:'', recoveryToTel:'',  // 回収先(配車先と異なる場合・PCで入力・空なら配車先と同じ)
+    // 回収先(配車先と異なる場合のみ入力・空なら配車先と同じ)。PC/モバイル両方で入力可 (2026-07-10)
+    recoveryToName: _v('m-nc-recoveryToName'), recoveryToAddress: _v('m-nc-recoveryToAddr'), recoveryToTel: _v('m-nc-recoveryToTel'),
     departedAt:'',
     // 走行距離記録 (キロ数のみ・未記録なら null)
     meterAtDispatch:null, meterAtReturn:null,
