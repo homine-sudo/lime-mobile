@@ -1449,7 +1449,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           </div>
           <input type="hidden" id="vm-firstRegistrationRaw">
         </div>
-        <div class="form-group"><label class="form-label">ステータス</label><select class="form-control" id="vm-status"><option>稼働可</option><option>点検入庫中</option><option>売却済</option><option>廃車</option></select></div>
+        <div class="form-group"><label class="form-label">ステータス</label><select class="form-control" id="vm-status" title="社用車=レンタル対象外 / 納車待ち=未納車。どちらも稼働率・在庫の分母から除外される"><option>稼働可</option><option>点検入庫中</option><option>社用車</option><option>納車待ち</option><option>売却済</option><option>廃車</option></select></div>
         <div class="form-group" style="grid-column:span 2"><label class="form-label">車台番号 <span class="text-muted text-sm">(車検証から手入力)</span></label><input class="form-control" id="vm-vin" placeholder="例: A202S-0030313"></div>
       </div>
       <div class="form-section">📅 車検・定期点検</div>
@@ -3098,7 +3098,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-10c';
+const APP_VERSION = '2026-07-10d';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -15404,7 +15404,17 @@ function saveVehicle(){
   v.plateDisplay = plateString(v.plate);
   v.vehicleClass = $('vm-class').value;
   const numFields = new Set(['mileage','vehiclePrice','leasePeriod','leaseFee','leaseTotal','residualValue','insuranceFee','soldPrice']);
+  const _prevStatus = v.status;
   VEHICLE_FIELDS.forEach(k=>{ const el=$('vm-'+k); if(!el) return; v[k] = numFields.has(k) ? Number(el.value||0) : el.value; });
+  // 🚨 ステータスの黙った消失を防ぐ (2026-07-10d):
+  //   選択肢に無いステータス(社用車/納車待ち等)の車両を開くと <select> の選択が外れ value='' になり、
+  //   そのまま保存すると status が空になっていた。選択肢は上で補完済みだが、将来 新しい status を
+  //   足した時の保険として「空になったら元の値を維持」する。
+  if(!v.status && _prevStatus) v.status = _prevStatus;
+  // 車両編集も updatedAt を刻む: これが無いと他端末とのマージで新旧を判定できず、
+  //   古い版が勝って変更が静かに巻き戻る (クラスマスタで起きたのと同型)。
+  v.updatedAt = Date.now();
+  v.updatedBy = 'PC車両編集';
   if(!editingVehicleId) DATA.vehicles.push(v);
   save(); toast('保存しました'); closeVehicleModal(); renderVehicles();
 }
