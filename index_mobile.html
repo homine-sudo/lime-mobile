@@ -1246,12 +1246,12 @@ a{color:var(--info);text-decoration:none}
       <div id="m-home-search-results"></div>
 
       <div class="m-stat-grid2">
-        <div class="m-stat-big" onclick="showScreen('dispatch')">
+        <div class="m-stat-big" onclick="openTodayList('dispatch')">
           <div class="bl"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3D7DC5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17"/><path d="M8 7h9v9"/></svg>今日の配車 残り</div>
           <div class="num" id="m-stat-dispatch">0</div>
           <div class="sub" id="m-stat-dispatch-done">完了 0</div>
         </div>
-        <div class="m-stat-big rec" onclick="showScreen('recovery')">
+        <div class="m-stat-big rec" onclick="openTodayList('recovery')">
           <div class="bl"><svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#C53030" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10"/><path d="M16 17H7V8"/></svg>今日の回収 残り</div>
           <div class="num" id="m-stat-recovery">0</div>
           <div class="sub" id="m-stat-recovery-done">完了 0</div>
@@ -1259,8 +1259,8 @@ a{color:var(--info);text-decoration:none}
       </div>
       <div class="m-stat-plan">
         <svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#5F6B58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg>予定
-        <span class="pp" onclick="showScreen('dispatch')">配車 <b id="m-stat-disp-plan">0</b></span>
-        <span class="pp" onclick="showScreen('recovery')">回収 <b id="m-stat-rec-plan">0</b></span>
+        <span class="pp" onclick="openPendingList('dispatch')">配車 <b id="m-stat-disp-plan">0</b></span>
+        <span class="pp" onclick="openPendingList('recovery')">回収 <b id="m-stat-rec-plan">0</b></span>
       </div>
 
       <button class="m-btn m-btn-outline m-btn-block" style="margin-bottom:10px" onclick="openAvailBoard()"><span class="ico"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span> 在庫の差し引き（よく出るクラス）</button>
@@ -1963,7 +1963,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-09';
+const APP_VERSION = '2026-07-10';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -7339,6 +7339,18 @@ async function renderCaseDetail(c){
 // ============================================================
 // SCREEN NAVIGATION
 // ============================================================
+// ホームKPIタップの遷移先を明示する (2026-07-10)
+//   旧: showScreen('dispatch') だけだと localStorage に残った前回のタブ(未対応/明日)で開き、
+//       「今日の配車」を押したのに未対応リストが出ていた。タブを指定してから画面を出す。
+function openTodayList(kind){
+  if(kind === 'dispatch'){ setDispTab('today'); showScreen('dispatch'); }
+  else { setRecTab('today'); showScreen('recovery'); }
+}
+function openPendingList(kind){
+  if(kind === 'dispatch'){ setDispTab('pending'); showScreen('dispatch'); }
+  else { setRecTab('pending'); showScreen('recovery'); }
+}
+
 function showScreen(name){
   if(_currentScreen === name) return;
   if(_currentScreen !== 'onboard' && _currentScreen !== name) _screenHistory.push(_currentScreen);
