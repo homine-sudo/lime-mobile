@@ -1428,7 +1428,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-09b';
+const APP_VERSION = '2026-07-10';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1903,14 +1903,16 @@ const BI_CLASS_GROUPS = [
   { key:'S',          codes:['S'] },
   { key:'SH〜MH',     codes:['SH','SV','SVH','BVH','MV','MVH','MH'] },
   { key:'WS〜WAH',    codes:['WS','WSH','WA','WAH'] },
-  { key:'P〜PMH',     codes:['P','PM','PMH'] },
+  // 2026-07-10: P を P1/P2/P3 に細分化。旧 'P' も残す(過去データの取りこぼし防止)
+  { key:'P〜PMH',     codes:['P','P1','P2','P3','PM','PMH'] },
 ];
 const CLASS_ALIASES = {
   'SK':'K','Ｋ':'K','KE':'K','SP':'S',
   'BV':'SV','F':'MV','G':'MV','WB':'PM','WC':'PMH',
   'ES':'SH','EA':'SH','E':'SH','EB':'BVH','EC':'MH',
   'EWS':'WSH','EWA':'WAH','EWC':'WAH',
-  'VA':'VK','DB':'VK','DD':'VK','PRV':'P'
+  'VA':'VK','DB':'VK','DD':'VK',
+  'PRV':'P1','P':'P1'   // 旧プレミアム → プレミアム(標準)
 };
 function groupOfClass(code){
   let c=(code||'').toUpperCase().trim();

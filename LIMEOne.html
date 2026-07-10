@@ -3075,7 +3075,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-10';
+const APP_VERSION = '2026-07-10a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3189,16 +3189,19 @@ function effectiveStatus(c){
 // 旧コード → 新コードのマイグレーションマップ (v24h)
 const OLD_TO_NEW_CLASS = {
   'EA':'SH','ES':'SH','EB':'BVH','EC':'MH','EWS':'WSH','EWA':'WAH',
-  'WC':'PMH','WB':'PM','F':'MV','G':'MV','BV':'SV','VA':'VK','DB':'VK','DD':'VK'
+  'WC':'PMH','WB':'PM','F':'MV','G':'MV','BV':'SV','VA':'VK','DB':'VK','DD':'VK',
+  'P':'P1'   // 2026-07-10: プレミアムを P1/P2/P3 に細分化。旧'P'は標準=P1へ
 };
-// v24h 新18コード → CSSバッジクラスの直接マップ
+// v24h 新コード → CSSバッジクラスの直接マップ (格が上がるほど濃い色)
 const CLASS_BADGE_MAP = {
   'K':'yellow','VK':'gray','TK':'black','KEV':'cyan',
   'S':'red','SH':'sh',
   'SV':'orange','SVH':'svh','BVH':'bvh','MV':'orange','MVH':'mvh',
   'MH':'mh',
   'WS':'green','WSH':'wsh','WA':'green','WAH':'wah',
-  'P':'navy','PM':'black','PMH':'pmh'
+  'P':'navy',                                  // 旧コード(データ移行済・保険で残す)
+  'P1':'blue','P2':'navy','P3':'purple',       // プレミアム3段
+  'PM':'black','PMH':'pmh'
 };
 function classBadgeColor(code){
   const raw = (code||'').trim();
@@ -3277,7 +3280,9 @@ const DEFAULT_CLASSES = [
   {category:'ミニバン', code:'WA',  name:'中型ミニバン',   color:'green', aliases:'中型ワゴン,ミニバン', examples:'VOXY/ステップワゴン/セレナ',          engine:'1.5-2.0L',    dailyRate:9900},
   {category:'ミニバン', code:'WAH', name:'中型ミニバンHV', color:'wah',   aliases:'HV中型ミニバン', examples:'VOXY HV/ステップワゴンe:HEV',            engine:'2.0L HV',     dailyRate:13200},
   // プレミアム
-  {category:'プレミアム', code:'P',   name:'プレミアム',        color:'navy',  aliases:'高級セダン,レクサス', examples:'NX300',                         engine:'2.0L+',    dailyRate:18700},
+  {category:'プレミアム', code:'P1',  name:'プレミアム(標準)',  color:'blue',  aliases:'高級セダン,レクサス',   examples:'レクサスNX300',                  engine:'2.0L+',    dailyRate:16500},
+  {category:'プレミアム', code:'P2',  name:'プレミアム(上級)',  color:'navy',  aliases:'プレミアムSUV,クラウン', examples:'クラウンスポーツHEV',            engine:'2.5L HV',  dailyRate:20900},
+  {category:'プレミアム', code:'P3',  name:'プレミアム(最上級)',color:'purple',aliases:'最上級,ラージSUV',     examples:'レクサスLX/クラウンセダン',       engine:'3.0L+',    dailyRate:27500},
   {category:'プレミアム', code:'PM',  name:'高級ミニバン',      color:'black', aliases:'ラージミニバン',       examples:'アルファード/ヴェルファイア(GAS)', engine:'2.5L+',    dailyRate:22000},
   {category:'プレミアム', code:'PMH', name:'高級ミニバンHV',    color:'pmh',   aliases:'HV高級ミニバン',       examples:'アルファードHV/ヴェルファイアHV', engine:'2.5L HV',  dailyRate:27500},
 ];
@@ -3291,13 +3296,14 @@ const CLASS_ALIASES = {
   'G':'MV',            // Gクラス → ミドルSUV
   'WB':'PM',           // 大型ワゴン → 高級ミニバン
   'WC':'PMH',          // 高級ワゴン → 高級ミニバンHV
+  'P':'P1',            // 旧プレミアム → プレミアム(標準) ※2026-07-10 P を P1/P2/P3 に細分化
   'ES':'SH', 'EA':'SH','E':'SH',   // HBコンパクト/HBライト → コンパクトHV
   'EB':'BVH',          // HB中型 → クロスSUV HV
   'EC':'MH',           // HBセダン → 中型セダンHV
   'EWS':'WSH',         // HB小型ワゴン → 小型ミニバンHV
   'EWA':'WAH', 'EWC':'WAH', // HB中型ワゴン → 中型ミニバンHV
   'VA':'VK', 'DB':'VK','DD':'VK',  // 商用バン系 → 軽バン
-  'PRV':'P'
+  'PRV':'P1'          // 旧プレミアム表記 → プレミアム(標準)
 };
 
 // 2026-05-25f: 旧 bk2/bk3 キーを起動時に削除して localStorage 空き容量を回復
@@ -4285,6 +4291,8 @@ function mergeCollection(localArr, diskArr, snapMap, label){
   });
   return { merged, conflicts };
 }
+// 車両クラスマスタを編集したら刻印 (mergeWithDisk のタイムスタンプ比較用・stale PCの巻き戻し防止)
+function _touchVehicleClasses(){ try { DATA.vehicleClassesUpdatedAt = Date.now(); } catch(e){} }
 function mergeWithDisk(local, disk, snapshot){
   const result = { ...disk };
   const allConflicts = [];
@@ -4326,7 +4334,18 @@ function mergeWithDisk(local, disk, snapshot){
     // タイムスタンプが新しい方を採用
     result.settings = (localTs >= diskTs) ? localSettings : diskSettings;
   }
-  if(local.vehicleClasses) result.vehicleClasses = local.vehicleClasses;
+  // v2026-07-10: 車両クラスマスタも settings と同じ「タイムスタンプが新しい方が勝つ」に。
+  //   旧: local が無条件に勝ち、開いたままの古いPCが保存する度にクラス変更(P→P1/P2/P3 等)を
+  //       静かに巻き戻していた。cases/vehicles は id+updatedAt でマージされ生き残るため、
+  //       クラスマスタだけが消えて気づきにくい。編集時は _touchVehicleClasses() で刻印する。
+  {
+    const lVcTs = Number(local.vehicleClassesUpdatedAt || 0);
+    const dVcTs = Number(disk.vehicleClassesUpdatedAt  || 0);
+    if(local.vehicleClasses && lVcTs >= dVcTs)  result.vehicleClasses = local.vehicleClasses;
+    else if(disk.vehicleClasses)                result.vehicleClasses = disk.vehicleClasses;
+    else if(local.vehicleClasses)               result.vehicleClasses = local.vehicleClasses;
+    result.vehicleClassesUpdatedAt = Math.max(lVcTs, dVcTs);
+  }
   if(local.holidays) result.holidays = local.holidays;
   result.lastModified = new Date().toISOString();
   return { merged: result, conflicts: allConflicts };
@@ -7684,7 +7703,8 @@ const BI_CLASS_GROUPS = [
   { key:'S',          codes:['S'] },
   { key:'SH〜MH',     codes:['SH','SV','SVH','BVH','MV','MVH','MH'] },
   { key:'WS〜WAH',    codes:['WS','WSH','WA','WAH'] },
-  { key:'P〜PMH',     codes:['P','PM','PMH'] },
+  // 2026-07-10: P を P1/P2/P3 に細分化。旧 'P' も残す(過去データ/他システム由来の取りこぼし防止)
+  { key:'P〜PMH',     codes:['P','P1','P2','P3','PM','PMH'] },
 ];
 function _biGroupOfClass(code){
   let c = (code||'').toUpperCase().trim();
@@ -15468,19 +15488,19 @@ function _renderMastersInner(){
     {v:'black', t:'⚫ 黒'},{v:'gray', t:'⚪ 灰'}
   ];
   $('mst-class-tbody').innerHTML = DATA.vehicleClasses.map((v,idx)=>`<tr>
-    <td><select oninput="DATA.vehicleClasses[${idx}].category=this.value;saveDebounced()">${catOpts.map(c=>`<option ${c===(v.category||'')?'selected':''}>${c}</option>`).join('')}</select></td>
-    <td><input value="${esc(v.code||'')}" oninput="DATA.vehicleClasses[${idx}].code=this.value;saveDebounced()" style="width:60px"></td>
-    <td><input value="${esc(v.name||'')}" oninput="DATA.vehicleClasses[${idx}].name=this.value;saveDebounced()"></td>
+    <td><select oninput="DATA.vehicleClasses[${idx}].category=this.value;_touchVehicleClasses();saveDebounced()">${catOpts.map(c=>`<option ${c===(v.category||'')?'selected':''}>${c}</option>`).join('')}</select></td>
+    <td><input value="${esc(v.code||'')}" oninput="DATA.vehicleClasses[${idx}].code=this.value;_touchVehicleClasses();saveDebounced()" style="width:60px"></td>
+    <td><input value="${esc(v.name||'')}" oninput="DATA.vehicleClasses[${idx}].name=this.value;_touchVehicleClasses();saveDebounced()"></td>
     <td>
-      <select onchange="DATA.vehicleClasses[${idx}].color=this.value;save();renderMasters()" style="width:90px">
+      <select onchange="DATA.vehicleClasses[${idx}].color=this.value;_touchVehicleClasses();save();renderMasters()" style="width:90px">
         <option value="">— 自動 —</option>
         ${colorOpts.map(c=>`<option value="${c.v}" ${c.v===(v.color||'')?'selected':''}>${c.t}</option>`).join('')}
       </select>
       <span class="badge ${classBadgeColor(v.code)}" style="margin-left:4px">${esc(v.code||'?')}</span>
     </td>
-    <td><input value="${esc(v.aliases||'')}" oninput="DATA.vehicleClasses[${idx}].aliases=this.value;saveDebounced()" placeholder="例: コンパクトSUV,SUV"></td>
-    <td><input value="${esc(v.examples||'')}" oninput="DATA.vehicleClasses[${idx}].examples=this.value;saveDebounced()"></td>
-    <td><input type="number" value="${Number(v.dailyRate||0)}" oninput="DATA.vehicleClasses[${idx}].dailyRate=Number(this.value);saveDebounced()" style="text-align:right;width:80px"></td>
+    <td><input value="${esc(v.aliases||'')}" oninput="DATA.vehicleClasses[${idx}].aliases=this.value;_touchVehicleClasses();saveDebounced()" placeholder="例: コンパクトSUV,SUV"></td>
+    <td><input value="${esc(v.examples||'')}" oninput="DATA.vehicleClasses[${idx}].examples=this.value;_touchVehicleClasses();saveDebounced()"></td>
+    <td><input type="number" value="${Number(v.dailyRate||0)}" oninput="DATA.vehicleClasses[${idx}].dailyRate=Number(this.value);_touchVehicleClasses();saveDebounced()" style="text-align:right;width:80px"></td>
     <td><button class="icon-btn" title="この車両クラスを削除" onclick="deleteMasterItem('class',${idx})">🗑️</button></td>
   </tr>`).join('') || '<tr><td colspan="8" class="empty-state">未登録</td></tr>';
 
@@ -15567,7 +15587,7 @@ function setDefaultContact(insIdx, ctxIdx){
   ins.contacts.forEach((c,i)=> c.isDefault = (i===ctxIdx));
   save(); renderMasters();
 }
-function addClass(){ DATA.vehicleClasses.push({category:'その他',code:'',name:'',examples:'',engine:'',dailyRate:0}); save(); renderMasters(); }
+function addClass(){ DATA.vehicleClasses.push({category:'その他',code:'',name:'',examples:'',engine:'',dailyRate:0}); _touchVehicleClasses(); save(); renderMasters(); }
 // ※ resetClassMaster (料金表を反映) は v24o で廃止 — マスタはユーザー編集優先
 // 🎨 バッジCSS定義 (本体の<style>ブロックと printPriceList の両方で使用)
 function getBadgeStyles(){
@@ -16930,7 +16950,7 @@ function mergeImportedData(d){
   (inc.insurers||[]).forEach(i => { if(!existingIns.has(insKey(i))){ DATA.insurers.push(i); existingIns.add(insKey(i)); iAdded++; } });
   // Vehicle classes: add missing codes
   const existingCodes = new Set(DATA.vehicleClasses.map(c=>c.code));
-  (inc.vehicleClasses||[]).forEach(c => { if(!existingCodes.has(c.code)){ DATA.vehicleClasses.push(c); existingCodes.add(c.code); } });
+  (inc.vehicleClasses||[]).forEach(c => { if(!existingCodes.has(c.code)){ DATA.vehicleClasses.push(c); existingCodes.add(c.code); _touchVehicleClasses(); } });
   // Staff: add missing names
   const existingStaff = new Set(DATA.staff.map(s=>s.name));
   (inc.staff||[]).forEach(s => { if(!existingStaff.has(s.name)){ DATA.staff.push(s); existingStaff.add(s.name); } });
@@ -17188,7 +17208,7 @@ function importFullBackup(input){
       if(newInsurers.length) DATA.insurers = newInsurers;
       if(newFactories.length) DATA.factories = newFactories;
       if(newVehicles.length) DATA.vehicles = newVehicles;
-      if(newClasses.length) DATA.vehicleClasses = newClasses;
+      if(newClasses.length){ DATA.vehicleClasses = newClasses; _touchVehicleClasses(); }
       if(newStaff.length) DATA.staff = newStaff;
       if(newHolidays.length) DATA.holidays = newHolidays;
       if(newSettings) DATA.settings = { ...(DATA.settings||{}), ...newSettings };
