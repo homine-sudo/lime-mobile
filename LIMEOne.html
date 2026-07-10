@@ -1531,12 +1531,19 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <select id="is-filter-status" onchange="refreshCaseSelect('is')" style="padding:6px;border:1px solid var(--border);border-radius:5px"><option value="">状態</option></select>
       <select id="is-filter-staff" onchange="refreshCaseSelect('is')" style="padding:6px;border:1px solid var(--border);border-radius:5px"><option value="">担当</option></select>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <select id="is-select-case" class="form-control" style="flex:1;min-width:300px" onchange="renderInstruction()">
         <option value="">案件を選択してください</option>
       </select>
-      <button class="btn btn-primary" onclick="printAndRecordFax('instruction')" title="印刷後、手配書のFAX送信履歴を自動記録します">🖨️ 印刷 / PDF保存</button>
-      <button class="btn btn-outline" onclick="sendFaxForCase('instruction')" title="GAS経由で1タップFAX送信。送信前に実PDFを目視確認。GAS失敗時は .eml ダウンロード(従来挙動)に自動フォールバック">📠 FAX送信</button>
+      <button class="btn btn-primary" id="is-btn-print" onclick="printAndRecordFax(_isSheetMode())" title="印刷後、FAX送信履歴を自動記録します">🖨️ 印刷 / PDF保存</button>
+      <button class="btn btn-outline" id="is-btn-fax" onclick="sendFaxForCase(_isSheetMode())" title="GAS経由で1タップFAX送信。送信前に実PDFを目視確認。GAS失敗時は .eml ダウンロード(従来挙動)に自動フォールバック">📠 FAX送信</button>
+    </div>
+    <!-- 📄 書面の切替: 保険会社向け(手配報告書兼請求書) / 他社レンタカー会社向け(車両手配書) -->
+    <div style="display:flex;gap:0;align-items:center;flex-wrap:wrap">
+      <span class="text-muted text-sm" style="margin-right:8px">書面:</span>
+      <button type="button" class="btn btn-sm" id="is-mode-insurer" onclick="setInstructionMode('instruction')" style="border-radius:5px 0 0 5px">🏢 保険会社向け</button>
+      <button type="button" class="btn btn-sm btn-outline" id="is-mode-borrow" onclick="setInstructionMode('borrow')" style="border-radius:0 5px 5px 0;border-left:none">🚗 他社手配書</button>
+      <span id="is-mode-hint" class="text-muted text-sm" style="margin-left:10px;font-size:11px"></span>
     </div>
   </div>
   <div id="instruction-body"><div class="empty-state card"><div class="icon">📄</div><div>案件を選択してください</div></div></div>
@@ -2573,10 +2580,13 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           </div>
           <!-- 🏢 他社借フリー入力エリア (他社借チェック時のみ表示) -->
           <div id="f-vehicle-borrowed" style="display:none;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#FFFBEB;border:1px dashed #E6C54C;border-radius:5px">
-            <div style="flex:1;min-width:150px"><label class="form-label" style="font-size:11px;color:#B45309">借入先(会社名) <span class="text-muted" style="font-weight:normal;font-size:10px">※手配書には出ません</span></label><input class="form-control" id="f-borrowedFrom" placeholder="例: スカイレンタカー" style="font-size:13px"></div>
+            <div style="flex:1;min-width:150px"><label class="form-label" style="font-size:11px;color:#B45309">借入先(会社名) <span class="text-muted" style="font-weight:normal;font-size:10px">※保険会社向け手配書には出ません</span></label><input class="form-control" id="f-borrowedFrom" list="borrow-company-list" onchange="onBorrowedFromChange()" onblur="onBorrowedFromChange()" placeholder="例: スカイレンタカー" style="font-size:13px"><datalist id="borrow-company-list"></datalist></div>
             <div style="flex:1.3;min-width:160px"><label class="form-label" style="font-size:11px;color:#B45309">車種名 <span class="text-muted" style="font-weight:normal;font-size:10px">→手配書の車種名</span></label><input class="form-control" id="f-borrowedVehicleInfo" placeholder="例: ヤリス" style="font-size:13px"></div>
             <div style="flex:1.3;min-width:160px"><label class="form-label" style="font-size:11px;color:#B45309">登録番号(車番) <span class="text-muted" style="font-weight:normal;font-size:10px">→手配書の登録番号</span></label><input class="form-control" id="f-borrowedPlate" placeholder="例: 沖縄 506 れ 1234" style="font-size:13px"></div>
             <div style="width:110px"><label class="form-label" style="font-size:11px;color:#B45309">借入日額(参考)</label><input type="number" class="form-control" id="f-borrowedDailyRate" placeholder="4400" style="font-size:13px"></div>
+            <div style="flex:1;min-width:150px;border-left:3px solid #E6C54C;padding-left:8px"><label class="form-label" style="font-size:11px;color:#B45309">借入先FAX <span class="text-muted" style="font-weight:normal;font-size:10px">→他社手配書の送信先</span></label><input class="form-control" id="f-borrowedFax" placeholder="098-XXX-XXXX" style="font-size:13px"></div>
+            <div style="flex:1;min-width:140px"><label class="form-label" style="font-size:11px;color:#B45309">借入先TEL</label><input class="form-control" id="f-borrowedTel" placeholder="098-XXX-XXXX" style="font-size:13px"></div>
+            <div style="flex-basis:100%;font-size:11px;color:#8A6510">📠 他社レンタカー会社への配車依頼は <b>手配書タブ →「他社手配書」</b> から送信できます（会社名を入れるとFAX/TELを自動補完）。</div>
           </div>
         </div>
       </div>
@@ -3065,7 +3075,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-09';
+const APP_VERSION = '2026-07-10';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -9183,7 +9193,7 @@ function defaultCase(){
     dispatchTimePending:false,        // 工場と時間調整中
     dispatchTimePendingDriver:false,  // 運転者と時間調整中
     vehicleClass:'', vehicleName:'', unitPrice:0, plateArea:'', plateNo:'', plateKana:'', plateTail:'',
-    isBorrowed:false, borrowedFrom:'', borrowedVehicleInfo:'', borrowedPlate:'', borrowedDailyRate:'',
+    isBorrowed:false, borrowedFrom:'', borrowedVehicleInfo:'', borrowedPlate:'', borrowedDailyRate:'', borrowedFax:'', borrowedTel:'',
     useStart:'', useEnd:'', returnStatus:'',
     status:'受付', invoiceNo:'', invoiceIssuedAt:'', paymentDueAt:'',
     paymentMethod:'', paidAt:'', paidAmount:'', salesYear:'', salesMonth:'',
@@ -9246,7 +9256,7 @@ function toggleCheck(i){
   if(typeof scheduleAutoSave === 'function') scheduleAutoSave();  // dirty 立てる: ✓ON/OFF で離脱警告対象に
   renderChecklist();
 }
-const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedPlate','borrowedDailyRate','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','recoveryToName','recoveryToAddress','recoveryToTel','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
+const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedPlate','borrowedDailyRate','borrowedFax','borrowedTel','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','recoveryToName','recoveryToAddress','recoveryToTel','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
   // 一般貸渡用 (自旅138号 貸渡証/貸渡簿の必須項目)
   'borrowerAddress','driverAddress','driverLicenseType','driverLicenseNo',
   // 一般貸渡 業務情報 (受取場所・補償・特記事項)
@@ -10077,6 +10087,7 @@ function onBorrowedToggle(){
   if(chk.checked){
     normal.style.display = 'none';
     borrowed.style.display = 'flex';
+    try { refreshBorrowCompanyList(); } catch(_){}   // 借入先の候補(過去に使った会社名)を用意
   } else {
     normal.style.display = 'flex';
     borrowed.style.display = 'none';
@@ -11046,6 +11057,7 @@ function saveCase(){
   const idx = DATA.cases.findIndex(x=>x.id===c.id);
   if(idx>=0) DATA.cases[idx] = c; else DATA.cases.unshift(c);
   _syncVehicleMileage(c);  // 返却メーター → 車両マスタ mileage へ追従 (走行距離を定位置に最新化)
+  try { _borrowFaxBookRemember(c); } catch(_){}  // 🚗 他社借の連絡先を記憶 (次回は会社名で自動補完)
   save();
   // v2026.04.29cd: 次回新規案件のデフォルトとして担当者などを記憶
   if(typeof saveLastCaseDefaults === 'function') saveLastCaseDefaults(c);
@@ -11760,10 +11772,10 @@ async function _genSheetPdfBlob(sheetEl, opt){
 // ページ充填の1枚PDFを作り、新規タブで開いて印刷/保存させる。
 // 旧 window.print() (@media print・上半分に圧縮されFAXと別様式) を廃止。
 window.printSheetPdf = async function(kind){
-  const sel = $(kind === 'instruction' ? 'is-select-case' : 'inv-select-case');
+  const sel = $((kind === 'instruction' || kind === 'borrow') ? 'is-select-case' : 'inv-select-case');
   const caseId = sel ? sel.value : '';
   if(!caseId){ toast('案件を選択してください','error'); return; }
-  const sheetEl = kind==='instruction'
+  const sheetEl = (kind==='instruction' || kind==='borrow')
     ? document.querySelector('#instruction-body .sheet.handover')
     : document.querySelector('#invoice-body .sheet.faxinv');
   if(!sheetEl){ toast('プレビューが表示されていません','error'); return; }
@@ -11788,13 +11800,16 @@ window.printSheetPdf = async function(kind){
     const c = findCaseById(caseId);
     if(c){
       const ins = (typeof findInsurer==='function'? findInsurer(c.insurerId): null)||{};
-      const docName = kind==='instruction' ? '手配書' : '請求書';
+      const _isBor = (kind === 'borrow');
+      const docName = kind==='instruction' ? '手配書' : (_isBor ? '他社手配書' : '請求書');
+      const _toName = _isBor ? ((c.borrowedFrom||'').trim() || '他社レンタカー会社') : (ins.name||'保険会社');
+      const _toFax  = _isBor ? (_borrowTargetFax(c) || '(未登録)') : (ins.fax||'(未登録)');
       const today = todayISO();
       const dupe = (c.faxHistory||[]).some(h => h.ts && h.ts.startsWith(today) && h.kind === docName);
       setTimeout(()=>{
         if(dupe){ toast(`ℹ️ 本日すでに${docName}の送信履歴が登録済みです`); return; }
-        if(confirm(`📠 ${docName}を印刷/FAX送信しましたか?\n\nOK: 送信履歴に記録\nキャンセル: 記録しない`)){
-          recordFaxHistory(caseId, kind, ins.name||'保険会社', ins.fax||'(未登録)', '(印刷/PDF保存)');
+        if(confirm(`📠 ${docName}を印刷/FAX送信しましたか?（宛先: ${_toName}）\n\nOK: 送信履歴に記録\nキャンセル: 記録しない`)){
+          recordFaxHistory(caseId, kind, _toName, _toFax, '(印刷/PDF保存)');
           if(typeof renderFaxHistoryList === 'function') renderFaxHistoryList(c);
         }
       }, 600);
@@ -11810,14 +11825,28 @@ window.printSheetPdf = async function(kind){
 // 2) メーラーを空白件名・本文で起動(宛先のみ自動)
 // 3) ユーザーがPDFを添付して送信 → 履歴記録ボタンで案件に保存
 async function sendFaxForCase(kind){
-  const sel = kind==='instruction' ? $('is-select-case') : $('inv-select-case');
+  const sel = (kind==='instruction' || kind==='borrow') ? $('is-select-case') : $('inv-select-case');
   const caseId = sel?.value||'';
   if(!caseId){ toast('案件を選択してください','error'); return; }
   const c = findCaseById(caseId); if(!c){ toast('案件が見つかりません','error'); return; }
   const ins = findInsurer(c.insurerId)||{};
-  const rawFax = (c.insurerContactFax || ins.fax || '').trim();
+  // 🚗 他社手配書: 宛先は借入先(他社レンタカー会社)のFAX。保険会社ではない。
+  let rawFax, partnerName;
+  if(kind === 'borrow'){
+    if(!c.isBorrowed){ toast('この案件は他社借ではありません','error'); return; }
+    rawFax = _borrowTargetFax(c);
+    partnerName = (c.borrowedFrom||'').trim() || '他社レンタカー会社';
+    if(!rawFax){
+      toast('借入先のFAX番号が未入力です。案件編集の「借入先FAX」欄に入力してください','error');
+      return;
+    }
+  } else {
+    rawFax = (c.insurerContactFax || ins.fax || '').trim();
+    partnerName = ins.name || '保険会社';
+  }
   const targetFax = toEfaxNumber(rawFax);
   if(!targetFax){
+    if(kind === 'borrow'){ toast('借入先のFAX番号が不正です','error'); return; }
     const insName = ins.name || '保険会社';
     const msg = `📠 ${insName} のFAX番号が未登録です。\n\n以下のいずれかで登録してください:\n\n1. マスタタブ → 保険会社 → 「${insName}」を編集 → FAX番号入力\n2. 案件編集の「保険会社FAX」欄に直接入力\n\nマスタを開きますか?`;
     if(confirm(msg)){
@@ -11828,9 +11857,9 @@ async function sendFaxForCase(kind){
   }
   const domain = (DATA.settings.faxSendDomain || 'efaxsend.com').trim();
   const to = `${targetFax}@${domain}`;
-  const docLabel = kind==='instruction' ? '手配報告書兼請求書' : '御請求書';
+  const docLabel = kind==='instruction' ? '手配報告書兼請求書' : (kind==='borrow' ? '車両手配書（配車依頼）' : '御請求書');
   // ファイル名: 受付No.pdf (手配書・請求書とも同じ命名。同一フォルダでの衝突は別サブフォルダで回避)
-  const docKindLabel = kind==='instruction' ? '手配書' : '請求書';
+  const docKindLabel = kind==='instruction' ? '手配書' : (kind==='borrow' ? '他社手配書' : '請求書');
   // 種別ごとに履歴件数をカウント (手配書/請求書でそれぞれ枝番を独立管理)
   const priorCount = (c.faxHistory||[]).filter(h => (h.kind||'') === kind).length;
   const safeCaseNo = (c.caseNo||'').replace(/[^A-Za-z0-9_\-]/g,'_') || 'nocase';
@@ -11841,8 +11870,8 @@ async function sendFaxForCase(kind){
   // 初期候補: faxHistory件数。実際の保存時に既存ファイルを検出してさらに進める
   let filename = makeName(priorCount);
 
-  // 対象DOM要素
-  const sheetEl = kind==='instruction'
+  // 対象DOM要素 (他社手配書も #instruction-body の .sheet.handover を再利用)
+  const sheetEl = (kind==='instruction' || kind==='borrow')
     ? document.querySelector('#instruction-body .sheet.handover')
     : document.querySelector('#invoice-body .sheet.faxinv');
   if(!sheetEl){ toast('プレビューが表示されていません','error'); return; }
@@ -11853,7 +11882,7 @@ async function sendFaxForCase(kind){
   let savedTo = '通常ダウンロード(ブラウザ既定)';
   let pdfBlob = null;
   try {
-    const isInstr = kind === 'instruction';
+    const isInstr = (kind === 'instruction' || kind === 'borrow');
     const opt = {
       filename: filename,
       // FAX送信時の右端見切れ対策: eFaxは送信先FAX機で左右5-10mm程度クリップされる
@@ -11879,8 +11908,8 @@ async function sendFaxForCase(kind){
     // 共有フォルダが有効なら空き枝番を検出して filename を確定
     if(typeof dirHandle !== 'undefined' && dirHandle){
       const yr = new Date().getFullYear();
-      // 手配書・請求書でサブフォルダを分けて、ファイル名衝突を回避
-      const subName = (kind === 'instruction' ? '手配書' : '請求書') + yr;
+      // 手配書・請求書・他社手配書でサブフォルダを分けて、ファイル名衝突を回避
+      const subName = docKindLabel + yr;
       try {
         const subDir = await dirHandle.getDirectoryHandle(subName, {create:true});
         let idx = priorCount;
@@ -11923,11 +11952,14 @@ async function sendFaxForCase(kind){
   window._lastFaxPdfFilename = filename;
 
   // ★ 送信前に実PDFを人間が確認 (見切れ・欠け・ページ数を最終チェック)
-  const okToSend = await confirmPdfBeforeSend(pdfBlob, filename, { to, docLabel });
+  //   他社手配書は宛先が保険会社ではないため、相手名を明示して誤送信を防ぐ
+  const okToSend = await confirmPdfBeforeSend(pdfBlob, filename, { to, docLabel: `${docLabel}（宛先: ${partnerName}）` });
   if(!okToSend){
     toast('FAX送信を中止しました (PDFは保存済み)', 'error');
     return;
   }
+  // 借入先の連絡先を記憶 (次回から会社名で自動補完)
+  if(kind === 'borrow'){ try { _borrowFaxBookRemember(c); } catch(_){} }
 
   // ★2026-05-21 GAS-FAX (手配書・請求書とも対象。手配書で実機FAX綺麗着信を確認後に請求書解放):
   //   confirmPdfBeforeSend で人間最終確認済の pdfBlob を GAS sendFax で直送=1タップ完結。
@@ -11946,7 +11978,7 @@ async function sendFaxForCase(kind){
       });
       if(_r && _r.ok){
         recordFaxHistory(caseId, kind, to, targetFax, filename);
-        toast(`📠 ${kind==='instruction'?'手配書':'請求書'} FAX送信完了 (GAS自動): ${filename} → ${to}`, true);
+        toast(`📠 ${docKindLabel} FAX送信完了 (GAS自動): ${filename} → ${to}`, true);
         return;
       }
       console.warn('GAS sendFax 失敗 — .emlにフォールバック:', _r);
@@ -11959,7 +11991,7 @@ async function sendFaxForCase(kind){
     await generateAndDownloadEml(to, '', '{nocoverpage}', pdfBlob, filename);
     // 送信履歴を自動記録 (ユーザーが「送信した」とみなす)
     recordFaxHistory(caseId, kind, to, targetFax, filename);
-    toast(`📠 ${kind==='instruction'?'手配書':'請求書'} メール送信: ${filename} → ${to} (.eml ダウンロード完了。ダブルクリックでメーラー起動)`, true);
+    toast(`📠 ${docKindLabel} メール送信: ${filename} → ${to} (.eml ダウンロード完了。ダブルクリックでメーラー起動)`, true);
   } catch(eEml) {
     console.error(eEml);
     toast('.emlファイル生成失敗: ' + eEml.message, 'error');
@@ -12030,7 +12062,7 @@ function showFaxSendConfirmDialog({caseId, kind, to, rawFax, targetFax, filename
 //   - 現在表示中の案件IDを取得 → 印刷実行 → 履歴記録
 //   - すでに同種の履歴が当日中にある場合は重複登録しない
 window.printAndRecordFax = function(kind){
-  const sel = $(kind === 'instruction' ? 'is-select-case' : 'inv-select-case');
+  const sel = $((kind === 'instruction' || kind === 'borrow') ? 'is-select-case' : 'inv-select-case');
   const caseId = sel ? sel.value : '';
   // 案件未選択の場合は通常印刷のみ
   if(!caseId){
@@ -12049,9 +12081,10 @@ window.printAndRecordFax = function(kind){
     window.removeEventListener('afterprint', onAfterPrint);
     setTimeout(() => {
       const ins = (typeof findInsurer === 'function' ? findInsurer(c.insurerId) : null) || {};
-      const faxNum = ins.fax || '(未登録)';
-      const to = ins.name || '保険会社';
-      const docName = kind==='instruction' ? '手配書' : '請求書';
+      const isBorrowKind = (kind === 'borrow');
+      const faxNum = isBorrowKind ? (_borrowTargetFax(c) || '(未登録)') : (ins.fax || '(未登録)');
+      const to = isBorrowKind ? ((c.borrowedFrom||'').trim() || '他社レンタカー会社') : (ins.name || '保険会社');
+      const docName = kind==='instruction' ? '手配書' : (isBorrowKind ? '他社手配書' : '請求書');
       // 当日同種の履歴があれば重複登録を避ける
       const today = todayISO();
       const dupe = (c.faxHistory||[]).some(h => h.ts && h.ts.startsWith(today) && h.kind === docName);
@@ -12080,13 +12113,23 @@ function recordFaxHistory(caseId, kind, to, faxNum, filename){
   if(!c.faxHistory) c.faxHistory = [];
   const now = new Date();
   const ts = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  const _kindLabel = kind==='instruction' ? '手配書' : (kind==='borrow' ? '他社手配書' : '請求書');
   c.faxHistory.push({
     ts,
-    kind: kind==='instruction' ? '手配書' : '請求書',
+    kind: _kindLabel,
     to, faxNumber: faxNum,
     filename,
     editor: (localStorage.getItem('editorName')||'').trim() || (typeof getPcId==='function'? getPcId():'')
   });
+  // 🚗 他社手配書は「他社への配車依頼」= 保険会社向けの送信済みフラグ・ステータスとは無関係。
+  //    faxSentAtDispatch/Return を絶対に触らない (触ると保険会社向け手配書の二重送信ガードが誤作動する)
+  if(kind==='borrow'){
+    try { _borrowFaxBookRemember(c); } catch(_){}
+    save();
+    toast(`✅ 他社手配書の送信履歴を記録: ${esc(c.borrowedFrom||'')} → ${faxNum}`, true);
+    if(typeof renderFaxHistoryList === 'function' && $('case-modal')?.classList.contains('open')) renderFaxHistoryList(c);
+    return;
+  }
   // 既存の faxSentAt 系フィールドも自動更新(業務フロー連動)
   if(kind==='instruction'){
     // 配車完了後の送信なら faxSentAtReturn、それ以前なら faxSentAtDispatch
@@ -12098,7 +12141,7 @@ function recordFaxHistory(caseId, kind, to, faxNum, filename){
     }
   }
   save();
-  toast(`✅ FAX送信履歴を記録: ${kind==='instruction'?'手配書':'請求書'} → ${faxNum}`, true);
+  toast(`✅ FAX送信履歴を記録: ${_kindLabel} → ${faxNum}`, true);
 }
 // v2026.04.29bo: 違う案件が表示されるバグ修正
 //   showPage前にドロップダウンの古い選択値をクリアし、
@@ -12388,7 +12431,19 @@ function renderInstructionPage(){
   setupCaseSearchFilters('is');
   refreshCaseSelect('is');
   const bb = $('is-back-btn'); if(bb) bb.style.display = _returnToCaseId ? '' : 'none';
-  if(!$('is-select-case').value) $('instruction-body').innerHTML = '<div class="empty-state card"><div class="icon">📄</div><div>案件を選択してください</div></div>';
+  // 書面モードの切替ボタンの見た目を現在値に同期 (ページ再入場時)
+  const bIns = $('is-mode-insurer'), bBor = $('is-mode-borrow');
+  if(bIns && bBor){
+    const on = 'btn btn-sm', off = 'btn btn-sm btn-outline';
+    bIns.className = (_isSheetMode()==='instruction') ? on : off;
+    bBor.className = (_isSheetMode()==='borrow') ? on : off;
+    bIns.style.borderRadius = '5px 0 0 5px';
+    bBor.style.borderRadius = '0 5px 5px 0'; bBor.style.borderLeft = 'none';
+  }
+  if(!$('is-select-case').value){
+    $('instruction-body').innerHTML = '<div class="empty-state card"><div class="icon">📄</div><div>案件を選択してください</div></div>';
+    const h = $('is-mode-hint'); if(h) h.innerHTML = '';
+  }
   else renderInstruction();
 }
 function setupCaseSearchFilters(prefix){
@@ -12448,9 +12503,153 @@ function refreshCaseSelect(prefix){
   const targetId = _returnToCaseId || currentId;
   if(targetId && findCaseById(targetId)) sel.value = targetId;
 }
+// ============================================================
+// 🚗 他社レンタカー会社向け 車両手配書 (2026-07-10)
+//   業務フロー: 保険会社 → ライムレンタカー → 他レンタカー会社 → 工場配車
+//   自社に空きが無い時、他社から車を借りて工場へ直接配車してもらうための依頼書。
+//   ・宛先FAXは案件の borrowedFax (会社名で settings.borrowFaxBook から自動補完)
+//   ・保険会社名・事故番号は載せない (相手に不要な情報)
+//   ・下部に「配車した実車の車種名・登録番号」の返信欄 → 返ってきたら案件の他社借欄に入力
+//   🚨 .sheet.handover を再利用 = FAX安全なテーブル組み (display:grid 禁止・CLAUDE.md鉄則)
+// ============================================================
+window._instructionMode = 'instruction';
+function _isSheetMode(){ return window._instructionMode === 'borrow' ? 'borrow' : 'instruction'; }
+function setInstructionMode(mode){
+  window._instructionMode = (mode === 'borrow') ? 'borrow' : 'instruction';
+  const bIns = $('is-mode-insurer'), bBor = $('is-mode-borrow');
+  if(bIns && bBor){
+    const on = 'btn btn-sm', off = 'btn btn-sm btn-outline';
+    bIns.className = (window._instructionMode==='instruction') ? on : off;
+    bBor.className = (window._instructionMode==='borrow') ? on : off;
+    bIns.style.borderRadius = '5px 0 0 5px';
+    bBor.style.borderRadius = '0 5px 5px 0';
+    bBor.style.borderLeft = 'none';
+  }
+  renderInstruction();
+}
+// 借入先の連絡先メモ帳 (settings.borrowFaxBook = { 会社名: {fax, tel} })
+function _borrowBook(){ return (DATA.settings && DATA.settings.borrowFaxBook) || {}; }
+function _borrowFaxBookRemember(c){
+  if(!c || !c.isBorrowed) return;
+  const name = (c.borrowedFrom||'').trim();
+  const fax = (c.borrowedFax||'').trim();
+  if(!name || !fax) return;
+  if(!DATA.settings) DATA.settings = {};
+  if(!DATA.settings.borrowFaxBook) DATA.settings.borrowFaxBook = {};
+  const cur = DATA.settings.borrowFaxBook[name] || {};
+  if(cur.fax === fax && cur.tel === (c.borrowedTel||'').trim()) return;   // 変化なし
+  DATA.settings.borrowFaxBook[name] = { fax, tel: (c.borrowedTel||'').trim() };
+  DATA.settings._updatedAt = Date.now();   // settings はこの値でマージされる
+}
+function refreshBorrowCompanyList(){
+  const dl = $('borrow-company-list'); if(!dl) return;
+  const names = new Set(Object.keys(_borrowBook()));
+  (DATA.cases||[]).forEach(c => { if(c.isBorrowed && (c.borrowedFrom||'').trim()) names.add(c.borrowedFrom.trim()); });
+  dl.innerHTML = [...names].sort().map(n => `<option value="${esc(n)}">`).join('');
+}
+function onBorrowedFromChange(){
+  const name = ($('f-borrowedFrom')?.value||'').trim();
+  if(!name) return;
+  const rec = _borrowBook()[name];
+  if(!rec) return;
+  const fx = $('f-borrowedFax'), tl = $('f-borrowedTel');
+  if(fx && !fx.value.trim() && rec.fax) fx.value = rec.fax;   // 空欄のときだけ自動補完 (手入力を上書きしない)
+  if(tl && !tl.value.trim() && rec.tel) tl.value = rec.tel;
+}
+// 他社手配書の宛先FAX: 案件の borrowedFax → 無ければメモ帳から
+function _borrowTargetFax(c){
+  const direct = (c.borrowedFax||'').trim();
+  if(direct) return direct;
+  const rec = _borrowBook()[(c.borrowedFrom||'').trim()];
+  return (rec && rec.fax) ? rec.fax : '';
+}
+function renderBorrowRequest(c){
+  const s = DATA.settings || {};
+  const fmtDT = v => { if(!v) return ''; const d=parseDate(v); if(!d) return esc(v);
+    const hasTime = String(v).includes('T') || /\d{1,2}:\d{1,2}/.test(String(v));
+    return hasTime ? `${d.getMonth()+1}月${d.getDate()}日　${pad2(d.getHours())}時${pad2(d.getMinutes())}分` : `${d.getMonth()+1}月${d.getDate()}日`; };
+  const fmtD = v => { const d=parseDate(v); return d? `${d.getMonth()+1}月${d.getDate()}日` : ''; };
+  const rate = Number(c.borrowedDailyRate||0);
+  // 利用期間: 終了日未定なら使用期限を目安として添える
+  const periodStr = c.useEnd
+    ? `${fmtD(c.useStart)||'―'}　〜　${fmtD(c.useEnd)}`
+    : `${fmtD(c.useStart)||'―'}　〜　<span class="ho-sub">未定${c.useDeadline?`（使用期限 ${fmtD(c.useDeadline)}）`:''}</span>`;
+  const wantVeh = (c.borrowedVehicleInfo||'').trim();
+  const targetFax = _borrowTargetFax(c);
+  return `
+    <div class="sheet handover">
+      <h1 class="ho-title">車両手配書（配車依頼）</h1>
+      <div class="ho-top">
+        <div class="ho-col">
+        <table class="ho-hdr">
+          <tr><th colspan="2" class="ho-hdr-title">お手配先</th></tr>
+          <tr><td colspan="2" class="ho-bigname">${esc(c.borrowedFrom||'')}　御中</td></tr>
+          <tr><th>FAX</th><td>${esc(targetFax)}</td></tr>
+          <tr><th>TEL</th><td>${esc(c.borrowedTel||'')}</td></tr>
+        </table>
+        </div>
+        <div class="ho-col ho-col2">
+        <table class="ho-hdr ho-hdr2">
+          <tr><th colspan="2" class="ho-hdr-title">ご依頼元</th></tr>
+          <tr><td colspan="2" class="ho-bigname">${esc(s.tradeName||'ライムレンタカーOKINAWA')}</td></tr>
+          <tr><th>TEL</th><td>${esc(s.tel||'')}</td></tr>
+          <tr><th>FAX</th><td>${esc(s.fax||'')}</td></tr>
+          <tr><th>住所</th><td class="ho-sm">${esc(s.address||'')}</td></tr>
+          <tr><th>担当</th><td class="ho-strong">${esc(c.staff||'')}</td></tr>
+          <tr><th>受付No</th><td class="ho-strong">${esc(c.caseNo||'')}</td></tr>
+        </table>
+        </div>
+      </div>
+      <div class="ho-memo" style="text-align:left;padding:2px 0 6px">下記のとおり車両の手配をお願い申し上げます。</div>
+      <div class="ho-section">■配車のご依頼</div>
+      <table class="ho-table">
+        <tr><th style="width:20%">配車日時</th><td colspan="3"><b class="ho-amt">${c.dispatchAt? fmtDT(c.dispatchAt) : '<span class="ho-sub">（未設定）</span>'}</b>　　${esc(c.dispatchNote||'')}</td></tr>
+        <tr><th>配車先</th><td colspan="3"><b class="ho-amt">${esc(c.dispatchToName||'')}</b></td></tr>
+        <tr><th>配車先住所</th><td colspan="3">${esc(c.dispatchToAddress||'')}</td></tr>
+        <tr><th>配車先TEL</th><td style="width:30%"><b>${esc(c.dispatchToTel||'')}</b></td><th style="width:20%">先方担当</th><td>${esc(c.dispatchToContact||'')}${c.dispatchToContact?'　様':''}</td></tr>
+        <tr><th>希望車種／クラス</th><td colspan="3"><b class="ho-amt">${esc(wantVeh)}</b>${wantVeh&&c.vehicleClass?'　':''}<span class="ho-sub">${c.vehicleClass?`／ ${esc(c.vehicleClass)}`:''}</span></td></tr>
+        <tr><th>利用期間</th><td colspan="3">${periodStr}</td></tr>
+        <tr><th>お借入日額</th><td colspan="3">${rate? `<b>${fmtNum(rate)}</b> 円（税込）` : '<span class="ho-sub">（別途ご相談）</span>'}</td></tr>
+      </table>
+      <div class="ho-section">■ご利用者</div>
+      <table class="ho-table">
+        <tr><th style="width:20%">利用者</th><td style="width:30%"><b>${esc(c.driverName||c.contractorName||'')}</b>　様</td><th style="width:20%">利用者TEL</th><td>${esc(c.driverTel||'')}</td></tr>
+        <tr><th>備考</th><td colspan="3" class="ho-memo" style="text-align:left">${esc(c.note1||'')}</td></tr>
+      </table>
+      <div class="ho-section">■ご返送のお願い（配車完了後）</div>
+      <table class="ho-table">
+        <tr><td colspan="4" class="ho-memo" style="text-align:left">配車いただいた車両の車種名・登録番号をご記入のうえ、本紙をご返信ください。</td></tr>
+        <tr><th style="width:20%">車種名</th><td style="width:30%;height:34px"></td><th style="width:20%">登録番号</th><td style="height:34px"></td></tr>
+      </table>
+      <div class="ho-footer">
+        <div class="ho-company">
+          ${esc(s.tradeName||'ライムレンタカーOKINAWA')}　／　TEL ${esc(s.tel||'')}　FAX ${esc(s.fax||'')}
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderInstruction(){
   const id = $('is-select-case').value; if(!id){ renderInstructionPage(); return; }
   const c = findCaseById(id); if(!c) return;
+  // 🚗 他社手配書モード: 他社借の案件のみ。宛先FAX未入力なら案内を出す。
+  const hint = $('is-mode-hint');
+  if(_isSheetMode() === 'borrow'){
+    if(!c.isBorrowed){
+      if(hint) hint.innerHTML = '';
+      $('instruction-body').innerHTML = `<div class="empty-state card"><div class="icon">🚗</div>
+        <div>この案件は<b>他社借ではありません</b></div>
+        <div class="text-muted text-sm" style="margin-top:6px">案件編集の「🏢 他社借」にチェックを入れ、借入先・FAX番号を入力してください。</div></div>`;
+      return;
+    }
+    const fx = _borrowTargetFax(c);
+    if(hint) hint.innerHTML = fx
+      ? `送信先: <b>${esc(c.borrowedFrom||'')}</b> / FAX <b>${esc(fx)}</b>`
+      : `<span style="color:#C53030">⚠ 借入先FAXが未入力です（案件編集の「借入先FAX」欄）</span>`;
+    $('instruction-body').innerHTML = renderBorrowRequest(c);
+    return;
+  }
+  if(hint) hint.innerHTML = '';
   const ins = findInsurer(c.insurerId)||{};
   const s = DATA.settings;
   const a = calcAmounts(c);
