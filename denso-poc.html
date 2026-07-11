@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>電装 Supabase PoC</title>
+<style>
+  :root{ --ink:#1a2230; --ink2:#5b6472; --line:#e3e7ee; --bg:#f5f7fb; --card:#fff;
+    --acc:#1E40AF; --ok:#2f855a; --warn:#b7791f; --danger:#c53030; --pending:#805ad5; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN",sans-serif;
+    background:var(--bg);color:var(--ink);font-size:14px;-webkit-text-size-adjust:100%}
+  header{position:sticky;top:0;z-index:10;background:#0f1830;color:#fff;padding:10px 12px;
+    box-shadow:0 1px 6px rgba(0,0,0,.2)}
+  .hrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .htitle{font-weight:700;font-size:15px;letter-spacing:.02em}
+  .htitle small{font-weight:400;opacity:.6;font-size:11px;margin-left:4px}
+  .spacer{flex:1}
+  .conn{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+    font-size:12px;font-weight:600;white-space:nowrap}
+  .conn.on{background:#123a24;color:#7ee2a8}
+  .conn.off{background:#4a1d1d;color:#ffb4b4}
+  .qbadge{background:var(--pending);color:#fff;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700}
+  .editorbox{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:#c7cede;flex-wrap:wrap}
+  .editorbox input{background:#1c2740;border:1px solid #38455f;color:#fff;border-radius:6px;padding:4px 8px;font-size:12px;width:120px}
+  .whoami{font-size:11px;color:#9fb0cc}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 12px;
+    font-size:13px;font-weight:600;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .btn.g{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .btn.sm{padding:4px 9px;font-size:12px}
+  .btn.ghost{background:#1c2740;color:#dfe6f3;border-color:#38455f}
+  main{padding:12px;max-width:820px;margin:0 auto}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .job{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);
+    border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+  .job.pending{border-left-color:var(--pending);background:#faf7ff}
+  .job .r1{display:flex;align-items:center;gap:8px}
+  .job .no{font-weight:700;font-variant-numeric:tabular-nums}
+  .job .cli{color:var(--ink2);font-size:13px}
+  .pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#eef2fb;color:var(--acc);white-space:nowrap}
+  .pill.done{background:#e7f4ec;color:var(--ok)}
+  .pill.cancel{background:#f6e7e7;color:var(--danger)}
+  .pill.pend{background:#f0e7fb;color:var(--pending)}
+  .job .r2{color:var(--ink2);font-size:12.5px;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+  .job .amt{font-weight:700;color:var(--ink)}
+  .meta{font-size:11px;color:#98a1b2;margin-top:3px}
+  .ov{position:fixed;inset:0;background:rgba(10,15,25,.5);display:none;align-items:flex-end;justify-content:center;z-index:20}
+  .ov.on{display:flex}
+  .sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding:14px}
+  @media(min-width:600px){.ov{align-items:center}.sheet{border-radius:14px}}
+  .sheet h3{margin:2px 0 12px}
+  .fld{margin-bottom:10px}
+  .fld label{display:block;font-size:12px;color:var(--ink2);margin-bottom:3px;font-weight:600}
+  .fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:14px;font-family:inherit}
+  .fld textarea{min-height:56px;resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sheetfoot{display:flex;gap:8px;margin-top:6px;position:sticky;bottom:0;background:#fff;padding-top:8px}
+  .sheetfoot .btn{flex:1}
+  .logwrap{margin-top:16px}
+  .logwrap h4{margin:0 0 6px;font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:8px}
+  #log{background:#0f1830;color:#cfe0ff;border-radius:10px;padding:10px;font-size:11.5px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;max-height:220px;overflow:auto;line-height:1.6}
+  #log .l-ok{color:#8ee7ad}#log .l-warn{color:#ffd479}#log .l-err{color:#ff9c9c}#log .l-dim{color:#8494b0}
+  .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#0f1830;color:#fff;
+    padding:10px 16px;border-radius:10px;font-size:13px;z-index:60;opacity:0;transition:.2s;pointer-events:none;max-width:90%}
+  .toast.on{opacity:1}
+  .banner{background:#fef3c7;color:#7a5b12;padding:8px 12px;font-size:12.5px;text-align:center;display:none}
+  .banner.on{display:block}
+  /* login gate */
+  #gate{position:fixed;inset:0;z-index:50;background:linear-gradient(160deg,#0f1830,#1c2740);
+    display:flex;align-items:center;justify-content:center;padding:18px}
+  #gate .card{background:#fff;border-radius:16px;padding:22px;width:100%;max-width:360px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+  #gate h2{margin:0 0 4px;font-size:18px}
+  #gate .sub{color:var(--ink2);font-size:12.5px;margin-bottom:16px}
+  #gate .fld input{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px;font-size:15px}
+  #gate .err{color:var(--danger);font-size:12.5px;min-height:16px;margin:6px 0}
+  #gate .btn{width:100%;padding:12px;font-size:15px}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ===== ログイン画面 ===== -->
+<div id="gate">
+  <div class="card">
+    <h2>電装 Supabase PoC</h2>
+    <div class="sub">同期事故 根治テスト / ログインしてください</div>
+    <div class="fld" style="margin-bottom:10px"><label style="font-size:12px;color:var(--ink2)">メールアドレス</label>
+      <input id="g-email" type="email" autocomplete="username" inputmode="email" placeholder="team@example.com"></div>
+    <div class="fld" style="margin-bottom:6px"><label style="font-size:12px;color:var(--ink2)">パスワード</label>
+      <input id="g-pass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <div class="err" id="g-err"></div>
+    <button class="btn p" id="g-btn" onclick="doAuth()">ログイン</button>
+    <div style="text-align:center;margin-top:12px;font-size:12.5px">
+      <a href="#" id="g-toggle" onclick="toggleAuthMode(event)" style="color:var(--acc);text-decoration:none">初めての方はこちら（新規登録）</a>
+    </div>
+  </div>
+</div>
+
+<header class="hide" id="apphdr">
+  <div class="hrow">
+    <span class="htitle">電装 <small>Supabase PoC / 同期事故 根治テスト</small></span>
+    <span class="spacer"></span>
+    <span id="conn" class="conn off">●</span>
+    <span id="qbadge" class="qbadge" style="display:none"></span>
+  </div>
+  <div class="editorbox">
+    <span>この端末の操作者:</span>
+    <input id="editor" placeholder="例: 大嶺 / PC-A / スマホ">
+    <span class="whoami" id="whoami"></span>
+    <span class="spacer"></span>
+    <button class="btn ghost sm" onclick="reloadAll()">再読込</button>
+    <button class="btn ghost sm" onclick="flushQueue(true)">🔄同期</button>
+    <button class="btn ghost sm" onclick="doLogout()">ログアウト</button>
+  </div>
+</header>
+<div id="banner" class="banner"></div>
+
+<main class="hide" id="appmain">
+  <div class="toolbar">
+    <button class="btn p" onclick="openNew()">＋ 新規案件</button>
+    <span class="spacer"></span>
+    <span id="count" style="font-size:12px;color:var(--ink2)"></span>
+  </div>
+  <div id="list"></div>
+
+  <div class="logwrap">
+    <h4>操作ログ <button class="btn sm" style="margin-left:auto" onclick="document.getElementById('log').innerHTML=''">クリア</button></h4>
+    <div id="log"></div>
+  </div>
+</main>
+
+<!-- edit sheet -->
+<div class="ov" id="ov">
+  <div class="sheet">
+    <h3 id="sh-title">案件</h3>
+    <input type="hidden" id="f-id">
+    <div class="fld"><label>受付No</label><input id="f-jobno" readonly></div>
+    <div class="fld"><label>取引先</label><input id="f-client"></div>
+    <div class="grid2">
+      <div class="fld"><label>状態</label><select id="f-status"></select></div>
+      <div class="fld"><label>担当</label><input id="f-worker"></div>
+    </div>
+    <div class="fld"><label>車種</label><input id="f-car"></div>
+    <div class="grid2">
+      <div class="fld"><label>単価(円)</label><input id="f-unit" inputmode="numeric"></div>
+      <div class="fld"><label>台数</label><input id="f-qty" inputmode="numeric"></div>
+    </div>
+    <div class="fld"><label>メモ</label><textarea id="f-memo"></textarea></div>
+    <div class="meta" id="f-meta"></div>
+    <div class="sheetfoot">
+      <button class="btn" onclick="closeSheet()">閉じる</button>
+      <button class="btn g" id="f-save" onclick="saveSheet()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   電装 Supabase PoC アプリ (2026-07-11) — ログイン(Auth)対応版
+   核心の実証:
+   ① 保存 = UPDATE denso_jobs WHERE id=X (1案件1行・他案件に触れない)
+   ② 楽観ロック(updated_at一致) で「他端末が先に更新」を検知→上書きしない
+   ③ 原子採番 denso_next('jobGlobal') で二重採番0
+   ④ オフライン: 圏外でも保存→IndexedDBキュー→復帰でupsert(id固定=二重なし)
+   ⑤ ログイン必須(Supabase Auth) → RLSは authenticated のみ許可 (公開しても安全)
+   ============================================================ */
+const SB_URL = 'https://acqudghpxlghmoyplrif.supabase.co';
+const SB_KEY = 'sb_publishable_a-wFPHs_RJBwg0RrLbTRng_Vesu6K4p'; // publishable(公開前提で安全)
+const REST = SB_URL + '/rest/v1';
+const AUTH = SB_URL + '/auth/v1';
+const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
+const DONE_ST = new Set(['報告済','請求済','入金済']);
+
+let JOBS = [];
+let EDITOR = localStorage.getItem('densoPoc_editor') || '';
+let SESSION = null; try { SESSION = JSON.parse(localStorage.getItem('densoPoc_session')||'null'); } catch(e){}
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),2200); }
+function log(msg, cls){ const el=$('log'); if(!el) return; const now=new Date(); const p=n=>String(n).padStart(2,'0');
+  const div=document.createElement('div'); div.className='l-'+(cls||'dim'); div.textContent=`[${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}] ${msg}`; el.insertBefore(div, el.firstChild); }
+function fmtAmt(u,q){ return '¥'+((parseFloat(u)||0)*(parseFloat(q)||0)).toLocaleString(); }
+function pillClass(st){ return DONE_ST.has(st)?'done':(st==='キャンセル'?'cancel':''); }
+
+/* ---------- Auth ---------- */
+function authHeaders(){ // apikey は publishable 固定 / Authorization はログイン中は access_token
+  const bearer = (SESSION && SESSION.access_token) ? SESSION.access_token : SB_KEY;
+  return { apikey: SB_KEY, Authorization: 'Bearer ' + bearer, 'Content-Type': 'application/json' }; }
+const H = (extra) => Object.assign(authHeaders(), extra || {});
+
+async function doLogin(){ const email=$('g-email').value.trim(), pass=$('g-pass').value;
+  $('g-err').textContent=''; $('g-btn').disabled=true; $('g-btn').textContent='ログイン中…';
+  try{
+    const r=await fetch(`${AUTH}/token?grant_type=password`,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const j=await r.json();
+    if(!r.ok){ $('g-err').textContent = (j.error_description||j.msg||j.error||'ログインに失敗しました'); $('g-btn').disabled=false; $('g-btn').textContent='ログイン'; return; }
+    SESSION={ access_token:j.access_token, refresh_token:j.refresh_token, expires_at:(j.expires_at||(Math.floor(Date.now()/1000)+(j.expires_in||3600))), email:(j.user&&j.user.email)||email };
+    localStorage.setItem('densoPoc_session',JSON.stringify(SESSION));
+    showApp(); boot();
+  }catch(e){ $('g-err').textContent='通信エラー: '+e.message; $('g-btn').disabled=false; $('g-btn').textContent='ログイン'; }
+}
+function doLogout(){ SESSION=null; localStorage.removeItem('densoPoc_session'); location.reload(); }
+let SIGNMODE=false;
+function toggleAuthMode(ev){ if(ev) ev.preventDefault(); SIGNMODE=!SIGNMODE; $('g-err').textContent='';
+  $('g-btn').textContent = SIGNMODE? '新規登録' : 'ログイン';
+  $('g-toggle').textContent = SIGNMODE? '← ログインに戻る' : '初めての方はこちら（新規登録）';
+  $('g-pass').setAttribute('autocomplete', SIGNMODE?'new-password':'current-password');
+}
+function doAuth(){ return SIGNMODE? doSignup() : doLogin(); }
+async function doSignup(){ const email=$('g-email').value.trim(), pass=$('g-pass').value;
+  $('g-err').textContent=''; if(pass.length<6){ $('g-err').textContent='パスワードは6文字以上にしてください'; return; }
+  $('g-btn').disabled=true; $('g-btn').textContent='登録中…';
+  try{
+    const r=await fetch(`${AUTH}/signup`,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const j=await r.json();
+    if(!r.ok){ $('g-err').textContent=(j.error_description||j.msg||j.error||'登録に失敗しました'); $('g-btn').disabled=false; $('g-btn').textContent='新規登録'; return; }
+    if(j.access_token){ // メール確認オフ→即ログイン
+      SESSION={ access_token:j.access_token, refresh_token:j.refresh_token, expires_at:(j.expires_at||(Math.floor(Date.now()/1000)+(j.expires_in||3600))), email:(j.user&&j.user.email)||email };
+      localStorage.setItem('densoPoc_session',JSON.stringify(SESSION)); showApp(); boot();
+    } else { // メール確認が必要な設定の場合
+      $('g-err').style.color='#2f855a'; $('g-err').textContent='登録しました。そのままログインしてください'; SIGNMODE=false; $('g-btn').disabled=false; $('g-btn').textContent='ログイン'; $('g-toggle').textContent='初めての方はこちら（新規登録）';
+    }
+  }catch(e){ $('g-err').textContent='通信エラー: '+e.message; $('g-btn').disabled=false; $('g-btn').textContent='新規登録'; }
+}
+async function ensureFreshToken(){ // 期限が近ければ refresh
+  if(!SESSION || !SESSION.refresh_token) return false;
+  const now=Math.floor(Date.now()/1000);
+  if(SESSION.expires_at && SESSION.expires_at - now > 120) return true; // まだ有効
+  if(!navigator.onLine) return false;
+  try{
+    const r=await fetch(`${AUTH}/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:SESSION.refresh_token})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error_description||j.msg||'refresh失敗');
+    SESSION.access_token=j.access_token; SESSION.refresh_token=j.refresh_token||SESSION.refresh_token;
+    SESSION.expires_at=(j.expires_at||(now+(j.expires_in||3600)));
+    localStorage.setItem('densoPoc_session',JSON.stringify(SESSION)); return true;
+  }catch(e){ log('トークン更新失敗: '+e.message,'warn'); return false; }
+}
+function showLogin(){ $('gate').classList.remove('hide'); $('apphdr').classList.add('hide'); $('appmain').classList.add('hide'); }
+function showApp(){ $('gate').classList.add('hide'); $('apphdr').classList.remove('hide'); $('appmain').classList.remove('hide');
+  if($('whoami')) $('whoami').textContent = SESSION? ('👤 '+SESSION.email) : ''; }
+
+/* ---------- IndexedDB write queue ---------- */
+let _db=null;
+function idb(){ return new Promise((res,rej)=>{ if(_db) return res(_db);
+  const r=indexedDB.open('densoPocQueue',1);
+  r.onupgradeneeded=e=>{ const db=e.target.result; if(!db.objectStoreNames.contains('q')) db.createObjectStore('q',{keyPath:'opId'}); };
+  r.onsuccess=e=>{ _db=e.target.result; res(_db); }; r.onerror=e=>rej(e.target.error); }); }
+async function qPut(op){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('q','readwrite'); tx.objectStore('q').put(op); tx.oncomplete=()=>res(); tx.onerror=e=>rej(e.target.error); }); }
+async function qDel(opId){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('q','readwrite'); tx.objectStore('q').delete(opId); tx.oncomplete=()=>res(); tx.onerror=e=>rej(e.target.error); }); }
+async function qAll(){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('q','readonly'); const rq=tx.objectStore('q').getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=e=>rej(e.target.error); }); }
+
+/* ---------- connection ---------- */
+function setConn(){ const on=navigator.onLine; const c=$('conn'); if(!c) return; c.className='conn '+(on?'on':'off'); c.textContent=on?'● オンライン':'● オフライン(圏外)'; }
+window.addEventListener('online', ()=>{ setConn(); log('ネット復帰 → キュー同期を試みます','ok'); flushQueue(); });
+window.addEventListener('offline', ()=>{ setConn(); log('圏外になりました。保存はキューに積みます','warn'); });
+async function refreshQBadge(){ const q=await qAll(); const b=$('qbadge'); if(!b) return; if(q.length){ b.style.display='inline-block'; b.textContent='未同期 '+q.length+'件'; } else b.style.display='none';
+  const bn=$('banner'); if(bn){ bn.classList.toggle('on', q.length>0); if(q.length) bn.textContent='未同期の変更が '+q.length+' 件あります（ネット復帰で自動送信 / 🔄同期）'; } }
+
+/* ---------- REST ---------- */
+async function sbGet(path){ await ensureFreshToken(); const r=await fetch(REST+path, {headers:H()}); if(r.status===401){ handle401(); throw new Error('401 未認証'); } if(!r.ok) throw new Error('GET '+r.status+' '+(await r.text())); return r.json(); }
+function handle401(){ log('認証切れ → 再ログインが必要','warn'); toast('ログインが切れました。再ログインしてください'); }
+
+/* ---------- load/render ---------- */
+async function loadJobs(){ JOBS = await sbGet('/denso_jobs?select=*&order=job_no.desc'); }
+function render(){ const wrap=$('list'); if(!wrap) return; wrap.innerHTML='';
+  const pend=new Set(window._pendingIds||[]);
+  JOBS.forEach(j=>{ const d=j.data||{}; const car=j.car_model||d.carModel||'';
+    const div=document.createElement('div'); div.className='job'+(pend.has(j.id)?' pending':''); div.onclick=()=>openEdit(j.id);
+    div.innerHTML=`<div class="r1"><span class="no">${esc(j.job_no||'(採番待ち)')}</span>
+      <span class="cli">${esc(j.client_name||'')}</span><span class="spacer" style="flex:1"></span>
+      <span class="pill ${pillClass(j.status)}">${esc(j.status||'')}</span></div>
+      <div class="r2"><span>${esc(car||'車種未定')}</span><span class="amt">${fmtAmt(j.unit_fee,j.qty)}</span>
+        <span>台数 ${esc(j.qty??'')}</span>${pend.has(j.id)?'<span class="pill pend">未同期</span>':''}</div>
+      <div class="meta">最終更新: ${esc(j.updated_by||'—')} / ${j.updated_at?new Date(j.updated_at).toLocaleString('ja-JP'):'—'}</div>`;
+    wrap.appendChild(div); });
+  $('count').textContent = JOBS.length+' 件';
+}
+async function reloadAll(){ try{ await loadJobs(); render(); await refreshQBadge(); log('再読込: '+JOBS.length+'件','ok'); }catch(e){ log('再読込失敗: '+e.message,'err'); toast('読込に失敗（ネット確認）'); } }
+
+/* ---------- edit ---------- */
+function openEdit(id){ const j=JOBS.find(x=>x.id===id); if(!j) return; const d=j.data||{};
+  $('sh-title').textContent='案件を編集'; $('f-id').value=j.id; $('f-jobno').value=j.job_no||'';
+  $('f-client').value=j.client_name||d.clientName||''; $('f-worker').value=j.worker||d.worker||'';
+  $('f-car').value=j.car_model||d.carModel||''; $('f-unit').value=j.unit_fee||d.unitFee||''; $('f-qty').value=j.qty??d.qty??'';
+  $('f-memo').value=d.memo||'';
+  $('f-status').innerHTML=STATUSES.map(s=>`<option ${s===j.status?'selected':''}>${s}</option>`).join('');
+  $('f-meta').textContent='id='+j.id+' / version(updated_at)='+(j.updated_at||'—');
+  $('f-id').dataset.ver = j.updated_at||''; $('f-id').dataset.mode='edit'; $('ov').classList.add('on');
+}
+function openNew(){ $('sh-title').textContent='新規案件'; $('f-id').value=''; $('f-jobno').value='(保存時に採番)';
+  $('f-client').value='株式会社プロシード'; $('f-worker').value=EDITOR; $('f-car').value=''; $('f-unit').value=''; $('f-qty').value='1'; $('f-memo').value='';
+  $('f-status').innerHTML=STATUSES.map(s=>`<option ${s==='依頼'?'selected':''}>${s}</option>`).join('');
+  $('f-meta').textContent='新規: 受付Noは保存時に denso_next で採番'; $('f-id').dataset.mode='new'; $('ov').classList.add('on');
+}
+function closeSheet(){ $('ov').classList.remove('on'); }
+function collectForm(){ return { client_name:$('f-client').value.trim(), worker:$('f-worker').value.trim(),
+  car_model:$('f-car').value.trim(), unit_fee:$('f-unit').value.trim(), qty: $('f-qty').value.trim()===''?null:Number($('f-qty').value), status:$('f-status').value, memo:$('f-memo').value }; }
+async function saveSheet(){ if(!requireEditor()) return; return $('f-id').dataset.mode==='new'? saveNew() : saveEdit(); }
+
+/* ---------- SAVE EDIT: 1案件1行 + 楽観ロック ---------- */
+async function saveEdit(){ const id=$('f-id').value; const prevVer=$('f-id').dataset.ver; const f=collectForm();
+  const j=JOBS.find(x=>x.id===id); const newData=Object.assign({}, j.data||{}, { clientName:f.client_name, worker:f.worker, carModel:f.car_model, unitFee:f.unit_fee, qty:f.qty, status:f.status, memo:f.memo, updatedBy:EDITOR });
+  const patch={ client_name:f.client_name, worker:f.worker, car_model:f.car_model, unit_fee:f.unit_fee, qty:f.qty, status:f.status, data:newData, updated_by:EDITOR };
+  closeSheet();
+  if(navigator.onLine){
+    try{
+      await ensureFreshToken();
+      const url=`${REST}/denso_jobs?id=eq.${encodeURIComponent(id)}&updated_at=eq.${encodeURIComponent(prevVer)}`;
+      const r=await fetch(url,{method:'PATCH',headers:H({Prefer:'return=representation'}),body:JSON.stringify(patch)});
+      if(r.status===401){ handle401(); return; }
+      if(!r.ok) throw new Error('PATCH '+r.status+' '+(await r.text()));
+      const rows=await r.json();
+      if(rows.length===0){ log(`⚠ 競合検知 ${j.job_no}: 他の端末が先に更新。上書きせず最新を再読込`,'warn'); toast('⚠ 競合: 他の端末が先に更新しました。最新を読み込みました'); await reloadAll(); if(JOBS.find(x=>x.id===id)) openEdit(id); return; }
+      Object.assign(j, rows[0]); log(`保存OK: UPDATE denso_jobs WHERE id=${id} (他案件に触れない) → ${f.status}`,'ok'); unmarkPending(id); render();
+    }catch(e){ log('保存エラー→キューへ: '+e.message,'err'); await enqueueUpsert(id,Object.assign({id},patch)); Object.assign(j,patch); markPending(id); render(); }
+  } else { log(`圏外保存→キュー: ${j.job_no} (id固定なので復帰時upsert=二重なし)`,'warn'); await enqueueUpsert(id, Object.assign({id}, patch)); Object.assign(j,patch); markPending(id); render(); toast('圏外: 保存をキューに積みました'); }
+}
+
+/* ---------- SAVE NEW: 原子採番 ---------- */
+async function saveNew(){ const f=collectForm();
+  const build=(num,id)=>{ const jobNo='D-'+String(num).padStart(4,'0'); const data={ id, jobNo, status:f.status, clientName:f.client_name, worker:f.worker, carModel:f.car_model, unitFee:f.unit_fee, qty:f.qty, memo:f.memo, requestedAt:new Date().toISOString().slice(0,10), createdBy:EDITOR, updatedBy:EDITOR };
+    return { id, job_no:jobNo, status:f.status, client_id:null, client_name:f.client_name, worker:f.worker, car_model:f.car_model, requested_at:data.requestedAt, unit_fee:f.unit_fee, qty:f.qty, data, updated_by:EDITOR }; };
+  closeSheet();
+  if(navigator.onLine){
+    try{
+      const num=await sbRpcNext(); const id='j-'+Date.now().toString(36)+'-'+Math.floor(Math.random()*1e4); const row=build(num,id);
+      const r=await fetch(`${REST}/denso_jobs`,{method:'POST',headers:H({Prefer:'return=representation'}),body:JSON.stringify(row)});
+      if(r.status===401){ handle401(); return; } if(!r.ok) throw new Error('POST '+r.status+' '+(await r.text()));
+      const rows=await r.json(); JOBS.unshift(rows[0]); log(`新規OK: denso_next→${num} = ${row.job_no} を INSERT (原子採番=二重なし)`,'ok'); render();
+    }catch(e){ log('新規エラー: '+e.message,'err'); toast('新規作成に失敗'); }
+  } else {
+    const tmpId='tmp-'+Date.now().toString(36)+'-'+Math.floor(Math.random()*1e4); const row=build('????',tmpId); row.job_no='(採番待ち)'; row.data.jobNo='(採番待ち)';
+    JOBS.unshift(row); markPending(tmpId); render(); await qPut({ opId:tmpId, kind:'newjob', payload:row });
+    log('圏外 新規→キュー: 復帰時に denso_next で採番して確定(二重採番なし)','warn'); toast('圏外: 新規をキューに積みました（復帰時に採番）'); refreshQBadge();
+  }
+}
+async function sbRpcNext(){ await ensureFreshToken(); const r=await fetch(`${REST}/rpc/denso_next`,{method:'POST',headers:H(),body:JSON.stringify({counter:'jobGlobal'})}); if(!r.ok) throw new Error('RPC '+r.status); return r.json(); }
+
+/* ---------- pending ---------- */
+window._pendingIds=[];
+function markPending(id){ if(!window._pendingIds.includes(id)) window._pendingIds.push(id); refreshQBadge(); }
+function unmarkPending(id){ window._pendingIds=window._pendingIds.filter(x=>x!==id); refreshQBadge(); }
+async function enqueueUpsert(id,row){ await qPut({opId:'up-'+id, kind:'upsert', payload:row}); refreshQBadge(); }
+
+/* ---------- flush ---------- */
+let _flushing=false;
+async function flushQueue(manual){ if(_flushing) return; if(!navigator.onLine){ if(manual) toast('まだ圏外です'); return; }
+  _flushing=true; try{ const ops=await qAll(); if(!ops.length){ if(manual) toast('未同期はありません'); return; }
+    await ensureFreshToken(); log('同期開始: '+ops.length+'件','ok');
+    for(const op of ops){ try{
+      if(op.kind==='upsert'){
+        const r=await fetch(`${REST}/denso_jobs?on_conflict=id`,{method:'POST',headers:H({Prefer:'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(op.payload)});
+        if(!r.ok) throw new Error('upsert '+r.status+' '+(await r.text()));
+        const rows=await r.json(); const j=JOBS.find(x=>x.id===op.payload.id); if(j&&rows[0]) Object.assign(j,rows[0]);
+        await qDel(op.opId); unmarkPending(op.payload.id); log(`同期OK(upsert): id=${op.payload.id}`,'ok');
+      } else if(op.kind==='newjob'){
+        const num=await sbRpcNext(); const jobNo='D-'+String(num).padStart(4,'0'); const row=Object.assign({}, op.payload, {job_no:jobNo}); row.data=Object.assign({}, op.payload.data, {jobNo});
+        const r=await fetch(`${REST}/denso_jobs`,{method:'POST',headers:H({Prefer:'return=representation'}),body:JSON.stringify(row)});
+        if(!r.ok) throw new Error('newjob '+r.status+' '+(await r.text()));
+        const rows=await r.json(); const j=JOBS.find(x=>x.id===op.payload.id); if(j&&rows[0]) Object.assign(j,rows[0]);
+        await qDel(op.opId); unmarkPending(op.payload.id); log(`同期OK(新規確定): 復帰後 denso_next→${num} = ${jobNo}`,'ok');
+      }
+    }catch(e){ log('同期失敗(次回再試行): '+e.message,'err'); } }
+    render(); await refreshQBadge(); const left=(await qAll()).length; if(manual) toast(left? ('同期: 残り'+left+'件') : '同期完了');
+  } finally{ _flushing=false; }
+}
+
+/* ---------- editor identity ---------- */
+function requireEditor(){ EDITOR=$('editor').value.trim(); if(!EDITOR){ toast('先に「この端末の操作者」を入力してください'); $('editor').focus(); return false; } localStorage.setItem('densoPoc_editor',EDITOR); return true; }
+
+/* ---------- boot ---------- */
+async function boot(){ setConn();
+  if($('editor')){ $('editor').value=EDITOR; $('editor').onchange=()=>{ EDITOR=$('editor').value.trim(); localStorage.setItem('densoPoc_editor',EDITOR); }; }
+  log('起動: '+SB_URL,'dim');
+  try{ await loadJobs(); render(); log('初回読込 '+JOBS.length+'件','ok'); }
+  catch(e){ log('初回読込失敗: '+e.message,'err'); toast('読込失敗: 認証/ネットを確認'); }
+  await refreshQBadge(); if(navigator.onLine) flushQueue();
+  if(!window._tick){ window._tick=setInterval(()=>{ if(navigator.onLine) flushQueue(); }, 20000); }
+}
+
+/* ---------- start ---------- */
+(async function start(){
+  if(SESSION && SESSION.access_token){ const ok=await ensureFreshToken(); if(ok || (SESSION && SESSION.access_token)){ showApp(); boot(); return; } }
+  showLogin();
+  $('g-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doAuth(); });
+})();
+</script>
+</body>
+</html>
