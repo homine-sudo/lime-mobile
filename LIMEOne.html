@@ -3098,7 +3098,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-10d';
+const APP_VERSION = '2026-07-11';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -4961,12 +4961,21 @@ window.save = function(){
   if(dirHandle) saveToDir();
 };
 
+/* 🚨 fail-closed: 共有フォルダ(Dropboxローカル)に書ける状態か。
+ *   未接続(dirHandle無し)なら「保存しました」と言わない/LINE・カレンダー通知も出さない。
+ *   2026-07-11 の同期事故(共有未接続で保存→localStorageだけ→LINEだけ飛んでデータが共有に無い)の再発防止。
+ *   注: localStorage には保存されるので入力は失われない。接続して再保存すれば共有に届く。
+ *   注: これは「共有フォルダへ書けるか」までの検知。Dropboxクラウドへのアップロード成否は
+ *       PC版からは見えない(API非連携)ので別問題(容量対策で担保)。 */
+function _sharedFolderReady(){ return !!dirHandle; }
+
 /* --- ステータス表示更新 --- */
 async function updateSyncStatus(msg){
   const el = $('sync-status'); if(!el) return;
   if(msg){ el.innerHTML = `<span style="color:#fff">${esc(msg)}</span>`; return; }
   if(!dirHandle){
-    el.innerHTML = '<span style="color:#aaa">未設定</span>';
+    // 🚨 未接続は「保存しても共有に届かない」危険状態。グレーの控えめ表示ではなく赤で常設警告。
+    el.innerHTML = '<span style="color:#C53030;font-weight:bold">⚠ 共有フォルダ未接続 — 保存が共有されません</span> <button class="btn btn-xs btn-warning" onclick="setupShareFolder()" style="padding:2px 8px;font-size:10px">共有フォルダを接続</button>';
     return;
   }
   let lockHtml = '';
@@ -9734,10 +9743,15 @@ function saveGeneralRental(closeAfter){
   const ind = $('gr-save-indicator');
   if(ind){
     const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    ind.textContent = '✓ 保存済 ' + t;
-    ind.style.color = 'var(--green)';
+    if(_sharedFolderReady()){
+      ind.textContent = '✓ 保存済 ' + t;
+      ind.style.color = 'var(--green)';
+    } else {
+      ind.textContent = '⚠ 共有未接続 ' + t;  // 🚨 共有に届いていないのに「保存済」と偽らない
+      ind.style.color = '#C53030';
+    }
   }
-  toast('💾 保存しました');
+  if(_sharedFolderReady()) toast('💾 保存しました');  // 🚨 共有未接続時は緑を出さない(_fireCaseNotificationsが赤警告)
   _grEditingId = c.id;
   editingCaseId = c.id;
   fillGRForm(c);
@@ -11107,7 +11121,7 @@ function saveCase(){
   // v2026.04.29cd: 次回新規案件のデフォルトとして担当者などを記憶
   if(typeof saveLastCaseDefaults === 'function') saveLastCaseDefaults(c);
   markCaseSaved();  // 未保存状態を解除
-  toast('💾 保存しました');
+  if(_sharedFolderReady()) toast('💾 保存しました');  // 🚨 共有未接続時は緑を出さない(_fireCaseNotificationsが赤警告を出す)
   editingCaseId = c.id;
   if(typeof fillForm === 'function') fillForm(c);
   if(typeof renderFlowStepper === 'function') renderFlowStepper(c);
@@ -11134,6 +11148,12 @@ function _fireCancelDeleteNotify(c, action){
 // 新規案件 / 配車日時変更 / 回収予定日 設定・変更時 にそれぞれ通知
 // oldCase は保存前の状態 (新規なら null)
 function _fireCaseNotifications(c, isNew, oldCase){
+  // 🚨 共有フォルダ未接続なら通知を出さない (LINE/カレンダーだけ飛んでデータが共有に無い、を根絶)
+  //   全案件保存経路(saveCase/GR/runFlowAction/duplicateCase)がここを通るので、通知抑止はここ一箇所で担保。
+  if(!_sharedFolderReady()){
+    try { toast('⚠️ 共有フォルダに未接続のため、この端末にのみ保存しました（共有・通知は保留中）。ナビ右上の「共有フォルダを接続」→ もう一度保存してください。', 'error'); } catch(_){}
+    return;
+  }
   const s = DATA.settings || {};
   if(!s.gasWebAppUrl) return;  // 連携未設定なら何もしない
   const _send = (t) => sendExternalNotify(t, _buildNotifyPayload(c, t))
