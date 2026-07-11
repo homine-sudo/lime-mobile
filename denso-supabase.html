@@ -2425,16 +2425,15 @@ function openSettings(){
     <div class="field"><div style="font-size:13px;margin-bottom:8px">状態: <b style="color:${isAdmin()?'var(--green)':'var(--text-dim)'}">${isAdmin()?'管理者 ✓（売上を表示）':'一般（売上は非表示）'}</b></div>
       <div class="btn-row">${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="adminLogout()">管理者モードを解除</button>`:`<button class="btn btn-primary btn-sm btn-full" onclick="adminLogin()">${s.adminPin?'🔑 管理者ログイン':'🔑 管理者PINを設定する'}</button>`}</div>
       <div class="hint">売上・粗利・月次請求は管理者のみ表示。現場のスマホはOFFのまま使えます（端末ごとに記憶）</div></div>
-    <div class="sec-label">☁️ Dropbox同期(端末間で共有)</div>
-    <div class="field"><div style="font-size:13px;margin-bottom:8px">状態: <b id="dbx-status">${DBX_TOKEN?'連携済み ✓':'未連携'}</b></div>
-      <div class="btn-row">${DBX_TOKEN?`<button class="btn btn-secondary btn-sm" onclick="syncNow()">🔄 今すぐ同期</button><button class="btn btn-ghost btn-sm" onclick="dbxLogout()">連携解除</button>`:`<button class="btn btn-primary btn-sm btn-full" onclick="dbxAuthorize()">📦 Dropboxと連携する</button>`}</div>
-      <div class="hint">PC/他のスマホと同じデータを共有。各自このボタンからDropboxにログイン(初回のみ)。保存先 ${esc(DBX_DATA_PATH)}</div></div>
+    <div class="sec-label">👤 アカウント（クラウド保存 / Supabase）</div>
+    <div class="field"><div style="font-size:13px;margin-bottom:8px">状態: <b style="color:var(--green)">ログイン中 ✓</b> <span style="color:var(--text-dim);font-size:12px">${esc((typeof SB!=='undefined'&&SB.session&&SB.session.email)||'')}</span></div>
+      <div class="btn-row"><button class="btn btn-secondary btn-sm" onclick="sbChangePassword()">🔑 パスワード変更</button><button class="btn btn-ghost btn-sm" onclick="sbLogout()">ログアウト</button></div>
+      <div class="hint">データはクラウド(Supabase)に保存され、ログインした端末どうしで共有されます。共有パスワードを変えたら、メンバー全員に新しいパスワードを伝えてください。</div></div>
     <div class="sec-label">💾 データ</div>
     <div class="btn-row" style="margin-bottom:9px"><button class="btn btn-secondary btn-sm" onclick="exportData()">⬇️ バックアップ書出</button><button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file').click()">⬆️ 復元(取込)</button></div>
     <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(this)">
-    <button class="btn btn-ghost btn-sm btn-full" style="margin-bottom:9px" onclick="seedRealData()">📥 請求書の実データを読み込む</button>
-    <button class="btn btn-danger btn-sm btn-full" onclick="wipeData()">全データ削除</button>
-    <div class="hint" style="margin-top:12px;text-align:center">なびんちゅ ${APP_VERSION}<br>データはこの端末内(localStorage)に保存されます</div>
+    <button class="btn btn-danger btn-sm btn-full" onclick="wipeData()">この端末の表示キャッシュをリセット</button>
+    <div class="hint" style="margin-top:12px;text-align:center">なびんちゅ ${APP_VERSION} SB<br>データはクラウド(Supabase)に保存され、ログインした端末どうしで共有されます</div>
   </div>
   <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">閉じる</button><button class="btn btn-primary" onclick="saveSettings()">保存</button></div>`;
   bg.classList.add('open');
@@ -2717,11 +2716,33 @@ function sbShowLogin(){ if(document.getElementById('sb-gate')) return; const g=d
   document.getElementById('sb-login-btn').onclick=doIt; document.getElementById('sb-pass').addEventListener('keydown',e=>{ if(e.key==='Enter') doIt(); });
 }
 function sbLogout(){ SB.session=null; localStorage.removeItem('densoSB_session'); location.reload(); }
+function sbChangePassword(){ if(!SB.session){ toast('先にログインしてください','err'); return; } if(document.getElementById('sb-pw-modal')) return;
+  const ov=document.createElement('div'); ov.id='sb-pw-modal';
+  ov.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(10,15,25,.55);display:flex;align-items:center;justify-content:center;padding:18px';
+  ov.innerHTML='<div style="background:#fff;border-radius:14px;padding:20px;width:100%;max-width:340px;font-family:system-ui,-apple-system,sans-serif">'
+   +'<div style="font-weight:700;font-size:16px;margin-bottom:4px">🔑 パスワード変更</div>'
+   +'<div style="font-size:12px;color:#5b6472;margin-bottom:12px">共有ログインのパスワードを変えます。変更後は全員に新しいパスワードを共有してください。</div>'
+   +'<div style="font-size:12px;color:#5b6472;margin-bottom:3px">新しいパスワード（6文字以上）</div><input id="sb-pw1" type="password" autocomplete="new-password" style="width:100%;box-sizing:border-box;border:1px solid #e3e7ee;border-radius:9px;padding:10px;font-size:15px;margin-bottom:8px">'
+   +'<div style="font-size:12px;color:#5b6472;margin-bottom:3px">確認のためもう一度</div><input id="sb-pw2" type="password" autocomplete="new-password" style="width:100%;box-sizing:border-box;border:1px solid #e3e7ee;border-radius:9px;padding:10px;font-size:15px">'
+   +'<div id="sb-pw-err" style="color:#c53030;font-size:12.5px;min-height:16px;margin:8px 0"></div>'
+   +'<div style="display:flex;gap:8px"><button id="sb-pw-cancel" style="flex:1;padding:11px;border:1px solid #e3e7ee;border-radius:9px;background:#fff;font-weight:600;cursor:pointer">キャンセル</button>'
+   +'<button id="sb-pw-ok" style="flex:1;padding:11px;border:none;border-radius:9px;background:#1E40AF;color:#fff;font-weight:700;cursor:pointer">変更する</button></div></div>';
+  document.body.appendChild(ov);
+  const close=()=>ov.remove(); document.getElementById('sb-pw-cancel').onclick=close;
+  document.getElementById('sb-pw-ok').onclick=async()=>{ const p1=document.getElementById('sb-pw1').value, p2=document.getElementById('sb-pw2').value; const eb=document.getElementById('sb-pw-err');
+    if((p1||'').length<6){ eb.textContent='6文字以上にしてください'; return; } if(p1!==p2){ eb.textContent='2つのパスワードが一致しません'; return; }
+    const btn=document.getElementById('sb-pw-ok'); btn.disabled=true; btn.textContent='変更中…';
+    try{ await sbEnsureToken(); const r=await fetch(`${SB_AUTH}/user`,{method:'PUT',headers:sbHeaders(),body:JSON.stringify({password:p1})}); const j=await r.json().catch(()=>({}));
+      if(!r.ok){ eb.textContent=(j.error_description||j.msg||j.error||('変更に失敗しました('+r.status+')')); btn.disabled=false; btn.textContent='変更する'; return; }
+      close(); toast('パスワードを変更しました。次回から新しいパスワードでログインしてください','ok'); }
+    catch(e){ eb.textContent='通信エラー: '+e.message; btn.disabled=false; btn.textContent='変更する'; } };
+}
 let _sbPullTimer=null;
 function sbStartAutoPull(){ if(_sbPullTimer) return; _sbPullTimer=setInterval(()=>{ try{ if(navigator.onLine&&SB.session&&!_modalOpen()) sbPull(); }catch(e){} }, 30000);
   window.addEventListener('online',()=>{ sbFlushQueue().then(()=>sbPull()); }); }
-// Dropbox系は無効化(このバージョンはSupabaseで動作)
-try{ dbxAuthorize=function(){ toast('このバージョンはSupabaseで動作しています','ok'); }; }catch(e){}
+// Dropbox系・内蔵シードは無効化(このバージョンはSupabaseが正データ=古いデータの再注入を防ぐ)
+try{ dbxAuthorize=function(){ toast('このバージョンはクラウド(Supabase)で動作しています','ok'); };
+  seedRealData=async function(){ toast('この版はクラウド(Supabase)が正データです。読み込みは不要です','ok'); }; }catch(e){}
 
 /* ───────── 起動 ───────── */
 async function init(){
