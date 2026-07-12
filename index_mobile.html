@@ -1988,7 +1988,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-10b';
+const APP_VERSION = '2026-07-12';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4134,14 +4134,25 @@ function closeVehicleModal(){
 //   (配車済/利用中/回収連絡/手配書FAX済 の案件に割当中でない)。
 //   点検入庫中・整備中・売却済・廃車 は除外。
 // ============================================================
-// 現在出払っている車両ID集合 (配車済/利用中/回収連絡/手配書FAX済 の案件に割当中)
+// 案件がその車両を物理的に確保している(=出払い中)か。
+//   在庫ボード/opmap(2026-07-12)と同基準: 請求ステータス(仮請求/請求済/入金済)で除外せず、
+//   マンスリー前払い(未返却で利用期間内)も出払い扱い。返却完了/返却済/利用期間超過の請求系は在庫に戻す。
+//   ★billing status(請求済/入金済)を「返却済み」とみなさない (マンスリーは前払い=請求が先・返却が後)。
+function _caseOccupiesVehicle(o){
+  if(!_isActive(o) || !o.vehicleId) return false;
+  if(o.recoveryCompleted || o.status === '返却済') return false;   // 戻ってきた
+  if(['配車済','利用中','回収連絡','手配書FAX済'].includes(o.status)) return true;  // 通常の出払い
+  if(['仮請求','請求済','入金済'].includes(o.status)){
+    const ue = o.useEnd ? parseDate(o.useEnd) : null;
+    return (!ue || ue >= new Date());   // 未返却で期間内 or 返却日未定 → まだ出ている
+  }
+  return false;
+}
+// 現在出払っている車両ID集合 (通常の配車〜手配書FAX済 + マンスリー前払いで未返却の車)
 function _inUseVehicleIds(){
   const inUse = new Set();
   (DATA?.cases || []).forEach(o => {
-    if(!_isActive(o)) return;
-    if(!o.recoveryCompleted && ['配車済','利用中','回収連絡','手配書FAX済'].includes(o.status) && o.vehicleId){
-      inUse.add(o.vehicleId);
-    }
+    if(_caseOccupiesVehicle(o)) inUse.add(o.vehicleId);
   });
   return inUse;
 }
@@ -4328,14 +4339,11 @@ function filterVehicleList(){
   const vehicles = DATA?.vehicles || [];
   // 案件詳細から開いた場合は _activeCaseId を優先 (前のフローの _flow が残っていても誤爆しない)
   const c = findCaseById(_currentScreen === 'case-detail' ? _activeCaseId : (_flow?.caseId || _activeCaseId));
-  // 割当済みのvehicleIdを使っている他案件 (利用中) はチェック
+  // 割当済みのvehicleIdを使っている他案件 (出払い中=マンスリー前払い含む) はチェック
   const inUseIds = new Set();
   (DATA?.cases || []).forEach(o => {
-    if(!_isActive(o)) return;
     if(o.id === c?.id) return;
-    if(!o.recoveryCompleted && ['配車済','利用中','回収連絡','手配書FAX済'].includes(o.status) && o.vehicleId){
-      inUseIds.add(o.vehicleId);
-    }
+    if(_caseOccupiesVehicle(o)) inUseIds.add(o.vehicleId);
   });
   const filtered = vehicles.filter(v => {
     if(!q) return true;
@@ -4371,9 +4379,8 @@ async function selectVehicle(vehicleId){
   const fromDetail = (_currentScreen === 'case-detail');
   let c = findCaseById(fromDetail ? _activeCaseId : (_flow?.caseId || _activeCaseId));
   if(!v || !c){ toast('車両または案件が見つかりません','error'); return; }
-  // ★[気づかせ] 車両の二重割当 (別案件で利用中の車を選んだ時・止めはしない)
-  const _usedByOther = (DATA?.cases || []).some(o => o.id !== c.id && _isActive(o) && !o.recoveryCompleted
-    && ['配車済','利用中','回収連絡','手配書FAX済'].includes(o.status) && o.vehicleId === v.id);
+  // ★[気づかせ] 車両の二重割当 (別案件で出払い中=マンスリー前払い含む の車を選んだ時・止めはしない)
+  const _usedByOther = (DATA?.cases || []).some(o => o.id !== c.id && o.vehicleId === v.id && _caseOccupiesVehicle(o));
   if(_usedByOther){
     const _okDup = await confirmModal('⚠️ 車両の二重割当',
       `この車両は<b>別の案件で利用中</b>です。<br>本当にこの案件にも割り当てますか?`,

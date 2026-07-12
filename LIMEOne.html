@@ -3098,7 +3098,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-12';
+const APP_VERSION = '2026-07-12a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -8066,9 +8066,17 @@ function showAvailStock(cls){
   const cont = $('availability-board-detail'); if(!cont) return;
   const clsOf = v => (((v&&(v.vehicleClass||v.class))||'—').toString().trim().toUpperCase()) || '—';
   const out = new Set();
+  const _nowD = new Date();
   (DATA.cases||[]).forEach(o=>{
-    if(o.isDeleted || o.isCancelled || o.status==='キャンセル') return;
-    if(!o.recoveryCompleted && ['配車済','利用中','回収連絡','手配書FAX済'].includes(o.status) && o.vehicleId) out.add(o.vehicleId);
+    if(o.isDeleted || o.isCancelled || o.isHistorical || o.status==='キャンセル' || !o.vehicleId) return;
+    if(o.recoveryCompleted || o.status==='返却済') return;   // 戻ってきた
+    let _out = ['配車済','利用中','回収連絡','手配書FAX済'].includes(o.status);
+    if(!_out && ['仮請求','請求済','入金済'].includes(o.status)){
+      // マンスリー前払い等: 請求系でも未返却で利用期間内なら物理的に出ている。在庫ボード/opmap(2026-07-12)と同基準。
+      const ue = o.useEnd ? parseDate(o.useEnd) : null;
+      _out = (!ue || ue >= _nowD);
+    }
+    if(_out) out.add(o.vehicleId);
   });
   const list = (DATA.vehicles||[]).filter(v=> (v.status==='稼働可'||!v.status) && clsOf(v)===cls && !out.has(v.id))
     .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
