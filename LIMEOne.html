@@ -3099,7 +3099,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-12c';
+const APP_VERSION = '2026-07-12d';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -11408,20 +11408,28 @@ async function swapVehicleContinue(){
     `🚗 車両を乗り換え\n\n` +
     `今の車「${curVehLabel}」を返却で締めて、\n新しい車で継続案件「${contNo}」を作成します。\n\n` +
     (willRename ? `この案件の番号は ${oldNo} → ${newCurNo} になります。\n\n` : '') +
+    `※前の車は乗り換え日の前日まで・新しい車は当日から。乗り換え日は片方だけの請求になります(二重請求なし)。\n\n` +
     `作成後、継続案件を開いて新しい車を割り当て → 手配書FAX してください。\nよろしいですか?`);
   if(!okSwap) return;
 
   const today = todayISO();
   const now = Date.now();
 
+  // 🚨 乗り換え日が両案件にかぶって二重請求にならないよう利用期間を分ける (2026-07-12):
+  //   前の車 = 乗り換え日の「前日」まで / 新しい車 = 前の車の終了の「翌日」(=通常は乗り換え当日)から。
+  //   請求日数(calcAmounts=両端含む)でも乗り換え日は片方の車だけに計上される。
+  const _swapPrev = addDays(today, -1);
+  let _oldEnd = _swapPrev;
+  if(c.useStart && c.useStart > _oldEnd) _oldEnd = c.useStart;   // 前の車の利用開始より前にはしない(同日乗り換えの保険)
+  const _newStart = addDays(_oldEnd, 1);                          // 新しい車の利用開始 (前の車の終了の翌日=かぶり無し)
   // 1) 今の案件(=前の車)を返却で締める。記録は全て残す。
   if(willRename){ c.caseNo = newCurNo; if($('f-caseNo')) $('f-caseNo').value = newCurNo; }
-  if(!c.useEnd) c.useEnd = today;
-  if(!c.recoveryCalledAt) c.recoveryCalledAt = today;
+  c.useEnd = _oldEnd;                                             // 乗り換え日の前日まで
+  if(!c.recoveryCalledAt) c.recoveryCalledAt = today;            // 物理的な引き上げは乗り換え当日
   c.recoveryCompleted = true;
   c.status = '返却済';
   c.internalMemo = ((c.internalMemo || '') + (c.internalMemo ? '\n' : '') +
-    `【車両乗り換え ${today}】この車を返却し ${contNo} で継続。返却メーターは必要なら後で入力。`).trim();
+    `【車両乗り換え ${today}】この車を返却し ${contNo} で継続。利用は ${_oldEnd} まで(乗り換え日は次の車で計上=二重請求なし)。返却メーターは必要なら後で入力。`).trim();
   c.updatedAt = now;
   c.updatedBy = 'PC乗り換え(返却締め)';
 
@@ -11436,7 +11444,7 @@ async function swapVehicleContinue(){
   cont.plateArea = ''; cont.plateNo = ''; cont.plateKana = ''; cont.plateTail = '';
   // vehicleClass は保険承認クラスのヒントとして残す (新車両選択時に上書きされる)
   cont.unitPrice = 0;
-  cont.useStart = today; cont.useEnd = ''; cont.useDeadline = '';
+  cont.useStart = _newStart; cont.useEnd = ''; cont.useDeadline = '';
   cont.dispatchAt = ''; cont.dispatchNote = ''; cont.dispatchDoneAt = ''; cont.dispatchDoneNote = '';
   cont.dispatchTimePending = false; cont.dispatchTimePendingDriver = false;
   cont.departedAt = '';
