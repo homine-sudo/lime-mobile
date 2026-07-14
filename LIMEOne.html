@@ -448,7 +448,8 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 .sheet.faxinv .fi-to .fi-to-name .fi-onchu{font-size:13px;font-weight:normal;margin-left:8px;white-space:nowrap}
 .sheet.faxinv .fi-to .fi-to-staff{margin:4px 0 0 16px;font-size:13px}
 .sheet.faxinv .fi-to .fi-to-msg{margin-top:22px;font-size:13px;letter-spacing:.04em}
-.sheet.faxinv .fi-issuer{font-size:12px;text-align:left;line-height:1.8;border-left:2px solid #888;padding-left:16px;min-height:120px}
+.sheet.faxinv .fi-issuer{font-size:12px;text-align:left;line-height:1.8;border-left:2px solid #888;padding-left:16px;min-height:120px;position:relative}
+.sheet.faxinv .fi-seal{position:absolute;top:-4px;right:2px;width:76px;height:76px;opacity:.85;pointer-events:none}
 .sheet.faxinv .fi-issuer .fi-issuer-name{font-size:14px;font-weight:bold;margin-bottom:3px}
 .sheet.faxinv .fi-issuer .fi-issuer-trade{font-size:12px;margin-bottom:6px;color:#333}
 /* 請求金額バナー — 二重枠の黒で強調 */
@@ -509,7 +510,8 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 .sheet.nocinv .noc-title{text-align:center;font-size:34px;font-weight:bold;letter-spacing:0.55em;margin:6px 0 34px;padding-right:0.55em;color:#000}
 .sheet.nocinv .noc-top{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:28px;align-items:flex-start}
 .sheet.nocinv .noc-to-name{font-size:20px;font-weight:bold;border-bottom:1.5px solid #000;padding:0 4px 8px;display:block;margin-top:24px}
-.sheet.nocinv .noc-issuer{font-size:12.5px;line-height:1.85;color:#000}
+.sheet.nocinv .noc-issuer{font-size:12.5px;line-height:1.85;color:#000;position:relative}
+.sheet.nocinv .fi-seal{position:absolute;top:-6px;right:0;width:80px;height:80px;opacity:.85;pointer-events:none}
 .sheet.nocinv .noc-issuer .nm{font-size:14px;font-weight:bold}
 .sheet.nocinv .noc-issuer .tr{font-size:12.5px;margin-bottom:4px}
 .sheet.nocinv .noc-amt-row{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0 30px}
@@ -973,6 +975,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   .sheet.faxinv .fi-to .fi-to-msg{margin-top:8pt!important;font-size:10.5pt!important}
   .sheet.faxinv .fi-issuer .fi-issuer-name{font-size:11.5pt!important;margin-bottom:1pt!important}
   .sheet.faxinv .fi-issuer .fi-issuer-trade{font-size:10pt!important;margin-bottom:3pt!important}
+  .sheet.faxinv .fi-seal{width:17mm!important;height:17mm!important}
   /* 御請求金額バナー (重要) — 大きく目立つように維持 */
   .sheet.faxinv .fi-amt-row{gap:14pt!important;margin:10pt 0 14pt!important;padding:2pt 0!important}
   .sheet.faxinv .fi-amt-lbl{padding:7pt 16pt!important;font-size:13pt!important;border-width:2.5pt!important}
@@ -2227,6 +2230,14 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <div class="form-group"><label class="form-label">支払期限（請求日から○日後）</label><input class="form-control" id="s-pay-due-days" type="number" min="0"></div>
       <div class="form-group" style="grid-column:1/-1"><label class="form-label">備考欄（請求書に表示）</label><textarea class="form-control" id="s-inv-note" rows="3"></textarea></div>
       <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label"><input type="checkbox" id="s-seal-enabled" onchange="_updateSealPreview()" style="vertical-align:middle;margin-right:6px">🔴 請求書・NOC請求書に電子印（角印）を押す</label>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap">
+          <input class="form-control" id="s-seal-text" oninput="_updateSealPreview()" placeholder="空欄=会社名。行を分けたい時は ／ で区切り（例: 株式会社／Hari Terrace）" style="flex:1;min-width:240px">
+          <span id="s-seal-preview" style="width:66px;height:66px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border:1px dashed #ddd;border-radius:4px"></span>
+        </div>
+        <div class="text-sm text-muted" style="margin-top:4px;line-height:1.6">会社名から赤い角印を自動生成し、請求書（単票・月次合算）とNOC請求書の発行者欄に重ねます。手配書には押されません。右のプレビューで仕上がりを確認できます。</div>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
         <label class="form-label">📠 eFax送信URL (FAX番号自動入力テンプレ)</label>
         <input class="form-control" id="s-efax-send-url" placeholder="https://portal.efax.co.jp/myaccount/newfax?number={FAX}">
         <div class="text-sm text-muted" style="margin-top:4px;line-height:1.6">
@@ -3109,7 +3120,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-14';
+const APP_VERSION = '2026-07-14b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3269,6 +3280,7 @@ const defaultData = () => ({
     bankName:'沖縄海邦銀行', bankBranch:'八重瀬支店', bankType:'普通',
     bankNumber:'0003911', bankHolder:'カ）ハリテラス',
     taxRate:10, payDueDays:14,
+    sealEnabled:true, sealText:'',   // 電子印(角印): 既定ON・空=会社名から自動生成
     invNote:'恐れ入りますが、振込手数料は貴社にてご負担ください。',
     faxSendDomain:'efaxsend.com',  // eFax経由送信: 相手FAX番号@efaxsend.com (プラン次第で異なる場合は設定画面から変更)
     efaxPortalUrl:'https://portal.efax.co.jp/myaccount/homepage',  // eFax管理画面URL (ログイン画面)
@@ -11415,15 +11427,18 @@ async function swapVehicleContinue(){
   const newCurNo = willRename ? (baseNo + '-1') : c.caseNo;
   const contNo = baseNo + '-' + (maxSuf + 1);
 
-  const okSwap = confirm(
+  // 乗り換え日を選べる (既定=今日)。この日から新しい車・前日まで前の車 = 利用日がかぶらない(二重請求なし)。
+  const _swapInput = prompt(
     `🚗 車両を乗り換え\n\n` +
-    `今の車「${curVehLabel}」を返却で締めて、\n新しい車で継続案件「${contNo}」を作成します。\n\n` +
-    (willRename ? `この案件の番号は ${oldNo} → ${newCurNo} になります。\n\n` : '') +
-    `※前の車は乗り換え日の前日まで・新しい車は当日から。乗り換え日は片方だけの請求になります(二重請求なし)。\n\n` +
-    `作成後、継続案件を開いて新しい車を割り当て → 手配書FAX してください。\nよろしいですか?`);
-  if(!okSwap) return;
+    `乗り換えた日を入力してください。\n(この日から新しい車・前日まで前の車。乗り換え日は片方だけの請求=二重請求なし)\n\n` +
+    `継続案件「${contNo}」を作成します。` +
+    (willRename ? `\n(この案件は ${oldNo} → ${newCurNo} に改番されます)` : '') +
+    `\n\n乗り換え日 YYYY-MM-DD （空欄=中止）：`, todayISO());
+  if(_swapInput === null) return;
+  const swapDay = (_swapInput || '').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(swapDay) || !parseDate(swapDay)){ toast('日付は YYYY-MM-DD の形式で入力してください', 'error'); return; }
 
-  const today = todayISO();
+  const today = swapDay;   // 以降 today = 乗り換え日 (業務上の日付。記録の updatedAt は now を使う)
   const now = Date.now();
 
   // 🚨 乗り換え日が両案件にかぶって二重請求にならないよう利用期間を分ける (2026-07-12):
@@ -12404,7 +12419,7 @@ function buildNOCInvoiceHTML(c, items){
       <div>
         <span class="noc-to-name">${esc(name)}　　様</span>
       </div>
-      <div class="noc-issuer">
+      <div class="noc-issuer">${_sealTag(s)}
         <div class="nm">${esc(s.companyName || '株式会社Hari Terrace')}</div>
         <div class="tr">${esc(s.tradeName || 'ライムレンタカーOKINAWA')}</div>
         <div>${esc(s.address || '沖縄県豊見城市与根326-6')}</div>
@@ -14474,8 +14489,103 @@ function renderInvoiceBulk(insurerId, month){
 const fmtSlash = s => { const d=parseDate(s); return d? `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`:''; };
 const fmtDateJPDaySep = s => { const d=parseDate(s); return d? `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日`:''; };
 const fmtNumeric = n => (n!=null)? Number(n).toLocaleString():'';
+/* ============================================================
+   電子印 (角印) — 会社名(または任意文字)から赤い角印を自動生成し請求書に重ねる
+   (2026-07-14a) 実画像アップロード不要。settings.sealEnabled(既定ON)/sealText で制御。
+   canvas→PNG data URI で描くため html2canvas(FAX/PDF)でも確実に写る。手配書には押さない。
+   ============================================================ */
+let _sealCache = {};
+function _sealMainLines(s){
+  s = (s||'').trim();
+  if(/\s/.test(s)){ const w = s.split(/\s+/).filter(Boolean); if(w.length>=1 && w.length<=3) return w; }
+  const t = s.replace(/\s+/g,''); const n = t.length;
+  const L = Math.max(1, Math.min(3, Math.round(Math.sqrt(n/1.8))));
+  const per = Math.ceil(n/L); const out = [];
+  for(let i=0;i<t.length;i+=per) out.push(t.slice(i, i+per));
+  return out;
+}
+function _sealParts(raw){
+  raw = (raw||'').trim();
+  if(!raw) return null;
+  // ／ / | ｜ 改行 = 明示的な行区切り (縦書き列なし・主文のみ複数行)
+  if(/[\/／\n|｜]/.test(raw)) return { side:'', main: raw.split(/[\/／\n|｜]+/).map(x=>x.trim()).filter(Boolean) };
+  // 会社形態の接頭辞 → 右側に縦書き / 残りを主文に (株式会社Hari Terrace → 縦「株式会社」+主「Hari Terrace」)
+  const CO = raw.match(/^(株式会社|有限会社|合同会社|合資会社|合名会社|一般社団法人|一般財団法人|社会福祉法人|医療法人)\s*(.+)$/);
+  if(CO && CO[2].trim()) return { side: CO[1], main: _sealMainLines(CO[2].trim()) };
+  return { side:'', main: _sealMainLines(raw) };
+}
+function _sealDataUrl(rawText){
+  const key = rawText||'';
+  if(_sealCache[key]) return _sealCache[key];
+  const parts = _sealParts(rawText);
+  if(!parts || !parts.main.length) return '';
+  const S = 360;  // 高解像度で描いてCSSで縮小=印刷でも鮮明
+  const cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+  const ctx = cv.getContext('2d');
+  const RED = '#c0322c';  // 朱肉風の赤
+  const MJ = '"Yu Mincho","Hiragino Mincho ProN","MS Mincho","Yu Mincho JP",serif';
+  ctx.strokeStyle = RED; ctx.fillStyle = RED; ctx.lineJoin = 'miter';
+  // 二重枠 (角印らしさ)
+  const p1 = S*0.045; ctx.lineWidth = S*0.060; ctx.strokeRect(p1, p1, S-2*p1, S-2*p1);
+  const p2 = S*0.120; ctx.lineWidth = S*0.013; ctx.strokeRect(p2, p2, S-2*p2, S-2*p2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // コンテンツ領域
+  const pad = S*0.045;
+  const cL = p2+pad, cR = S-p2-pad, cT = p2+pad, cB = S-p2-pad;
+  const cW = cR-cL, cH = cB-cT;
+  let mainLeft = cL, mainRight = cR;
+  // 右側の縦書き列 (会社形態・株式会社 等)
+  if(parts.side){
+    const chars = parts.side.split('');
+    const colW = cW*0.22;
+    const colCx = cR - colW/2;
+    let vfs = colW*0.94;
+    while(vfs*chars.length*1.02 > cH*0.94 && vfs > 6) vfs *= 0.95;
+    ctx.font = 'bold ' + vfs + 'px ' + MJ;
+    const vGap = vfs*1.02;
+    const vStart = (cT+cB)/2 - vGap*(chars.length-1)/2;
+    chars.forEach((ch,i)=> ctx.fillText(ch, colCx, vStart + i*vGap));
+    mainRight = cR - colW - S*0.02;
+  }
+  // 主文 (中央〜左・大きめ) — 枠内に収まるよう自動縮小
+  const lines = parts.main;
+  const mW = mainRight - mainLeft, mCx = (mainLeft+mainRight)/2, mCy = (cT+cB)/2;
+  const GAP = 1.14;
+  let fs = Math.min(cH*0.6, mW*0.95);
+  for(let g=0; g<70; g++){
+    ctx.font = 'bold ' + fs + 'px ' + MJ;
+    const maxW = Math.max.apply(null, lines.map(l => ctx.measureText(l).width || 1));
+    const totalH = fs + fs*GAP*(lines.length-1);
+    if(maxW <= mW && totalH <= cH*0.98) break;
+    fs *= 0.95;
+  }
+  ctx.font = 'bold ' + fs + 'px ' + MJ;
+  const lineGap = fs*GAP;
+  const yStart = mCy - lineGap*(lines.length-1)/2;
+  lines.forEach((l,i)=> ctx.fillText(l, mCx, yStart + i*lineGap));
+  // 朱肉のかすれ質感 — インクの抜けを destination-out で薄く彫る (実印っぽさ)
+  ctx.globalCompositeOperation = 'destination-out';
+  const specks = Math.floor(S*S*0.010);
+  for(let i=0;i<specks;i++){
+    ctx.globalAlpha = 0.35 + Math.random()*0.5;
+    ctx.beginPath(); ctx.arc(Math.random()*S, Math.random()*S, Math.random()*1.7, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  const url = cv.toDataURL('image/png');
+  _sealCache[key] = url;
+  return url;
+}
+function _sealTextOf(s){ s = s||DATA.settings||{}; return (s.sealText && s.sealText.trim()) || s.companyName || ''; }
+function _sealEnabled(s){ s = s||DATA.settings||{}; return s.sealEnabled !== false; }  // 既定ON (未設定=表示)
+function _sealTag(s, cls){
+  s = s || DATA.settings || {};
+  if(!_sealEnabled(s)) return '';
+  const url = _sealDataUrl(_sealTextOf(s));
+  if(!url) return '';
+  return '<img class="fi-seal ' + (cls||'') + '" src="' + url + '" alt="社印">';
+}
 function _issuerBlock(s){
-  return `<div class="fi-issuer">
+  return `<div class="fi-issuer">${_sealTag(s)}
       <div class="fi-issuer-name">${esc(s.companyName||'株式会社Hari Terrace')}</div>
       <div class="fi-issuer-trade">${esc(s.tradeName||'ライムレンタカーOKINAWA')}</div>
       <div>${esc(s.address||'')}</div>
@@ -16479,6 +16589,19 @@ function fillSettings(){
   if($('s-gas-url')) $('s-gas-url').value = s.gasWebAppUrl || '';
   if($('s-notify-new-case')) $('s-notify-new-case').checked = !!s.notifyOnNewCase;
   if($('s-notify-recovery-date')) $('s-notify-recovery-date').checked = !!s.notifyOnRecoveryDate;
+  // 電子印(角印)
+  if($('s-seal-enabled')) $('s-seal-enabled').checked = (s.sealEnabled !== false);  // 既定ON
+  if($('s-seal-text')) $('s-seal-text').value = s.sealText || '';
+  _updateSealPreview();
+}
+// 設定画面: 電子印プレビューを現在の入力から再描画
+function _updateSealPreview(){
+  const host = $('s-seal-preview'); if(!host) return;
+  const on = $('s-seal-enabled') ? $('s-seal-enabled').checked : true;
+  if(!on){ host.innerHTML = '<span style="font-size:10px;color:#999">OFF</span>'; return; }
+  const txt = ((($('s-seal-text')||{}).value)||'').trim() || ((($('s-company-name')||{}).value)||'').trim() || (DATA.settings.companyName||'');
+  const url = _sealDataUrl(txt);
+  host.innerHTML = url ? '<img src="'+url+'" style="width:62px;height:62px" alt="社印プレビュー">' : '';
 }
 function saveSettings(){
   const map = {'s-company-name':'companyName','s-trade-name':'tradeName','s-address':'address','s-tel':'tel','s-fax':'fax','s-invoice-reg':'invoiceReg','s-bank-name':'bankName','s-bank-branch':'bankBranch','s-bank-type':'bankType','s-bank-number':'bankNumber','s-bank-holder':'bankHolder','s-tax-rate':'taxRate','s-pay-due-days':'payDueDays','s-inv-note':'invNote','s-adminPasscode':'adminPasscode','s-efax-send-url':'efaxSendUrl','s-efax-from':'efaxFrom','s-freee-start':'freeeImportStartDate','s-freee-dept':'freeeDepartment','s-freee-api-url':'freeeApiUrl','s-gas-url':'gasWebAppUrl'};
@@ -16486,6 +16609,10 @@ function saveSettings(){
   // チェックボックス系
   if($('s-notify-new-case')) DATA.settings.notifyOnNewCase = $('s-notify-new-case').checked;
   if($('s-notify-recovery-date')) DATA.settings.notifyOnRecoveryDate = $('s-notify-recovery-date').checked;
+  // 電子印(角印)
+  if($('s-seal-enabled')) DATA.settings.sealEnabled = $('s-seal-enabled').checked;
+  if($('s-seal-text')) DATA.settings.sealText = $('s-seal-text').value;
+  _sealCache = {};  // 文字/ON状態が変わった可能性→キャッシュ破棄して次回再生成
   // v2026.05: 共有モードのマージで「最新の設定保存が勝つ」よう _updatedAt をセット
   DATA.settings._updatedAt = Date.now();
   save(); toast('設定を保存しました');

@@ -1988,7 +1988,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-12a';
+const APP_VERSION = '2026-07-14';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5686,7 +5686,20 @@ function renderMncCal(){
   }
   $('m-cal-grid').innerHTML = h;
 }
+// 🚗 車両乗り換えの「乗り換え日」をカレンダーシートで選ぶ (既存シートを再利用・promise化)。
+//   キャンセル(閉じる)時も resolve(null) されるよう closeMncCal にフックを入れている。
+let _mSwapDateResolve = null;
+function _mSwapPickDate(defISO){
+  return new Promise(res => {
+    _mSwapDateResolve = res;
+    let inp = document.getElementById('m-swap-date');
+    if(!inp){ inp = document.createElement('input'); inp.type = 'hidden'; inp.id = 'm-swap-date'; document.body.appendChild(inp); }
+    inp.value = defISO || todayISO();
+    openMncCal('m-swap-date', false);
+  });
+}
 function closeMncCal(commit){
+  const _wasSwap = _mncCal && _mncCal.target === 'm-swap-date';
   if(commit && _mncCal){
     const ymd = `${_mncCal.sy}-${pad2(_mncCal.sm)}-${pad2(_mncCal.sd)}`;
     const inp = $(_mncCal.target);
@@ -5703,7 +5716,9 @@ function closeMncCal(commit){
     }
   }
   $('m-cal-sheet').classList.remove('active');
+  const _swapVal = _wasSwap ? ((document.getElementById('m-swap-date')||{}).value || '').slice(0,10) : '';
   _mncCal = null;
+  if(_wasSwap && _mSwapDateResolve){ const r = _mSwapDateResolve; _mSwapDateResolve = null; r(commit ? _swapVal : null); }
 }
 function refreshMncNoteChips(){
   const v = ($('m-nc-dispatchNote')?.value || '');
@@ -7200,24 +7215,27 @@ async function swapVehicleContinue(){
   const newCurNo = willRename ? (baseNo + '-1') : c.caseNo;
   const contNo = baseNo + '-' + (maxSuf + 1);
 
+  // 🚗 乗り換え日を選ぶ (既定=今日・カレンダーシート再利用)。空=キャンセル。
+  const _addDaysISO = (iso, n) => { const p=(iso||'').slice(0,10).split('-'); if(p.length<3) return iso; const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); d.setDate(d.getDate()+Number(n||0)); const z=x=>String(x).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; };
+  const swapDay = await _mSwapPickDate(todayISO());
+  if(!swapDay || !/^\d{4}-\d{2}-\d{2}$/.test(swapDay)) return;   // キャンセル
+  // 乗り換え日を境に利用日を分割(二重請求なし): 前の車=前日まで / 新しい車=前の車の終了の翌日(=通常は乗り換え当日)。
+  let _oldEnd = _addDaysISO(swapDay, -1);
+  if(c.useStart && c.useStart > _oldEnd) _oldEnd = c.useStart;   // 前の車の利用開始より前にはしない(同日乗り換えの保険)
+  const _newStart = _addDaysISO(_oldEnd, 1);
+
   const okSwap = await confirmModal('🚗 車両を乗り換え',
-    `今の車〈<b>${esc(curVehLabel)}</b>〉を<b>返却で締めて</b>、<br>` +
-    `新しい車で<b>継続案件〈${esc(contNo)}〉</b>を作成します。<br><br>` +
+    `乗り換え日 <b>${esc(swapDay)}</b><br><br>` +
+    `今の車〈<b>${esc(curVehLabel)}</b>〉を <b>${esc(_oldEnd)} まで</b>で締めて、<br>` +
+    `新しい車で<b>継続案件〈${esc(contNo)}〉</b>を <b>${esc(_newStart)} から</b> 作成します。<br><br>` +
     (willRename ? `この案件の番号は <b>${esc(oldNo)} → ${esc(newCurNo)}</b> になります。<br><br>` : '') +
-    `<span style="font-size:12px;color:#6B6B66">※前の車は乗り換え日の前日まで・新しい車は当日から。乗り換え日は片方だけの請求です(二重請求なし)。</span><br><br>` +
-    `作成後、続けて新しい車を選んで配車できます。よろしいですか?`,
+    `<span style="font-size:12px;color:#6B6B66">乗り換え日は新しい車の側だけで請求=二重請求なし。作成後、続けて新しい車を選んで配車できます。</span>`,
     '乗り換えて継続案件を作成', 'm-btn-primary');
   if(!okSwap) return;
 
-  const today = todayISO();
+  const today = swapDay;   // 以降 today = 乗り換え日 (業務上の日付)
   const now = Date.now();
   const snap = JSON.parse(JSON.stringify(c));  // ロールバック用スナップショット
-  // 🚨 乗り換え日が両案件にかぶって二重請求にならないよう利用期間を分ける (2026-07-12・PCと同一):
-  //   前の車 = 乗り換え日の「前日」まで / 新しい車 = 前の車の終了の「翌日」(=通常は乗り換え当日)から。
-  const _addDaysISO = (iso, n) => { const p=(iso||'').slice(0,10).split('-'); if(p.length<3) return iso; const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); d.setDate(d.getDate()+Number(n||0)); const z=x=>String(x).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; };
-  let _oldEnd = _addDaysISO(today, -1);
-  if(c.useStart && c.useStart > _oldEnd) _oldEnd = c.useStart;   // 前の車の利用開始より前にはしない(同日乗り換えの保険)
-  const _newStart = _addDaysISO(_oldEnd, 1);
 
   // 1) 今の案件(=前の車)を返却で締める。記録は全て残す。
   if(willRename) c.caseNo = newCurNo;
