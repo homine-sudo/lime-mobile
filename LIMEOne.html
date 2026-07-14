@@ -3120,7 +3120,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-14b';
+const APP_VERSION = '2026-07-14c';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -6198,7 +6198,7 @@ function biCalcUtilization(from, to){
     if(!c.vehicleId || c.status === 'キャンセル' || !c.useStart) return;
     if(!vehUsage[c.vehicleId]) return; // 廃車車両など
     const start = c.useStart < from ? from : c.useStart;
-    const useEnd = c.useEnd || addDays(c.useStart, 30); // useEnd空なら +30日仮
+    const useEnd = c.useEnd || ((['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted) ? todayISO() : addDays(c.useStart, 30)); // useEnd空: 出払い中は今日まで継続扱い / それ以外は+30日仮
     const end = useEnd > to ? to : useEnd;
     const dDays = daysBetween(start, end);
     if(dDays > 0) {
@@ -15056,7 +15056,7 @@ function renderUtilization(year){
     DATA.cases.forEach(c=>{
       if(c.vehicleId!==v.id || c.status==='キャンセル' || !c.useStart) return;
       const s = c.useStart < yStart ? yStart : c.useStart;
-      const e = c.useEnd || addDays(c.useStart, 30);
+      const e = c.useEnd || ((['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status) && !c.recoveryCompleted) ? todayISO() : addDays(c.useStart, 30));
       const e2 = e > yEnd ? yEnd : e;
       const d = daysBetween(s, e2);
       if(d>0){ usedDays += d; revenue += calcAmounts(c).total; }

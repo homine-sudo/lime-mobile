@@ -1428,7 +1428,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-10a';
+const APP_VERSION = '2026-07-14';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1976,7 +1976,7 @@ function vehicleStats(){
   rentalCases().forEach(c=>{
     if(!c.vehicleId||c.status==='キャンセル'||!c.useStart) return;
     const s=c.useStart<startISO?startISO:c.useStart;
-    const eRaw=c.useEnd||addDays(c.useStart,30);
+    const eRaw=c.useEnd||(isOutToday(c)?today:addDays(c.useStart,30));
     const e=eRaw>endISO?endISO:eRaw;
     const d=daysBetween(s,e);
     if(d>0) used[c.vehicleId]=(used[c.vehicleId]||0)+d;
@@ -3291,7 +3291,7 @@ function renderVehicleROI(){
   rentalCases().forEach(c=>{
     if(!c.vehicleId||c.status==='キャンセル'||!c.useStart) return;
     const s=c.useStart<sinceStr?sinceStr:c.useStart;
-    const eRaw=c.useEnd||addDays(c.useStart,30);
+    const eRaw=c.useEnd||(isOutToday(c)?today:addDays(c.useStart,30));
     const e=eRaw>today?today:eRaw;
     const d=daysBetween(s,e);
     if(d>0) used[c.vehicleId]=(used[c.vehicleId]||0)+d;
@@ -3369,7 +3369,7 @@ function _lifeRows(){
   const vehs=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車');
   const live={}, used12={};
   billableRental().forEach(c=>{ if(!c.vehicleId) return; const ue=(c.useEnd||'').slice(0,10); if(ue>='2026-01-01') live[c.vehicleId]=(live[c.vehicleId]||0)+rentalAmount(c).total; });
-  rentalCases().forEach(c=>{ if(!c.vehicleId||c.status==='キャンセル'||!c.useStart) return; const s=c.useStart<sinceStr?sinceStr:c.useStart; const eRaw=c.useEnd||addDays(c.useStart,30); const e=eRaw>today?today:eRaw; const d=daysBetween(s,e); if(d>0) used12[c.vehicleId]=(used12[c.vehicleId]||0)+d; });
+  rentalCases().forEach(c=>{ if(!c.vehicleId||c.status==='キャンセル'||!c.useStart) return; const s=c.useStart<sinceStr?sinceStr:c.useStart; const eRaw=c.useEnd||(isOutToday(c)?today:addDays(c.useStart,30)); const e=eRaw>today?today:eRaw; const d=daysBetween(s,e); if(d>0) used12[c.vehicleId]=(used12[c.vehicleId]||0)+d; });
   // 維持費按分プール率 (freee前期: 保険料+租税公課+金城以外車両費 ÷ 取得原価合計) — renderVehicleROIと同式
   const priceTotal=vehs.reduce((a,v)=>a+(Number(v.vehiclePrice)||0),0);
   let poolRate=0;
