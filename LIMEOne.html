@@ -2751,6 +2751,16 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <input type="hidden" id="f-invoiceDays">
       <input type="hidden" id="f-invoiceUnitPrice">
       <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px">
+        <!-- 請求先(宛名): 空欄=保険会社に請求(既定) / 個人・別会社に請求する時だけ入力。FAX送信先・freee取引先は変わりません -->
+        <div style="display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:end;margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--border)">
+          <div class="form-group" style="margin:0"><label class="form-label">請求先 敬称</label>
+            <select class="form-control" id="f-billingToHonorific"><option value="様">様（個人）</option><option value="御中">御中（会社・団体）</option></select>
+          </div>
+          <div class="form-group" style="margin:0"><label class="form-label">請求先 宛名 <span class="text-muted text-sm">空欄=保険会社に請求（既定）／請求書の宛名だけ変わります</span></label>
+            <input class="form-control" id="f-billingToName" placeholder="例: 山田 太郎 ／ 空欄なら保険会社に請求">
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" style="height:34px" onclick="billingUseDriverName()" title="運転者(契約者)の氏名を請求先の宛名に入れます">運転者名を使う</button>
+        </div>
         <!-- 状態・請求日 (v24ay: 請求書No非表示) -->
         <div style="display:grid;grid-template-columns:160px 160px 160px 1fr;gap:10px;align-items:end;margin-bottom:8px">
           <div class="form-group" style="margin:0"><label class="form-label">状態</label>
@@ -3099,7 +3109,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-12d';
+const APP_VERSION = '2026-07-14';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -9268,6 +9278,7 @@ function defaultCase(){
     isBorrowed:false, borrowedFrom:'', borrowedVehicleInfo:'', borrowedPlate:'', borrowedDailyRate:'', borrowedFax:'', borrowedTel:'',
     useStart:'', useEnd:'', returnStatus:'',
     status:'受付', invoiceNo:'', invoiceIssuedAt:'', paymentDueAt:'',
+    billingToName:'', billingToHonorific:'様',   // 請求先の宛名上書き(空=保険会社に請求) / 敬称: 様(個人)|御中(会社・団体)。FAX送信先・freee取引先は不変
     paymentMethod:'', paidAt:'', paidAmount:'', salesYear:'', salesMonth:'',
     note1:'', note2:'', note3:'', internalMemo:'', negotiationLog:'',
     confirmCalledAt:'', faxSentAtDispatch:'', faxSentAtReturn:'',
@@ -9328,7 +9339,7 @@ function toggleCheck(i){
   if(typeof scheduleAutoSave === 'function') scheduleAutoSave();  // dirty 立てる: ✓ON/OFF で離脱警告対象に
   renderChecklist();
 }
-const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedPlate','borrowedDailyRate','borrowedFax','borrowedTel','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','recoveryToName','recoveryToAddress','recoveryToTel','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
+const FORM_FIELDS = ['caseNo','receivedAt','staff','category','callType','target','insurerId','insurerContact','insurerContactTel','insurerContactFax','accidentNo','accidentDate','contractorName','driverName','driverTel','dispatchToName','dispatchToAddress','dispatchToTel','dispatchToContact','dispatchToContactTel','dispatchAt','dispatchNote','dispatchTimePending','dispatchTimePendingDriver','dispatchDoneAt','dispatchDoneNote','vehicleId','vehicleClass','vehicleName','unitPrice','plateArea','plateNo','plateKana','plateTail','isBorrowed','borrowedFrom','borrowedVehicleInfo','borrowedPlate','borrowedDailyRate','borrowedFax','borrowedTel','useStart','useEnd','useDeadline','plannedReturnAt','deadlineNote','discount','discountDays','discountNote','returnStatus','status','invoiceNo','invoiceIssuedAt','paymentDueAt','billingToName','billingToHonorific','invoiceDays','invoiceUnitPrice','paymentMethod','paidAt','paidAmount','salesYear','salesMonth','note1','note2','note3','internalMemo','negotiationLog','confirmCalledAt','recoveryCalledAt','recoveryCompleted','recoveryToName','recoveryToAddress','recoveryToTel','faxSentAtDispatch','faxSentAtReturn','departedAt','meterAtDispatch','meterAtReturn',
   // 一般貸渡用 (自旅138号 貸渡証/貸渡簿の必須項目)
   'borrowerAddress','driverAddress','driverLicenseType','driverLicenseNo',
   // 一般貸渡 業務情報 (受取場所・補償・特記事項)
@@ -14350,6 +14361,15 @@ function onInvBulkSelectChange(){
   }
   renderInvoice();
 }
+// 請求先の宛名に 運転者(なければ契約者)の氏名を流し込む (個人請求のワンタップ補助)。敬称は「様」にする。
+function billingUseDriverName(){
+  const nm = (($('f-driverName')||{}).value||'').trim() || (($('f-contractorName')||{}).value||'').trim();
+  if(!nm){ toast('運転者・契約者の氏名が未入力です','error'); return; }
+  if($('f-billingToName')) $('f-billingToName').value = nm;
+  if($('f-billingToHonorific')) $('f-billingToHonorific').value = '様';
+  if(typeof scheduleAutoSave==='function') scheduleAutoSave();
+  toast('請求先を「'+nm+' 様」に設定しました');
+}
 function renderInvoiceSingle(id){
   const c = findCaseById(id); if(!c) return;
   const ins = findInsurer(c.insurerId)||{};
@@ -14370,10 +14390,15 @@ function renderInvoiceSingle(id){
   // 金額調整(lump sum) = discount total から日数調整相当分を除いた残余
   //   discountDays×unit が lump sum と一致する場合 → 残余ゼロで lump sum 行は非表示
   const residualDiscount = Math.max(0, Number(a.discount||0) - dayDiscountAmt);
+  // 請求先(宛名)の上書き: billingToName があれば その宛名+敬称で発行 (保険会社ではなく個人・別会社へ請求する時)。
+  //   空なら従来どおり保険会社名+御中+支店+担当。FAX送信先・freee取引先は変えない (宛名の見た目のみ)。
+  const _billTo = (c.billingToName||'').trim();
+  const _billOverride = !!_billTo;
   $('invoice-body').innerHTML = renderFaxInvoiceSingle({
-    insurerName: insurerLabel(ins),
-    insurerBranch: ins.branch||'',
-    staffName: c.insurerContact||'',
+    insurerName: _billOverride ? _billTo : insurerLabel(ins),
+    honorific: _billOverride ? (c.billingToHonorific||'様') : '御中',
+    insurerBranch: _billOverride ? '' : (ins.branch||''),
+    staffName: _billOverride ? '' : (c.insurerContact||''),
     invNo: c.invoiceNo || '未発行',
     issueDate: fmtDateJP(c.invoiceIssuedAt||todayISO()),
     dueDate: fmtDateJPDaySep(due),
@@ -14405,7 +14430,8 @@ function renderInvoiceBulk(insurerId, month){
     c.insurerId === insurerId &&
     matchMonth(c) &&
     c.status === '請求済' &&
-    !c.isHistorical
+    !c.isHistorical &&
+    !(c.billingToName||'').trim()   // 請求先を別宛名(個人・別会社)に変更した案件は保険会社の月次合算に含めない(単票で発行する)
   );
   if(!targets.length){
     $('invoice-body').innerHTML = `<div class="empty-state card"><div class="icon">🧾</div>
@@ -14554,7 +14580,7 @@ function renderFaxInvoiceSingle(v){
       <div class="fi-title">御請求書</div>
       <div class="fi-top">
         <div class="fi-to">
-          <div class="fi-to-name">${esc(v.insurerName||'')}<span class="fi-onchu">御中</span></div>
+          <div class="fi-to-name">${esc(v.insurerName||'')}<span class="fi-onchu">${esc(v.honorific||'御中')}</span></div>
           ${v.insurerBranch? `<div class="fi-to-staff">${esc(v.insurerBranch)}</div>`:''}
           ${v.staffName? `<div class="fi-to-staff">担当　${esc(v.staffName)}　様</div>`:''}
           <div class="fi-to-msg">下記のとおり御請求申し上げます。</div>
