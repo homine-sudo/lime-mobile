@@ -240,6 +240,32 @@
   .drill-note{font-size:10.5px;color:var(--ink3);line-height:1.6;margin:4px 0 12px}
   .drill-total{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0 4px;margin-top:6px;border-top:1px solid var(--line);font-size:12px;color:var(--ink2)}
   .drill-total b{font-family:var(--serif);font-size:17px;color:var(--ink)}
+  /* トレンド + 要因分解 (分析クオリティUP・2026-07-15) */
+  .tr{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px dotted var(--line)}
+  .tr:last-child{border-bottom:0}
+  .tr-lbl{font-size:11.5px;color:var(--ink2);line-height:1.3}
+  .tr-lbl small{color:var(--ink3);font-size:9.5px;display:block}
+  .tr-spark{width:100%;height:34px;display:block}
+  .tr-val{text-align:right;white-space:nowrap}
+  .tr-num{font-family:var(--serif);font-size:20px;font-weight:600;line-height:1;color:var(--ink)}
+  .tr-dir{font-size:10px;font-weight:700}
+  .tr-dir.up{color:var(--danger)} .tr-dir.down{color:var(--ok)} .tr-dir.flat{color:var(--ink3)}
+  .tr-note{font-size:9.5px;color:var(--ink3);margin-top:8px;line-height:1.55}
+  .fac-toggle{display:flex;gap:6px;margin-bottom:12px}
+  .fac-tbtn{flex:1;padding:7px 6px;background:transparent;border:1px solid var(--line);color:var(--ink3);font-size:11px;cursor:pointer;letter-spacing:.02em}
+  .fac-tbtn.on{border-color:var(--acc);color:var(--acc);background:var(--panel2)}
+  .wf-svg{width:100%;height:150px;display:block;margin:2px 0 4px}
+  .wf-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:6px}
+  .wf-li{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3)}
+  .wf-sw{width:9px;height:9px;flex:0 0 9px}
+  .fac-row{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px dotted var(--line)}
+  .fac-row:last-child{border-bottom:0}
+  .fac-nm{flex:1;font-size:12px;color:var(--ink2)}
+  .fac-nm small{color:var(--ink3);font-size:10px}
+  .fac-amt{font-family:var(--serif);font-size:17px;color:var(--acc);white-space:nowrap}
+  .fac-amt.neg{color:var(--danger)}
+  .fac-pct{font-size:10px;color:var(--ink3);width:40px;text-align:right}
+  .fac-warn{margin-top:10px;padding:9px 11px;background:var(--panel2);border-left:2px solid var(--warn);font-size:10.5px;color:var(--ink2);line-height:1.55}
   /* grid */
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -1375,6 +1401,19 @@
     </div>
 
     <div class="card">
+      <div class="rpt-sec">07b / トレンド</div>
+      <div class="rpt-h">主要指標の推移（直近12ヶ月）</div>
+      <div id="trend-body"></div>
+    </div>
+
+    <div class="card">
+      <div class="rpt-sec">07c / 要因分解</div>
+      <div class="rpt-h">増収は何で伸びたか</div>
+      <div class="fac-toggle"><button class="fac-tbtn on" id="fac-t-confirmed" onclick="setFactorMode('confirmed')">FY24→FY25（確定）</button><button class="fac-tbtn" id="fac-t-progress" onclick="setFactorMode('progress')">今年度（進行中）</button></div>
+      <div id="factor-body"></div>
+    </div>
+
+    <div class="card">
       <div class="rpt-sec">08 / 追加観点</div>
       <div class="rpt-h">人件費・税・設備投資・基盤</div>
       <ul class="rpt-ul">
@@ -1516,7 +1555,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-15b';
+const APP_VERSION = '2026-07-15c';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3340,6 +3379,124 @@ function drillLowVeh(){
     openDrill('リース車 稼働率ランキング（整理候補）', html);
   }catch(e){ console.warn('drillLowVeh',e); openDrill('リース車','<div class="drill-note">計算に失敗しました。</div>'); }
 }
+// ===== 分析クオリティUP: トレンド + 要因分解 (2026-07-15) =====
+// レンタカー売上を 件数N × 平均日数D × 平均日額U に分解 (upToMonth=年度内経過月に絞ると進行中の同期比較になる)
+function fyDecomp(fy, upToMonth){
+  let n=0,dsum=0,rev=0;
+  billableRental().forEach(c=>{
+    const k=rentalSalesYM(c); if(!k||fyOf(k)!==fy) return;
+    if(upToMonth){ const mo=Number(k.split('-')[1]); const fm=mo>=4?mo-3:mo+9; if(fm>upToMonth) return; }
+    const a=rentalBillAmount(c); if(a.total<=0) return;
+    rev+=a.total; n++; dsum+=(a.days>0?a.days:1);
+  });
+  return {n,dsum,rev,D:n?dsum/n:0,U:dsum?rev/dsum:0};
+}
+// 月次トレンド (直近12ヶ月): 集中度(最大取引先%)・稼働率(月平均%)・レンタ売上(万)
+function _trendData(){
+  const t12=trailing12(), labels=t12.labels;
+  const conc=labels.map(k=>{
+    const by={}; let tot=0;
+    billableRental().forEach(c=>{ if(rentalSalesYM(c)!==k) return; const a=rentalBillAmount(c).total; if(a<=0)return; tot+=a; const id=c.insurerId||'?'; by[id]=(by[id]||0)+a; });
+    if(tot<=0) return null; let mx=0; Object.keys(by).forEach(id=>{if(by[id]>mx)mx=by[id];}); return Math.round(mx/tot*1000)/10;
+  });
+  const tot=vehicleStats().tot||1;
+  const util=labels.map(k=>{
+    const a=k.split('-'); const md=new Date(Number(a[0]),Number(a[1]),0).getDate();
+    const ms=k+'-01', me=k+'-'+pad2(md); let sum=0;
+    rentalCases().forEach(c=>{ if(!c.useStart||c.status==='キャンセル')return; const e=c.useEnd||addDays(c.useStart,30); const s2=c.useStart>ms?c.useStart:ms, e2=e<me?e:me; if(s2<=e2) sum+=daysBetween(s2,e2); });
+    return Math.round(sum/(tot*md)*1000)/10;
+  });
+  return {labels, conc, util, rental:t12.rental.map(v=>Math.round(v/10000))};
+}
+function renderTrend(){
+  const host=document.getElementById('trend-body'); if(!host) return;
+  try{
+    const d=_trendData();
+    const rows=[
+      {lbl:'顧客集中度',sub:'最大取引先%',vals:d.conc,color:'#e5707e',unit:'%',th:3},
+      {lbl:'稼働率',sub:'月平均%',vals:d.util,color:'#6f97e6',unit:'%',th:3},
+      {lbl:'レンタ売上',sub:'月次・万円',vals:d.rental,color:'#6f97e6',unit:'万',th:30}
+    ];
+    host.innerHTML = rows.map((r,i)=>{
+      const cur=r.vals[r.vals.length-2], prev=r.vals[r.vals.length-3];
+      let dir='flat',arrow='→ 横ばい';
+      if(cur!=null&&prev!=null){ const dd=cur-prev; if(Math.abs(dd)>=r.th){ dir=dd>0?'up':'down'; arrow=dd>0?'↑ 上昇':'↓ 低下'; } }
+      return '<div class="tr"><div class="tr-lbl">'+r.lbl+'<small>'+r.sub+'</small></div><svg class="tr-spark" id="tr-spark-'+i+'" viewBox="0 0 120 34" preserveAspectRatio="none"></svg><div class="tr-val"><div class="tr-num">'+(cur!=null?cur:'-')+'<span style="font-size:11px">'+r.unit+'</span></div><div class="tr-dir '+dir+'">'+arrow+'</div></div></div>';
+    }).join('') + '<div class="tr-note">末尾（進行中の月）は破線＝未確定（貸出中が未計上・集中度が跳ねやすい）。数値は直近の確定月・向きは前月比。9月繁忙／1〜5月閑散の季節性が読める。</div>';
+    rows.forEach((r,i)=>_drawSpark(document.getElementById('tr-spark-'+i), r.vals, r.color));
+  }catch(e){ console.warn('renderTrend',e); }
+}
+function _drawSpark(svg, vals, col){
+  if(!svg) return; svg.innerHTML='';
+  const ns='http://www.w3.org/2000/svg';
+  const pairs=vals.map((v,i)=>({v,i})).filter(p=>p.v!=null);
+  if(pairs.length<2) return;
+  const nums=pairs.map(p=>p.v), W=120,H=34,pad=3, N=vals.length;
+  const mn=Math.min.apply(null,nums),mx=Math.max.apply(null,nums),rng=(mx-mn)||1;
+  const pts=pairs.map(p=>[pad+p.i*(W-2*pad)/(N-1), H-pad-(p.v-mn)/rng*(H-2*pad)]);
+  const poly=(arr,dash)=>{ if(arr.length<2)return; const p=document.createElementNS(ns,'polyline'); p.setAttribute('points',arr.map(a=>a[0].toFixed(1)+','+a[1].toFixed(1)).join(' ')); p.setAttribute('fill','none'); p.setAttribute('stroke',col); p.setAttribute('stroke-width','1.6'); p.setAttribute('stroke-linejoin','round'); p.setAttribute('stroke-linecap','round'); if(dash){p.setAttribute('stroke-dasharray','2.5 2.5');p.setAttribute('opacity','.55');} svg.appendChild(p); };
+  poly(pts.slice(0,pts.length-1),false);
+  poly([pts[pts.length-2],pts[pts.length-1]],true);
+  const c=document.createElementNS(ns,'circle'); c.setAttribute('cx',pts[pts.length-2][0].toFixed(1)); c.setAttribute('cy',pts[pts.length-2][1].toFixed(1)); c.setAttribute('r','2.2'); c.setAttribute('fill',col); svg.appendChild(c);
+}
+function setFactorMode(m){ window._factorMode=m; const a=document.getElementById('fac-t-confirmed'),b=document.getElementById('fac-t-progress'); if(a)a.classList.toggle('on',m==='confirmed'); if(b)b.classList.toggle('on',m==='progress'); renderFactor(); }
+function renderFactor(){
+  const host=document.getElementById('factor-body'); if(!host) return;
+  try{
+    const mode=window._factorMode||'confirmed';
+    let A,B,alab,blab,warn='';
+    if(mode==='progress'){
+      const now=new Date(), m=now.getMonth()+1, em=m>=4?m-3:m+9, cfy=_currentFY();
+      A=fyDecomp(cfy-1,em); B=fyDecomp(cfy,em); alab='FY'+String(cfy-1).slice(2); blab='FY'+String(cfy).slice(2);
+      warn='<div class="fac-warn">⚠ 進行中（FY'+cfy+' 4〜'+m+'月）は返却ラグ（貸出中が未計上）で件数・売上が構造的に低く出ます。確定は返却が進む8月以降。前年も同じ経過月（4〜'+m+'月）で比較しています。</div>';
+    } else {
+      A=fyDecomp(2024); B=fyDecomp(2025); alab='FY24'; blab='FY25';
+    }
+    const dN=(B.n-A.n)*A.D*A.U, dD=B.n*(B.D-A.D)*A.U, dU=B.n*B.D*(B.U-A.U);
+    const diff=B.rev-A.rev;
+    const man=x=>Math.round(x/10000).toLocaleString();
+    const sgn=x=>(x>=0?'＋':'−')+man(Math.abs(x));
+    const pct=x=>diff!==0?Math.round(x/diff*100)+'%':'—';
+    let acc=A.rev; const bars=[{lbl:alab,from:0,to:A.rev,col:'#59657c'}];
+    bars.push({lbl:'件数',from:acc,to:acc+dN,col:'#6f97e6'}); acc+=dN;
+    bars.push({lbl:'日数',from:acc,to:acc+dD,col:'#8fb0ea'}); acc+=dD;
+    bars.push({lbl:'単価',from:acc,to:acc+dU,col:'#c8a86a'});
+    bars.push({lbl:blab,from:0,to:B.rev,col:'#59657c'});
+    host.innerHTML =
+      '<div class="wf-legend"><div class="wf-li"><span class="wf-sw" style="background:#59657c"></span>年度売上</div><div class="wf-li"><span class="wf-sw" style="background:#6f97e6"></span>件数</div><div class="wf-li"><span class="wf-sw" style="background:#8fb0ea"></span>日数</div><div class="wf-li"><span class="wf-sw" style="background:#c8a86a"></span>単価</div></div>'+
+      '<svg class="wf-svg" id="wf-svg" viewBox="0 0 340 150" preserveAspectRatio="xMidYMid meet"></svg>'+
+      '<div class="fac"><div class="fac-row"><span class="fac-nm">件数効果 <small>'+A.n+' → '+B.n+'件（'+(A.n?((B.n>=A.n?'+':'')+Math.round((B.n/A.n-1)*100)):'-')+'%）</small></span><span class="fac-amt'+(dN<0?' neg':'')+'">'+sgn(dN)+'万</span><span class="fac-pct">'+pct(dN)+'</span></div>'+
+      '<div class="fac-row"><span class="fac-nm">日数効果 <small>平均 '+A.D.toFixed(1)+' → '+B.D.toFixed(1)+'日</small></span><span class="fac-amt'+(dD<0?' neg':'')+'">'+sgn(dD)+'万</span><span class="fac-pct">'+pct(dD)+'</span></div>'+
+      '<div class="fac-row"><span class="fac-nm">単価効果 <small>日額 '+Math.round(A.U).toLocaleString()+' → '+Math.round(B.U).toLocaleString()+'円</small></span><span class="fac-amt'+(dU<0?' neg':'')+'">'+sgn(dU)+'万</span><span class="fac-pct">'+pct(dU)+'</span></div></div>'+
+      _factorCall(mode,diff,dN,A,B)+warn;
+    _drawWaterfall(document.getElementById('wf-svg'), bars);
+  }catch(e){ console.warn('renderFactor',e); }
+}
+function _factorCall(mode,diff,dN,A,B){
+  if(mode==='progress') return '<div class="rpt-call" style="margin-top:12px">進行中は返却ラグの影響が大きく確定値ではありません。傾向の目安として（確定は8月以降）。</div>';
+  const share=diff>0?Math.round(dN/diff*100):0;
+  const uPct=A.U?Math.round((B.U/A.U-1)*100):0;
+  return '<div class="rpt-call" style="margin-top:12px"><b>読み取り:</b> 増収の <b>'+share+'%は件数増</b>、単価は'+(uPct>=0?'+':'')+uPct+'%。＝価格決定力の弱い<b>量的拡大</b>（損保代車の構造）。利幅を上げるには単価交渉力のある事業（電装 粗利74.8%）へのシフトか、長期・高単価案件の比率改善が鍵。</div>';
+}
+function _drawWaterfall(svg, bars){
+  if(!svg) return; svg.innerHTML='';
+  const ns='http://www.w3.org/2000/svg';
+  const W=340,H=150,padB=22,padT=10,padL=6,padR=6;
+  const max=Math.max.apply(null, bars.map(b=>Math.max(b.from,b.to)))||1;
+  const n=bars.length,gap=10,bw=(W-padL-padR-gap*(n-1))/n;
+  const Y=v=>padT+(1-v/max)*(H-padT-padB);
+  const man=x=>Math.round(x/10000).toLocaleString();
+  bars.forEach((b,i)=>{
+    const x=padL+i*(bw+gap);
+    const y0=Y(Math.max(b.from,b.to)), y1=Y(Math.min(b.from,b.to));
+    const r=document.createElementNS(ns,'rect'); r.setAttribute('x',x.toFixed(1)); r.setAttribute('y',y0.toFixed(1)); r.setAttribute('width',bw.toFixed(1)); r.setAttribute('height',Math.max(2,y1-y0).toFixed(1)); r.setAttribute('fill',b.col); svg.appendChild(r);
+    const t=document.createElementNS(ns,'text'); t.setAttribute('x',(x+bw/2).toFixed(1)); t.setAttribute('y',H-8); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','9'); t.setAttribute('fill','#8791a8'); t.textContent=b.lbl; svg.appendChild(t);
+    const isBase=(i===0||i===n-1);
+    const vv=document.createElementNS(ns,'text'); vv.setAttribute('x',(x+bw/2).toFixed(1)); vv.setAttribute('y',(y0-3).toFixed(1)); vv.setAttribute('text-anchor','middle'); vv.setAttribute('font-size','8.5'); vv.setAttribute('fill','#c3ccdd'); vv.setAttribute('font-family','Cormorant Garamond,Georgia,serif');
+    vv.textContent=isBase?man(b.to):((b.to-b.from>=0?'+':'')+man(b.to-b.from)); svg.appendChild(vv);
+  });
+  for(let i=0;i<n-1;i++){ const xa=padL+i*(bw+gap)+bw, xb=padL+(i+1)*(bw+gap); const yl=Y(bars[i].to); const ln=document.createElementNS(ns,'line'); ln.setAttribute('x1',xa.toFixed(1)); ln.setAttribute('y1',yl.toFixed(1)); ln.setAttribute('x2',xb.toFixed(1)); ln.setAttribute('y2',yl.toFixed(1)); ln.setAttribute('stroke','#3b4a63'); ln.setAttribute('stroke-width','1'); ln.setAttribute('stroke-dasharray','2 2'); svg.appendChild(ln); }
+}
 function _renderFreeePL(){
   const host=document.getElementById('rev-freee-pl'); if(!host||!FREEE_PL) return;
   const c=FREEE_PL, p=FREEE_PL_PREV;
@@ -3969,6 +4126,7 @@ function renderAll(){
   renderNow();renderRev();renderOps();renderPipe();renderSet();
   try{ renderReport(); }catch(e){ console.warn('report',e); }           // 第1波A(2026-07-15): 分析タブ ライブ化 (内部で renderReportLive も呼ぶ)
   try{ renderSim(); }catch(e){ console.warn('sim',e); }                 // 第2波B(2026-07-15): 経営シミュレーター
+  try{ renderTrend(); renderFactor(); }catch(e){ console.warn('trend factor',e); } // 2026-07-15c: 分析クオリティUP(トレンド+要因分解)
   try{ renderCash(); }catch(e){ console.warn('cash',e); }               // 第4波: 資金繰りタブ
 }
 
