@@ -1852,13 +1852,14 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       🏆 <span>担当者ランキング (件数/売上)</span>
       <span id="bi-contact-rank-summary" class="text-muted text-sm" style="font-size:11px;font-weight:normal"></span>
     </div>
+    <div class="text-muted" style="font-size:10.5px;margin:-2px 0 6px">※件数=受付日ベース(貸出中も含む)／売上・平均単価・入金率=返却(利用終了)ベース</div>
     <div class="tbl-wrap" style="max-height:360px;overflow:auto">
       <table style="font-size:12px">
         <thead><tr>
           <th style="width:32px">#</th>
           <th>保険会社担当者</th>
           <th>所属保険会社</th>
-          <th style="width:70px">件数</th>
+          <th style="width:70px">件数(受付)</th>
           <th class="money" style="width:120px">売上(税込)</th>
           <th class="money" style="width:120px">平均単価</th>
           <th style="width:70px">入金率</th>
@@ -1893,9 +1894,10 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   <div class="bi-rank-row">
     <div class="card" style="padding:10px">
       <div class="card-title" style="margin-bottom:4px">🏢 保険会社 TOP10</div>
+      <div class="text-muted" style="font-size:10.5px;margin:-2px 0 6px">※件数=受付日ベース(貸出中も含む)／売上・平均日数・入金率=返却(利用終了)ベース</div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th style="width:36px">#</th><th>保険会社</th><th style="width:70px">件数</th><th style="width:90px">平均日数</th><th style="width:110px">売上(税込)</th><th style="width:70px">入金率</th></tr></thead>
+          <thead><tr><th style="width:36px">#</th><th>保険会社</th><th style="width:70px">件数(受付)</th><th style="width:90px">平均日数</th><th style="width:110px">売上(税込)</th><th style="width:70px">入金率</th></tr></thead>
           <tbody id="bi-rank-insurer"></tbody>
         </table>
       </div>
@@ -3120,7 +3122,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-14c';
+const APP_VERSION = '2026-07-16';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7662,14 +7664,20 @@ function setBiYoyGranularity(g){
 }
 
 function renderBIRankings(cases){
+  // v2026-07-16: 件数=受付日ベース(貸出中も含む) / 売上・日数・入金率=利用終了(useEnd)ベース(freee整合)
+  // に分離 (戦略サマリー v2026.04.29ct と同方式)。従来は件数もuseEnd基準で貸出中が丸ごと未計上だった。
+  const range = computeBiRange(_biState.period);
+  const recvCases = biFilterCasesByReceived(range.from, range.to);
   // 保険会社別サマリー
   const byIns = {};
+  const insEnsure = key => byIns[key] || (byIns[key] = { ins: findInsurer(key), count:0, endCount:0, daysSum:0, sales:0, paidCount:0, billedCount:0 });
+  // 件数 (受付日ベース)
+  recvCases.forEach(c=>{ insEnsure(c.insurerId || '').count++; });
+  // 売上・日数・入金率 (利用終了ベース)
   cases.forEach(c=>{
-    const key = c.insurerId || '';
-    if(!byIns[key]) byIns[key] = { ins: findInsurer(key), count:0, daysSum:0, sales:0, paidCount:0, billedCount:0 };
-    const r = byIns[key];
+    const r = insEnsure(c.insurerId || '');
     const a = calcAmounts(c);
-    r.count++;
+    r.endCount++;
     r.daysSum += a.days||0;
     r.sales += a.total||0;
     if(c.status==='入金済') r.paidCount++;
@@ -7681,31 +7689,40 @@ function renderBIRankings(cases){
       <td><b>${i+1}</b></td>
       <td class="left">${esc(r.ins?.name||'(未設定)')}</td>
       <td>${r.count}</td>
-      <td>${r.count?(r.daysSum/r.count).toFixed(1):'0.0'}日</td>
+      <td>${r.endCount?(r.daysSum/r.endCount).toFixed(1):'0.0'}日</td>
       <td class="money">¥${Math.round(r.sales).toLocaleString()}</td>
       <td>${r.billedCount?(r.paidCount/r.billedCount*100).toFixed(1):'0.0'}%</td>
     </tr>
   `).join('') || '<tr><td colspan="6" class="empty-state">データなし</td></tr>';
 
-  renderBIInsurerContactRanking(cases);
+  renderBIInsurerContactRanking(cases, recvCases);
 }
 
-function renderBIInsurerContactRanking(cases){
+function renderBIInsurerContactRanking(cases, recvCases){
   const tbody = $('bi-contact-rank-tbody');
   if(!tbody) return;
   // v2026.04.29cn: 副行廃止 (過去累計はマトリックスに集約)
+  // v2026-07-16: 件数=受付日ベース(recvCases・貸出中も含む) / 売上・平均単価・入金率=利用終了ベース(cases)
   const byContact = {};
-  cases.forEach(c => {
-    if(c.status === 'キャンセル' || c.isHistorical) return;
+  const ctEnsure = c => {
     const rawContact = (c.insurerContact || '(未設定)').trim() || '(未設定)';
     // v2026.04.29co: 表記ゆれ吸収 (空白詰め)
     const normContact = (typeof normalizeContactName === 'function') ? (normalizeContactName(rawContact) || '(未設定)') : rawContact;
-    const insName = ((findInsurer(c.insurerId) || {}).name || '');
     const key = `${normContact}__${c.insurerId||''}`;
-    if(!byContact[key]) byContact[key] = { contact: rawContact, insName, count:0, sales:0, paidCount:0, billedCount:0 };
-    const r = byContact[key];
+    if(!byContact[key]) byContact[key] = { contact: rawContact, insName: ((findInsurer(c.insurerId) || {}).name || ''), count:0, endCount:0, sales:0, paidCount:0, billedCount:0 };
+    return byContact[key];
+  };
+  // 件数 (受付日ベース)
+  (recvCases||[]).forEach(c => {
+    if(c.status === 'キャンセル' || c.isHistorical) return;
+    ctEnsure(c).count++;
+  });
+  // 売上・入金率 (利用終了ベース・freee整合)
+  cases.forEach(c => {
+    if(c.status === 'キャンセル' || c.isHistorical) return;
+    const r = ctEnsure(c);
     const a = calcAmounts(c);
-    r.count++;
+    r.endCount++;
     r.sales += a.total || 0;
     if(c.status === '入金済') r.paidCount++;
     if(['請求済','入金済'].includes(c.status)) r.billedCount++;
@@ -7714,13 +7731,13 @@ function renderBIInsurerContactRanking(cases){
   const totalCount = ranking.reduce((s,r)=>s+r.count, 0);
   const totalSales = ranking.reduce((s,r)=>s+r.sales, 0);
   const sumEl = $('bi-contact-rank-summary');
-  if(sumEl) sumEl.textContent = ranking.length ? `担当者 ${Object.keys(byContact).length}名 / 計 ${totalCount}件 ${yen(totalSales)}` : '';
+  if(sumEl) sumEl.textContent = ranking.length ? `担当者 ${Object.keys(byContact).length}名 / 受付計 ${totalCount}件 / 売上計 ${yen(totalSales)}` : '';
   if(!ranking.length){
     tbody.innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:14px">対象期間にデータがありません</td></tr>';
     return;
   }
   tbody.innerHTML = ranking.map((r,i) => {
-    const avg = r.count ? Math.round(r.sales/r.count) : 0;
+    const avg = r.endCount ? Math.round(r.sales/r.endCount) : 0;
     const paidRate = r.billedCount ? (r.paidCount/r.billedCount*100) : 0;
     return `<tr>
       <td><b>${i+1}</b></td>
