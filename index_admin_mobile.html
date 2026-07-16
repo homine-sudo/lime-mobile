@@ -194,6 +194,33 @@
   .rpt-act td b{color:var(--ink);font-weight:600}
   .rpt-act .due{color:var(--ink3);font-size:9.5px;letter-spacing:.04em;white-space:nowrap}
   .rpt-note{font-size:10px;color:var(--ink3);line-height:1.65;margin-top:6px}
+  /* ① 打ち手トラッカー (2026-07-16): 打ち手Top7の測定可能KPIを基準日比で自動追跡 */
+  .act-track{margin:4px 0 14px;border:1px solid var(--line);background:var(--panel2);padding:10px 12px}
+  .act-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:9.5px;color:var(--ink3);letter-spacing:.05em;line-height:1.5;margin-bottom:2px}
+  .act-reset{background:transparent;border:1px solid var(--line2);color:var(--ink3);font-size:9px;padding:4px 8px;cursor:pointer;white-space:nowrap;letter-spacing:.04em}
+  .act-row{display:flex;align-items:baseline;gap:8px;padding:9px 0;border-bottom:1px dotted var(--line)}
+  .act-row:last-child{border-bottom:0;padding-bottom:2px}
+  .act-no{font-family:var(--serif);font-size:15px;color:var(--acc);flex:0 0 16px;text-align:center}
+  .act-nm{flex:1;font-size:12px;color:var(--ink2);line-height:1.45}
+  .act-nm small{display:block;font-size:9.5px;color:var(--ink3)}
+  .act-val{text-align:right;font-variant-numeric:tabular-nums}
+  .act-val .cur{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink)}
+  .act-val .base{display:block;font-size:9px;color:var(--ink3)}
+  .act-st{flex:0 0 74px;text-align:right;font-size:10.5px;font-weight:600;white-space:nowrap}
+  .act-st.good{color:var(--ok)}
+  .act-st.bad{color:var(--danger)}
+  .act-st.flat{color:var(--ink3)}
+  .act-st small{display:block;font-weight:400;font-size:9px;color:var(--ink3)}
+  /* ③ 当月売上の速報 (発生ベース・2026-07-16) — HERO直下 */
+  .hero-flash{text-align:center;margin-top:9px;font-size:10.5px;letter-spacing:.03em;color:var(--ink3)}
+  .card.hero .hero-flash{color:var(--kami-ink3)}
+  .hero-flash b{font-family:var(--serif);font-size:13.5px;font-weight:600;color:var(--ink)}
+  .card.hero .hero-flash b{color:var(--kami-ink)}
+  .hero-flash .up{color:var(--acc);font-weight:600}
+  .hero-flash .dn{color:var(--danger);font-weight:600}
+  .card.hero .hero-flash .up{color:var(--kami-blue)}
+  .card.hero .hero-flash .dn{color:var(--kami-danger)}
+  .hero-flash .fl-note{display:block;font-size:8.5px;opacity:.85;margin-top:2px}
   /* 経営シミュレーター (第2波B・2026-07-15) */
   .sim-note-top{font-size:11px;color:var(--ink3);line-height:1.55;margin:2px 0 12px}
   .sim-outs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
@@ -218,6 +245,11 @@
   .sim-card input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--acc);border:3px solid var(--panel);cursor:pointer}
   .sim-chint{font-size:9.5px;color:var(--ink3);margin-top:3px}
   .sim-reset{margin-top:12px;width:100%;padding:9px;background:transparent;border:1px solid var(--line);color:var(--ink3);font-size:11px;cursor:pointer;letter-spacing:.05em}
+  /* ② シミュ×資金ランウェイ連動 (2026-07-16) */
+  .sim-cash{display:block;margin:0 0 14px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-left:2px solid var(--gold);cursor:pointer}
+  .sim-cash .sc-k{display:block;font-size:9px;letter-spacing:.06em;color:var(--ink3);text-transform:uppercase;font-weight:600}
+  .sim-cash .sc-v{font-family:var(--serif);font-size:23px;font-weight:600;color:var(--ink);line-height:1.1;margin-top:2px;display:inline-block}
+  .sim-cash .sc-d{display:block;font-size:10px;color:var(--ink3);margin-top:3px;line-height:1.55}
   /* ドリルダウン (A2+C・2026-07-15) */
   .drill-btn{margin-top:10px;display:inline-flex;align-items:center;gap:5px;padding:7px 13px;background:transparent;border:1px solid var(--line2);color:var(--acc);font-size:11px;cursor:pointer;letter-spacing:.04em}
   .drill-scrim{position:fixed;inset:0;background:rgba(6,10,18,.66);opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
@@ -866,6 +898,8 @@
         <span class="delta" id="now-mom">前月比 —</span>
         <span class="delta ink3" id="now-yoy">前年同月 —</span>
       </div>
+      <!-- ③ 実態速報 (発生ベース・2026-07-16): useEnd計上の返却ラグ(貸出中が未計上)を補正した当月の実態YoY -->
+      <div class="hero-flash" id="now-flash" style="display:none"></div>
 
       <!-- 稼働率 サブダイヤル (1つに集約) -->
       <div class="subdial-row">
@@ -1228,8 +1262,8 @@
   <section id="sec-report">
     <div class="card">
       <div class="rpt-date" id="rpt-date">経営分析スナップショット · 2026-07-10（初版 2026-06-28）</div>
-      <div class="rpt-h">総括 — 補助金頼みから本業黒字へ</div>
-      <div class="rpt-verdict"><b>FY2025に本業（営業利益）で黒字化した健全な成長企業。</b>財務余力も十分（現預金3,689万・自己資本比率24%・純有利子負債1,695万）。ただし構造的弱点が3つ。</div>
+      <div class="rpt-h">総括 — 薄利から本業の稼ぐ力が伸びる成長企業</div>
+      <div class="rpt-verdict"><b>FY2024の薄利（営業利益151万）から、FY2025は営業利益694万（率2.5→7.2%）へ＝本業の稼ぐ力が伸びた健全な成長企業。</b>財務余力も十分（現預金3,689万・自己資本比率24%・純有利子負債1,695万）。ただし構造的弱点が3つ。</div>
       <ul class="rpt-ul">
         <li><b>① 利幅の薄い量的拡大。</b>FY2025は+59%増収だが売上総利益はほぼ横ばい。増収分を車両保有コスト（リース・減価償却）が食い切る損保代車の構造。</li>
         <li><b>② 単一顧客依存（最大リスク）。</b>3事業すべてが1社依存（JA共済61.2%／次郎工業70.0%／プロシード98.9%）。<span class="rpt-neg">JA共済喪失で即・分岐点割れ。</span></li>
@@ -1249,7 +1283,7 @@
         <tr><td>経常利益</td><td class="n">1,095</td><td class="n">658</td><td class="n">697</td></tr>
         <tr class="tot"><td>当期純利益</td><td class="n">559</td><td class="n">755</td><td class="n">697<br><span class="ink3">税前</span></td></tr>
       </table>
-      <div class="rpt-p"><b>利益の質が改善（最重要）。</b>FY2024の経常黒字1,095万は営業利益わずか151万＋<b>助成金987万</b>頼みだった。FY2025は助成金が消えた中で<b>本業の営業利益694万で稼いだ＝本業黒字への転換</b>。</div>
+      <div class="rpt-p"><b>利益の質が改善（最重要）。</b>FY2024は営業利益わずか151万＝薄利。<b>助成金987万は圧縮記帳で同額の圧縮損と相殺され、損益はプラマイ0＝利益への寄与はゼロ</b>（効くのは将来、圧縮した資産の減価償却が減る＝課税の繰り延べ）。FY2024を「助成金頼み」とするのは誤り。<b>利益の質は営業利益で見るのが正しく、151→694万（率2.5→7.2%）＝本業の稼ぐ力が着実に伸びた</b>。</div>
       <div class="rpt-call"><b>「粗利率73.5%→46.8%」は悪化ではない。</b>減価償却の計上場所の変更（FY24=販管費15.7M→FY25=売上原価27.5M）による会計上の組み替え。年度比較は組み替えに影響されない<b>営業利益率（2.5%→7.2%）で見るのが正しい</b>。</div>
       <div class="rpt-kpis">
         <div class="rpt-kpi g"><div class="k">現預金</div><div class="v">3,689<small>万</small></div><div class="s">純有利子負債 1,695万のみ</div></div>
@@ -1353,6 +1387,8 @@
         <div class="sim-bar-lbl"><span>月商 vs 実力の損益ライン（≒785万）</span><span id="sim-bar-cap">黒字圏</span></div>
         <div class="sim-track"><div class="sim-fill" id="sim-fill" style="width:71%"></div><div class="sim-beline" id="sim-beline" style="left:65%"></div></div>
       </div>
+      <!-- ② 資金ランウェイ連動 (2026-07-16): 営業利益の変化分を資金タブ cashFlowPlan の営業CFに加減した「現金の谷」 -->
+      <div class="sim-cash tap" id="sim-cash" onclick="showTab('kane')" style="display:none"></div>
       <div class="sim-ctrl">
         <div class="sim-ctop"><span class="sim-cname">🚗 レンタカー稼働率</span><span class="sim-cval" id="sim-v-occ">70%</span></div>
         <input type="range" id="sim-occ" min="55" max="90" value="70" step="1" oninput="simCalc()">
@@ -1369,7 +1405,7 @@
         <div class="sim-chint" id="sim-cut-hint">1台整理 ≒ 月固定費が減る（低稼働リースをKPIから取得）</div>
       </div>
       <button class="sim-reset" onclick="simReset()">現状にリセット</button>
-      <div class="rpt-note">概算シミュレーション（感度モデル）。現金の谷（資金繰り）への波及は資金タブと連動予定。営業利益の年換算で当面の傾向を把握。</div>
+      <div class="rpt-note">概算シミュレーション（感度モデル）。「現金の谷」は資金タブの12ヶ月投影と連動（営業利益の変化分を月次営業CFに加減・タップで資金タブへ）。</div>
     </div>
 
     <div class="card">
@@ -1391,6 +1427,8 @@
         <div class="r"><div class="l">3月 閑散71%</div><div class="t"><div class="f lo" style="width:46%"></div></div><div class="v">526</div></div>
       </div>
       <div class="rpt-p">レンタカーは FY2024 5,531万→FY2025 8,858万（<b>+60%</b>）。FY2026は4月 <b class="rpt-pos">+11.6%</b>（569万）、5月 −22%（472万）、6月 −37%（395万）。ただし売上は返却日に計上されるため、<b>貸出中55台（稼働73%）の売上が直近月に未計上＝5月以降の前年比は構造的に低く出る</b>（返却が進む8月以降に確定）。閑散期の谷をDETALIA/電装で埋められるかが利益安定の課題。</div>
+      <!-- ③ 当月売上の実態速報 (発生ベース・2026-07-16): 上の「見かけの前年比」を返却ラグ補正で読み替える LIVE 行 -->
+      <div class="rpt-live" id="rl-flash" style="display:none"></div>
       <table class="rpt-tbl">
         <tr><th>FY2027シナリオ</th><th class="n">通期売上</th><th class="n">前年比</th></tr>
         <tr><td>保守</td><td class="n">1.04億</td><td class="n">+11.5%</td></tr>
@@ -1441,6 +1479,11 @@
     <div class="card">
       <div class="rpt-sec">10 / 打ち手</div>
       <div class="rpt-h">優先度つき Top 7</div>
+      <!-- ① 打ち手トラッカー (2026-07-16): 測定可能な打ち手にライブKPIを紐づけ基準日比で自動追跡=「言いっぱなし」を防ぐ -->
+      <div class="act-track" id="act-track" style="display:none">
+        <div class="act-head"><span>📍 進捗トラッカー — 主要打ち手のKPIをライブ追跡（基準 <span id="act-base-date">—</span> 比・この端末で記録）</span><button class="act-reset" onclick="actBaseReset()">基準を今日に</button></div>
+        <div id="act-rows"></div>
+      </div>
       <table class="rpt-act">
         <tr><td class="n">1</td><td><b>AR・未請求の一斉棚卸し</b> — <span class="rpt-pos">進捗: 大口AR（西日本144万等）回収済・freee売掛金987万で横ばい</span>。残=台帳4件270万＋90日超1件40万。<span class="rpt-warn">未請求は依然612万（49件）と高水準＝請求発行の徹底へ重点シフト</span> <span class="due">／ 7月中</span></td></tr>
         <tr><td class="n">2</td><td><b>JA共済依存をKPI化</b>（3年で61%→40%以下・準大手2社を各10%超に育成） <span class="due">／ 通期方針</span></td></tr>
@@ -1555,7 +1598,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-15c';
+const APP_VERSION = '2026-07-16';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1962,6 +2005,40 @@ function thisMonthSummary(){
     prev:rPrev+dPrev+ePrev,yoy:rYoy+dYoy+eYoy,
     rentalPrev:rPrev,detaliaPrev:dPrev,densoPrev:ePrev,           // 部門別 前月(同経過日まで)
     rentalYoy:rYoy,detaliaYoy:dYoy,densoYoy:eYoy};                // 部門別 前年同月(同経過日まで)
+}
+
+// ③ 当月レンタ売上の実態速報 (発生ベース・2026-07-16):
+//   確定売上は useEnd(返却日)に全額計上=貸出中が未計上で、直近月の前年比が構造的に低く出る(「6月−37%は見かけ」問題)。
+//   速報 = 各案件の「対象月1日〜基準日」の占有日数(両端含む=rentalBillAmount の+1日規約と整合) × unitPrice を発生ベースで積算。
+//   前年同月も同じ発生ベース・同経過日(MTD)で再計算 = 公平な実態YoY。値引きは返却時確定のため含めない(概算・レンタカーのみ)。
+//   実効終了日: useEnd > 出払い中(配車済/利用中/回収連絡/手配書FAX済 かつ 未回収)なら今日まで継続 > +30日仮 (2026-07-14 稼働率修正と同思想)。
+//   未配車の計画案件(受付/確認中/配車予定 で useEnd 無し)は車が出ていないので発生させない。
+function flashMonth(){
+  const now=new Date(), N=now.getDate(), today=todayISO();
+  const tm=now.getFullYear()+'-'+pad2(now.getMonth()+1);
+  const py=new Date(now.getFullYear()-1, now.getMonth(), 1);
+  const yym=py.getFullYear()+'-'+pad2(py.getMonth()+1);
+  const pyLast=new Date(py.getFullYear(), py.getMonth()+1, 0).getDate();
+  const accr=(ms,me)=>{
+    let sum=0, n=0, outN=0;
+    rentalCases().forEach(c=>{
+      if(!c||c.status==='キャンセル'||!c.useStart) return;
+      const unit=Number(c.unitPrice||0); if(unit<=0) return;
+      const s=String(c.useStart).slice(0,10);
+      const isOut=['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)&&!c.recoveryCompleted;
+      if(!c.useEnd && !isOut && ['受付','確認中','配車予定'].includes(c.status)) return; // まだ車が出ていない計画案件
+      const e=(c.useEnd&&String(c.useEnd).slice(0,10))||(isOut?today:addDays(s,30));
+      const s2=s>ms?s:ms, e2=e<me?e:me;
+      if(s2>e2) return;
+      sum+=(daysBetween(s2,e2)+1)*unit; n++;
+      if(isOut&&!c.useEnd) outN++;
+    });
+    return {sum,n,outN};
+  };
+  const cur=accr(tm+'-01', today);
+  const prev=accr(yym+'-01', yym+'-'+pad2(Math.min(N,pyLast)));
+  const yoy=prev.sum>0?Math.round((cur.sum-prev.sum)/prev.sum*100):null;
+  return {cur:cur.sum, curN:cur.n, curOut:cur.outN, prev:prev.sum, prevN:prev.n, yoy};
 }
 
 // ===== 現況 — 全社の「今 動いている」案件ボリューム (2026-06-07) =====
@@ -2618,13 +2695,14 @@ function renderIntakeNote(){
 
 // ===== 資金繰り予定 (第4波・2026-07-04) — freeeライブ(現預金/営業利益/借入) + 納車待ち車両capex連動 =====
 function vehiclesPending(){ return ((DR&&DR.vehicles)||[]).filter(v=>v.status==='納車待ち'); }
-function cashFlowPlan(){
+function cashFlowPlan(opAdj){
   // 期首現金 = freee 現預金 (ライブ) / fallback は既知値
   const openCash = (FREEE_BS && FREEE_BS.cash!=null) ? FREEE_BS.cash : 36087108;
   const loan = (FREEE_BS && FREEE_BS.loan) ? FREEE_BS.loan : 53839000;
   // 月次営業CF = freee 営業利益 ÷ 経過月 (4月起点)。減価償却は期中ほぼ未計上=営業利益≒営業キャッシュ。fallback 定数。
   let opCF = CASH_CFG.opCFfallback, opCFlive=false;
   if(FREEE_PL && FREEE_PL.op!=null && FREEE_PL.em){ const mo=Math.max(1,FREEE_PL.em-3); opCF=Math.round(FREEE_PL.op/mo); opCFlive=true; }
+  opCF += Math.round(Number(opAdj)||0);  // ② シミュレーター連動 (2026-07-16): 打ち手の営業利益変化分(円/月)を加減。renderCash は引数なし=0で従来どおり
   const baseRepay = CASH_CFG.loanRepay;
   // 車両仕入 (納車待ち・全額現金・今月=index0 に計上=最も現金が下がる保守的置き方)
   const pend = vehiclesPending();
@@ -2747,6 +2825,20 @@ function renderNow(){
   $('now-mom').textContent='前月比 '+dTxt(mom);
   $('now-yoy').className='delta '+dCls(yoy);
   $('now-yoy').textContent='前年同月 '+dTxt(yoy);
+  // ③ 実態速報 (発生ベース・2026-07-16): useEnd計上の返却ラグを補正した当月レンタの実態YoY (計算=flashMonth)
+  try{
+    const fEl=$('now-flash');
+    if(fEl){
+      const f=flashMonth();
+      if(f.cur>0||f.prev>0){
+        const man=n=>Math.round((n||0)/10000).toLocaleString();
+        const p=f.yoy, cls=(p==null||p===0)?'':(p>0?'up':'dn');
+        fEl.style.display='';
+        fEl.innerHTML='実態速報 <b class="num">'+man(f.cur)+'万</b> ・ 前年同月 <span class="'+cls+'">'+(p==null?'—':(p>0?'+':'')+p+'%')+'</span>'+
+          '<span class="fl-note">発生ベース＝今月の稼働×日額（レンタ・貸出中'+f.curOut+'台含む・値引き前概算・前年も同経過日）</span>';
+      } else fEl.style.display='none';
+    }
+  }catch(e){ console.warn('flash',e); }
   // 部門別 売上 当月
   $('rent-month').textContent=yen(s.rental);
   $('det-month').textContent=yen(s.detalia);
@@ -3239,6 +3331,16 @@ function renderReport(){
     const lowLease=vs.rows.filter(r=>idSet.has(r.v.id)&&Number(r.v.leaseFee)>0&&r.rate<30);
     const lowFee=lowLease.reduce((a,r)=>a+(Number(r.v.leaseFee)||0),0);
     setT('rl-veh-lown', lowLease.length+''); setT('rl-veh-lowfee','月'+man(lowFee)+'万・整理候補');
+    // ── 07 成長: ③当月レンタ売上の実態速報 (発生ベース・返却ラグ補正・2026-07-16)
+    const flEl=document.getElementById('rl-flash');
+    if(flEl){
+      const fl=flashMonth();
+      if(fl.cur>0||fl.prev>0){
+        const s=thisMonthSummary(), yy=fl.yoy;
+        flEl.style.display='';
+        flEl.innerHTML='<b>LIVE</b>当月レンタ売上の実態速報: 確定 '+man(s.rental)+'万（useEnd計上・貸出中は未計上）→ 発生ベース <b class="num">'+man(fl.cur)+'万</b> ・ 実態の前年同月比 <b class="num">'+(yy==null?'—':(yy>0?'+':'')+yy+'%')+'</b>（同経過日・貸出中'+fl.curOut+'台含む・値引き前概算）。上の「前年比が低く出る」は返却ラグの見かけ＝実態はこの速報で判断。';
+      } else flEl.style.display='none';
+    }
   }catch(e){ console.warn('renderReport',e); }
 }
 // 経営シミュレーター (第2波B・2026-07-15): 稼働率/単価/低稼働リース整理 → 営業利益・分岐点余裕をライブ試算。低稼働台数と1台あたりリース料は実データ連動、感度は損益分岐点MD(限界利益率89.4%・分岐点=BREAK_EVEN)。
@@ -3296,11 +3398,78 @@ function simCalc(){
   const cap=g('sim-bar-cap');
   cap.textContent= op<0?'営業赤字':(thin?'薄利圏':'黒字圏');
   cap.style.color= op<0?'var(--danger)':(thin?'var(--warn)':'var(--ok)');
+  // ② 資金ランウェイ連動 (2026-07-16): 営業利益の変化分(月)を cashFlowPlan の営業CFに加減し「現金の谷」への波及を表示
+  try{
+    const cEl=g('sim-cash');
+    if(cEl){
+      const dOp=Math.round((op-OP0)*10000);                 // 円/月 (スライダー初期値=現状 で 0)
+      const bPlan=cashFlowPlan(0), sPlan=cashFlowPlan(dOp);
+      const man=n=>Math.round(n/10000).toLocaleString();
+      const dv=sPlan.trough.close-bPlan.trough.close;
+      const okC=sPlan.trough.close>=sPlan.floor;
+      cEl.style.display='';
+      cEl.innerHTML='<span class="sc-k">現金の谷への波及（12ヶ月投影・最も下がる '+sPlan.trough.label+'） ›</span>'+
+        '<span class="sc-v num"'+(okC?'':' style="color:var(--danger)"')+'>'+man(sPlan.trough.close)+'万</span>'+
+        '<span class="sc-d">'+(dv===0?'現状の資金繰り投影と同じ':('現状 '+man(bPlan.trough.close)+'万 から '+(dv>0?'+':'−')+man(Math.abs(dv))+'万'))+
+        ' ・ 現金下限'+man(sPlan.floor)+'万まで '+(okC?'+':'−')+man(Math.abs(sPlan.trough.close-sPlan.floor))+'万 ・ タップで資金タブ</span>';
+    }
+  }catch(e){ console.warn('sim cash',e); }
 }
 function simReset(){
   const v={'sim-occ':70,'sim-price':0,'sim-cut':0};
   Object.keys(v).forEach(id=>{const el=document.getElementById(id); if(el) el.value=v[id];});
   simCalc();
+}
+// ===== ① 打ち手トラッカー (2026-07-16): 打ち手Top7のうち測定可能な4本にライブKPIを紐づけ「言いっぱなし」を防ぐ =====
+// 基準値はこの端末の localStorage (limeAdm_actBase・初回表示日に自動スナップ) — admin は data.json 非書込の設計(§9)のため端末ローカル基準。
+// good: +1=増えたら改善 / -1=減ったら改善。金額は円で保持し表示時に万へ。デモ(?demo=1)は基準を保存しない。
+const LS_ACTBASE='limeAdm_actBase';
+function _actionKpis(){
+  const arr=[];
+  try{ const a=arSummary(); arr.push({key:'unb', no:1, lbl:'AR・未請求の一斉棚卸し', mt:'未請求（請求すれば入る金）', val:a.unb, unit:'万', good:-1, sub:a.unbN+'件'}); }catch(e){}
+  try{ const k=concentrationKPI(); if(k) arr.push({key:'conc', no:2, lbl:'JA依存の分散', mt:'最大取引先シェア（FY売上比）', val:k.share, unit:'%', good:-1, sub:k.name}); }catch(e){}
+  try{ const t=trailing12(); arr.push({key:'den12', no:3, lbl:'電装を2本目の柱に', mt:'電装売上（直近12ヶ月移動計）', val:t.denso.reduce((s,v)=>s+v,0), unit:'万', good:1, sub:''}); }catch(e){}
+  try{
+    const fleet=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち'&&v.status!=='社用車');
+    const idSet=new Set(fleet.map(v=>v.id));
+    const low=vehicleStats().rows.filter(r=>idSet.has(r.v.id)&&Number(r.v.leaseFee)>0&&r.rate<30);
+    arr.push({key:'lowlease', no:4, lbl:'低稼働リースの仕分け', mt:'30日稼働<30%のリース料（月）', val:low.reduce((s,r)=>s+(Number(r.v.leaseFee)||0),0), unit:'万', good:-1, sub:low.length+'台'});
+  }catch(e){}
+  return arr.filter(k=>typeof k.val==='number'&&isFinite(k.val));
+}
+function renderActions(){
+  const host=document.getElementById('act-rows'), wrap=document.getElementById('act-track');
+  if(!host||!wrap) return;
+  try{
+    const kpis=_actionKpis();
+    if(!kpis.length){ wrap.style.display='none'; return; }
+    let base=null;
+    try{ base=JSON.parse(localStorage.getItem(LS_ACTBASE)||'null'); }catch(e){}
+    let save=false;
+    if(!base||!base.vals){ base={date:todayISO(), vals:{}}; save=true; }
+    kpis.forEach(k=>{ if(base.vals[k.key]==null){ base.vals[k.key]=k.val; save=true; } });  // 新KPI追加時は現値で埋める
+    if(save&&!DEMO){ try{ localStorage.setItem(LS_ACTBASE,JSON.stringify(base)); }catch(e){ console.warn('actBase save',e&&e.name); } }
+    const bd=document.getElementById('act-base-date'); if(bd) bd.textContent=base.date;
+    const man=n=>Math.round((n||0)/10000).toLocaleString();
+    host.innerHTML=kpis.map(k=>{
+      const b=Number(base.vals[k.key]), d=k.val-b;
+      const f=v=>k.unit==='%'?(Math.round(v*10)/10)+'%':man(v)+'万';
+      const eps=k.unit==='%'?0.45:Math.max(10000,Math.abs(b)*0.01);   // 微小変動は横ばい扱い(ノイズ防止)
+      let st='flat', ico='→', word='横ばい';
+      if(Math.abs(d)>eps){ const ok=d*k.good>0; st=ok?'good':'bad'; ico=ok?'✓':'⚠'; word=ok?'改善':'悪化'; }
+      const dTxt=d===0?'±0':(k.unit==='%'?((d>0?'+':'−')+(Math.round(Math.abs(d)*10)/10)+'pt'):((d>0?'+':'−')+man(Math.abs(d))+'万'));
+      return '<div class="act-row"><span class="act-no">'+k.no+'</span>'+
+        '<span class="act-nm">'+esc(k.lbl)+'<small>'+esc(k.mt)+(k.sub?'・'+esc(k.sub):'')+'</small></span>'+
+        '<span class="act-val"><span class="cur num">'+f(k.val)+'</span><span class="base">基準 '+f(b)+'</span></span>'+
+        '<span class="act-st '+st+'">'+ico+' '+word+'<small>'+dTxt+'</small></span></div>';
+    }).join('');
+    wrap.style.display='';
+  }catch(e){ console.warn('renderActions',e); wrap.style.display='none'; }
+}
+function actBaseReset(){
+  if(!confirm('進捗トラッカーの基準値を「今日の値」にリセットしますか？\n（以後の改善/悪化は今日を起点に判定されます）')) return;
+  try{ localStorage.removeItem(LS_ACTBASE); }catch(e){}
+  renderActions(); toast('基準値を今日にリセットしました','ok');
 }
 // ===== ドリルダウン (第1波A2 + 第3波C・2026-07-15): 分析カードをタップで内訳へ。全て読み取りのみ =====
 function openDrill(title, html){
@@ -4125,7 +4294,8 @@ function renderAll(){
   renderStaleBar();
   renderNow();renderRev();renderOps();renderPipe();renderSet();
   try{ renderReport(); }catch(e){ console.warn('report',e); }           // 第1波A(2026-07-15): 分析タブ ライブ化 (内部で renderReportLive も呼ぶ)
-  try{ renderSim(); }catch(e){ console.warn('sim',e); }                 // 第2波B(2026-07-15): 経営シミュレーター
+  try{ renderActions(); }catch(e){ console.warn('actions',e); }         // ① 打ち手トラッカー (2026-07-16)
+  try{ renderSim(); }catch(e){ console.warn('sim',e); }                 // 第2波B(2026-07-15): 経営シミュレーター (② 資金ランウェイ連動を内包)
   try{ renderTrend(); renderFactor(); }catch(e){ console.warn('trend factor',e); } // 2026-07-15c: 分析クオリティUP(トレンド+要因分解)
   try{ renderCash(); }catch(e){ console.warn('cash',e); }               // 第4波: 資金繰りタブ
 }
