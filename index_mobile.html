@@ -1988,7 +1988,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-14';
+const APP_VERSION = '2026-07-23';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4220,6 +4220,8 @@ function _mAvailP2(n){ return String(n).padStart(2,'0'); }
 function _mAvailToday(){ const d=new Date(); return `${d.getFullYear()}-${_mAvailP2(d.getMonth()+1)}-${_mAvailP2(d.getDate())}`; }
 function _mAvailAddDays(iso,n){ const p=(iso||'').slice(0,10).split('-'); if(p.length<3) return iso; const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${_mAvailP2(d.getMonth()+1)}-${_mAvailP2(d.getDate())}`; }
 function _mAvailStartOf(c){ return (c.useStart||c.dispatchAt||'').slice(0,10); }
+// 「出る(車が車庫を出る)」日 = 配車日基準 (2026-07-23)。前日配車は利用開始日の前日に出るので dispatchAt を優先。配車日が無い案件のみ利用開始日にフォールバック。返却見込み(+30日)は利用開始基準のまま。
+function _mAvailDepartOf(c){ return (c.dispatchAt||c.useStart||'').slice(0,10); }
 function _mAvailEffEnd(c,today){
   // 「今も出ている系」= 出庫ステータス かつ 回収未完了
   const active=['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)&&!c.recoveryCompleted;
@@ -4256,7 +4258,7 @@ function renderAvailBoard(){
   // クラス×日 の 空き数・出発/返却/稼働中 案件ID を計算 (タップの内訳に使う)
   const flowsByCls={};
   Object.keys(own).forEach(cls=>{
-    const spans=occupying.filter(c=>caseClass(c)===cls).map(c=>({id:c.id,s:_mAvailStartOf(c),e:_mAvailEffEnd(c,today)})).filter(x=>x.s&&x.e);
+    const spans=occupying.filter(c=>caseClass(c)===cls).map(c=>({id:c.id,s:_mAvailDepartOf(c),e:_mAvailEffEnd(c,today)})).filter(x=>x.s&&x.e);
     flowsByCls[cls]=days.map(day=>{ const prev=_mAvailAddDays(day,-1); let occ=0; const dep=[],ret=[],occIds=[]; spans.forEach(x=>{const onD=x.s<=day&&day<=x.e,onP=x.s<=prev&&prev<=x.e; if(onD){occ++;occIds.push(x.id);} if(onD&&!onP)dep.push(x.id); if(!onD&&onP)ret.push(x.id);}); return {free:own[cls]-occ,occ,dep,ret,occIds}; });
   });
   window._mAvailFlows=flowsByCls; window._mAvailDaysArr=days;
