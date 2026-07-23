@@ -493,23 +493,34 @@ a{color:var(--info);text-decoration:none}
 .m-color-dot{width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.22);display:inline-block;flex-shrink:0}
 .m-plate-hero-no{font-size:22px;font-weight:800;color:#1E2A36;letter-spacing:.02em;line-height:1.2}
 .m-plate-hero-none{font-size:15px;color:#B9B9B0;font-weight:700}
+/* 📏 走行距離: 大きな枠+大数字で入れやすく (2026-07-23c) */
+.m-meter-field{display:flex;align-items:center;gap:8px;background:#F4F8EE;border:1.5px solid #B7D48C;border-radius:12px;padding:4px 16px}
+.m-meter-input{flex:1;min-width:0;border:none;background:transparent;font-size:32px;font-weight:800;text-align:right;color:#1E2A36;letter-spacing:.02em;padding:8px 0;-moz-appearance:textfield}
+.m-meter-input:focus{outline:none;box-shadow:none}
+.m-meter-input::-webkit-outer-spin-button,.m-meter-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.m-meter-unit{font-size:17px;font-weight:700;color:#5A7A2E;flex-shrink:0}
+/* 📞🗺 タップ領域を指で押しやすく (2026-07-23c ④ボタン押しにくい対策) */
 .m-tel-link{
-  display:inline-flex;align-items:center;gap:3px;
-  color:var(--info);font-weight:700;
-  padding:1px 6px;border-radius:5px;background:#E8F0FB;
-  transition:background .12s;text-decoration:none;
+  display:inline-flex;align-items:center;gap:5px;
+  color:var(--info);font-weight:700;font-size:13.5px;
+  padding:6px 12px;border-radius:8px;background:#E8F0FB;min-height:30px;
+  transition:background .12s;text-decoration:none;white-space:nowrap;
 }
 .m-tel-link:active{background:#CFE3FF}
 .m-map-link{
-  display:inline-flex;align-items:center;gap:3px;
-  color:#fff;font-weight:700;font-size:11px;
-  padding:2px 9px;border-radius:11px;
+  display:inline-flex;align-items:center;gap:5px;
+  color:#fff;font-weight:700;font-size:12.5px;
+  padding:6px 13px;border-radius:9px;min-height:30px;
   background:linear-gradient(135deg,#E67E22,#C45D00);
   box-shadow:0 1px 3px rgba(230,126,34,.32);
-  text-decoration:none;margin-left:4px;white-space:nowrap;
+  text-decoration:none;margin-left:5px;white-space:nowrap;
   transition:transform .08s;
 }
 .m-map-link:active{transform:scale(.94)}
+/* 配車注記タグ (2026-07-23c ⑤): 至急=赤 / 前日・前々日=青 / 頃迄は時刻に付与 */
+.m-note-urg{display:inline-block;background:#FCE4E4;color:#C53030;font-size:10px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:5px;letter-spacing:.02em}
+.m-note-tag{display:inline-block;background:#EAF0FB;color:#2C5282;font-size:10px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:5px;letter-spacing:.02em}
+.m-note-rest{color:var(--muted);font-size:12.5px}
 
 /* === CASE INFO BOX (in flow screens) === */
 .m-info-box{
@@ -1378,12 +1389,14 @@ a{color:var(--info);text-decoration:none}
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">通常は現在時刻でOK。変更したい場合だけ修正してください。</div>
         <input type="datetime-local" id="m-confirm-time" step="60" style="width:100%;font-size:16px">
       </div>
-      <!-- 走行距離記録 (任意入力・キロ数のみ) -->
+      <!-- 走行距離記録 (任意入力・キロ数のみ)・2026-07-23c: 大きな枠+大数字で入れやすく -->
       <div class="m-photo-section" id="m-confirm-meter-section" style="display:none">
         <h3 id="m-confirm-meter-label">📏 メーター値 (km)</h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">任意入力。記録すると将来の売却判断や代車距離証跡に使えます。</div>
-        <input type="number" inputmode="numeric" min="0" step="1" id="m-confirm-meter" placeholder="例: 28450" style="width:100%;font-size:16px;text-align:right">
-        <div id="m-confirm-meter-delta" style="margin-top:6px;font-size:12px;text-align:right;color:var(--navy);display:none"></div>
+        <div class="m-meter-field">
+          <input type="number" inputmode="numeric" min="0" step="1" id="m-confirm-meter" placeholder="0" class="m-meter-input">
+          <span class="m-meter-unit">km</span>
+        </div>
+        <div id="m-confirm-meter-delta" style="margin-top:8px;font-size:13px;text-align:right;color:var(--navy);display:none"></div>
       </div>
       <div class="m-confirm-card">
         <div class="m-confirm-q" id="m-confirm-question">この内容で完了しますか？</div>
@@ -1996,7 +2009,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-23b';
+const APP_VERSION = '2026-07-23c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3387,64 +3400,71 @@ async function _genHandoverPDF(sheetEl, opt){
 }
 
 // 送信前 実PDF画像確認 (FAX誤送信防止の最重要チェックポイント)
-//   PDFに焼かれる実ビットマップをそのまま見せ、人間が取引先と同じ物を確認して確定
+//   PDFに焼かれる実ビットマップをそのまま見せ、人間が取引先と同じ物を確認して確定。
+//   ★2026-07-23c「1タップ卒業」: 自動インクチェック(_inkCheckSheet)が実施されて合格した時だけ
+//     ロック無し・確認1枚で送信できる。不合格(空白検出)/未検証(canvas読取不可等)は従来のフル確認+1.2秒ロックを残す。
+//     鉄則=この確認ステップ自体(実PDFを人間に見せる砦)は消さない。番号バナーも常に表示(番号誤りはインクチェックの対象外)。
 function confirmPdfBeforeSend(meta){
   return new Promise(resolve => {
     const img = window._lastFaxPdfImg || '';
-    $('m-modal-title').textContent = '🔍 送信前確認';
+    const ink = window._lastInkCheck || null;
+    const verified = !!(ink && ink.pass === true && !ink.skipped);   // 自動チェック実施+合格 = 1タップ許可
+    const inkFail  = !!(ink && ink.pass === false);                  // 空白検出 = 要フル確認
+    $('m-modal-title').textContent = verified ? '📠 送信の確認' : '🔍 送信前確認';
+    const banner = inkFail
+      ? `<div style="font-size:12.5px;line-height:1.7;background:#FEF2F2;border-left:3px solid #C53030;padding:8px 10px;border-radius:6px;margin-bottom:10px;color:#C53030">
+          <b>🚨 機械検証が「文字があるはずの領域の空白」を検出 (${esc((ink.zones||[]).filter(z=>z.blank).map(z=>z.zone).join(', '))})</b><br>
+          右側・下部の欠けを特に確認し、少しでも欠けていたら<b>必ず中止</b>してください。
+        </div>`
+      : verified
+        ? `<div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;background:#EAF3DE;border-radius:8px;padding:9px 12px;margin-bottom:10px;color:#3B6D11">
+            <svg class="m-svg" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5l4.5-5"/></svg>
+            自動チェック合格 — 見切れ・欠けはありません
+          </div>`
+        : `<div style="font-size:12.5px;line-height:1.7;color:var(--text);background:#FFF7E6;border-left:3px solid #E69E50;padding:8px 10px;border-radius:6px;margin-bottom:10px">
+            <b>⚠️ 取引先に届くのは下の内容そのものです。</b><br>右端の見切れ・項目欠け・ページを確認してから送信してください。
+          </div>`;
+    const numBg = verified ? '#F7FAF2' : '#FEF2F2', numBd = verified ? '#CFE0B4' : '#F3C0C0', numFg = verified ? '#2C4A34' : '#C53030';
     $('m-modal-msg').innerHTML = `
-      ${(window._lastInkCheck && window._lastInkCheck.pass === false) ? `
-      <div style="font-size:12.5px;line-height:1.7;background:#FEF2F2;border-left:3px solid #C53030;padding:8px 10px;border-radius:6px;margin-bottom:10px;color:#C53030">
-        <b>🚨 機械検証が「文字があるはずの領域の空白」を検出 (${esc((window._lastInkCheck.zones||[]).filter(z=>z.blank).map(z=>z.zone).join(', '))})</b><br>
-        右側・下部の欠けを特に確認し、少しでも欠けていたら<b>必ず中止</b>してください。
-      </div>` : ''}
-      <div style="font-size:12.5px;line-height:1.7;color:var(--text);background:#FFF7E6;border-left:3px solid #E69E50;padding:8px 10px;border-radius:6px;margin-bottom:10px">
-        <b>⚠️ 取引先に届くのは下の内容そのものです。</b><br>
-        右端の見切れ・項目欠け・ページを確認してから送信してください。
-      </div>
-      ${meta&&meta.faxDisplay?`<div style="background:#FEF2F2;border:1px solid #F3C0C0;border-radius:8px;padding:10px 12px;margin-bottom:10px;text-align:center;color:#C53030">
+      ${banner}
+      ${meta&&meta.faxDisplay?`<div style="background:${numBg};border:1px solid ${numBd};border-radius:8px;padding:10px 12px;margin-bottom:10px;text-align:center;color:${numFg}">
         <span style="font-size:11.5px;font-weight:700">この番号に送信します</span><br>
-        <span style="font-size:19px;font-weight:700;letter-spacing:.04em">${esc(meta.faxDisplay)}</span>
-        ${meta.partnerName?`<br><span style="font-size:13px;font-weight:700;color:#7A2E2E">${esc(meta.partnerName)}</span>`:''}
+        <span style="font-size:20px;font-weight:800;letter-spacing:.04em">${esc(meta.faxDisplay)}</span>
+        ${meta.partnerName?`<br><span style="font-size:13px;font-weight:700">${esc(meta.partnerName)}</span>`:''}
         ${meta.docLabel?`<span style="font-size:11.5px;color:var(--muted);font-weight:400"> ／ ${esc(meta.docLabel)}</span>`:''}
       </div>`:''}
       ${meta&&meta.to?`<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">📧 送信先アドレス: ${esc(meta.to)}</div>`:''}
       ${img
-        ? `<div style="border:1px solid #999;border-radius:6px;overflow:auto;max-height:56vh;background:#fff"><img src="${img}" style="width:100%;display:block" alt="送信PDFプレビュー"></div>`
+        ? `<div style="border:1px solid #CFCFC8;border-radius:6px;overflow:auto;max-height:52vh;background:#fff"><img src="${img}" style="width:100%;display:block" alt="送信PDFプレビュー"></div>`
         : `<div style="border:1px solid #C53030;border-radius:6px;padding:14px;background:#FEF2F2;color:#C53030;font-size:12.5px;text-align:center">プレビュー画像を生成できませんでした。<br>不安な場合は中止して、Dropboxに保存されたPDFを確認してください。</div>`}`;
     const acts = $('m-modal-actions'); acts.innerHTML = '';
-    // ボタンを縦積みにし、確認スクロール領域から離す (取引先送信前の最重要確認＝誤タップで即閉じ/即送信を防ぐ)
     acts.classList.add('m-actions-2row');
+    const okLabel = '✅ この内容で送信';
     const cancel = document.createElement('button');
     cancel.className = 'm-btn m-btn-outline'; cancel.textContent = '✕ 中止';
     cancel.onclick = () => { if(cancel.disabled) return; $('m-modal').classList.remove('active'); acts.classList.remove('m-actions-2row'); resolve(false); };
     const ok = document.createElement('button');
-    ok.className = 'm-btn m-btn-success';
-    const okLabel = '✅ この内容で送信';
+    ok.className = 'm-btn m-btn-success'; ok.textContent = okLabel;
     ok.onclick = () => { if(ok.disabled) return; $('m-modal').classList.remove('active'); acts.classList.remove('m-actions-2row'); resolve(true); };
-    acts.appendChild(ok); acts.appendChild(cancel);  // 送信を上・中止を下に (押し間違い時の被害が軽い順)
-    // ★誤タップ防止ガード (2026-06-19): 表示直後の一定時間は両ボタンをロックする。
-    //   PDF生成スピナー中の連打が確認表示の瞬間に貫通する「タップスルー」や、
-    //   下部シートがせり上がる瞬間の親指の置きタップで、確認が即閉じる/即送信される事故を防ぐ。
-    //   ※生成ロジック・送信処理・確認ステップ自体には一切触れていない (鉄則=この確認を必ず送信前に残す)。
-    const GUARD_MS = 1200;
-    cancel.disabled = true; ok.disabled = true;
-    cancel.style.opacity = '0.45'; ok.style.opacity = '0.45';
-    let remain = Math.ceil(GUARD_MS/1000);
-    ok.textContent = `${okLabel}（確認中… ${remain}）`;
-    const _tick = setInterval(() => {
-      remain--;
-      if(remain > 0) ok.textContent = `${okLabel}（確認中… ${remain}）`;
-    }, 1000);
-    setTimeout(() => {
-      clearInterval(_tick);
-      cancel.disabled = false; ok.disabled = false;
-      cancel.style.opacity = ''; ok.style.opacity = '';
-      ok.textContent = okLabel;
-    }, GUARD_MS);
+    acts.appendChild(ok); acts.appendChild(cancel);  // 送信を上・中止を下に
+    if(!verified){
+      // ★不合格/未検証時のみ 誤タップ防止ガード (2026-06-19): 表示直後1.2秒は両ボタンをロック+カウントダウン。
+      //   合格(自動チェックpass)時はこのロックを外し、確認1枚・1タップで送れる (2026-07-23c 卒業)。
+      const GUARD_MS = 1200;
+      cancel.disabled = true; ok.disabled = true;
+      cancel.style.opacity = '0.45'; ok.style.opacity = '0.45';
+      let remain = Math.ceil(GUARD_MS/1000);
+      ok.textContent = `${okLabel}（確認中… ${remain}）`;
+      const _tick = setInterval(() => { remain--; if(remain>0) ok.textContent = `${okLabel}（確認中… ${remain}）`; }, 1000);
+      setTimeout(() => {
+        clearInterval(_tick);
+        cancel.disabled = false; ok.disabled = false;
+        cancel.style.opacity = ''; ok.style.opacity = '';
+        ok.textContent = okLabel;
+      }, GUARD_MS);
+    }
     $('m-modal').classList.add('active');
-    // ★2026-05-21d 取引先送信前の人間最終確認＝重み付け強化 (送信動作には触れない・視覚以外の追加チャネル)
-    haptic('warn');
+    haptic(verified ? 'tap' : 'warn');
   });
 }
 
@@ -3866,18 +3886,29 @@ function _renderCaseCard(c, kind){
   const pendingBadge = _pp.length
     ? ` <span class="m-pending-badge" title="${_pp.join('/')}と時間調整中"><svg class="m-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>${_pp.join('/')}調整中</span>`
     : '';
+  // 配車予約の注記を整形 (2026-07-23c ⑤バラバラ解消): 頃/迄は時刻に付け、至急/前日/前々日はタグ、その他はメモ。「・迄」の断片を出さない
+  const _noteToks = (c.dispatchNote||'').trim() ? (c.dispatchNote||'').trim().split(/[\s・、,]+/).filter(Boolean) : [];
+  let _timeSuffix = '', _noteTags = ''; const _noteRest = [];
+  _noteToks.forEach(t=>{
+    if(t==='頃'||t==='迄') _timeSuffix = t;
+    else if(t==='至急') _noteTags += `<span class="m-note-urg">至急</span>`;
+    else if(t==='前日配車') _noteTags += `<span class="m-note-tag">前日</span>`;
+    else if(t==='前々日配車') _noteTags += `<span class="m-note-tag">前々日</span>`;
+    else _noteRest.push(t);
+  });
   const dispatchInfo = c.dispatchAt
-    ? `${fmtDateTime(c.dispatchAt)}${pendingBadge}${c.dispatchNote?` ・${esc(c.dispatchNote)}`:''}`
+    ? `${fmtDateTime(c.dispatchAt)}${_timeSuffix}${pendingBadge}${_noteTags}${_noteRest.length?` <span class="m-note-rest">・${esc(_noteRest.join(' '))}</span>`:''}`
     : `<span class="muted">未設定</span>${pendingBadge}`;
 
-  // 配車先1行: 名前 / 担当 / TEL
-  const toLine = [
-    c.dispatchToName ? `<b>${esc(c.dispatchToName)}</b>` : '',
+  // 配車先/回収先: 会社名(太字)を1行目、担当+TELを2行目に。スラッシュの宙ぶらり(「/ 様 /」)を解消
+  const _toName = c.dispatchToName ? `<b>${esc(c.dispatchToName)}</b>` : '';
+  const _toSub = [
     c.dispatchToContact ? `${esc(c.dispatchToContact)} 様` : '',
     tel(c.dispatchToContactTel || c.dispatchToTel)
-  ].filter(Boolean).join(' / ');
+  ].filter(Boolean).join('　');
+  const toLine = [_toName, _toSub].filter(Boolean).join('<br>');
 
-  // 運転者: 名前 / TEL
+  // 運転者: 名前 + TEL
   const driver = c.driverName || c.contractorName || '';
   const driverLine = [
     driver ? `<b>${esc(driver)}</b>` : '',
