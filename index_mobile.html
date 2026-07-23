@@ -40,7 +40,7 @@
   --card:#fff;
   --border:#D4DECA;
   --text:#1F2A1C;
-  --muted:#6B7A65;
+  --muted:#51604A;       /* 二次テキスト: 炎天下でも読める濃さに (旧#6B7A65は日向で不可視・2026-07-23e) */
   --shadow-sm:0 1px 2px rgba(30,58,43,.06);
   --shadow-md:0 2px 8px rgba(30,58,43,.08),0 1px 2px rgba(30,58,43,.04);
   --shadow-lg:0 8px 24px rgba(30,58,43,.12),0 2px 6px rgba(30,58,43,.06);
@@ -532,12 +532,16 @@ a{color:var(--info);text-decoration:none}
 .m-info-box .caseno{
   font-size:15px;font-weight:bold;color:var(--navy);margin-bottom:8px;letter-spacing:.02em;
 }
-.m-info-row{display:flex;padding:6px 0;font-size:14px;line-height:1.5}
-.m-info-row:not(:last-child){border-bottom:1px solid #F0F2EC}
-.m-info-row .lbl{color:var(--muted);font-size:12px;width:80px;flex-shrink:0;padding-top:1px}
-.m-info-row .val{flex:1;word-break:break-word}
+.m-info-row{display:flex;padding:9px 0;font-size:15px;line-height:1.55}
+.m-info-row:not(:last-child){border-bottom:1px solid #E6EBDF}
+.m-info-row .lbl{color:#4A5744;font-size:12.5px;font-weight:700;width:72px;flex-shrink:0;padding-top:2px;letter-spacing:.02em}
+.m-info-row .val{flex:1;word-break:break-word;color:var(--text);font-size:15px}
 .m-info-row .val.strong{font-weight:bold;color:var(--navy)}
-.m-info-row .val.empty{color:#BBB;font-style:italic}
+.m-info-row .val.empty{color:#AEAEA4;font-style:italic}
+/* 🌞 現場(炎天下)で「どこへ」を最優先: 行き先ブロックを強調 */
+.m-info-row.m-info-dest{background:#F4F8EE;border-radius:8px;padding:9px 11px;margin:2px 0}
+.m-info-row.m-info-dest .lbl{color:#3B6D11}
+.m-info-row.m-info-dest .val{font-size:16px}
 
 /* === PHOTO CAPTURE === */
 /* ★2026-05-22: .m-detail-section は従来CSS未定義で prep画面/案件詳細が "下書き" 状態
@@ -2011,7 +2015,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-23d';
+const APP_VERSION = '2026-07-23e';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4069,16 +4073,17 @@ function renderInfoBox(c, hostId, kind){
     ? `<div class="m-info-row" style="background:#FFF9E6;border-radius:6px;border:1px solid #F0D58A"><span class="lbl" style="color:#7A4500">${ic('<path d="M7 10h3v-3l-3.5-3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8l3.5 3.5"/>')} 点検期日</span><span class="val" style="color:#7A4500"><b>${esc(_va.kind)}</b> ${_va.daysLeft<0?`<span style="color:#A32D2D;font-weight:bold">${-_va.daysLeft}日超過</span>`:`残${_va.daysLeft}日`} <span style="color:var(--muted)">(${esc(fmtDateFull(_va.date))})</span><br><b>→ 回収後そのまま工場へ</b></span></div>`
     : '';
 
+  // 🌞 現場(炎天下)優先の並び: どこへ(行き先)→住所/地図→いつ→運転者(誰に電話) を上に。保険会社/担当/メモは下 (2026-07-23e)
   $(hostId).innerHTML = `
     <div class="caseno">${ic('<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>',15)} ${esc(c.caseNo||'')}</div>
     ${_isRec?_mPlateHero(c):''}
-    <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
-    ${_staffRow}
+    <div class="m-info-row m-info-dest"><span class="lbl">${_destLabel}</span><span class="val">${_destName?`<b>${esc(_destName)}</b>`:'<span class="empty">―</span>'}${_destContact?`<br>担当: ${esc(_destContact)} 様`:''}${_destTel?`<br>${tel(_destTel)}`:''}</span></div>
+    ${_destAddr?`<div class="m-info-row"><span class="lbl">住所</span><span class="val">${esc(_destAddr)} ${_destMapBtn}</span></div>`:''}
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val strong">${kind==='recovery'?(fmtDateFull(c.recoveryCalledAt)||'<span class="empty">未設定</span>'):dispatchInfo}</span></div>
     ${_vaRow}
     <div class="m-info-row"><span class="lbl">運転者</span><span class="val">${driver?`<b>${esc(driver)}</b>`:'<span class="empty">―</span>'} ${c.driverTel?tel(c.driverTel):''}</span></div>
-    <div class="m-info-row"><span class="lbl">${_destLabel}</span><span class="val">${_destName?`<b>${esc(_destName)}</b>`:'<span class="empty">―</span>'}${_destContact?`<br>担当: ${esc(_destContact)} 様`:''}${_destTel?` ${tel(_destTel)}`:''}</span></div>
-    ${_destAddr?`<div class="m-info-row"><span class="lbl">住所</span><span class="val">${esc(_destAddr)} ${_destMapBtn}</span></div>`:''}
+    <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
+    ${_staffRow}
     <div class="m-info-row m-memo-edit-row" onclick="openMemoEdit('${c.id}')" style="cursor:pointer" title="タップで社内メモを編集"><span class="lbl">社内メモ</span><span class="val" style="color:#5A3F00;background:#FFF9E6;padding:6px 8px;border-radius:6px">${c.internalMemo?esc(c.internalMemo):'<span style="color:var(--muted);font-style:italic">＋ タップで追加</span>'} <span style="float:right;color:var(--muted)">${ic('<path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/>')}</span></span></div>
     ${c.negotiationLog?`<div class="m-info-row"><span class="lbl">交渉記録</span><span class="val" style="color:#3D2459;background:#FAF5FE;padding:6px 8px;border-radius:6px;white-space:pre-wrap;line-height:1.6">${esc(c.negotiationLog)}</span></div>`:''}
   `;
