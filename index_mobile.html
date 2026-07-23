@@ -485,11 +485,13 @@ a{color:var(--info);text-decoration:none}
 }
 .m-card-row.m-card-memo .lbl{background:transparent;min-width:auto;padding:0}
 .m-card-row.m-card-memo .val{color:#5A3F00;font-size:12.5px}
-/* 🚗 車両ナンバーを主役に (2026-07-23 回収の視認性): 現場で実車と一目で照合できる大ナンバー */
-.m-plate-hero{background:#FCF2F2;border:1px solid #F2D3D3;border-radius:10px;padding:8px 12px 9px;text-align:center;margin:8px 0}
-.m-plate-hero-cap{font-size:10px;color:#A32D2D;font-weight:700;letter-spacing:.08em;margin-bottom:1px}
-.m-plate-hero-no{font-size:25px;font-weight:800;color:#1E2A36;letter-spacing:.02em;line-height:1.15}
-.m-plate-hero-nm{font-size:12px;color:#666;margin-top:2px}
+/* 🚗 車両ナンバーを主役に (2026-07-23 回収の視認性): 現場で実車と一目で照合。車種名とナンバーは同等の大きさ+カラー表示 */
+.m-plate-hero{background:#FCF2F2;border:1px solid #F2D3D3;border-radius:10px;padding:9px 12px 10px;text-align:center;margin:8px 0}
+.m-plate-hero-nm{font-size:22px;font-weight:800;color:#1E2A36;line-height:1.2}
+.m-plate-hero-nm .cls{font-size:14px;color:#777;font-weight:700}
+.m-plate-hero-color{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:#555;font-weight:700;margin:3px 0 4px}
+.m-color-dot{width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.22);display:inline-block;flex-shrink:0}
+.m-plate-hero-no{font-size:22px;font-weight:800;color:#1E2A36;letter-spacing:.02em;line-height:1.2}
 .m-plate-hero-none{font-size:15px;color:#B9B9B0;font-weight:700}
 .m-tel-link{
   display:inline-flex;align-items:center;gap:3px;
@@ -1994,7 +1996,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-23a';
+const APP_VERSION = '2026-07-23b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3798,18 +3800,36 @@ function renderRecoveryCard(c){
 // 共通カードレンダラ — ユーザー指定の表示項目:
 //   受付No / 配車予約情報 / 運転者TEL / 配車先名・担当・TEL /
 //   配車先住所(Google Maps) / 社内メモ
-// 🚗 車両ナンバーの大表示ブロック (2026-07-23): 回収カード/回収フローで実車照合しやすく。他社借にも対応。
+// 車名から色見本のhex (現場で色チップを一目で。日本語色名→代表色)
+function _colorHex(name){
+  const n = String(name||'');
+  const map = [['ホワイト|白|パール','#FBFBF8'],['ブラック|黒','#23252A'],['シルバー|銀','#C4C7CC'],['グレー|ｸﾞﾚｰ|灰','#8A8D93'],['ネイビー|紺','#26406B'],['ブルー|青|水色','#2F6BB3'],['レッド|赤','#C53030'],['グリーン|緑','#3B8C4F'],['イエロー|黄','#E6B800'],['オレンジ|橙','#E07B1E'],['ブラウン|茶|カッパー|銅','#7A5230'],['ベージュ|ゴールド|金|シャンパン','#CBB584'],['ピンク|桃','#E27FA6'],['パープル|紫','#7A5AA8']];
+  for(const [k,v] of map){ if(new RegExp(k).test(n)) return v; }
+  return '#9AA0A6';
+}
+// 🚗 車両ナンバーの大表示ブロック (2026-07-23): 回収カード/回収フローで実車照合しやすく。車種名=ナンバーと同等の大きさ+カラー。他社借対応。
 function _mPlateHero(c){
   const isB = !!c.isBorrowed;
+  let name = '', cls = '', color = '';
+  if(isB){
+    name = (c.borrowedVehicleInfo||'').trim();
+  } else {
+    const v = (c.vehicleId && DATA && DATA.vehicles) ? DATA.vehicles.find(x=>x.id===c.vehicleId) : null;
+    name  = ((v&&v.name) || c.vehicleName || '').trim();
+    cls   = ((v&&v.vehicleClass) || c.vehicleClass || '').trim();
+    color = ((v&&v.color) || '').trim();
+  }
   const plate = isB ? (c.borrowedPlate||'').trim()
     : [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
-  const nm = isB ? (c.borrowedVehicleInfo||'').trim()
-    : [c.vehicleName||'', c.vehicleClass?`(${c.vehicleClass})`:''].filter(Boolean).join(' ');
-  if(!plate && !nm) return '';
+  if(!plate && !name) return '';
+  const nameLine = name
+    ? `<div class="m-plate-hero-nm">${esc(name)}${cls?` <span class="cls">(${esc(cls)})</span>`:''}</div>` : '';
+  const colorLine = color
+    ? `<div class="m-plate-hero-color"><span class="m-color-dot" style="background:${_colorHex(color)}"></span>${esc(color)}</div>` : '';
   return `<div class="m-plate-hero">
-    <div class="m-plate-hero-cap">車両ナンバー${isB?' ・他社借':''}</div>
+    ${nameLine}
+    ${colorLine}
     <div class="m-plate-hero-no">${plate?esc(plate):'<span class="m-plate-hero-none">ナンバー未設定</span>'}</div>
-    ${nm?`<div class="m-plate-hero-nm">${esc(nm)}</div>`:''}
   </div>`;
 }
 function _renderCaseCard(c, kind){
