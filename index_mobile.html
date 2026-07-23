@@ -2033,7 +2033,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-24';
+const APP_VERSION = '2026-07-24a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4257,14 +4257,31 @@ function _availableVehicles(){
   const inUse = _inUseVehicleIds();
   return vehicles.filter(v => (v.status === '稼働可' || !v.status) && !inUse.has(v.id));
 }
-// 🎨 クラスごとの色 (2026-07-24 現場でクラスを一目で見分ける): 既知コードは固定の色相・未知はコードのハッシュ。HSLでチップ/バッジの淡色bg+濃色fg+枠を生成。
-const _CLS_HUE = {K:96,KEV:168,VK:78,TK:60,S:212,SH:190,SV:230,SVH:200,BVH:255,MV:28,MVH:14,MH:45,WS:280,WSH:308,WA:295,WAH:322,P1:358,P2:350,P3:270,PM:8,PMH:262};
+// 🎨 クラスの色 = PC版(LIMEOne)の CLASS_BADGE_MAP / badge-cls-* と完全同一 (2026-07-24 決められた色に統一)。
+//   HV系(sh/svh/bvh/mvh/mh/wsh/wah/pmh)は PC同様「ベース色×青」の2色斜め分割グラデ。未知はマスタcolor→gray。
+const OLD_TO_NEW_CLASS = { 'EA':'SH','ES':'SH','EB':'BVH','EC':'MH','EWS':'WSH','EWA':'WAH','WC':'PMH','WB':'PM','F':'MV','G':'MV','BV':'SV','VA':'VK','DB':'VK','DD':'VK','P':'P1' };
+const CLASS_BADGE_MAP = { K:'yellow',VK:'gray',TK:'black',KEV:'cyan',S:'red',SH:'sh',SV:'orange',SVH:'svh',BVH:'bvh',MV:'orange',MVH:'mvh',MH:'mh',WS:'green',WSH:'wsh',WA:'green',WAH:'wah',P:'navy',P1:'blue',P2:'navy',P3:'purple',PM:'black',PMH:'pmh' };
+const _CLS_SOLID = {
+  yellow:{bg:'#FFF4B8',fg:'#8A6A00',bd:'#E6C54C'}, red:{bg:'#FFD9D9',fg:'#B42525',bd:'#E58080'},
+  blue:{bg:'#D6E8FF',fg:'#0E4DA4',bd:'#7FAFE6'}, green:{bg:'#D9F1D9',fg:'#1F6B1F',bd:'#7FB97F'},
+  purple:{bg:'#E4D5F5',fg:'#4B2A7A',bd:'#A889C7'}, orange:{bg:'#FFE0C7',fg:'#A05B1C',bd:'#E69A5A'},
+  pink:{bg:'#FFE0EE',fg:'#A8256F',bd:'#E68AB2'}, navy:{bg:'#CBD5E8',fg:'#1F2F5E',bd:'#7286B0'},
+  black:{bg:'#3A3A3A',fg:'#FFFFFF',bd:'#000000'}, gray:{bg:'#E7E6E6',fg:'#444444',bd:'#B5B5B5'},
+  cyan:{bg:'#C7EAEA',fg:'#0F5555',bd:'#5EB0B0'}
+};
+const _CLS_HV = { sh:{c:['#FFD9D9','#D6E8FF'],base:'red'}, svh:{c:['#FFE0C7','#D6E8FF'],base:'orange'}, bvh:{c:['#FFE0C7','#D6E8FF'],base:'orange'}, mvh:{c:['#FFE0C7','#D6E8FF'],base:'orange'}, mh:{c:['#FFE0EE','#D6E8FF'],base:'pink'}, wsh:{c:['#D9F1D9','#D6E8FF'],base:'green'}, wah:{c:['#D9F1D9','#D6E8FF'],base:'green'}, pmh:{c:['#3A3A3A','#D6E8FF'],base:'black'} };
+function _clsColorName(code){
+  const c = String(code||'').toUpperCase().trim(); if(!c) return 'gray';
+  const cc = OLD_TO_NEW_CLASS[c] || c;
+  if(CLASS_BADGE_MAP[cc]) return CLASS_BADGE_MAP[cc];
+  const m = ((typeof DATA!=='undefined' && DATA && DATA.vehicleClasses)||[]).find(v=>(v.code||'').toUpperCase()===cc);
+  if(m && m.color){ const col=String(m.color).toLowerCase().trim(); if(_CLS_SOLID[col]||_CLS_HV[col]) return col; }
+  return 'gray';
+}
 function _clsColor(code){
-  const c = String(code||'').toUpperCase().trim();
-  if(!c) return { bg:'#EEF0EC', fg:'#5A6B52', bd:'#D6DDCB' };
-  let h = _CLS_HUE[c];
-  if(h==null){ h=0; for(let i=0;i<c.length;i++) h=(h*31+c.charCodeAt(i))%360; }
-  return { bg:`hsl(${h},52%,90%)`, fg:`hsl(${h},58%,27%)`, bd:`hsl(${h},38%,73%)` };
+  const name = _clsColorName(code);
+  if(_CLS_HV[name]){ const h=_CLS_HV[name], s=_CLS_SOLID[h.base]; return { bg:`linear-gradient(135deg,${h.c[0]} 0%,${h.c[0]} 50%,${h.c[1]} 50%,${h.c[1]} 100%)`, fg:s.fg, bd:s.bd }; }
+  return _CLS_SOLID[name] || _CLS_SOLID.gray;
 }
 let _stockClassFilter = '';
 function openStockSearch(){
