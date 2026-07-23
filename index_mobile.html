@@ -200,6 +200,16 @@ a{color:var(--info);text-decoration:none}
 .m-confirm-card .m-confirm-actions .m-btn small{
   display:block;font-weight:normal;font-size:11px;opacity:.92;margin-top:2px;
 }
+/* 完了確認 現場UI (2026-07-24): どの車か帯 / 走行距離ミラー / キーボード時は完了カード退避 */
+.m-confirm-ident{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;background:#fff;border:1px solid var(--border);border-left:4px solid var(--navy);border-radius:10px;padding:9px 13px;margin-bottom:12px}
+.m-confirm-ident .ci-no{font-size:13px;font-weight:700;color:var(--navy)}
+.m-confirm-ident .ci-plate{font-size:18px;font-weight:800;color:#1E2A36;letter-spacing:.02em}
+.m-confirm-ident .ci-dest{font-size:13px;color:#4A5744;font-weight:700}
+.m-meter-done{flex-shrink:0;background:#EAF3DE;color:#3B6D11;border:1px solid #C0DD97;border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:700;min-height:36px}
+.m-meter-done:active{background:#DCEBC8}
+.m-confirm-meter-echo{text-align:center;font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;line-height:1.4}
+.m-confirm-meter-echo .empty{color:#C53030}
+body.kb-open .m-confirm-card{display:none}
 /* 新規案件モーダル: 2段構成 (上段=サブ操作・下段=主アクション) */
 .m-modal-actions.m-actions-2row{flex-direction:column;gap:8px;margin-top:18px}
 .m-actions-2row .m-actions-row-top{display:flex;gap:8px}
@@ -1371,8 +1381,9 @@ a{color:var(--info);text-decoration:none}
       <div class="m-flow-prog" id="m-flow-prog-photo"></div>
       <div class="m-info-box" id="m-photo-info"></div>
       <div id="m-photo-host"></div>
-      <!-- capture属性を外す → iOS/Androidが「カメラ撮影 / フォトライブラリ / ファイル」の選択を出す -->
-      <input type="file" class="m-camera-input" id="m-camera-input" accept="image/*" onchange="onCameraCapture(event)">
+      <!-- 2026-07-24: 撮影ボタン=カメラ直起動 (capture=environment=背面カメラ)。ライブラリ選択は別入力(#m-lib-input・capture無し)で保険的に残す -->
+      <input type="file" class="m-camera-input" id="m-camera-input" accept="image/*" capture="environment" onchange="onCameraCapture(event)">
+      <input type="file" class="m-camera-input" id="m-lib-input" accept="image/*" onchange="onCameraCapture(event)">
       <div class="m-flow-actions">
         <div class="m-flow-actions-row">
           <button class="m-btn m-btn-outline" onclick="goBack()">キャンセル</button>
@@ -1382,30 +1393,37 @@ a{color:var(--info);text-decoration:none}
     </section>
 
     <!-- (6) Flow: Completion confirmation -->
+    <!-- 2026-07-24: 走行距離を上部にホイスト=無スクロールで見える(誤完了防止)。並び=どの車→走行距離→時刻→案件情報→写真→sticky完了。IDは全維持 -->
     <section id="m-screen-flow-confirm" class="m-screen">
       <div class="m-flow-prog" id="m-flow-prog-confirm"></div>
-      <div class="m-info-box" id="m-confirm-info"></div>
-      <div class="m-photo-section">
-        <h3>📷 チェックシート</h3>
-        <div id="m-confirm-photo"></div>
-      </div>
-      <!-- 配車完了時刻の編集欄 (配車フローのみ表示・回収では非表示) -->
-      <div class="m-photo-section" id="m-confirm-time-section" style="display:none">
-        <h3 id="m-confirm-time-label">🕐 配車完了日時</h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">通常は現在時刻でOK。変更したい場合だけ修正してください。</div>
-        <input type="datetime-local" id="m-confirm-time" step="60" style="width:100%;font-size:16px">
-      </div>
-      <!-- 走行距離記録 (任意入力・キロ数のみ)・2026-07-23c: 大きな枠+大数字で入れやすく -->
+      <!-- どの車か (受付No/ナンバー/行き先) を最上部に常時 -->
+      <div class="m-confirm-ident" id="m-confirm-ident"></div>
+      <!-- 📏走行距離: 上部にホイスト=無スクロールで見える -->
       <div class="m-photo-section" id="m-confirm-meter-section" style="display:none">
         <h3 id="m-confirm-meter-label">📏 メーター値 (km)</h3>
         <div class="m-meter-field">
           <input type="number" inputmode="numeric" min="0" step="1" id="m-confirm-meter" placeholder="0" class="m-meter-input">
           <span class="m-meter-unit">km</span>
+          <button type="button" class="m-meter-done" id="m-meter-done-btn" onclick="document.getElementById('m-confirm-meter').blur()">✓ 閉じる</button>
         </div>
         <div id="m-confirm-meter-delta" style="margin-top:8px;font-size:13px;text-align:right;color:var(--navy);display:none"></div>
       </div>
+      <!-- 完了日時/回収日 (自動補完済・低リスク) -->
+      <div class="m-photo-section" id="m-confirm-time-section" style="display:none">
+        <h3 id="m-confirm-time-label">🕐 配車完了日時</h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">通常は現在時刻でOK。変更したい場合だけ修正してください。</div>
+        <input type="datetime-local" id="m-confirm-time" step="60" style="width:100%;font-size:16px">
+      </div>
+      <!-- 案件情報フル (参照) -->
+      <div class="m-info-box" id="m-confirm-info"></div>
+      <!-- チェックシート写真 (参照) -->
+      <div class="m-photo-section">
+        <h3>📷 チェックシート</h3>
+        <div id="m-confirm-photo"></div>
+      </div>
       <div class="m-confirm-card">
         <div class="m-confirm-q" id="m-confirm-question">この内容で完了しますか？</div>
+        <div class="m-confirm-meter-echo" id="m-confirm-meter-echo"></div>
         <div class="m-confirm-actions">
           <button class="m-btn m-btn-outline" onclick="goBack()">キャンセル</button>
           <button class="m-btn m-btn-success" id="m-confirm-do-btn" onclick="onConfirmDo()">完了する</button>
@@ -2015,7 +2033,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-23e';
+const APP_VERSION = '2026-07-24';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3950,8 +3968,9 @@ function _renderCaseCard(c, kind){
   const _dName = c.isBorrowed ? (c.borrowedVehicleInfo||'').trim() : (((_dv&&_dv.name) || c.vehicleName || '').trim());
   const _dPlate = c.isBorrowed ? (c.borrowedPlate||'').trim() : [c.plateArea,c.plateNo,c.plateKana,c.plateTail].filter(Boolean).join(' ');
   const _dClsName = (_dCls && DATA && DATA.vehicleClasses) ? ((DATA.vehicleClasses.find(x=>x.code===_dCls)||{}).name||'') : '';
+  const _dClsCol = _dCls ? _clsColor(_dCls) : null;
   const _dVehRow = (_dCls || _dName || _dPlate)
-    ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${_dCls?`<span class="m-cls-badge">${esc(_dCls)}</span> `:''}${_dName?esc(_dName):(_dClsName?`<span style="color:var(--muted)">${esc(_dClsName)}</span>`:'')}${_dPlate?` <b>${esc(_dPlate)}</b>`:''}</span></div>`
+    ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${_dCls?`<span class="m-cls-badge" style="background:${_dClsCol.bg};color:${_dClsCol.fg}">${esc(_dCls)}</span> `:''}${_dName?esc(_dName):(_dClsName?`<span style="color:var(--muted)">${esc(_dClsName)}</span>`:'')}${_dPlate?` <b>${esc(_dPlate)}</b>`:''}</span></div>`
     : '';
   return `
     <div class="m-card flow-${kind} ${isDone?'done':''}" onclick="enter${kind==='dispatch'?'Dispatch':'Recovery'}Flow('${c.id}')">
@@ -4238,6 +4257,15 @@ function _availableVehicles(){
   const inUse = _inUseVehicleIds();
   return vehicles.filter(v => (v.status === '稼働可' || !v.status) && !inUse.has(v.id));
 }
+// 🎨 クラスごとの色 (2026-07-24 現場でクラスを一目で見分ける): 既知コードは固定の色相・未知はコードのハッシュ。HSLでチップ/バッジの淡色bg+濃色fg+枠を生成。
+const _CLS_HUE = {K:96,KEV:168,VK:78,TK:60,S:212,SH:190,SV:230,SVH:200,BVH:255,MV:28,MVH:14,MH:45,WS:280,WSH:308,WA:295,WAH:322,P1:358,P2:350,P3:270,PM:8,PMH:262};
+function _clsColor(code){
+  const c = String(code||'').toUpperCase().trim();
+  if(!c) return { bg:'#EEF0EC', fg:'#5A6B52', bd:'#D6DDCB' };
+  let h = _CLS_HUE[c];
+  if(h==null){ h=0; for(let i=0;i<c.length;i++) h=(h*31+c.charCodeAt(i))%360; }
+  return { bg:`hsl(${h},52%,90%)`, fg:`hsl(${h},58%,27%)`, bd:`hsl(${h},38%,73%)` };
+}
 let _stockClassFilter = '';
 function openStockSearch(){
   _stockClassFilter = '';
@@ -4259,7 +4287,9 @@ function renderStockList(){
   const classes = Object.keys(byClass).sort((a,b) => a.localeCompare(b));
   $('m-stock-chips').innerHTML =
     `<button class="m-chip ${_stockClassFilter===''?'on':''}" onclick="setStockClass('')">すべて ${all.length}</button>` +
-    classes.map(c => `<button class="m-chip ${_stockClassFilter===c?'on':''}" onclick="setStockClass('${esc(c)}')">${esc(c)} ${byClass[c]}</button>`).join('');
+    classes.map(c => { const col=_clsColor(c); const sel=_stockClassFilter===c;
+      return `<button class="m-chip" style="background:${col.bg};color:${col.fg};border-color:${col.bd}${sel?`;box-shadow:inset 0 0 0 2px ${col.fg};font-weight:800`:''}" onclick="setStockClass('${esc(c)}')">${esc(c)} ${byClass[c]}</button>`;
+    }).join('');
   // 絞り込み: クラス → テキスト
   let list = all;
   if(_stockClassFilter) list = list.filter(v => cls(v) === _stockClassFilter);
@@ -4280,12 +4310,13 @@ function renderStockList(){
   $('m-stock-list').innerHTML = list.map(v => {
     const pl = v.plate || {};
     const plate = [pl.area, pl.no, pl.kana, pl.tail].filter(Boolean).join(' ');
-    const meta = [plate, cls(v), v.dailyRate ? `¥${fmtNum(v.dailyRate)}/日` : ''].filter(Boolean).join(' ・ ');
+    const k = cls(v); const col = _clsColor(k);
+    const meta = [plate, v.dailyRate ? `¥${fmtNum(v.dailyRate)}/日` : ''].filter(Boolean).join(' ・ ');
     return `
-      <div class="m-vehicle-item">
-        <div class="v-ico">🚙</div>
+      <div class="m-vehicle-item" style="border-left:4px solid ${col.fg}">
+        <div class="v-ico" style="background:${col.bg}">🚙</div>
         <div class="v-body">
-          <div class="v-name">${esc(v.name || v.maker || '(車種名なし)')}</div>
+          <div class="v-name">${esc(v.name || v.maker || '(車種名なし)')} ${k?`<span class="m-cls-badge" style="background:${col.bg};color:${col.fg}">${esc(k)}</span>`:''}</div>
           <div class="v-meta">${esc(meta)}</div>
         </div>
       </div>`;
@@ -4606,9 +4637,10 @@ async function renderFlowPhotoScreen(){
     `;
   } else {
     currentHtml = `
-      <div class="m-photo-prompt">${prompt}<br><small style="color:var(--muted)">撮影 または 端末の画像から選択 / JPEG ≤500KB に自動圧縮</small></div>
-      <div class="m-photo-empty">🖼️ まだ選択されていません</div>
-      <button class="m-btn m-btn-primary m-btn-block" style="margin-top:10px" onclick="triggerCamera()">📷 撮影 / 🖼️ 画像を選ぶ</button>
+      <div class="m-photo-prompt">${prompt}<br><small style="color:var(--muted)">「📷 撮影」でカメラが起動します / JPEG ≤500KB に自動圧縮</small></div>
+      <div class="m-photo-empty">🖼️ まだ撮影されていません</div>
+      <button class="m-btn m-btn-primary m-btn-block" style="margin-top:10px" onclick="triggerCamera()"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M5 7h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2"/><circle cx="12" cy="13" r="3"/></svg>撮影する（カメラ起動）</button>
+      <button class="m-btn m-btn-ghost m-btn-block" style="margin-top:6px;font-size:13px;min-height:40px" onclick="triggerLib()">🖼️ 端末の画像から選ぶ</button>
     `;
   }
 
@@ -4624,7 +4656,8 @@ async function renderFlowPhotoScreen(){
   $('m-photo-next-btn').disabled = !_flow.photoBlob;
 }
 
-function triggerCamera(){ $('m-camera-input').click(); }
+function triggerCamera(){ $('m-camera-input').value=''; $('m-camera-input').click(); }   // カメラ直起動 (capture=environment)
+function triggerLib(){ $('m-lib-input').value=''; $('m-lib-input').click(); }              // 端末の画像から選ぶ (保険)
 
 async function onCameraCapture(ev){
   const file = ev.target.files && ev.target.files[0];
@@ -4695,9 +4728,17 @@ async function onPhotoNext(){
 async function renderFlowConfirmScreen(){
   if(!_flow) return;
   const c = findCaseById(_flow.caseId); if(!c) return;
+  document.body.classList.remove('kb-open');   // 前画面でメーターfocus中に離脱した場合の残留を解除 (完了カードが消えたままを防ぐ)
   renderInfoBox(c, 'm-confirm-info', _flow.kind);
   renderFlowProgress('m-flow-prog-confirm', 1);
   $('m-header-title').textContent = _flow.kind === 'recovery' ? '回収完了確認' : '配車完了確認';
+  // どの車か 帯 (最上部・常時): 受付No + ナンバー大 + 行き先。走行距離を入れる相手を取り違えない
+  const identEl = $('m-confirm-ident');
+  if(identEl){
+    const _idPlate = c.isBorrowed ? (c.borrowedPlate||'') : [c.plateArea,c.plateNo,c.plateKana,c.plateTail].filter(Boolean).join(' ');
+    const _idDest = c.dispatchToName || '';
+    identEl.innerHTML = `<span class="ci-no">${esc(c.caseNo||'')}</span>${_idPlate?`<span class="ci-plate">${esc(_idPlate)}</span>`:''}${_idDest?`<span class="ci-dest">${_flow.kind==='recovery'?'←':'→'} ${esc(_idDest)}</span>`:''}`;
+  }
 
   // 写真表示
   if(_flow.kind === 'recovery'){
@@ -4748,52 +4789,62 @@ async function renderFlowConfirmScreen(){
     timeInput.removeAttribute('step');
     timeInput.value = c.recoveryCalledAt || todayISO();
   }
-  // 走行距離入力欄 (配車=貸出メーター / 回収=返却メーター+利用走行距離自動計算)
+  // 走行距離入力欄 (配車=貸出メーター / 回収=返却メーター+利用走行距離)。2026-07-24: 上部ホイスト+完了ボタン近傍ミラー+キーボード退避
   const meterSection = $('m-confirm-meter-section');
   const meterLabel = $('m-confirm-meter-label');
   const meterInput = $('m-confirm-meter');
   const meterDelta = $('m-confirm-meter-delta');
+  const meterEcho = $('m-confirm-meter-echo');
+  const _meterIcon = '<svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><rect x="3" y="8" width="18" height="8" rx="1"/><path d="M7 8v3M11 8v3M15 8v3M19 8v3"/></svg>';
   if(meterSection && meterInput){
     meterSection.style.display = '';
-    if(_flow.kind === 'dispatch'){
-      meterLabel.innerHTML = '<svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><rect x="3" y="8" width="18" height="8" rx="1"/><path d="M7 8v3M11 8v3M15 8v3M19 8v3"/></svg>貸出メーター (km)';
-      meterInput.value = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? c.meterAtDispatch : '';
-      meterDelta.style.display = 'none';
-      meterInput.oninput = null;
-    } else {
-      meterLabel.innerHTML = '<svg class="m-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><rect x="3" y="8" width="18" height="8" rx="1"/><path d="M7 8v3M11 8v3M15 8v3M19 8v3"/></svg>返却メーター (km)';
-      meterInput.value = (c.meterAtReturn != null && c.meterAtReturn !== '') ? c.meterAtReturn : '';
-      meterDelta.style.display = '';
-      const baseMeter = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? Number(c.meterAtDispatch) : null;
-      const updateDelta = () => {
+    const isRec = _flow.kind === 'recovery';
+    meterLabel.innerHTML = _meterIcon + (isRec ? '返却メーター (km)' : '貸出メーター (km)');
+    meterInput.value = isRec
+      ? ((c.meterAtReturn != null && c.meterAtReturn !== '') ? c.meterAtReturn : '')
+      : ((c.meterAtDispatch != null && c.meterAtDispatch !== '') ? c.meterAtDispatch : '');
+    meterDelta.style.display = isRec ? '' : 'none';
+    const baseMeter = (c.meterAtDispatch != null && c.meterAtDispatch !== '') ? Number(c.meterAtDispatch) : null;
+    const updateMeterUI = () => {
+      const raw = (meterInput.value||'').trim();
+      // 完了ボタン近傍のミラー: ボタンが画面下でも 走行距離/未入力 が必ず視界に入る
+      if(meterEcho){
+        if(raw === '') meterEcho.innerHTML = `<span class="empty">🛣️ ${isRec?'返却':'貸出'}メーター: 未入力</span>`;
+        else meterEcho.innerHTML = `🛣️ 記録する走行距離: <b>${Number(raw).toLocaleString('ja-JP')}</b> km`;
+      }
+      // 回収時のみ 利用走行距離(差分)
+      if(isRec){
         const cur = parseInt(meterInput.value||'', 10);
-        if(baseMeter == null){
-          meterDelta.textContent = isFinite(cur) ? '貸出メーター未記録のため利用走行距離は計算できません' : '';
-          meterDelta.style.color = '#888';
-          return;
-        }
-        if(!isFinite(cur)){
-          meterDelta.textContent = `貸出時メーター: ${baseMeter.toLocaleString('ja-JP')} km`;
-          meterDelta.style.color = '#888';
-          return;
-        }
-        const d = cur - baseMeter;
-        meterDelta.textContent = `利用走行距離: ${d.toLocaleString('ja-JP')} km (貸出時 ${baseMeter.toLocaleString('ja-JP')} km)`;
-        meterDelta.style.color = d < 0 ? '#C53030' : 'var(--navy)';
-      };
-      meterInput.oninput = updateDelta;
-      updateDelta();
-    }
+        if(baseMeter == null){ meterDelta.textContent = isFinite(cur) ? '貸出メーター未記録のため利用走行距離は計算できません' : ''; meterDelta.style.color = '#888'; }
+        else if(!isFinite(cur)){ meterDelta.textContent = `貸出時メーター: ${baseMeter.toLocaleString('ja-JP')} km`; meterDelta.style.color = '#888'; }
+        else { const d = cur - baseMeter; meterDelta.textContent = `利用走行距離: ${d.toLocaleString('ja-JP')} km (貸出時 ${baseMeter.toLocaleString('ja-JP')} km)`; meterDelta.style.color = d < 0 ? '#C53030' : 'var(--navy)'; }
+      }
+    };
+    meterInput.oninput = updateMeterUI;
+    // 数値キーボード表示中は完了カード(=完了ボタン)を退避 → 打鍵中の誤完了を封鎖。入力欄はキーボード上へ持ち上げる。
+    meterInput.onfocus = () => { document.body.classList.add('kb-open'); try{ meterInput.scrollIntoView({block:'center'}); }catch(e){} };
+    meterInput.onblur  = () => { document.body.classList.remove('kb-open'); };
+    updateMeterUI();
   }
+  _emptyMeterAck = false;   // 画面表示ごとに 空メーター確認 をやり直す
 }
 
 // 完了直後undo & 多重実行ガード用 (直前1操作のみ退避)
 let _confirmBusy = false;
 let _undoComplete = null;
+let _emptyMeterAck = false;   // 走行距離 空欄のまま完了する意思確認済みフラグ (画面表示ごとにリセット)
 async function onConfirmDo(){
   if(_confirmBusy) return;                 // ★多重実行ガード: 連打・固まり時の焦りタップで二重記録/二重通知しない
   if(!_flow) return;
   const c = findCaseById(_flow.caseId); if(!c) return;
+  // ★走行距離 空欄ガード (2026-07-24 誤完了防止): 空のまま完了しようとしたら一度だけ確認。任意入力なので「このまま完了」で通せる。
+  const _meterEl = $('m-confirm-meter');
+  if(_meterEl && (_meterEl.value||'').trim()==='' && !_emptyMeterAck){
+    const _mk = _flow.kind==='recovery' ? '返却メーター' : '貸出メーター';
+    const _goOn = await confirmModal('走行距離が未入力', `${_mk}（走行距離）が入力されていません。<br>このまま完了しますか？`, 'このまま完了', 'm-btn-primary');
+    if(!_goOn){ try{ _meterEl.scrollIntoView({block:'center'}); setTimeout(()=>{ try{_meterEl.focus();}catch(e){} },250); }catch(e){} return; }
+    _emptyMeterAck = true;
+  }
   _confirmBusy = true;
   const _doBtn = $('m-confirm-do-btn'); if(_doBtn) _doBtn.disabled = true;
   showSpinner((_flow.kind==='recovery'?'回収':'配車')+'完了を記録中...');
