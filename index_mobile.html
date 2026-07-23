@@ -485,6 +485,12 @@ a{color:var(--info);text-decoration:none}
 }
 .m-card-row.m-card-memo .lbl{background:transparent;min-width:auto;padding:0}
 .m-card-row.m-card-memo .val{color:#5A3F00;font-size:12.5px}
+/* 🚗 車両ナンバーを主役に (2026-07-23 回収の視認性): 現場で実車と一目で照合できる大ナンバー */
+.m-plate-hero{background:#FCF2F2;border:1px solid #F2D3D3;border-radius:10px;padding:8px 12px 9px;text-align:center;margin:8px 0}
+.m-plate-hero-cap{font-size:10px;color:#A32D2D;font-weight:700;letter-spacing:.08em;margin-bottom:1px}
+.m-plate-hero-no{font-size:25px;font-weight:800;color:#1E2A36;letter-spacing:.02em;line-height:1.15}
+.m-plate-hero-nm{font-size:12px;color:#666;margin-top:2px}
+.m-plate-hero-none{font-size:15px;color:#B9B9B0;font-weight:700}
 .m-tel-link{
   display:inline-flex;align-items:center;gap:3px;
   color:var(--info);font-weight:700;
@@ -1988,7 +1994,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-23';
+const APP_VERSION = '2026-07-23a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3792,6 +3798,20 @@ function renderRecoveryCard(c){
 // 共通カードレンダラ — ユーザー指定の表示項目:
 //   受付No / 配車予約情報 / 運転者TEL / 配車先名・担当・TEL /
 //   配車先住所(Google Maps) / 社内メモ
+// 🚗 車両ナンバーの大表示ブロック (2026-07-23): 回収カード/回収フローで実車照合しやすく。他社借にも対応。
+function _mPlateHero(c){
+  const isB = !!c.isBorrowed;
+  const plate = isB ? (c.borrowedPlate||'').trim()
+    : [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  const nm = isB ? (c.borrowedVehicleInfo||'').trim()
+    : [c.vehicleName||'', c.vehicleClass?`(${c.vehicleClass})`:''].filter(Boolean).join(' ');
+  if(!plate && !nm) return '';
+  return `<div class="m-plate-hero">
+    <div class="m-plate-hero-cap">車両ナンバー${isB?' ・他社借':''}</div>
+    <div class="m-plate-hero-no">${plate?esc(plate):'<span class="m-plate-hero-none">ナンバー未設定</span>'}</div>
+    ${nm?`<div class="m-plate-hero-nm">${esc(nm)}</div>`:''}
+  </div>`;
+}
 function _renderCaseCard(c, kind){
   const badgeCls = statusBadgeClass(c, kind);
   const badgeTxt = statusBadgeText(c, kind);
@@ -3844,19 +3864,7 @@ function _renderCaseCard(c, kind){
     tel(c.driverTel)
   ].filter(Boolean).join(' ');
 
-  // 車両情報: 回収時のみ表示 (配車時はまだ車両未割当のことが多い)
-  let vehicleLine = '';
-  if(kind === 'recovery'){
-    const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
-    const classOrName = c.vehicleClass || c.vehicleName || '';
-    const parts = [];
-    if(plate) parts.push(`<b>${esc(plate)}</b>`);
-    if(classOrName) parts.push(esc(classOrName));
-    if(c.vehicleName && c.vehicleClass) parts.push(esc(c.vehicleName));
-    vehicleLine = parts.join(' / ');
-  }
-
-  // 回収カードは指定の5項目のみ: 受付No / 車両 / 運転者 / 回収先 / 社内メモ
+  // 車両ナンバーは _mPlateHero(c) で大表示 (2026-07-23)。回収カードは 受付No / 車両ナンバー / 運転者 / 回収先 / 社内メモ
   // (配車カードは従来どおり 配車予約・住所マップリンクも表示)
   if(kind === 'recovery'){
     return `
@@ -3867,7 +3875,7 @@ function _renderCaseCard(c, kind){
             <span class="m-card-caseno">${esc(c.caseNo||'(No未設定)')}</span>
             <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
           </div>
-          ${vehicleLine ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${vehicleLine}</span></div>` : ''}
+          ${_mPlateHero(c)}
           ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
           ${toLine ? `<div class="m-card-row"><span class="lbl">回収先</span><span class="val">${toLine}</span></div>` : ''}
           ${c.category === '一般' && (c.useStart || c.useEnd) ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>` : ''}
@@ -4000,6 +4008,7 @@ function renderInfoBox(c, hostId, kind){
 
   $(hostId).innerHTML = `
     <div class="caseno">${ic('<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>',15)} ${esc(c.caseNo||'')}</div>
+    ${_isRec?_mPlateHero(c):''}
     <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
     ${_staffRow}
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val strong">${kind==='recovery'?(fmtDateFull(c.recoveryCalledAt)||'<span class="empty">未設定</span>'):dispatchInfo}</span></div>
