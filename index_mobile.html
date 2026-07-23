@@ -521,6 +521,8 @@ a{color:var(--info);text-decoration:none}
 .m-note-urg{display:inline-block;background:#FCE4E4;color:#C53030;font-size:10px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:5px;letter-spacing:.02em}
 .m-note-tag{display:inline-block;background:#EAF0FB;color:#2C5282;font-size:10px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:5px;letter-spacing:.02em}
 .m-note-rest{color:var(--muted);font-size:12.5px}
+/* 🚗 車両クラスのバッジ (2026-07-23d 配車カード) */
+.m-cls-badge{display:inline-block;background:#E7F0DC;color:#3B6D11;font-size:12.5px;font-weight:800;padding:2px 10px;border-radius:7px;letter-spacing:.03em}
 
 /* === CASE INFO BOX (in flow screens) === */
 .m-info-box{
@@ -2009,7 +2011,7 @@ a{color:var(--info);text-decoration:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-23c';
+const APP_VERSION = '2026-07-23d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3938,6 +3940,15 @@ function _renderCaseCard(c, kind){
     `;
   }
 
+  // 🚗 配車カードに車両クラスを表示 (2026-07-23d): 配車時は特定車未割当でもクラス(準備の要)は分かる。割当済なら車種名・ナンバーも併記
+  const _dv = (c.vehicleId && DATA && DATA.vehicles) ? DATA.vehicles.find(x=>x.id===c.vehicleId) : null;
+  const _dCls = c.isBorrowed ? (c.vehicleClass||'').trim() : (((_dv&&_dv.vehicleClass) || c.vehicleClass || '').trim());
+  const _dName = c.isBorrowed ? (c.borrowedVehicleInfo||'').trim() : (((_dv&&_dv.name) || c.vehicleName || '').trim());
+  const _dPlate = c.isBorrowed ? (c.borrowedPlate||'').trim() : [c.plateArea,c.plateNo,c.plateKana,c.plateTail].filter(Boolean).join(' ');
+  const _dClsName = (_dCls && DATA && DATA.vehicleClasses) ? ((DATA.vehicleClasses.find(x=>x.code===_dCls)||{}).name||'') : '';
+  const _dVehRow = (_dCls || _dName || _dPlate)
+    ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${_dCls?`<span class="m-cls-badge">${esc(_dCls)}</span> `:''}${_dName?esc(_dName):(_dClsName?`<span style="color:var(--muted)">${esc(_dClsName)}</span>`:'')}${_dPlate?` <b>${esc(_dPlate)}</b>`:''}</span></div>`
+    : '';
   return `
     <div class="m-card flow-${kind} ${isDone?'done':''}" onclick="enter${kind==='dispatch'?'Dispatch':'Recovery'}Flow('${c.id}')">
       <div class="m-card-left">
@@ -3949,6 +3960,7 @@ function _renderCaseCard(c, kind){
         ${c.category === '一般'
           ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>`
           : `<div class="m-card-row"><span class="lbl">配車予約</span><span class="val">${dispatchInfo}</span></div>`}
+        ${_dVehRow}
         ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
         ${toLine ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${toLine}</span></div>` : ''}
         ${c.dispatchToAddress ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsLink}</span></div>` : ''}
