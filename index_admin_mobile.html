@@ -188,6 +188,16 @@
   .rpt-kpi .v{font-family:var(--serif);font-size:23px;font-weight:500;color:var(--ink);line-height:1.1;margin-top:3px}
   .rpt-kpi .v small{font-size:11px;color:var(--ink3);font-family:var(--sans);margin-left:2px}
   .rpt-kpi .s{font-size:9.5px;color:var(--ink3);margin-top:3px;line-height:1.4}
+  /* 🗂️ 章折りたたみ (2026-07-25b): 経営分析・稼働タブのカードを見出しタップで開閉 */
+  .fold-hd{cursor:pointer;position:relative;padding-right:22px;-webkit-tap-highlight-color:transparent}
+  .fold-hd::after{content:'▾';position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink3);transition:transform .18s}
+  .card.folded .fold-hd::after{transform:translateY(-50%) rotate(-90deg)}
+  .card.folded .fold-bd{display:none}
+  .card.folded{padding-bottom:11px}
+  .rpt-toc{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .rpt-toc::-webkit-scrollbar{display:none}
+  .rpt-toc .tc{flex:0 0 auto;font-size:10px;padding:5px 11px;border:1px solid var(--line);border-radius:13px;color:var(--ink2);background:var(--panel2);white-space:nowrap}
+  .rpt-toc .tc:active{background:var(--panel);color:var(--ink)}
   .rpt-act{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:4px}
   .rpt-act td{padding:9px 5px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top;line-height:1.6}
   .rpt-act td.n{text-align:center;width:22px;color:var(--acc);font-family:var(--serif);font-size:16px;font-weight:600}
@@ -1650,7 +1660,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-25';
+const APP_VERSION = '2026-07-25b';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4422,6 +4432,46 @@ async function enterApp(){
   renderAll();
 }
 
+// 🗂️ 章折りたたみ (2026-07-25b): 経営分析(sec-report)・稼働(sec-ops)のカードを見出しタップで開閉。
+//   - デフォルト: report=総括のみ開く / ops=先頭2枚(先々の埋まり・クラス別稼働率)のみ開く
+//   - 開閉状態は localStorage に記憶 (admFolds_v1)
+//   - report 先頭に目次チップ (タップで該当章へスクロール＋展開)
+//   - DOMは移動のみ(削除なし)=既存のID・イベント・ライブ再計算に影響しない
+const FOLD_LS='admFolds_v1';
+function initFolds(){
+  let saved={}; try{ saved=JSON.parse(localStorage.getItem(FOLD_LS)||'{}'); }catch(_){}
+  const save=()=>{ try{ localStorage.setItem(FOLD_LS,JSON.stringify(saved)); }catch(_){} };
+  const toc=[];
+  [['sec-report',1],['sec-ops',2]].forEach(([sid,openN])=>{
+    const sec=document.getElementById(sid); if(!sec) return;
+    [...sec.querySelectorAll(':scope > .card')].forEach((card,i)=>{
+      const hd=card.querySelector(':scope > .lbl')||card.querySelector(':scope > .rpt-h'); if(!hd) return;
+      const key=sid+':'+i;
+      // 見出しの直前にある小見出し(.rpt-sec/.rpt-date)は開閉時も見せたままにする
+      const keep=new Set([hd]); let n=hd.previousElementSibling;
+      while(n&&(n.classList.contains('rpt-sec')||n.classList.contains('rpt-date'))){ keep.add(n); n=n.previousElementSibling; }
+      const bd=document.createElement('div'); bd.className='fold-bd';
+      [...card.children].filter(el=>!keep.has(el)).forEach(el=>bd.appendChild(el));
+      card.appendChild(bd);
+      hd.classList.add('fold-hd');
+      const open=(key in saved)?saved[key]:(i<openN);
+      if(!open) card.classList.add('folded');
+      hd.addEventListener('click',()=>{ card.classList.toggle('folded'); saved[key]=!card.classList.contains('folded'); save(); });
+      if(sid==='sec-report'){
+        const rs=card.querySelector('.rpt-sec');
+        const label=rs?rs.textContent.split('/').pop().trim():(i===0?'総括':'');
+        if(label) toc.push({card,label});
+      }
+    });
+    if(sid==='sec-report'&&toc.length){
+      const bar=document.createElement('div'); bar.className='rpt-toc';
+      toc.forEach(t=>{ const b=document.createElement('button'); b.type='button'; b.className='tc'; b.textContent=t.label;
+        b.onclick=()=>{ t.card.classList.remove('folded'); const k=[...sec.querySelectorAll(':scope > .card')].indexOf(t.card); saved[sid+':'+k]=true; save(); t.card.scrollIntoView({behavior:'smooth',block:'start'}); };
+        bar.appendChild(b); });
+      sec.insertBefore(bar,sec.firstElementChild);
+    }
+  });
+}
 function setupTabs(){
   // Crown FAB
   $('crown-btn').onclick=(e)=>{e.stopPropagation();toggleCrown()};
@@ -4642,6 +4692,7 @@ function DEMO_E(){
 // ---------- BOOTSTRAP ----------
 async function bootstrap(){
   setupTabs();
+  try{ initFolds(); }catch(e){ console.warn('folds',e); }  // 🗂️ 章折りたたみ (2026-07-25b)
   // Dropbox OAuth コールバック処理 (URLに code パラメータがあれば交換)
   if(new URL(location.href).searchParams.get('code')){
     await dbxHandleCallback();
