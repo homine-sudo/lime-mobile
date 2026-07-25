@@ -1551,6 +1551,17 @@
       <div class="cf-runway" id="cf-runway"></div>
     </div>
 
+    <!-- 🛡️ 無収入サバイバル (2026-07-25): 売上が完全に止まっても会社が持つ月数 -->
+    <div class="card" id="sv-card">
+      <div class="lbl">無収入サバイバル · 売上ゼロでも持つ期間</div>
+      <div class="cf-hero">
+        <div class="cf-hero-l">現預金だけで</div>
+        <div class="cf-hero-v num" id="sv-months">—<span class="unit">ヶ月</span></div>
+      </div>
+      <div class="cf-grid" id="sv-grid"></div>
+      <div class="cf-runway" id="sv-note"></div>
+    </div>
+
     <!-- 12ヶ月 資金繰り予定 チャート -->
     <div class="card">
       <div class="lbl">資金繰り予定 · 今後12ヶ月（各月末の現金）</div>
@@ -1639,7 +1650,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-20';
+const APP_VERSION = '2026-07-25';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2496,6 +2507,15 @@ const BREAK_EVEN = {
 //   現状は空 (推測で税額を入れて資金繰りを誤らせない)。UIに「未設定・要入力」と明示する。
 const CASH_CFG = { loanRepay: 740000, opCFfallback: 1400000, floor: 4250000 };
 const CASH_SPECIAL = {}; // 例) '2027-05': 2500000  ← 法人税・消費税・賞与の予定を入れる
+// 🛡️ 無収入サバイバル (2026-07-25): 売上ゼロが続いた場合の月次固定キャッシュアウト (実勢・消費税込み)。
+//   FY26 4〜6月のfreee実測から: リース料142.7万(税込) + 人件費(役員+給料+法定福利)100万 + 保険料34万
+//   + 地代家賃27.5万 + 車両費・事務系の固定分約60万 + 支払利息8.4万 + 借入元金返済74万 ≒ 495万/月。
+//   縮小策(リース返却・車両売却・保険見直し)を打たず「今の体制のまま」の保守値。月次PLの実績で随時見直すこと。
+const SURVIVAL_CFG = {
+  monthlyOut: 4950000,                           // 無収入時の月次流出 (円/月)
+  cashFallback: 37758651, arFallback: 12543891,  // freee未接続時の既知値 (2026-07-24 BS)
+  kyosaiRefund: Math.round(4800000*0.9)          // 倒産防止共済 即解約の概算返戻 (40ヶ月未満≒90%)
+};
 // 資金イベント (借入実行・車両以外の設備投資) — 月キー YYYY-MM → 額
 const CASH_LOAN_DRAWS  = { '2026-07': 15000000 };                              // 海邦銀行 借入 1,500万 (7月実行)
 const CASH_EXTRA_CAPEX = { '2026-07': { amount: 1800000, label: 'プレハブ' } };// 設備投資(車両以外)。プレハブ 180万
@@ -2776,7 +2796,34 @@ function cashFlowPlan(opAdj){
     pendCount:pend.length, rows, trough, floor:CASH_CFG.floor,
     hasSpecial:Object.keys(CASH_SPECIAL).length>0, newLoanAssumed:!!CASH_NEW_LOAN.assumed};
 }
+// 🛡️ 無収入サバイバル (2026-07-25): 「売上が明日から0でも、今の体制のまま何ヶ月生きられるか」。
+//   freee B/Sライブ(現預金・売掛金)があればライブ値、なければ既知値。月次流出は SURVIVAL_CFG.monthlyOut。
+function renderSurvival(){
+  const el=$('sv-months'); if(!el) return;
+  const live=!!(FREEE_BS&&FREEE_BS.cash!=null);
+  const cash=live?FREEE_BS.cash:SURVIVAL_CFG.cashFallback;
+  const ar=(FREEE_BS&&FREEE_BS.ar)?FREEE_BS.ar:SURVIVAL_CFG.arFallback;
+  const out=SURVIVAL_CFG.monthlyOut;
+  const m1=cash/out;                                   // 現預金のみ
+  const m1f=Math.max(0,(cash-CASH_CFG.floor)/out);     // 現金下限425万を守りながら
+  const m2=(cash+ar)/out;                              // +売掛回収 (JA系=貸倒实質ゼロ)
+  const m3=(cash+ar+SURVIVAL_CFG.kyosaiRefund)/out;    // +倒産防止共済 即解約
+  const f1=n=>(Math.round(n*10)/10).toFixed(1);
+  el.innerHTML=f1(m1)+'<span class="unit">ヶ月</span>';
+  const g=$('sv-grid');
+  if(g) g.innerHTML=
+    '<div><span class="cf-k">現預金 '+(live?'(freeeライブ)':'(2026-07-24時点)')+'</span><span class="cf-v num">'+yen(cash)+'</span></div>'+
+    '<div><span class="cf-k">無収入時の月次流出 (固定費+返済)</span><span class="cf-v num dn">−'+yen(out)+' /月</span></div>'+
+    '<div><span class="cf-k">現金下限425万を割らずに</span><span class="cf-v num">'+f1(m1f)+' ヶ月</span></div>'+
+    '<div><span class="cf-k">＋売掛金 '+yen(ar)+' を回収したら</span><span class="cf-v num" style="color:var(--acc)">'+f1(m2)+' ヶ月</span></div>'+
+    '<div><span class="cf-k">＋倒産防止共済を解約したら (概算'+yen(SURVIVAL_CFG.kyosaiRefund)+')</span><span class="cf-v num">'+f1(m3)+' ヶ月</span></div>';
+  const n=$('sv-note');
+  if(n) n.innerHTML='売上が明日から完全に0になり、<b>縮小策を何も打たない</b>最悪前提で <b>約'+f1(m1)+'ヶ月</b>。'+
+    '実際はリース返却(月−143万)・自社車両の売却(実勢約5,000万)・保険見直しで大幅に延命できるため、これは<b>下限値</b>。'+
+    '月次流出495万の内訳: リース143＋人件費100＋元利82＋保険34＋家賃28＋車両費・事務系ほか108 (FY26 4〜6月 freee実測・税込実勢)。';
+}
 function renderCash(){
+  try{ renderSurvival(); }catch(e){ console.warn('survival',e); }
   const card=$('cf-pos-card'); if(!card) return;
   const p=cashFlowPlan();
   const man=n=>Math.round(n/10000).toLocaleString(); // 万円
@@ -3286,7 +3333,8 @@ function _parseBS(res){
   let cash=0, hasCash=false;
   bal.forEach(b=>{ if(!b.total_line&&b.account_category_name==='現金・預金'){ cash+=Number(b.closing_balance||0); hasCash=true; } });
   const loan=(_plItem(bal,'長期借入金')||0)+(_plItem(bal,'短期借入金')||0);
-  return {cash:hasCash?Math.round(cash):null, loan:Math.round(loan)};
+  const ar=_plItem(bal,'売掛金')||0;  // 🛡️ 無収入サバイバル: 売掛回収込みの生存月数に使用
+  return {cash:hasCash?Math.round(cash):null, loan:Math.round(loan), ar:Math.round(ar)};
 }
 function _jsonpGAS(params,cbPrefix,onDone,parse){
   const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url){ onDone(null); return; }
