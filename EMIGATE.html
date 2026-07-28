@@ -97,6 +97,84 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
 }
 .fab:active{transform:scale(.95)}
 
+/* ===== A: 誕生カウントダウン ===== */
+.cd-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px 18px 14px;margin-bottom:14px;border-top:3px solid var(--sun)}
+.cd-lbl{font-size:11.5px;color:var(--ink3);letter-spacing:.1em}
+.cd-num{display:flex;align-items:baseline;gap:7px;margin:1px 0 12px}
+.cd-num .n{font-size:44px;font-weight:700;line-height:1;color:var(--acc);letter-spacing:-.02em}
+.cd-num .u{font-size:13px;color:var(--ink2)}
+.cd-num .born{font-size:24px;font-weight:700;color:var(--acc);line-height:1.2}
+.cd-road{display:flex;align-items:center;gap:0;margin-bottom:7px}
+.cd-dot{width:10px;height:10px;border-radius:50%;background:var(--panel);
+  border:2px solid var(--line2);flex-shrink:0;box-sizing:content-box}
+.cd-dot.done{background:var(--sun);border-color:var(--sun)}
+.cd-dot.goal{width:14px;height:14px;border-color:var(--acc)}
+.cd-dot.goal.done{background:var(--acc)}
+.cd-bar{flex:1;height:2px;background:var(--line2)}
+.cd-bar.done{background:var(--sun)}
+.cd-names{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3)}
+.cd-names span{flex:1;text-align:center}
+.cd-names span:first-child{text-align:left}.cd-names span:last-child{text-align:right}
+
+/* ===== C: 今日の一枚 ===== */
+.td-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:14px 16px;margin-bottom:14px}
+.td-head{font-size:11.5px;color:var(--ink3);margin-bottom:9px;display:flex;align-items:center;gap:8px}
+.td-head .who{margin-left:auto;background:var(--acc-soft);color:var(--acc);border-radius:99px;
+  padding:1px 9px;font-size:11px;font-weight:700}
+.td-item{display:flex;align-items:flex-start;gap:10px;border-left:3px solid var(--sun);
+  padding:3px 0 3px 11px;margin-bottom:11px;cursor:pointer}
+.td-item:last-of-type{margin-bottom:9px}
+.td-item.over{border-left-color:var(--red)}
+.td-item .chk{flex-shrink:0;width:24px;height:24px;border-radius:50%;border:2px solid var(--line2);
+  background:#fff;font-size:14px;line-height:20px;text-align:center;color:transparent;padding:0}
+.td-item .ttl{font-size:15.5px;font-weight:600;line-height:1.45;word-break:break-word}
+.td-item .sub{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.td-rest{font-size:12px;color:var(--ink3);border-top:1px solid var(--line);padding-top:8px}
+.td-none{text-align:center;padding:6px 0 10px}
+.td-none .m{font-size:14.5px;font-weight:600;color:var(--green)}
+.td-none .s{font-size:12px;color:var(--ink3);margin-top:3px}
+
+/* ===== B: ひまわり ===== */
+.sf-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:12px 16px 10px;margin-bottom:14px;text-align:center}
+.sf-card svg{width:100%;max-width:168px;height:auto;display:block;margin:0 auto}
+.sf-cap{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.sf-cap b{color:var(--acc);font-size:13px}
+.sf-stem{transition:all .5s ease}
+@keyframes sfBloom{0%{transform:scale(.3) rotate(-25deg);opacity:0}
+  60%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+.sf-pop{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:300;pointer-events:none}
+.sf-pop svg{width:118px;height:118px;animation:sfBloom .62s cubic-bezier(.2,1.2,.4,1) both}
+.sf-pop .msg{text-align:center;font-size:13px;font-weight:700;color:var(--acc);margin-top:2px;
+  animation:sfBloom .5s .1s both}
+
+/* ===== D: 週次の指示書 ===== */
+.wk-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.wk-bar .btn{white-space:nowrap}
+#wk-preview{margin-top:10px}
+#wk-preview img{width:100%;max-width:360px;border:1px solid var(--line);border-radius:10px;display:block}
+
+/* ===== E: 創業の記録 ===== */
+.st-item{display:flex;gap:12px}
+.st-rail{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:12px}
+.st-rail .d{width:9px;height:9px;border-radius:50%;background:var(--sun);margin-top:5px;flex-shrink:0}
+.st-rail .d.future{background:var(--panel);border:2px solid var(--line2)}
+.st-rail .d.big{width:13px;height:13px;background:var(--acc)}
+.st-rail .l{flex:1;width:2px;background:var(--line);min-height:14px}
+.st-body{flex:1;padding-bottom:14px;min-width:0}
+.st-date{font-size:11px;color:var(--ink3);letter-spacing:.04em}
+.st-ttl{font-size:14px;line-height:1.5;word-break:break-word}
+.st-item.future .st-ttl{color:var(--ink3)}
+.st-ttl .mk{background:var(--acc-soft);color:var(--acc);border-radius:99px;padding:1px 8px;
+  font-size:10.5px;font-weight:700;margin-right:6px;white-space:nowrap}
+.st-meta{font-size:11px;color:var(--ink3);margin-top:2px}
+.st-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.st-sum .b{background:var(--gray-soft);border-radius:var(--radius);padding:10px 6px;text-align:center}
+.st-sum .b .n{font-size:22px;font-weight:700;color:var(--acc);line-height:1.2}
+.st-sum .b .l{font-size:10.5px;color:var(--ink3)}
+
 /* ===== KPI tiles ===== */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
@@ -285,6 +363,8 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
     <svg viewBox="0 0 24 24"><path d="M4 6h12M4 12h12M4 18h8"/><path d="M16 16l2 2 4-4"/></svg>タスク</button>
   <button id="nav-cal" onclick="showTab('cal')">
     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>カレンダー</button>
+  <button id="nav-story" onclick="showTab('story')">
+    <svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M12 9a5 5 0 0 1 5-5 5 5 0 0 1-5 5z"/><path d="M12 9a5 5 0 0 0-5-5 5 5 0 0 0 5 5z"/><path d="M7 21h10"/></svg>記録</button>
   <button id="nav-settings" onclick="showTab('settings')">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>設定</button>
 </nav>
@@ -292,6 +372,9 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
 <main>
   <!-- ============ HOME ============ -->
   <section id="page-home" class="page active">
+    <div id="countdown-host"></div>
+    <div id="today-host"></div>
+    <div id="sunflower-host"></div>
     <div class="kpi-grid">
       <div class="kpi overdue" onclick="jumpFiltered('overdue')"><div class="n" id="k-over">0</div><div class="l">期限切れ</div></div>
       <div class="kpi today" onclick="jumpFiltered('today')"><div class="n" id="k-today">0</div><div class="l">今日</div></div>
@@ -319,6 +402,11 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
       <select id="f-project" onchange="renderTasks()"></select>
       <input id="f-q" type="search" placeholder="検索" oninput="renderTasks()">
     </div>
+    <div class="wk-bar">
+      <button class="btn btn-outline" onclick="buildWeekSheet()">🖼 今週の指示書を画像で作る</button>
+      <span class="muted" id="wk-hint">担当で絞ると、その人ぶんだけになります</span>
+    </div>
+    <div id="wk-preview"></div>
     <div class="card" style="padding:6px 14px">
       <div id="task-list"></div>
     </div>
@@ -341,6 +429,11 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
       </h3>
       <div id="day-panel-list"><div class="empty">カレンダーの日付をタップすると、その日のタスクが表示されます</div></div>
     </div>
+  </section>
+
+  <!-- ============ STORY (創業の記録) ============ -->
+  <section id="page-story" class="page">
+    <div id="story-host"></div>
   </section>
 
   <!-- ============ SETTINGS ============ -->
@@ -471,7 +564,7 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
    - 共有: Dropbox (PKCE API) or ローカル共有フォルダ(File System Access API)
    - 保存は 常に プル→idマージ→書込 (stale上書き防止・LIME Oneの教訓踏襲)
    ========================================================= */
-const APP_VERSION = '2026-07-28d';
+const APP_VERSION = '2026-07-28e';
 const DEMO = new URLSearchParams(location.search).has('demo');
 const DBX_KEY = 'fly154tcdbz09x9';
 const DBX_PATH = '/EMIGATE/システムデータ/data.json';   /* 非共有フォルダ(HT従業員に非公開)。共有DB内に置かないこと */
@@ -847,9 +940,11 @@ function newTask(fields){
 function toggleDone(id, ev){
   if(ev) ev.stopPropagation();
   const t = DATA.tasks.find(t=>t.id===id); if(!t) return;
-  if(t.status==='完了'){ t.status='未着手'; t.completedAt=0; }
+  const wasDone = t.status==='完了';
+  if(wasDone){ t.status='未着手'; t.completedAt=0; }
   else { t.status='完了'; t.completedAt=Date.now(); }
   stamp(t); persist(); renderAll();
+  if(!wasDone) bloom(t);
 }
 
 /* =========================================================
@@ -873,8 +968,156 @@ function renderAll(){
   if(curTab==='home') renderHome();
   else if(curTab==='tasks') renderTasks();
   else if(curTab==='cal') renderCal();
+  else if(curTab==='story') renderStory();
   else if(curTab==='settings') renderSettings();
   renderConn();
+}
+
+/* =========================================================
+   A. 誕生カウントダウン
+   ========================================================= */
+const FOUNDING_DATE = '2026-09-01';                 /* 登記申請日=会社成立日 */
+const MILESTONES = [                                 /* 道のりの点(タスクidで完了を判定) */
+  { id:'t-setup-02', name:'定款' },
+  { id:'t-setup-06', name:'認証' },
+  { id:'t-setup-08', name:'払込' },
+  { id:'t-setup-11', name:'登記', goal:true }
+];
+function daysBetweenISO(a, b){
+  const d1 = new Date(a+'T00:00:00'), d2 = new Date(b+'T00:00:00');
+  return Math.round((d2 - d1) / 86400000);
+}
+function renderCountdown(){
+  const host = $('#countdown-host'); if(!host) return;
+  const left = daysBetweenISO(todayISO(), FOUNDING_DATE);
+  const born = left <= 0;
+  const since = born ? Math.abs(left) : 0;
+  const byId = {};
+  DATA.tasks.forEach(t=>{ byId[t.id]=t; });
+  const pts = MILESTONES.map(m=>{
+    const t = byId[m.id];
+    return { name:m.name, goal:!!m.goal, done: !!(t && t.status==='完了' && !t.isDeleted) };
+  });
+  let road='';
+  pts.forEach((p,i)=>{
+    if(i>0) road += `<div class="cd-bar${pts[i-1].done?' done':''}"></div>`;
+    road += `<div class="cd-dot${p.goal?' goal':''}${p.done?' done':''}"></div>`;
+  });
+  const head = born
+    ? `<div class="cd-lbl">株式会社EMIGATE 創業から</div>
+       <div class="cd-num"><span class="n">${since}</span><span class="u">日</span></div>`
+    : `<div class="cd-lbl">株式会社EMIGATE 誕生まで</div>
+       <div class="cd-num">${left===0
+          ? `<span class="born">今日、会社が生まれます</span>`
+          : `<span class="n">${left}</span><span class="u">日 ・ ${fmtDue(FOUNDING_DATE)} 登記</span>`}</div>`;
+  host.innerHTML = `<div class="cd-card">${head}
+    <div class="cd-road">${road}</div>
+    <div class="cd-names">${pts.map(p=>`<span>${esc(p.name)}</span>`).join('')}</div>
+  </div>`;
+}
+
+/* =========================================================
+   B. ひまわり(週の進捗で育つ)
+   ========================================================= */
+function weekRange(){                                /* 月曜〜日曜 */
+  const d = new Date(); const dow = (d.getDay()+6)%7;
+  const mon = addDaysISO(todayISO(), -dow);
+  return { start: mon, end: addDaysISO(mon, 6) };
+}
+function weekStats(){
+  const w = weekRange();
+  const live = liveTasks();
+  const due = live.filter(t=>t.due && t.due>=w.start && t.due<=w.end);
+  const doneInWeek = live.filter(t=>{
+    if(t.status!=='完了' || !t.completedAt) return false;
+    const d = new Date(t.completedAt);
+    const iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    return iso>=w.start && iso<=w.end;
+  });
+  const total = new Set([...due.map(t=>t.id), ...doneInWeek.map(t=>t.id)]).size;
+  return { done: doneInWeek.length, total, week: w };
+}
+function sunflowerSVG(rate, size){
+  /* rate 0..1 → 種→芽→茎→蕾→開花 */
+  const stage = rate<=0 ? 0 : rate<0.25 ? 1 : rate<0.5 ? 2 : rate<0.8 ? 3 : 4;
+  const h = 96, stemTop = [78, 62, 44, 30, 22][stage];
+  const petals = [0,45,90,135].map(a=>
+    `<ellipse rx="5.5" ry="15" fill="#FAC775" transform="rotate(${a})"/>`).join('');
+  const head = stage===0 ? `<ellipse cx="0" cy="0" rx="5" ry="4" fill="#8A6A3A"/>`
+    : stage===1 ? `<ellipse cx="0" cy="2" rx="5" ry="7" fill="#97C459"/>`
+    : stage===2 ? `<ellipse cx="0" cy="0" rx="6" ry="8" fill="#7DB03F"/>`
+    : stage===3 ? `<circle cx="0" cy="0" r="8.5" fill="#EF9F27"/>`
+    : `${petals}<circle r="7" fill="#854F0B"/>`;
+  const leaf = stage>=2 ? `<ellipse cx="-8" cy="${(h-stemTop)/2}" rx="8" ry="4.5" fill="#97C459" transform="rotate(-18 -8 ${(h-stemTop)/2})"/>` : '';
+  const leaf2 = stage>=3 ? `<ellipse cx="8" cy="${(h-stemTop)/2+12}" rx="8" ry="4.5" fill="#8CBB4E" transform="rotate(18 8 ${(h-stemTop)/2+12})"/>` : '';
+  const vy = Math.max(0, stemTop-26), vh = h-vy;      /* 育つ前は上の余白を詰める */
+  return `<svg viewBox="0 ${vy} 120 ${vh}" ${size?`width="${size}" height="${size*vh/120}"`:''} aria-hidden="true">
+    <g transform="translate(60 ${stemTop})">
+      ${stage>0?`<path d="M0 ${h-stemTop} L0 0" stroke="#639922" stroke-width="3" stroke-linecap="round"/>`:''}
+      ${leaf}${leaf2}
+      <g class="sf-stem">${head}</g>
+    </g>
+    <path d="M18 ${h-4} H102" stroke="#D8CDA9" stroke-width="2" stroke-linecap="round"/>
+  </svg>`;
+}
+function renderSunflower(){
+  const host = $('#sunflower-host'); if(!host) return;
+  const s = weekStats();
+  if(!s.total){ host.innerHTML=''; return; }
+  const rate = s.done / s.total;
+  const msg = rate>=1 ? '今週ぶんは咲きました' : rate>=0.8 ? 'もうすぐ咲きます'
+    : rate>=0.5 ? 'つぼみがふくらんできました' : rate>0 ? '芽が出ました' : '今週の種';
+  host.innerHTML = `<div class="sf-card">${sunflowerSVG(rate)}
+    <div class="sf-cap">今週 <b>${s.done} / ${s.total}</b> 件 ・ ${esc(msg)}</div></div>`;
+}
+function bloom(task){
+  if(document.querySelector('.sf-pop')) return;
+  const el = document.createElement('div');
+  el.className = 'sf-pop';
+  const s = weekStats();
+  const all = s.total && s.done>=s.total;
+  el.innerHTML = `<div>${sunflowerSVG(1,118)}</div>
+    <div class="msg">${all? '今週ぶん、咲きました' : 'ひとつ、咲いた'}</div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .35s'; el.style.opacity='0';
+    setTimeout(()=>el.remove(), 380); }, 900);
+}
+
+/* =========================================================
+   C. 今日の一枚
+   ========================================================= */
+function renderTodayCard(){
+  const host = $('#today-host'); if(!host) return;
+  const today = todayISO();
+  const me = (editor||'').trim();
+  const act = liveTasks().filter(t=>t.status!=='完了');
+  const mine = me ? act.filter(t=>t.assignee===me) : act;
+  const pool = (me && mine.length===0) ? act : mine;      /* 自分ぶんが無い日は全体を見せる */
+  const over  = pool.filter(t=>t.due && t.due<today);
+  const now   = pool.filter(t=>t.due===today);
+  const pick  = sortTasks([...over, ...now]).slice(0,3);
+  const rest  = act.length - pick.length;
+  const whoLbl = me ? (mine.length? esc(me)+' さん' : '全員') : '全員';
+  let body;
+  if(pick.length){
+    body = pick.map(t=>{
+      const isOver = t.due && t.due<today;
+      return `<div class="td-item${isOver?' over':''}" onclick="openTaskModal('${t.id}')">
+        <button class="chk" onclick="toggleDone('${t.id}',event)" title="完了にする">✓</button>
+        <div style="flex:1;min-width:0">
+          <div class="ttl">${esc(t.title)}</div>
+          <div class="sub">${isOver?'⚠ '+esc(fmtDue(t.due))+' 期限 ・ ':''}${esc(projName(t.projectId)||'')}${t.assignee&&!me?' ・ '+esc(t.assignee):''}</div>
+        </div></div>`;
+    }).join('') + (rest>0? `<div class="td-rest">残り ${rest} 件は、まだ考えなくていい</div>`:'');
+  } else {
+    const next = sortTasks(pool.filter(t=>t.due))[0];
+    body = `<div class="td-none"><div class="m">今日やることはありません</div>
+      <div class="s">${next? '次は '+esc(fmtDue(next.due))+' ・ '+esc(next.title) : 'ゆっくりどうぞ'}</div></div>`;
+  }
+  const d = new Date();
+  host.innerHTML = `<div class="td-card">
+    <div class="td-head">${d.getMonth()+1}月${d.getDate()}日 ${DOW[d.getDay()]}曜 ・ 今日やること
+      <span class="who">${whoLbl}</span></div>${body}</div>`;
 }
 
 /* ---------- task row html ---------- */
@@ -917,8 +1160,141 @@ function sortTasks(arr){
   });
 }
 
+/* =========================================================
+   D. 今週の指示書を画像で作る
+   ========================================================= */
+function _wkSheetTasks(){
+  const w = weekRange();
+  const asSel = $('#f-assignee');
+  const who = asSel ? asSel.value : '';
+  let arr = liveTasks().filter(t=>t.status!=='完了' && t.due && t.due<=w.end);
+  if(who) arr = arr.filter(t=>t.assignee===who);
+  return { who, arr: sortTasks(arr).slice(0,10), week:w };
+}
+function buildWeekSheet(){
+  const { who, arr, week } = _wkSheetTasks();
+  if(!arr.length){ toast('今週ぶんの未完了タスクがありません'); return; }
+  const W=720, PAD=44, rowH=62;
+  const H = 210 + arr.length*rowH + 56;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  const F = (sz,w)=>`${w||400} ${sz}px -apple-system, "Hiragino Kaku Gothic ProN", "Segoe UI", Meiryo, sans-serif`;
+  g.fillStyle='#FFFCF4'; g.fillRect(0,0,W,H);
+  g.fillStyle='#F6BC1C'; g.fillRect(0,0,W,7);
+  /* ロゴマーク(アーチ+スマイル) */
+  g.strokeStyle='#8A7364'; g.lineWidth=5; g.lineCap='round';
+  g.beginPath(); g.moveTo(PAD,92); g.lineTo(PAD,66);
+  g.arc(PAD+17,66,17,Math.PI,0); g.lineTo(PAD+34,92); g.stroke();
+  g.strokeStyle='#F08A70'; g.beginPath(); g.arc(PAD+17,68,11,0.28*Math.PI,0.72*Math.PI); g.stroke();
+  g.fillStyle='#8A7364'; g.font=F(21,500);
+  g.fillText('EMI GATE', PAD+50, 86);
+  const d1=new Date(week.start+'T00:00:00'), d2=new Date(week.end+'T00:00:00');
+  g.fillStyle='#2C2510'; g.font=F(27,700);
+  g.fillText(who? `${who} さんの今週` : '今週やること', PAD, 140);
+  g.fillStyle='#94896A'; g.font=F(15);
+  g.fillText(`${d1.getMonth()+1}/${d1.getDate()} 〜 ${d2.getMonth()+1}/${d2.getDate()} ・ ${arr.length}件`, PAD, 168);
+  g.strokeStyle='#ECE4CE'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(PAD,190); g.lineTo(W-PAD,190); g.stroke();
+  const today = todayISO();
+  arr.forEach((t,i)=>{
+    const y = 190 + i*rowH;
+    const over = t.due < today;
+    g.fillStyle = over? '#C53030' : (t.due===today? '#A87700' : '#D8CDA9');
+    g.fillRect(PAD, y+16, 4, 30);
+    g.fillStyle = over? '#C53030' : '#5A5138'; g.font=F(14,500);
+    const dd=new Date(t.due+'T00:00:00');
+    g.fillText(`${dd.getMonth()+1}/${dd.getDate()}(${DOW[dd.getDay()]})${over?' 期限超過':''}`, PAD+16, y+32);
+    g.fillStyle='#2C2510'; g.font=F(18,500);
+    let ttl=t.title; while(g.measureText(ttl).width > W-PAD*2-30 && ttl.length>4) ttl=ttl.slice(0,-1);
+    if(ttl!==t.title) ttl=ttl.slice(0,-1)+'…';
+    g.fillText(ttl, PAD+16, y+55);
+    g.strokeStyle='#F2EEE1'; g.beginPath();
+    g.moveTo(PAD,y+rowH); g.lineTo(W-PAD,y+rowH); g.stroke();
+  });
+  g.fillStyle='#94896A'; g.font=F(13);
+  g.fillText('笑顔の入口に、幸せを。', PAD, H-22);
+  const url = cv.toDataURL('image/png');
+  _lastWeekSheet = { url, name:`EMIGATE_${who||'今週'}_${week.start}.png` };
+  $('#wk-preview').innerHTML = `<img src="${url}" alt="今週の指示書">
+    <div class="wk-bar" style="margin-top:8px">
+      <button class="btn btn-primary" onclick="shareWeekSheet()">📤 送る / 保存</button>
+      <span class="muted">長押しでコピーもできます</span>
+    </div>`;
+  toast('指示書を作りました','ok');
+}
+let _lastWeekSheet = null;
+async function shareWeekSheet(){
+  if(!_lastWeekSheet){ toast('先に指示書を作ってください'); return; }
+  try{
+    const blob = await (await fetch(_lastWeekSheet.url)).blob();
+    const file = new File([blob], _lastWeekSheet.name, { type:'image/png' });
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({ files:[file] });
+      return;
+    }
+  }catch(e){ if(e && e.name==='AbortError') return; console.warn(e); }
+  const a=document.createElement('a'); a.href=_lastWeekSheet.url; a.download=_lastWeekSheet.name; a.click();
+  toast('画像を保存しました','ok');
+}
+
+/* =========================================================
+   E. 創業の記録
+   ========================================================= */
+function byLine(t){                                  /* 記録に出す人名(システム記入は隠す) */
+  const n = t.assignee || t.updatedBy || '';
+  return (!n || /^(Claude|システム)/.test(n)) ? '' : ' ・ '+esc(n);
+}
+function renderStory(){
+  const host = $('#story-host'); if(!host) return;
+  const done = liveTasks().filter(t=>t.status==='完了' && t.completedAt)
+    .sort((a,b)=>b.completedAt-a.completedAt);
+  const mkIds = MILESTONES.map(m=>m.id);
+  const left = daysBetweenISO(todayISO(), FOUNDING_DATE);
+  const born = left<=0;
+  const firstTs = DATA.settings && DATA.settings.createdAt ? DATA.settings.createdAt : Date.now();
+  const days = Math.max(1, Math.round((Date.now()-firstTs)/86400000)+1);
+  let items = '';
+  if(!born){
+    items += `<div class="st-item future"><div class="st-rail"><div class="d big future"></div><div class="l"></div></div>
+      <div class="st-body"><div class="st-date">${fmtDue(FOUNDING_DATE)}</div>
+      <div class="st-ttl"><span class="mk">これから</span>会社が生まれる日</div>
+      <div class="st-meta">あと ${left} 日</div></div></div>`;
+  }
+  if(!done.length){
+    items += `<div class="empty">まだ記録がありません。<br>タスクをひとつ終えると、ここに刻まれます。</div>`;
+  } else {
+    done.forEach((t,i)=>{
+      const d = new Date(t.completedAt);
+      const isMk = mkIds.includes(t.id);
+      const last = i===done.length-1;
+      items += `<div class="st-item"><div class="st-rail">
+          <div class="d${isMk?' big':''}"></div>${last?'':'<div class="l"></div>'}
+        </div>
+        <div class="st-body" onclick="openTaskModal('${t.id}')" style="cursor:pointer">
+          <div class="st-date">${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${DOW[d.getDay()]}曜</div>
+          <div class="st-ttl">${isMk?'<span class="mk">節目</span>':''}${esc(t.title)}</div>
+          <div class="st-meta">${esc(projName(t.projectId)||'')}${byLine(t)}</div>
+        </div></div>`;
+    });
+  }
+  host.innerHTML = `<div class="card">
+    <h3>🌻 創業の記録</h3>
+    <div class="st-sum">
+      <div class="b"><div class="n">${done.length}</div><div class="l">終えたこと</div></div>
+      <div class="b"><div class="n">${born? Math.abs(left) : left}</div><div class="l">${born?'創業から(日)':'誕生まで(日)'}</div></div>
+      <div class="b"><div class="n">${days}</div><div class="l">はじめてN日目</div></div>
+    </div>
+    ${items}
+  </div>
+  <p class="muted" style="text-align:center;margin-top:4px">終えたタスクが、そのまま会社の歴史になります。</p>`;
+}
+
 /* ---------- home ---------- */
 function renderHome(){
+  renderCountdown();
+  renderTodayCard();
+  renderSunflower();
   const today = todayISO();
   const t7 = addDaysISO(today,7);
   const live = liveTasks();
@@ -937,7 +1313,6 @@ function renderHome(){
 
   let html='';
   if(over.length)  html+=`<div class="card"><h3>⚠ 期限切れ <span class="cnt">${over.length}</span></h3>${listHTML(sortTasks(over))}</div>`;
-  html+=`<div class="card"><h3>📌 今日 <span class="cnt">${todayT.length}</span></h3>${listHTML(sortTasks(todayT),'今日が期日のタスクはありません')}</div>`;
   html+=`<div class="card"><h3>📅 7日以内 <span class="cnt">${week.length}</span></h3>${listHTML(sortTasks(week),'直近7日のタスクはありません')}</div>`;
   if(noDue.length) html+=`<div class="card"><h3>🗂 期日なし <span class="cnt">${noDue.length}</span></h3>${listHTML(sortTasks(noDue))}</div>`;
   if(doneToday.length) html+=`<div class="card"><h3>✅ 今日完了 <span class="cnt">${doneToday.length}</span></h3>${listHTML(doneToday)}</div>`;
