@@ -564,7 +564,7 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
    - 共有: Dropbox (PKCE API) or ローカル共有フォルダ(File System Access API)
    - 保存は 常に プル→idマージ→書込 (stale上書き防止・LIME Oneの教訓踏襲)
    ========================================================= */
-const APP_VERSION = '2026-07-28e';
+const APP_VERSION = '2026-07-28f';
 const DEMO = new URLSearchParams(location.search).has('demo');
 const DBX_KEY = 'fly154tcdbz09x9';
 const DBX_PATH = '/EMIGATE/システムデータ/data.json';   /* 非共有フォルダ(HT従業員に非公開)。共有DB内に置かないこと */
@@ -1115,9 +1115,12 @@ function renderTodayCard(){
       <div class="s">${next? '次は '+esc(fmtDue(next.due))+' ・ '+esc(next.title) : 'ゆっくりどうぞ'}</div></div>`;
   }
   const d = new Date();
+  const hint = me ? '' :
+    `<div class="td-rest" style="cursor:pointer" onclick="showTab('settings')">
+       設定で名前を登録すると、あなたの担当だけになります ›</div>`;
   host.innerHTML = `<div class="td-card">
     <div class="td-head">${d.getMonth()+1}月${d.getDate()}日 ${DOW[d.getDay()]}曜 ・ 今日やること
-      <span class="who">${whoLbl}</span></div>${body}</div>`;
+      <span class="who">${whoLbl}</span></div>${body}${hint}</div>`;
 }
 
 /* ---------- task row html ---------- */
@@ -1409,7 +1412,9 @@ function renderDayPanel(){
 
 /* ---------- settings ---------- */
 function renderSettings(){
-  $('#set-editor').value = editor;
+  /* 入力中(フォーカス中)は上書きしない=自動同期でタイピングが消える事故を防ぐ */
+  const ed = $('#set-editor');
+  if(document.activeElement !== ed) ed.value = editor;
   $('#member-list').innerHTML = liveMembers().map(m=>
     `<span class="tag">${esc(m.name)}<button class="x" onclick="rmMember('${m.id}')">✕</button></span>`).join('') || '<span class="muted">未登録</span>';
   $('#project-list').innerHTML = liveProjects().map(p=>
@@ -1443,7 +1448,15 @@ function renderConn(){
 function saveEditor(){
   editor = $('#set-editor').value.trim();
   localStorage.setItem(LS.editor, editor);
-  toast('保存しました','ok');
+  if(!editor){ toast('名前を空にしました(全員ぶんを表示します)'); showTab('home'); return; }
+  /* メンバー未登録なら自動で追加(担当の絞り込みに使えるように) */
+  if(!liveMembers().some(m=>m.name===editor)){
+    DATA.members.push(stamp({ id:uid('m'), name:editor, isDeleted:false }));
+    persist();
+  }
+  const mine = liveTasks().filter(t=>t.status!=='完了' && t.assignee===editor).length;
+  toast(`${editor} として保存しました（担当 ${mine} 件）`,'ok');
+  showTab('home');   /* 変化がその場で見えるようにホームへ戻す */
 }
 function addMember(){
   const inp=$('#new-member'); const v=inp.value.trim(); if(!v) return;
