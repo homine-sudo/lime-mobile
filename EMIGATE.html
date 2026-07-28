@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#453410">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EMIGATE">
+<title>EMI GATE — タスク & スケジュール</title>
+<link rel="apple-touch-icon" href="EMIGATE_icon.png">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+:root{
+  /* 🌻 ヒマワリテーマ: 花びら=黄 / 花芯=焦げ茶 / 葉=緑 */
+  --bg:#FAF7EE; --panel:#FFFFFF; --line:#ECE4CE; --line2:#D8CDA9;
+  --ink:#2C2510; --ink2:#5A5138; --ink3:#94896A;
+  --acc:#A87700; --acc-soft:#FFF3C9;          /* 文字・枠用の深い金色 / 淡い花びら */
+  --sun:#F6BC1C; --sun-ink:#3A2C08;           /* ボタン面の花びら黄 / その上の濃茶文字 */
+  --navy:#453410;                              /* ヘッダー等: ヒマワリの花芯(焦げ茶) */
+  --red:#C53030; --red-soft:#FDECEC;
+  --amber:#B7791F; --amber-soft:#FCF3E1;
+  --green:#3F7D46; --green-soft:#E9F4E8;
+  --gray-soft:#F2EEE1;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(60,45,10,.05),0 4px 14px rgba(60,45,10,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:15px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Segoe UI",Meiryo,sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.55;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom,0px));
+}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
+
+/* ===== header (ロゴ原色を活かす生成り地) ===== */
+.hdr{
+  position:sticky;top:0;z-index:50;
+  background:#FFFCF4; color:var(--ink);
+  border-bottom:1px solid var(--line);
+  padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;
+  display:flex;align-items:center;gap:10px;
+}
+.hdr .brand{display:flex;align-items:center;gap:8px;color:#8A7364;font-size:15px;
+  letter-spacing:.22em;font-weight:600}
+.hdr .brand .bt{white-space:nowrap}
+@media(min-width:768px){ .hdr .brand{font-size:17px;letter-spacing:.3em} }
+.hdr .brand .logo-mk{width:32px;height:32px;flex-shrink:0;border-radius:7px}
+.hdr .ver{font-size:10px;letter-spacing:.05em;color:var(--ink3);margin-left:2px}
+.hdr .sp{flex:1}
+.hdr .sync-ind{font-size:11px;color:var(--ink3);white-space:nowrap}
+.hdr .hbtn{
+  background:#fff;border:1px solid var(--line2);color:var(--ink2);
+  border-radius:8px;width:32px;height:32px;font-size:15px;line-height:1;flex-shrink:0;
+}
+.hdr .hbtn:active{background:var(--acc-soft)}
+
+/* conn banner */
+#conn-banner{display:none;background:#FFF4E0;border-bottom:1px solid #EAD9AE;color:#7A5A12;
+  padding:8px 14px;font-size:12.5px;align-items:center;gap:10px;flex-wrap:wrap}
+#conn-banner.danger{background:#FDECEC;border-color:#EEC2C2;color:#8E2323}
+#conn-banner button{border:1px solid currentColor;background:#fff;border-radius:7px;padding:4px 10px;font-size:12px;color:inherit}
+
+/* ===== layout ===== */
+main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
+.page{display:none}
+.page.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:14px 16px;margin-bottom:14px}
+.card h3{font-size:13px;color:var(--ink2);letter-spacing:.04em;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px}
+.card h3 .cnt{font-size:11px;background:var(--gray-soft);color:var(--ink2);border-radius:99px;padding:1px 8px;font-weight:600}
+.muted{color:var(--ink3);font-size:12.5px}
+
+/* ===== bottom nav ===== */
+.bnav{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:var(--navy);
+  display:flex;justify-content:space-around;
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
+}
+.bnav button{
+  flex:1;max-width:150px;background:none;border:none;color:rgba(250,240,214,.55);
+  font-size:10.5px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;border-radius:10px;
+}
+.bnav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.bnav button.on{color:#fff}
+.bnav button.on svg{stroke:#FFD34D}
+
+/* FAB */
+.fab{
+  position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:59;
+  width:54px;height:54px;border-radius:50%;border:none;
+  background:var(--sun);color:var(--sun-ink);font-size:28px;line-height:1;font-weight:700;
+  box-shadow:0 6px 18px rgba(214,160,20,.45);
+}
+.fab:active{transform:scale(.95)}
+
+/* ===== KPI tiles ===== */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:10px 6px 9px;text-align:center;border-top:3px solid var(--line2)}
+.kpi .n{font-size:26px;font-weight:700;line-height:1.15}
+.kpi .l{font-size:10.5px;color:var(--ink3);letter-spacing:.03em}
+.kpi.overdue{border-top-color:var(--red)}   .kpi.overdue .n{color:var(--red)}
+.kpi.today{border-top-color:var(--acc)}    .kpi.today .n{color:var(--acc)}
+.kpi.week{border-top-color:var(--amber)}   .kpi.week .n{color:var(--amber)}
+.kpi.doing{border-top-color:var(--green)}  .kpi.doing .n{color:var(--green)}
+.kpi{cursor:pointer}
+
+/* ===== task rows ===== */
+.trow{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:9px 2px;border-bottom:1px solid var(--line);cursor:pointer;
+}
+.trow:last-child{border-bottom:none}
+.trow .chk{
+  flex-shrink:0;width:22px;height:22px;margin-top:2px;border-radius:50%;
+  border:2px solid var(--line2);background:#fff;font-size:13px;line-height:18px;text-align:center;color:transparent;
+}
+.trow.done .chk{background:var(--green);border-color:var(--green);color:#fff}
+.trow .tbody{flex:1;min-width:0}
+.trow .ttl{font-size:14.5px;font-weight:600;word-break:break-word}
+.trow.done .ttl{color:var(--ink3);text-decoration:line-through;font-weight:500}
+.trow .tmeta{display:flex;flex-wrap:wrap;gap:5px 8px;margin-top:3px;font-size:11.5px;color:var(--ink3);align-items:center}
+.chip{display:inline-flex;align-items:center;border-radius:99px;padding:1px 8px;font-size:11px;font-weight:600;white-space:nowrap}
+.chip.pj{background:var(--acc-soft);color:var(--acc)}
+.chip.as{background:var(--gray-soft);color:var(--ink2)}
+.chip.due{background:var(--gray-soft);color:var(--ink2)}
+.chip.due.today{background:var(--acc-soft);color:var(--acc)}
+.chip.due.over{background:var(--red-soft);color:var(--red)}
+.chip.st-doing{background:var(--green-soft);color:var(--green)}
+.chip.st-todo{background:var(--amber-soft);color:var(--amber)}
+.pri{flex-shrink:0;width:4px;align-self:stretch;border-radius:3px;background:transparent;margin:2px 0}
+.pri.high{background:var(--red)} .pri.mid{background:var(--amber)} .pri.low{background:var(--line2)}
+.empty{padding:16px 4px;text-align:center;color:var(--ink3);font-size:13px}
+
+/* ===== filter bar ===== */
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.fchip{border:1px solid var(--line2);background:#fff;color:var(--ink2);border-radius:99px;
+  padding:5px 13px;font-size:12.5px;font-weight:600}
+.fchip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.fbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.fbar select,.fbar input[type=search]{
+  border:1px solid var(--line2);border-radius:9px;padding:7px 10px;background:#fff;font-size:13px}
+.fbar input[type=search]{flex:1;min-width:130px}
+.quick-add{display:flex;gap:8px;margin-bottom:12px}
+.quick-add input{flex:1;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;background:#fff}
+.quick-add button{background:var(--sun);color:var(--sun-ink);border:none;border-radius:10px;padding:0 16px;font-size:14px;font-weight:700}
+
+/* ===== calendar ===== */
+.cal-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cal-head .ttl{font-size:17px;font-weight:700;letter-spacing:.02em}
+.cal-head button{border:1px solid var(--line2);background:#fff;border-radius:8px;padding:5px 12px;font-size:13px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow{text-align:center;font-size:11px;color:var(--ink3);padding:3px 0;font-weight:600}
+.cal-dow.sat{color:#3B6CC7}.cal-dow.sun{color:#C05353}
+.cal-cell{
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  min-height:74px;padding:3px 4px;cursor:pointer;overflow:hidden;
+}
+.cal-cell.out{opacity:.42}
+.cal-cell.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.cal-cell.sel{background:var(--acc-soft)}
+.cal-cell .d{font-size:11.5px;font-weight:700;color:var(--ink2);margin-bottom:2px}
+.cal-cell.sun .d{color:#C05353}.cal-cell.sat .d{color:#3B6CC7}
+.cal-task{
+  font-size:10px;line-height:1.3;border-radius:5px;padding:1px 4px;margin-bottom:2px;
+  background:var(--acc-soft);color:var(--acc);font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cal-task.done{background:var(--gray-soft);color:var(--ink3);text-decoration:line-through}
+.cal-task.over{background:var(--red-soft);color:var(--red)}
+.cal-more{font-size:9.5px;color:var(--ink3)}
+#cal-day-panel h3 .addbtn{margin-left:auto;border:1px solid var(--line2);background:#fff;
+  border-radius:8px;padding:3px 10px;font-size:12px;color:var(--ink2)}
+
+/* ===== settings ===== */
+.set-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.set-row:last-child{border-bottom:none}
+.set-row .lbl{font-size:13px;color:var(--ink2);min-width:110px}
+.set-row input[type=text]{flex:1;min-width:140px;border:1px solid var(--line2);border-radius:8px;padding:7px 10px}
+.btn{border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600}
+.btn-primary{background:var(--sun);color:var(--sun-ink)}
+.btn-outline{background:#fff;border:1px solid var(--line2);color:var(--ink2)}
+.btn-danger-o{background:#fff;border:1px solid #E5B8B8;color:var(--red)}
+.tag-list{display:flex;flex-wrap:wrap;gap:7px;padding:4px 0}
+.tag{display:inline-flex;align-items:center;gap:6px;background:var(--gray-soft);border-radius:99px;
+  padding:4px 6px 4px 12px;font-size:12.5px;font-weight:600;color:var(--ink2)}
+.tag .x{border:none;background:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:1;color:var(--ink3)}
+.conn-ok{color:var(--green);font-weight:700}
+.conn-ng{color:var(--red);font-weight:700}
+
+/* ===== modal ===== */
+.modal-scrim{
+  display:none;position:fixed;inset:0;z-index:100;background:rgba(15,22,40,.5);
+  align-items:flex-end;justify-content:center;
+}
+.modal-scrim.active{display:flex}
+.modal{
+  background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;
+  border-radius:18px 18px 0 0;padding:16px 18px calc(18px + env(safe-area-inset-bottom,0px));
+}
+.modal h2{font-size:16px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.modal h2 .x{margin-left:auto;border:none;background:var(--gray-soft);border-radius:50%;
+  width:30px;height:30px;font-size:14px;color:var(--ink2)}
+.frow{margin-bottom:12px}
+.frow label{display:block;font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:4px}
+.frow input[type=text],.frow input[type=date],.frow input[type=time],.frow select,.frow textarea{
+  width:100%;border:1px solid var(--line2);border-radius:9px;padding:9px 11px;background:#fff}
+.frow textarea{min-height:70px;resize:vertical}
+.frow-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;border:1px solid var(--line2);background:#fff;border-radius:9px;padding:8px 0;font-size:13px;font-weight:600;color:var(--ink2)}
+.seg button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.seg.pri button.on[data-v="高"]{background:var(--red);border-color:var(--red)}
+.seg.pri button.on[data-v="中"]{background:var(--amber);border-color:var(--amber)}
+.seg.pri button.on[data-v="低"]{background:var(--ink3);border-color:var(--ink3)}
+.cl-item{display:flex;align-items:center;gap:8px;padding:5px 0}
+.cl-item input[type=checkbox]{width:17px;height:17px}
+.cl-item .t{flex:1;font-size:13.5px}
+.cl-item .t.done{color:var(--ink3);text-decoration:line-through}
+.cl-item .rm{border:none;background:none;color:var(--ink3);font-size:13px}
+.cl-add{display:flex;gap:7px;margin-top:5px}
+.cl-add input{flex:1;border:1px solid var(--line2);border-radius:8px;padding:7px 10px;font-size:13px}
+.cl-add button{border:1px solid var(--line2);background:#fff;border-radius:8px;padding:0 12px;font-size:13px}
+.modal-actions{display:flex;gap:9px;margin-top:16px}
+.modal-actions .btn{flex:1;padding:12px 0;font-size:14.5px}
+.modal .meta-note{font-size:11px;color:var(--ink3);margin-top:10px;text-align:right}
+
+/* confirm mini modal */
+#confirm-box .modal{max-width:400px;border-radius:16px;margin:0 14px}
+#confirm-box.modal-scrim{align-items:center}
+#confirm-msg{font-size:14px;margin-bottom:14px;white-space:pre-wrap}
+
+/* toast */
+#toast-host{position:fixed;left:0;right:0;bottom:calc(84px + env(safe-area-inset-bottom,0px));
+  z-index:200;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{background:rgba(20,28,48,.94);color:#fff;border-radius:99px;padding:9px 18px;
+  font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90%;animation:tin .18s ease}
+.toast.err{background:rgba(160,38,38,.95)}
+.toast.ok{background:rgba(38,110,70,.95)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* desktop */
+@media(min-width:768px){
+  html{font-size:15.5px}
+  body{padding-bottom:24px}
+  .bnav{
+    position:static;justify-content:flex-start;gap:4px;
+    padding:0 max(16px,calc(50% - 480px));
+  }
+  .bnav button{flex:none;flex-direction:row;gap:7px;font-size:13.5px;padding:11px 16px;max-width:none;border-radius:0;border-bottom:3px solid transparent}
+  .bnav button.on{border-bottom-color:#FFD34D}
+  .bnav button svg{width:17px;height:17px}
+  .fab{bottom:26px}
+  #toast-host{bottom:30px}
+  .modal-scrim{align-items:center}
+  .modal{border-radius:16px;max-height:86vh}
+  .cal-cell{min-height:96px}
+  .kpi .n{font-size:30px}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="brand">
+    <img class="logo-mk" alt="EMI GATE" src="data:image/png;base64,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">
+    <span class="bt">EMI GATE</span>
+  </div>
+  <span class="ver" id="ver"></span>
+  <div class="sp"></div>
+  <span class="sync-ind" id="sync-ind">未接続</span>
+  <button class="hbtn" id="btn-sync" title="今すぐ同期" onclick="manualSync()">↻</button>
+</header>
+<div id="conn-banner"></div>
+
+<!-- nav: モバイル=下部固定 / デスクトップ=ヘッダー直下タブ (CSSで切替・DOM位置はここが正) -->
+<nav class="bnav">
+  <button id="nav-home" class="on" onclick="showTab('home')">
+    <svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg>ホーム</button>
+  <button id="nav-tasks" onclick="showTab('tasks')">
+    <svg viewBox="0 0 24 24"><path d="M4 6h12M4 12h12M4 18h8"/><path d="M16 16l2 2 4-4"/></svg>タスク</button>
+  <button id="nav-cal" onclick="showTab('cal')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>カレンダー</button>
+  <button id="nav-settings" onclick="showTab('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>設定</button>
+</nav>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section id="page-home" class="page active">
+    <div class="kpi-grid">
+      <div class="kpi overdue" onclick="jumpFiltered('overdue')"><div class="n" id="k-over">0</div><div class="l">期限切れ</div></div>
+      <div class="kpi today" onclick="jumpFiltered('today')"><div class="n" id="k-today">0</div><div class="l">今日</div></div>
+      <div class="kpi week" onclick="jumpFiltered('week')"><div class="n" id="k-week">0</div><div class="l">7日以内</div></div>
+      <div class="kpi doing" onclick="jumpFiltered('doing')"><div class="n" id="k-doing">0</div><div class="l">進行中</div></div>
+    </div>
+    <div id="home-sections"></div>
+  </section>
+
+  <!-- ============ TASKS ============ -->
+  <section id="page-tasks" class="page">
+    <div class="quick-add">
+      <input id="qa-title" type="text" placeholder="＋ タスクを素早く追加 (Enter)" onkeydown="if(event.key==='Enter')quickAdd()">
+      <button onclick="quickAdd()">追加</button>
+    </div>
+    <div class="chips" id="st-chips">
+      <button class="fchip on" data-st="active" onclick="setStFilter('active')">未完了</button>
+      <button class="fchip" data-st="未着手" onclick="setStFilter('未着手')">未着手</button>
+      <button class="fchip" data-st="進行中" onclick="setStFilter('進行中')">進行中</button>
+      <button class="fchip" data-st="完了" onclick="setStFilter('完了')">完了</button>
+      <button class="fchip" data-st="all" onclick="setStFilter('all')">すべて</button>
+    </div>
+    <div class="fbar">
+      <select id="f-assignee" onchange="renderTasks()"></select>
+      <select id="f-project" onchange="renderTasks()"></select>
+      <input id="f-q" type="search" placeholder="検索" oninput="renderTasks()">
+    </div>
+    <div class="card" style="padding:6px 14px">
+      <div id="task-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ CALENDAR ============ -->
+  <section id="page-cal" class="page">
+    <div class="cal-head">
+      <button onclick="calMove(-1)">◀</button>
+      <div class="ttl" id="cal-title"></div>
+      <button onclick="calMove(1)">▶</button>
+      <div style="flex:1"></div>
+      <button onclick="calToday()">今日</button>
+    </div>
+    <div class="cal-grid" id="cal-dow"></div>
+    <div class="cal-grid" id="cal-grid" style="margin-top:4px"></div>
+    <div class="card" id="cal-day-panel" style="margin-top:14px">
+      <h3><span id="day-panel-title">日付を選択</span>
+        <button class="addbtn" id="day-add-btn" style="display:none" onclick="openTaskModal(null,_selDate)">＋この日に追加</button>
+      </h3>
+      <div id="day-panel-list"><div class="empty">カレンダーの日付をタップすると、その日のタスクが表示されます</div></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="page-settings" class="page">
+    <div class="card">
+      <h3>🔗 データ共有(接続)</h3>
+      <div class="set-row"><span class="lbl">状態</span><span id="conn-status" class="conn-ng">未接続(この端末のみ)</span></div>
+      <div class="set-row"><span class="lbl">最終同期</span><span id="last-sync" class="muted">—</span></div>
+      <div class="set-row" id="row-fs" style="display:none">
+        <span class="lbl">共有フォルダ</span>
+        <button class="btn btn-outline" onclick="fsConnect()">📁 フォルダを選択して接続</button>
+        <span class="muted">PC: Dropboxの「EMIGATE/システムデータ」フォルダを選択</span>
+      </div>
+      <div class="set-row" id="row-dbx">
+        <span class="lbl">Dropbox</span>
+        <button class="btn btn-outline" id="btn-dbx" onclick="dbxAuthStart()">🔑 Dropboxと連携</button>
+        <button class="btn btn-danger-o" id="btn-dbx-out" style="display:none" onclick="dbxDisconnect()">連携解除</button>
+      </div>
+      <p class="muted" style="margin-top:8px">複数人で使うには全員が同じDropbox共有フォルダに接続します。未接続でもこの端末内(ブラウザ)には保存されます。</p>
+    </div>
+
+    <div class="card">
+      <h3>👤 あなたの名前 <span class="muted" style="font-weight:400">(更新記録に残ります)</span></h3>
+      <div class="set-row">
+        <input type="text" id="set-editor" placeholder="例: 大嶺">
+        <button class="btn btn-primary" onclick="saveEditor()">保存</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>👥 メンバー</h3>
+      <div class="tag-list" id="member-list"></div>
+      <div class="set-row">
+        <input type="text" id="new-member" placeholder="メンバー名を追加">
+        <button class="btn btn-outline" onclick="addMember()">追加</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📂 プロジェクト</h3>
+      <div class="tag-list" id="project-list"></div>
+      <div class="set-row">
+        <input type="text" id="new-project" placeholder="プロジェクト名を追加">
+        <button class="btn btn-outline" onclick="addProject()">追加</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🗄 データ</h3>
+      <div class="set-row">
+        <button class="btn btn-outline" onclick="exportJSON()">⬇ バックアップ書き出し</button>
+        <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">⬆ 読み込み</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(this)">
+      </div>
+      <p class="muted" style="margin-top:6px">完了タスクは削除せず記録として残ります。バックアップは定期的に書き出し推奨。</p>
+    </div>
+
+    <div class="card">
+      <h3>ℹ️ このアプリ</h3>
+      <p class="muted">EMI GATE タスク & スケジュール管理 — 笑顔の入口に、幸せを。<br>単一HTML・複数端末共有(Dropbox)対応 / バージョン: <span id="ver2"></span></p>
+    </div>
+  </section>
+</main>
+
+<button class="fab" onclick="openTaskModal()">＋</button>
+
+<!-- ============ task modal ============ -->
+<div class="modal-scrim" id="task-modal">
+  <div class="modal">
+    <h2><span id="tm-title">新しいタスク</span><button class="x" onclick="closeTaskModal()">✕</button></h2>
+    <div class="frow"><label>タイトル *</label><input type="text" id="tm-ttl" placeholder="やること"></div>
+    <div class="frow-2">
+      <div class="frow"><label>期日</label><input type="date" id="tm-due"></div>
+      <div class="frow"><label>時刻(任意)</label><input type="time" id="tm-time"></div>
+    </div>
+    <div class="frow"><label>優先度</label>
+      <div class="seg pri" id="tm-pri">
+        <button data-v="高" onclick="segSel('tm-pri','高')">高</button>
+        <button data-v="中" class="on" onclick="segSel('tm-pri','中')">中</button>
+        <button data-v="低" onclick="segSel('tm-pri','低')">低</button>
+      </div>
+    </div>
+    <div class="frow"><label>状態</label>
+      <div class="seg" id="tm-st">
+        <button data-v="未着手" class="on" onclick="segSel('tm-st','未着手')">未着手</button>
+        <button data-v="進行中" onclick="segSel('tm-st','進行中')">進行中</button>
+        <button data-v="完了" onclick="segSel('tm-st','完了')">完了</button>
+      </div>
+    </div>
+    <div class="frow-2">
+      <div class="frow"><label>担当</label><select id="tm-assignee"></select></div>
+      <div class="frow"><label>プロジェクト</label><select id="tm-project"></select></div>
+    </div>
+    <div class="frow"><label>メモ</label><textarea id="tm-note" placeholder="詳細・URL・補足など"></textarea></div>
+    <div class="frow"><label>チェックリスト</label>
+      <div id="tm-cl"></div>
+      <div class="cl-add">
+        <input type="text" id="tm-cl-new" placeholder="項目を追加" onkeydown="if(event.key==='Enter')clAdd()">
+        <button onclick="clAdd()">＋</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger-o" id="tm-del" style="display:none" onclick="delTaskFromModal()">削除</button>
+      <button class="btn btn-primary" onclick="saveTaskFromModal()">保存</button>
+    </div>
+    <div class="meta-note" id="tm-meta"></div>
+  </div>
+</div>
+
+<!-- confirm -->
+<div class="modal-scrim" id="confirm-box">
+  <div class="modal">
+    <div id="confirm-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="confirm-no">キャンセル</button>
+      <button class="btn btn-primary" id="confirm-yes">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-host"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   EMIGATE タスク & スケジュール管理
+   - 単一HTML / PC+スマホ両対応
+   - 共有: Dropbox (PKCE API) or ローカル共有フォルダ(File System Access API)
+   - 保存は 常に プル→idマージ→書込 (stale上書き防止・LIME Oneの教訓踏襲)
+   ========================================================= */
+const APP_VERSION = '2026-07-28c';
+const DEMO = new URLSearchParams(location.search).has('demo');
+const DBX_KEY = 'fly154tcdbz09x9';
+const DBX_PATH = '/EMIGATE/システムデータ/data.json';   /* 非共有フォルダ(HT従業員に非公開)。共有DB内に置かないこと */
+const LS = {
+  cache:  'emg_cache',
+  editor: 'emg_editor',
+  dbxA:   'emg_dbx_access',
+  dbxR:   'emg_dbx_refresh',
+  dbxE:   'emg_dbx_exp',
+  lastSync:'emg_last_sync'
+};
+
+/* ---------- utils ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = p => (p||'t') + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function addDaysISO(iso, n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+const DOW = ['日','月','火','水','木','金','土'];
+function fmtDue(iso, time){
+  if(!iso) return '';
+  const d = new Date(iso+'T00:00:00'); if(isNaN(d)) return iso;
+  const t = todayISO();
+  let s;
+  if(iso===t) s='今日';
+  else if(iso===addDaysISO(t,1)) s='明日';
+  else s = (d.getMonth()+1)+'/'+d.getDate()+'('+DOW[d.getDay()]+')';
+  return s + (time? ' '+time : '');
+}
+function toast(msg, type){
+  const h=$('#toast-host'); const el=document.createElement('div');
+  el.className='toast'+(type==='error'?' err':type==='ok'?' ok':'');
+  el.textContent=msg; h.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),320); }, 2600);
+}
+function confirmBox(msg, okLabel){
+  return new Promise(res=>{
+    $('#confirm-msg').textContent = msg;
+    $('#confirm-yes').textContent = okLabel||'OK';
+    $('#confirm-box').classList.add('active');
+    const done = v => { $('#confirm-box').classList.remove('active'); $('#confirm-yes').onclick=null; $('#confirm-no').onclick=null; res(v); };
+    $('#confirm-yes').onclick = ()=>done(true);
+    $('#confirm-no').onclick  = ()=>done(false);
+  });
+}
+
+/* ---------- data model ---------- */
+function defaultData(){
+  return {
+    app:'emigate-tasks', schemaVersion:1,
+    tasks:[], projects:[], members:[],
+    settings:{ createdAt: Date.now() }
+  };
+}
+function normalizeData(d){
+  if(!d || typeof d!=='object') return defaultData();
+  const base = defaultData();
+  d.tasks    = Array.isArray(d.tasks)? d.tasks : [];
+  d.projects = Array.isArray(d.projects)? d.projects : [];
+  d.members  = Array.isArray(d.members)? d.members : [];
+  d.settings = d.settings && typeof d.settings==='object' ? d.settings : base.settings;
+  d.app = 'emigate-tasks';
+  return d;
+}
+let DATA = defaultData();
+let editor = localStorage.getItem(LS.editor) || '';
+
+/* ---------- merge (id + updatedAt / soft delete tombstone) ---------- */
+function mergeCol(localArr, diskArr){
+  const map = new Map();
+  (diskArr||[]).forEach(r=>{ if(r && r.id) map.set(r.id, r); });
+  (localArr||[]).forEach(r=>{
+    if(!r || !r.id) return;
+    const d = map.get(r.id);
+    if(!d) { map.set(r.id, r); return; }
+    map.set(r.id, (Number(r.updatedAt)||0) >= (Number(d.updatedAt)||0) ? r : d);
+  });
+  return Array.from(map.values());
+}
+function mergeData(local, disk){
+  if(!disk) return local;
+  if(!local) return disk;
+  const m = normalizeData(JSON.parse(JSON.stringify(disk)));
+  m.tasks    = mergeCol(local.tasks, disk.tasks);
+  m.projects = mergeCol(local.projects, disk.projects);
+  m.members  = mergeCol(local.members, disk.members);
+  const lts = Number(local.settings && local.settings._updatedAt)||0;
+  const dts = Number(disk.settings  && disk.settings._updatedAt)||0;
+  m.settings = lts >= dts ? local.settings : disk.settings;
+  return m;
+}
+
+/* ---------- local cache ---------- */
+function cacheSave(){
+  if(DEMO) return;
+  try{ localStorage.setItem(LS.cache, JSON.stringify(DATA)); }catch(e){ console.warn('cache save failed', e); }
+}
+function cacheLoad(){
+  try{
+    const raw = localStorage.getItem(LS.cache);
+    if(raw) DATA = normalizeData(JSON.parse(raw));
+  }catch(e){ console.warn('cache load failed', e); }
+}
+
+/* =========================================================
+   storage backends
+   ========================================================= */
+const BK = { mode:'none' };   // 'none' | 'fs' | 'dbx'
+let _dirHandle = null;
+
+/* ----- IndexedDB (FS handle persistence) ----- */
+function idbOpen(){ return new Promise((res,rej)=>{
+  const r = indexedDB.open('emg', 1);
+  r.onupgradeneeded = ()=> r.result.createObjectStore('kv');
+  r.onsuccess = ()=> res(r.result);
+  r.onerror = ()=> rej(r.error);
+});}
+async function idbSet(k,v){ const db=await idbOpen(); return new Promise((res,rej)=>{
+  const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').put(v,k);
+  tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });}
+async function idbGet(k){ const db=await idbOpen(); return new Promise((res,rej)=>{
+  const tx=db.transaction('kv','readonly'); const rq=tx.objectStore('kv').get(k);
+  rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); });}
+
+/* ----- File System Access backend (PC) ----- */
+async function fsConnect(){
+  if(DEMO){ toast('デモモードでは接続できません'); return; }
+  if(!window.showDirectoryPicker){ toast('このブラウザはフォルダ接続非対応です(Chrome/Edge推奨)','error'); return; }
+  try{
+    const h = await window.showDirectoryPicker({ mode:'readwrite' });
+    _dirHandle = h; BK.mode='fs';
+    await idbSet('dir', h);
+    await syncCycle(true);
+    toast('フォルダに接続しました','ok');
+    renderConn();
+  }catch(e){ if(e && e.name!=='AbortError'){ console.warn(e); toast('接続できませんでした','error'); } }
+}
+async function fsRestore(){
+  try{
+    const h = await idbGet('dir');
+    if(!h) return false;
+    const p = await h.queryPermission({ mode:'readwrite' });
+    _dirHandle = h;
+    if(p==='granted'){ BK.mode='fs'; return true; }
+    BK.mode='fs-locked';   // 要ユーザー操作
+    return false;
+  }catch(e){ return false; }
+}
+async function fsUnlock(){
+  try{
+    const p = await _dirHandle.requestPermission({ mode:'readwrite' });
+    if(p==='granted'){ BK.mode='fs'; renderConn(); await syncCycle(true); toast('再接続しました','ok'); }
+  }catch(e){ toast('再接続できませんでした','error'); }
+}
+async function fsRead(){
+  try{
+    const fh = await _dirHandle.getFileHandle('data.json');
+    const f  = await fh.getFile();
+    const txt = await f.text();
+    if(!txt.trim()) return { json:null, missing:true };
+    try{ return { json: JSON.parse(txt) }; }
+    catch(e){
+      await new Promise(r=>setTimeout(r,300));
+      const f2 = await (await _dirHandle.getFileHandle('data.json')).getFile();
+      try{ return { json: JSON.parse(await f2.text()) }; }
+      catch(e2){ return { error:'parse' }; }
+    }
+  }catch(e){
+    if(e && e.name==='NotFoundError') return { json:null, missing:true };
+    return { error:'read' };
+  }
+}
+async function fsWrite(json){
+  const fh = await _dirHandle.getFileHandle('data.json', { create:true });
+  const w  = await fh.createWritable();
+  await w.write(JSON.stringify(json, null, 2));
+  await w.close();
+}
+
+/* ----- Dropbox backend (PKCE) ----- */
+function asciiArg(o){
+  return JSON.stringify(o).replace(/[-￿]/g, c=>'\\u'+('000'+c.charCodeAt(0).toString(16)).slice(-4));
+}
+function b64url(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function dbxAuthStart(){
+  if(DEMO){ toast('デモモードでは連携できません'); return; }
+  if(location.protocol==='file:'){ toast('file:// ではDropbox連携不可。PCは「フォルダを選択して接続」を使ってください','error'); return; }
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
+  sessionStorage.setItem('emg_pkce_v', verifier);
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  const redirect = location.origin + location.pathname;
+  location.href = 'https://www.dropbox.com/oauth2/authorize'
+    + '?client_id=' + DBX_KEY
+    + '&response_type=code'
+    + '&code_challenge=' + challenge
+    + '&code_challenge_method=S256'
+    + '&token_access_type=offline'
+    + '&redirect_uri=' + encodeURIComponent(redirect);
+}
+async function dbxHandleRedirect(){
+  const code = new URLSearchParams(location.search).get('code');
+  if(!code) return;
+  const verifier = sessionStorage.getItem('emg_pkce_v');
+  history.replaceState(null,'', location.pathname + (DEMO?'?demo=1':''));
+  if(!verifier) return;
+  try{
+    const body = new URLSearchParams({
+      code, grant_type:'authorization_code', client_id:DBX_KEY,
+      code_verifier:verifier, redirect_uri: location.origin+location.pathname
+    });
+    const r = await fetch('https://api.dropboxapi.com/oauth2/token', { method:'POST', body });
+    const j = await r.json();
+    if(j.access_token){
+      localStorage.setItem(LS.dbxA, j.access_token);
+      if(j.refresh_token) localStorage.setItem(LS.dbxR, j.refresh_token);
+      localStorage.setItem(LS.dbxE, String(Date.now() + (j.expires_in||14400)*1000));
+      BK.mode='dbx';
+      toast('Dropboxと連携しました','ok');
+    } else { toast('Dropbox連携に失敗しました','error'); console.warn(j); }
+  }catch(e){ console.warn(e); toast('Dropbox連携に失敗しました','error'); }
+}
+async function dbxToken(){
+  const exp = Number(localStorage.getItem(LS.dbxE))||0;
+  let tok = localStorage.getItem(LS.dbxA);
+  if(tok && Date.now() < exp - 5*60*1000) return tok;
+  const rt = localStorage.getItem(LS.dbxR);
+  if(!rt) return tok;
+  try{
+    const body = new URLSearchParams({ grant_type:'refresh_token', refresh_token:rt, client_id:DBX_KEY });
+    const r = await fetch('https://api.dropboxapi.com/oauth2/token', { method:'POST', body });
+    const j = await r.json();
+    if(j.access_token){
+      localStorage.setItem(LS.dbxA, j.access_token);
+      localStorage.setItem(LS.dbxE, String(Date.now() + (j.expires_in||14400)*1000));
+      return j.access_token;
+    }
+  }catch(e){ console.warn('token refresh failed', e); }
+  return tok;
+}
+function dbxDisconnect(){
+  localStorage.removeItem(LS.dbxA); localStorage.removeItem(LS.dbxR); localStorage.removeItem(LS.dbxE);
+  if(BK.mode==='dbx') BK.mode='none';
+  renderConn(); toast('Dropbox連携を解除しました');
+}
+async function dbxRead(){
+  const tok = await dbxToken();
+  if(!tok) return { error:'auth' };
+  try{
+    const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+tok, 'Dropbox-API-Arg': asciiArg({ path: DBX_PATH }) }
+    });
+    if(r.status===409) return { json:null, missing:true };
+    if(r.status===401) return { error:'auth' };
+    if(!r.ok) return { error:'http'+r.status };
+    const rev = JSON.parse(r.headers.get('dropbox-api-result')||'{}').rev;
+    const txt = await r.text();
+    try{ return { json: JSON.parse(txt), rev }; }
+    catch(e){ return { error:'parse' }; }
+  }catch(e){ return { error:'network' }; }
+}
+async function dbxWrite(json, rev){
+  const tok = await dbxToken();
+  if(!tok) return { error:'auth' };
+  const mode = rev ? { '.tag':'update', update: rev } : 'add';
+  try{
+    const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+tok,
+        'Dropbox-API-Arg': asciiArg({ path: DBX_PATH, mode, autorename:false, mute:true }),
+        'Content-Type':'application/octet-stream'
+      },
+      body: JSON.stringify(json, null, 2)
+    });
+    if(r.status===409) return { conflict:true };
+    if(!r.ok) return { error:'http'+r.status };
+    return { ok:true };
+  }catch(e){ return { error:'network' }; }
+}
+
+/* =========================================================
+   sync engine — 常に プル→マージ→書込 / 直列化
+   ========================================================= */
+let _tail = Promise.resolve();
+let _syncing = false;
+function persist(){
+  cacheSave();
+  _tail = _tail.then(()=>_syncOnce(true)).catch(e=>console.warn('persist error', e));
+  return _tail;
+}
+function syncCycle(write){
+  _tail = _tail.then(()=>_syncOnce(write)).catch(e=>console.warn('sync error', e));
+  return _tail;
+}
+async function _syncOnce(allowWrite){
+  if(DEMO) return true;
+  if(BK.mode!=='fs' && BK.mode!=='dbx'){ setSyncInd(); return true; }
+  _syncing = true; setSyncInd('同期中…');
+  try{
+    if(BK.mode==='fs'){
+      const r = await fsRead();
+      if(r.error){ setSyncInd('⚠同期失敗'); toast('共有フォルダの読み込みに失敗(上書き回避のため保存中止)','error'); return false; }
+      const disk = r.missing ? null : normalizeData(r.json);
+      const merged = mergeData(DATA, disk);
+      const changed = JSON.stringify(merged) !== JSON.stringify(disk);
+      DATA = merged; cacheSave();
+      if(allowWrite && (changed || r.missing)){ await fsWrite(DATA); }
+      stampSync(); renderAll();
+      return true;
+    }
+    /* dbx: CAS with retry */
+    for(let i=0;i<3;i++){
+      const r = await dbxRead();
+      if(r.error==='auth'){ setSyncInd('⚠要再連携'); renderConn(); return false; }
+      if(r.error){ setSyncInd('⚠同期失敗'); if(allowWrite) toast('Dropbox同期に失敗しました('+r.error+')','error'); return false; }
+      const disk = r.missing ? null : normalizeData(r.json);
+      const merged = mergeData(DATA, disk);
+      const changed = JSON.stringify(merged) !== JSON.stringify(disk);
+      DATA = merged; cacheSave();
+      if(!allowWrite || (!changed && !r.missing)){ stampSync(); renderAll(); return true; }
+      const w = await dbxWrite(DATA, r.rev);
+      if(w.ok){ stampSync(); renderAll(); return true; }
+      if(w.conflict){ await new Promise(rs=>setTimeout(rs, 400*(i+1))); continue; }
+      setSyncInd('⚠同期失敗'); toast('Dropboxへの保存に失敗しました','error'); return false;
+    }
+    setSyncInd('⚠競合'); toast('同期の競合が続いています。少し待って↻を押してください','error');
+    return false;
+  } finally { _syncing = false; }
+}
+function stampSync(){
+  localStorage.setItem(LS.lastSync, String(Date.now()));
+  setSyncInd();
+  const el=$('#last-sync'); if(el){ el.textContent = new Date().toLocaleString('ja-JP'); }
+}
+function setSyncInd(txt){
+  const el = $('#sync-ind');
+  if(txt){ el.textContent = txt; return; }
+  if(DEMO){ el.textContent='デモ'; return; }
+  if(BK.mode==='fs') el.textContent='📁共有中';
+  else if(BK.mode==='dbx') el.textContent='☁共有中';
+  else if(BK.mode==='fs-locked') el.textContent='📁要再接続';
+  else el.textContent='この端末のみ';
+}
+function manualSync(){
+  if(DEMO){ toast('デモモードです'); return; }
+  if(BK.mode!=='fs' && BK.mode!=='dbx'){ toast('未接続です(設定から接続)'); showTab('settings'); return; }
+  syncCycle(true).then(ok=>{ if(ok!==false) toast('同期しました','ok'); });
+}
+
+/* =========================================================
+   task helpers
+   ========================================================= */
+function liveTasks(){ return DATA.tasks.filter(t=>!t.isDeleted); }
+function liveProjects(){ return DATA.projects.filter(p=>!p.isDeleted); }
+function liveMembers(){ return DATA.members.filter(m=>!m.isDeleted); }
+function projName(id){ const p=DATA.projects.find(p=>p.id===id); return p? p.name : ''; }
+function stamp(o){ o.updatedAt = Date.now(); o.updatedBy = editor || '未設定'; return o; }
+
+function newTask(fields){
+  const t = Object.assign({
+    id: uid('t'), title:'', note:'', projectId:'', assignee:'',
+    due:'', dueTime:'', priority:'中', status:'未着手',
+    checklist:[], createdAt: Date.now(), completedAt:0, isDeleted:false
+  }, fields||{});
+  stamp(t);
+  DATA.tasks.push(t);
+  return t;
+}
+function toggleDone(id, ev){
+  if(ev) ev.stopPropagation();
+  const t = DATA.tasks.find(t=>t.id===id); if(!t) return;
+  if(t.status==='完了'){ t.status='未着手'; t.completedAt=0; }
+  else { t.status='完了'; t.completedAt=Date.now(); }
+  stamp(t); persist(); renderAll();
+}
+
+/* =========================================================
+   rendering
+   ========================================================= */
+let curTab='home';
+let calY, calM;                 // calendar year / month(0-11)
+let _selDate = '';
+const filt = { st:'active', assignee:'', project:'', q:'' };
+
+function showTab(t){
+  curTab=t;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('#page-'+t).classList.add('active');
+  document.querySelectorAll('.bnav button').forEach(b=>b.classList.remove('on'));
+  $('#nav-'+t).classList.add('on');
+  renderAll();
+  window.scrollTo(0,0);
+}
+function renderAll(){
+  if(curTab==='home') renderHome();
+  else if(curTab==='tasks') renderTasks();
+  else if(curTab==='cal') renderCal();
+  else if(curTab==='settings') renderSettings();
+  renderConn();
+}
+
+/* ---------- task row html ---------- */
+function taskRowHTML(t){
+  const today = todayISO();
+  const over = t.due && t.due < today && t.status!=='完了';
+  const dueCls = over? 'over' : (t.due===today? 'today':'');
+  const done = t.status==='完了';
+  const priCls = t.priority==='高'?'high': t.priority==='低'?'low':'mid';
+  const clDone = (t.checklist||[]).filter(c=>c.done).length;
+  const clAll  = (t.checklist||[]).length;
+  return `<div class="trow${done?' done':''}" onclick="openTaskModal('${t.id}')">
+    <div class="pri ${priCls}"></div>
+    <button class="chk" onclick="toggleDone('${t.id}',event)" title="完了切替">✓</button>
+    <div class="tbody">
+      <div class="ttl">${esc(t.title)||'(無題)'}</div>
+      <div class="tmeta">
+        ${t.due? `<span class="chip due ${dueCls}">${over?'⚠ ':''}${esc(fmtDue(t.due,t.dueTime))}</span>`:''}
+        ${!done && t.status==='進行中'? `<span class="chip st-doing">進行中</span>`:''}
+        ${t.projectId? `<span class="chip pj">${esc(projName(t.projectId))}</span>`:''}
+        ${t.assignee? `<span class="chip as">${esc(t.assignee)}</span>`:''}
+        ${clAll? `<span>☑ ${clDone}/${clAll}</span>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+function listHTML(arr, emptyMsg){
+  if(!arr.length) return `<div class="empty">${esc(emptyMsg||'タスクはありません')}</div>`;
+  return arr.map(taskRowHTML).join('');
+}
+function sortTasks(arr){
+  return arr.slice().sort((a,b)=>{
+    const pa = a.status==='完了'?1:0, pb = b.status==='完了'?1:0;
+    if(pa!==pb) return pa-pb;
+    const da = a.due||'9999-12-31', db = b.due||'9999-12-31';
+    if(da!==db) return da<db? -1:1;
+    const pr = {'高':0,'中':1,'低':2};
+    if(pr[a.priority]!==pr[b.priority]) return pr[a.priority]-pr[b.priority];
+    return (a.createdAt||0)-(b.createdAt||0);
+  });
+}
+
+/* ---------- home ---------- */
+function renderHome(){
+  const today = todayISO();
+  const t7 = addDaysISO(today,7);
+  const live = liveTasks();
+  const act = live.filter(t=>t.status!=='完了');
+  const over  = act.filter(t=>t.due && t.due<today);
+  const todayT= act.filter(t=>t.due===today);
+  const week  = act.filter(t=>t.due && t.due>today && t.due<=t7);
+  const doing = act.filter(t=>t.status==='進行中');
+  $('#k-over').textContent=over.length;
+  $('#k-today').textContent=todayT.length;
+  $('#k-week').textContent=week.length;
+  $('#k-doing').textContent=doing.length;
+
+  const noDue = act.filter(t=>!t.due);
+  const doneToday = live.filter(t=>t.status==='完了' && t.completedAt && new Date(t.completedAt).toDateString()===new Date().toDateString());
+
+  let html='';
+  if(over.length)  html+=`<div class="card"><h3>⚠ 期限切れ <span class="cnt">${over.length}</span></h3>${listHTML(sortTasks(over))}</div>`;
+  html+=`<div class="card"><h3>📌 今日 <span class="cnt">${todayT.length}</span></h3>${listHTML(sortTasks(todayT),'今日が期日のタスクはありません')}</div>`;
+  html+=`<div class="card"><h3>📅 7日以内 <span class="cnt">${week.length}</span></h3>${listHTML(sortTasks(week),'直近7日のタスクはありません')}</div>`;
+  if(noDue.length) html+=`<div class="card"><h3>🗂 期日なし <span class="cnt">${noDue.length}</span></h3>${listHTML(sortTasks(noDue))}</div>`;
+  if(doneToday.length) html+=`<div class="card"><h3>✅ 今日完了 <span class="cnt">${doneToday.length}</span></h3>${listHTML(doneToday)}</div>`;
+  if(!live.length) html=`<div class="card"><div class="empty">まだタスクがありません。<br>右下の＋から最初のタスクを追加しましょう。</div></div>`;
+  $('#home-sections').innerHTML = html;
+}
+function jumpFiltered(kind){
+  filt.q=''; $('#f-q').value='';
+  filt.assignee=''; filt.project='';
+  if(kind==='doing'){ filt.st='進行中'; }
+  else filt.st='active';
+  showTab('tasks');
+  syncStChips();
+}
+
+/* ---------- tasks tab ---------- */
+function setStFilter(v){ filt.st=v; syncStChips(); renderTasks(); }
+function syncStChips(){
+  document.querySelectorAll('#st-chips .fchip').forEach(b=>b.classList.toggle('on', b.dataset.st===filt.st));
+}
+function renderTasks(){
+  /* selects */
+  const asSel=$('#f-assignee'), pjSel=$('#f-project');
+  const asPrev=asSel.value, pjPrev=pjSel.value;
+  asSel.innerHTML = '<option value="">担当: 全員</option>' + liveMembers().map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+  pjSel.innerHTML = '<option value="">プロジェクト: 全て</option>' + liveProjects().map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  asSel.value=asPrev; pjSel.value=pjPrev;
+  filt.assignee=asSel.value; filt.project=pjSel.value; filt.q=$('#f-q').value.trim().toLowerCase();
+
+  let arr = liveTasks();
+  if(filt.st==='active') arr=arr.filter(t=>t.status!=='完了');
+  else if(filt.st!=='all') arr=arr.filter(t=>t.status===filt.st);
+  if(filt.assignee) arr=arr.filter(t=>t.assignee===filt.assignee);
+  if(filt.project)  arr=arr.filter(t=>t.projectId===filt.project);
+  if(filt.q) arr=arr.filter(t=> (t.title+' '+(t.note||'')).toLowerCase().includes(filt.q));
+  $('#task-list').innerHTML = listHTML(sortTasks(arr), '該当するタスクはありません');
+}
+function quickAdd(){
+  const inp=$('#qa-title'); const v=inp.value.trim();
+  if(!v){ inp.focus(); return; }
+  newTask({ title:v });
+  inp.value='';
+  persist(); renderAll();
+  toast('追加しました','ok');
+}
+
+/* ---------- calendar ---------- */
+function calToday(){ const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); _selDate=todayISO(); renderCal(); }
+function calMove(n){ calM+=n; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCal(); }
+function renderCal(){
+  if(calY==null) { const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); }
+  $('#cal-title').textContent = calY+'年 '+(calM+1)+'月';
+  $('#cal-dow').innerHTML = DOW.map((d,i)=>`<div class="cal-dow${i===0?' sun':i===6?' sat':''}">${d}</div>`).join('');
+
+  const first = new Date(calY, calM, 1);
+  const start = new Date(first); start.setDate(1 - first.getDay());
+  const today = todayISO();
+  const byDate = {};
+  liveTasks().forEach(t=>{ if(t.due){ (byDate[t.due]=byDate[t.due]||[]).push(t); } });
+
+  let html='';
+  for(let i=0;i<42;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const out = d.getMonth()!==calM;
+    const dow = d.getDay();
+    const list = sortTasks(byDate[iso]||[]);
+    const shown = list.slice(0,3);
+    html += `<div class="cal-cell${out?' out':''}${iso===today?' today':''}${iso===_selDate?' sel':''}${dow===0?' sun':dow===6?' sat':''}"
+      onclick="selDay('${iso}')">
+      <div class="d">${d.getDate()}</div>
+      ${shown.map(t=>{
+        const over = t.due<today && t.status!=='完了';
+        return `<div class="cal-task${t.status==='完了'?' done':over?' over':''}">${esc(t.title)}</div>`;
+      }).join('')}
+      ${list.length>3? `<div class="cal-more">+${list.length-3}件</div>`:''}
+    </div>`;
+    if(i>=34 && d.getMonth()!==calM && d.getDay()===6) break;  // 最終行が翌月のみなら打ち切り
+  }
+  $('#cal-grid').innerHTML = html;
+  renderDayPanel();
+}
+function selDay(iso){ _selDate=iso; renderCal(); }
+function renderDayPanel(){
+  const addBtn=$('#day-add-btn');
+  if(!_selDate){ $('#day-panel-title').textContent='日付を選択'; addBtn.style.display='none';
+    $('#day-panel-list').innerHTML='<div class="empty">カレンダーの日付をタップすると、その日のタスクが表示されます</div>'; return; }
+  const d=new Date(_selDate+'T00:00:00');
+  $('#day-panel-title').textContent = (d.getMonth()+1)+'/'+d.getDate()+'('+DOW[d.getDay()]+') のタスク';
+  addBtn.style.display='';
+  const list = sortTasks(liveTasks().filter(t=>t.due===_selDate));
+  $('#day-panel-list').innerHTML = listHTML(list, 'この日のタスクはありません');
+}
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  $('#set-editor').value = editor;
+  $('#member-list').innerHTML = liveMembers().map(m=>
+    `<span class="tag">${esc(m.name)}<button class="x" onclick="rmMember('${m.id}')">✕</button></span>`).join('') || '<span class="muted">未登録</span>';
+  $('#project-list').innerHTML = liveProjects().map(p=>
+    `<span class="tag">${esc(p.name)}<button class="x" onclick="rmProject('${p.id}')">✕</button></span>`).join('') || '<span class="muted">未登録</span>';
+  const ls = Number(localStorage.getItem(LS.lastSync))||0;
+  $('#last-sync').textContent = ls? new Date(ls).toLocaleString('ja-JP') : '—';
+}
+function renderConn(){
+  const st=$('#conn-status');
+  if(DEMO){ st.textContent='デモモード(保存されません)'; st.className='muted'; }
+  else if(BK.mode==='fs'){ st.textContent='✓ 共有フォルダ接続中'; st.className='conn-ok'; }
+  else if(BK.mode==='dbx'){ st.textContent='✓ Dropbox接続中'; st.className='conn-ok'; }
+  else if(BK.mode==='fs-locked'){ st.textContent='フォルダ再接続が必要'; st.className='conn-ng'; }
+  else { st.textContent='未接続(この端末のみ)'; st.className='conn-ng'; }
+
+  $('#row-fs').style.display = window.showDirectoryPicker ? '' : 'none';
+  const hasTok = !!localStorage.getItem(LS.dbxR) || !!localStorage.getItem(LS.dbxA);
+  $('#btn-dbx-out').style.display = hasTok? '':'none';
+  $('#btn-dbx').textContent = hasTok? '🔑 再連携' : '🔑 Dropboxと連携';
+
+  /* banner */
+  const b=$('#conn-banner');
+  if(DEMO){ b.style.display='none'; setSyncInd(); return; }
+  if(BK.mode==='fs-locked'){
+    b.className='';
+    b.style.display='flex';
+    b.innerHTML='📁 共有フォルダへの再接続が必要です <button onclick="fsUnlock()">再接続</button>';
+  } else { b.style.display='none'; }
+  setSyncInd();
+}
+function saveEditor(){
+  editor = $('#set-editor').value.trim();
+  localStorage.setItem(LS.editor, editor);
+  toast('保存しました','ok');
+}
+function addMember(){
+  const inp=$('#new-member'); const v=inp.value.trim(); if(!v) return;
+  if(liveMembers().some(m=>m.name===v)){ toast('同名のメンバーがいます'); return; }
+  DATA.members.push(stamp({ id:uid('m'), name:v, isDeleted:false }));
+  inp.value=''; persist(); renderSettings();
+}
+async function rmMember(id){
+  const m=DATA.members.find(m=>m.id===id); if(!m) return;
+  if(!await confirmBox(`メンバー「${m.name}」を削除しますか?\n(既存タスクの担当表示はそのまま残ります)`,'削除')) return;
+  m.isDeleted=true; stamp(m); persist(); renderSettings();
+}
+function addProject(){
+  const inp=$('#new-project'); const v=inp.value.trim(); if(!v) return;
+  if(liveProjects().some(p=>p.name===v)){ toast('同名のプロジェクトがあります'); return; }
+  DATA.projects.push(stamp({ id:uid('p'), name:v, isDeleted:false }));
+  inp.value=''; persist(); renderSettings();
+}
+async function rmProject(id){
+  const p=DATA.projects.find(p=>p.id===id); if(!p) return;
+  const used = liveTasks().filter(t=>t.projectId===id).length;
+  if(!await confirmBox(`プロジェクト「${p.name}」を削除しますか?`+(used?`\n(${used}件のタスクが紐付いています。タスクは残ります)`:''),'削除')) return;
+  p.isDeleted=true; stamp(p); persist(); renderSettings();
+}
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(DATA,null,2)], { type:'application/json' });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='EMIGATE_backup_'+todayISO()+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+async function importJSON(input){
+  const f=input.files && input.files[0]; input.value='';
+  if(!f) return;
+  try{
+    const j = JSON.parse(await f.text());
+    if(j.app!=='emigate-tasks'){ toast('EMIGATEのバックアップではありません','error'); return; }
+    if(!await confirmBox('バックアップを読み込みます。現在のデータとマージされます(新しい方が優先)。よろしいですか?','読み込む')) return;
+    DATA = mergeData(normalizeData(j), DATA);   /* import側をlocal扱い=同時刻ならimport優先にしない: mergeColはlocal>=diskでlocal優先 → import を disk側にして既存優先 */
+    persist(); renderAll();
+    toast('読み込みました','ok');
+  }catch(e){ console.warn(e); toast('読み込みに失敗しました','error'); }
+}
+
+/* =========================================================
+   task modal
+   ========================================================= */
+let _editingId = null;
+let _clTemp = [];
+
+function segSel(id, v){
+  document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+}
+function segVal(id){
+  const b=document.querySelector('#'+id+' button.on'); return b? b.dataset.v : '';
+}
+function fillSelect(sel, options, val, emptyLabel){
+  sel.innerHTML = `<option value="">${esc(emptyLabel)}</option>` + options.join('');
+  sel.value = val||'';
+}
+function openTaskModal(id, presetDue){
+  _editingId = id||null;
+  const t = id ? DATA.tasks.find(x=>x.id===id) : null;
+  $('#tm-title').textContent = t? 'タスクを編集' : '新しいタスク';
+  $('#tm-ttl').value  = t? t.title : '';
+  $('#tm-due').value  = t? (t.due||'') : (presetDue||'');
+  $('#tm-time').value = t? (t.dueTime||'') : '';
+  $('#tm-note').value = t? (t.note||'') : '';
+  segSel('tm-pri', t? (t.priority||'中') : '中');
+  segSel('tm-st',  t? (t.status||'未着手') : '未着手');
+  fillSelect($('#tm-assignee'), liveMembers().map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`), t? t.assignee:'', '未定');
+  fillSelect($('#tm-project'), liveProjects().map(p=>`<option value="${p.id}">${esc(p.name)}</option>`), t? t.projectId:'', 'なし');
+  _clTemp = t? JSON.parse(JSON.stringify(t.checklist||[])) : [];
+  renderCl();
+  $('#tm-cl-new').value='';
+  $('#tm-del').style.display = t? '' : 'none';
+  $('#tm-meta').textContent = t? `更新: ${new Date(t.updatedAt).toLocaleString('ja-JP')} / ${esc(t.updatedBy||'')}` : '';
+  $('#task-modal').classList.add('active');
+  if(!t) setTimeout(()=>$('#tm-ttl').focus(), 60);
+}
+function closeTaskModal(){ $('#task-modal').classList.remove('active'); _editingId=null; }
+function renderCl(){
+  $('#tm-cl').innerHTML = _clTemp.map((c,i)=>`
+    <div class="cl-item">
+      <input type="checkbox" ${c.done?'checked':''} onchange="_clTemp[${i}].done=this.checked;renderCl()">
+      <span class="t ${c.done?'done':''}">${esc(c.text)}</span>
+      <button class="rm" onclick="_clTemp.splice(${i},1);renderCl()">✕</button>
+    </div>`).join('');
+}
+function clAdd(){
+  const inp=$('#tm-cl-new'); const v=inp.value.trim(); if(!v) return;
+  _clTemp.push({ text:v, done:false });
+  inp.value=''; renderCl(); inp.focus();
+}
+function saveTaskFromModal(){
+  const title = $('#tm-ttl').value.trim();
+  if(!title){ toast('タイトルを入力してください','error'); $('#tm-ttl').focus(); return; }
+  const fields = {
+    title,
+    due: $('#tm-due').value || '',
+    dueTime: $('#tm-time').value || '',
+    note: $('#tm-note').value,
+    priority: segVal('tm-pri') || '中',
+    status: segVal('tm-st') || '未着手',
+    assignee: $('#tm-assignee').value,
+    projectId: $('#tm-project').value,
+    checklist: _clTemp
+  };
+  if(_editingId){
+    const t = DATA.tasks.find(x=>x.id===_editingId);
+    if(!t){ toast('タスクが見つかりません','error'); closeTaskModal(); return; }
+    const wasDone = t.status==='完了';
+    Object.assign(t, fields);
+    if(!wasDone && t.status==='完了') t.completedAt=Date.now();
+    if(wasDone && t.status!=='完了') t.completedAt=0;
+    stamp(t);
+  } else {
+    const t = newTask(fields);
+    if(t.status==='完了') t.completedAt=Date.now();
+  }
+  persist(); closeTaskModal(); renderAll();
+  toast('保存しました','ok');
+}
+async function delTaskFromModal(){
+  if(!_editingId) return;
+  const t = DATA.tasks.find(x=>x.id===_editingId); if(!t) return;
+  if(!await confirmBox(`「${t.title}」を削除しますか?`,'削除')) return;
+  t.isDeleted=true; stamp(t);
+  persist(); closeTaskModal(); renderAll();
+  toast('削除しました');
+}
+
+/* =========================================================
+   demo data
+   ========================================================= */
+function seedDemo(){
+  const today=todayISO();
+  DATA = defaultData();
+  DATA.projects = [
+    { id:'p-web', name:'Webサイト', isDeleted:false, updatedAt:1 },
+    { id:'p-setup', name:'会社設立', isDeleted:false, updatedAt:1 },
+    { id:'p-sales', name:'営業', isDeleted:false, updatedAt:1 }
+  ];
+  DATA.members = [
+    { id:'m-1', name:'大嶺', isDeleted:false, updatedAt:1 },
+    { id:'m-2', name:'佐藤', isDeleted:false, updatedAt:1 }
+  ];
+  const mk=(f)=>{ const t=newTask(f); return t; };
+  mk({ title:'ロゴデザイン最終確認', projectId:'p-web', assignee:'大嶺', due:addDaysISO(today,-2), priority:'高', status:'進行中' });
+  mk({ title:'定款の作成', projectId:'p-setup', assignee:'大嶺', due:today, priority:'高', status:'進行中',
+       checklist:[{text:'事業目的の確定',done:true},{text:'公証役場に予約',done:false}] });
+  mk({ title:'銀行口座開設の書類準備', projectId:'p-setup', assignee:'佐藤', due:today, priority:'中' });
+  mk({ title:'LP ワイヤーフレーム作成', projectId:'p-web', assignee:'佐藤', due:addDaysISO(today,2), priority:'中' });
+  mk({ title:'見込み客リスト 20社', projectId:'p-sales', assignee:'大嶺', due:addDaysISO(today,5), priority:'低' });
+  mk({ title:'名刺発注', projectId:'p-setup', due:addDaysISO(today,10), priority:'低' });
+  mk({ title:'競合サービス調査', projectId:'p-sales', assignee:'佐藤', priority:'中' });
+  const done = mk({ title:'ドメイン取得', projectId:'p-web', assignee:'大嶺', due:addDaysISO(today,-1), status:'完了' });
+  done.completedAt = Date.now();
+}
+
+/* =========================================================
+   init
+   ========================================================= */
+async function init(){
+  $('#ver').textContent = 'v'+APP_VERSION;
+  $('#ver2').textContent = APP_VERSION;
+  if(DEMO){
+    seedDemo();
+  } else {
+    cacheLoad();
+    await dbxHandleRedirect();
+    if(localStorage.getItem(LS.dbxR) || localStorage.getItem(LS.dbxA)){
+      BK.mode='dbx';
+    } else {
+      await fsRestore();
+    }
+  }
+  calToday(); /* calendar state 初期化 */
+  showTab('home');
+  renderConn();
+  if(!DEMO && (BK.mode==='fs' || BK.mode==='dbx')){
+    syncCycle(false);
+    setInterval(()=>{
+      if(document.hidden) return;
+      if($('#task-modal').classList.contains('active')) return;
+      if(_syncing) return;
+      syncCycle(false);
+    }, 90*1000);
+    document.addEventListener('visibilitychange', ()=>{
+      if(!document.hidden && !_syncing && !$('#task-modal').classList.contains('active')) syncCycle(false);
+    });
+  }
+}
+init();
+</script>
+</body>
+</html>
