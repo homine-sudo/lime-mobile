@@ -365,7 +365,7 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
     <div class="card">
       <h3>👤 あなたの名前 <span class="muted" style="font-weight:400">(更新記録に残ります)</span></h3>
       <div class="set-row">
-        <input type="text" id="set-editor" placeholder="例: 大嶺">
+        <input type="text" id="set-editor" placeholder="例: 山田">
         <button class="btn btn-primary" onclick="saveEditor()">保存</button>
       </div>
     </div>
@@ -471,7 +471,7 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
    - 共有: Dropbox (PKCE API) or ローカル共有フォルダ(File System Access API)
    - 保存は 常に プル→idマージ→書込 (stale上書き防止・LIME Oneの教訓踏襲)
    ========================================================= */
-const APP_VERSION = '2026-07-28c';
+const APP_VERSION = '2026-07-28d';
 const DEMO = new URLSearchParams(location.search).has('demo');
 const DBX_KEY = 'fly154tcdbz09x9';
 const DBX_PATH = '/EMIGATE/システムデータ/data.json';   /* 非共有フォルダ(HT従業員に非公開)。共有DB内に置かないこと */
@@ -1209,23 +1209,23 @@ function seedDemo(){
   DATA = defaultData();
   DATA.projects = [
     { id:'p-web', name:'Webサイト', isDeleted:false, updatedAt:1 },
-    { id:'p-setup', name:'会社設立', isDeleted:false, updatedAt:1 },
+    { id:'p-setup', name:'社内準備', isDeleted:false, updatedAt:1 },
     { id:'p-sales', name:'営業', isDeleted:false, updatedAt:1 }
   ];
   DATA.members = [
-    { id:'m-1', name:'大嶺', isDeleted:false, updatedAt:1 },
-    { id:'m-2', name:'佐藤', isDeleted:false, updatedAt:1 }
+    { id:'m-1', name:'山田', isDeleted:false, updatedAt:1 },
+    { id:'m-2', name:'鈴木', isDeleted:false, updatedAt:1 }
   ];
   const mk=(f)=>{ const t=newTask(f); return t; };
-  mk({ title:'ロゴデザイン最終確認', projectId:'p-web', assignee:'大嶺', due:addDaysISO(today,-2), priority:'高', status:'進行中' });
-  mk({ title:'定款の作成', projectId:'p-setup', assignee:'大嶺', due:today, priority:'高', status:'進行中',
-       checklist:[{text:'事業目的の確定',done:true},{text:'公証役場に予約',done:false}] });
-  mk({ title:'銀行口座開設の書類準備', projectId:'p-setup', assignee:'佐藤', due:today, priority:'中' });
-  mk({ title:'LP ワイヤーフレーム作成', projectId:'p-web', assignee:'佐藤', due:addDaysISO(today,2), priority:'中' });
-  mk({ title:'見込み客リスト 20社', projectId:'p-sales', assignee:'大嶺', due:addDaysISO(today,5), priority:'低' });
+  mk({ title:'ロゴデザイン最終確認', projectId:'p-web', assignee:'山田', due:addDaysISO(today,-2), priority:'高', status:'進行中' });
+  mk({ title:'資料をまとめる', projectId:'p-setup', assignee:'山田', due:today, priority:'高', status:'進行中',
+       checklist:[{text:'たたき台を作る',done:true},{text:'内容を確認する',done:false}] });
+  mk({ title:'見積書の作成', projectId:'p-setup', assignee:'鈴木', due:today, priority:'中' });
+  mk({ title:'LP ワイヤーフレーム作成', projectId:'p-web', assignee:'鈴木', due:addDaysISO(today,2), priority:'中' });
+  mk({ title:'見込み客リスト 20社', projectId:'p-sales', assignee:'山田', due:addDaysISO(today,5), priority:'低' });
   mk({ title:'名刺発注', projectId:'p-setup', due:addDaysISO(today,10), priority:'低' });
-  mk({ title:'競合サービス調査', projectId:'p-sales', assignee:'佐藤', priority:'中' });
-  const done = mk({ title:'ドメイン取得', projectId:'p-web', assignee:'大嶺', due:addDaysISO(today,-1), status:'完了' });
+  mk({ title:'競合サービス調査', projectId:'p-sales', assignee:'鈴木', priority:'中' });
+  const done = mk({ title:'ドメイン取得', projectId:'p-web', assignee:'山田', due:addDaysISO(today,-1), status:'完了' });
   done.completedAt = Date.now();
 }
 
