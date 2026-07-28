@@ -564,7 +564,7 @@ main{max-width:960px;margin:0 auto;padding:14px 14px 30px}
    - 共有: Dropbox (PKCE API) or ローカル共有フォルダ(File System Access API)
    - 保存は 常に プル→idマージ→書込 (stale上書き防止・LIME Oneの教訓踏襲)
    ========================================================= */
-const APP_VERSION = '2026-07-28f';
+const APP_VERSION = '2026-07-28g';
 const DEMO = new URLSearchParams(location.search).has('demo');
 const DBX_KEY = 'fly154tcdbz09x9';
 const DBX_PATH = '/EMIGATE/システムデータ/data.json';   /* 非共有フォルダ(HT従業員に非公開)。共有DB内に置かないこと */
@@ -1319,7 +1319,18 @@ function renderHome(){
   html+=`<div class="card"><h3>📅 7日以内 <span class="cnt">${week.length}</span></h3>${listHTML(sortTasks(week),'直近7日のタスクはありません')}</div>`;
   if(noDue.length) html+=`<div class="card"><h3>🗂 期日なし <span class="cnt">${noDue.length}</span></h3>${listHTML(sortTasks(noDue))}</div>`;
   if(doneToday.length) html+=`<div class="card"><h3>✅ 今日完了 <span class="cnt">${doneToday.length}</span></h3>${listHTML(doneToday)}</div>`;
-  if(!live.length) html=`<div class="card"><div class="empty">まだタスクがありません。<br>右下の＋から最初のタスクを追加しましょう。</div></div>`;
+  if(!live.length){
+    const off = !DEMO && BK.mode!=='fs' && BK.mode!=='dbx';
+    html = off
+      ? `<div class="card"><div class="empty" style="padding:22px 4px">
+           <div style="font-size:15px;font-weight:600;color:var(--ink)">まだデータにつながっていません</div>
+           <div style="margin:8px 0 16px">つなぐと、登録済みのタスクが出てきます。</div>
+           ${window.showDirectoryPicker? `<button class="btn btn-primary" onclick="fsConnect()">📁 フォルダに接続（PC）</button><br><br>`:''}
+           <button class="btn btn-outline" onclick="dbxAuthStart()">🔑 Dropboxと連携（スマホ）</button>
+           <div class="muted" style="margin-top:14px">PCは Dropbox → EMIGATE → システムデータ を選びます</div>
+         </div></div>`
+      : `<div class="card"><div class="empty">まだタスクがありません。<br>右下の＋から最初のタスクを追加しましょう。</div></div>`;
+  }
   $('#home-sections').innerHTML = html;
 }
 function jumpFiltered(kind){
@@ -1442,6 +1453,12 @@ function renderConn(){
     b.className='';
     b.style.display='flex';
     b.innerHTML='📁 共有フォルダへの再接続が必要です <button onclick="fsUnlock()">再接続</button>';
+  } else if(BK.mode!=='fs' && BK.mode!=='dbx'){
+    b.className='';
+    b.style.display='flex';
+    b.innerHTML = window.showDirectoryPicker
+      ? 'まだデータにつながっていません <button onclick="fsConnect()">フォルダに接続</button><button onclick="dbxAuthStart()">Dropboxと連携</button>'
+      : 'まだデータにつながっていません <button onclick="dbxAuthStart()">Dropboxと連携</button>';
   } else { b.style.display='none'; }
   setSyncInd();
 }
