@@ -188,16 +188,6 @@
   .rpt-kpi .v{font-family:var(--serif);font-size:23px;font-weight:500;color:var(--ink);line-height:1.1;margin-top:3px}
   .rpt-kpi .v small{font-size:11px;color:var(--ink3);font-family:var(--sans);margin-left:2px}
   .rpt-kpi .s{font-size:9.5px;color:var(--ink3);margin-top:3px;line-height:1.4}
-  /* 🗂️ 章折りたたみ (2026-07-25b): 経営分析・稼働タブのカードを見出しタップで開閉 */
-  .fold-hd{cursor:pointer;position:relative;padding-right:22px;-webkit-tap-highlight-color:transparent}
-  .fold-hd::after{content:'▾';position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink3);transition:transform .18s}
-  .card.folded .fold-hd::after{transform:translateY(-50%) rotate(-90deg)}
-  .card.folded .fold-bd{display:none}
-  .card.folded{padding-bottom:11px}
-  .rpt-toc{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  .rpt-toc::-webkit-scrollbar{display:none}
-  .rpt-toc .tc{flex:0 0 auto;font-size:10px;padding:5px 11px;border:1px solid var(--line);border-radius:13px;color:var(--ink2);background:var(--panel2);white-space:nowrap}
-  .rpt-toc .tc:active{background:var(--panel);color:var(--ink)}
   .rpt-act{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:4px}
   .rpt-act td{padding:9px 5px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top;line-height:1.6}
   .rpt-act td.n{text-align:center;width:22px;color:var(--acc);font-family:var(--serif);font-size:16px;font-weight:600}
@@ -1076,7 +1066,7 @@
         <span class="dsp-v small num" id="det-ws-y">—</span>
       </div>
       <div class="dsp-row sub">
-        <span class="dsp-l">└ 次郎工業</span>
+        <span class="dsp-l">└ 主要取引先</span>
         <span class="dsp-v num" id="det-jiro-m">—</span>
         <span class="dsp-v small num" id="det-jiro-y">—</span>
       </div>
@@ -1270,286 +1260,15 @@
 
   <!-- ========== 分析レポート ========== -->
   <section id="sec-report">
-    <div class="card">
-      <div class="rpt-date" id="rpt-date">経営分析スナップショット · 2026-07-16（初版 2026-06-28）</div>
-      <div class="rpt-h">総括 — 増収・減益。利益の出どころが本業から車両売買に移っている</div>
-      <div class="rpt-verdict"><b>完全計上月（4〜6月）で前年と揃えると、売上は+29.9%（1,853→2,408万）だが営業利益は−75.7%（194→47万）、EBITDAは半減（771→386万）。</b>サービス3事業（レンタカー・DETALIA・電装）を合算した営業利益は<b class="rpt-neg">4〜6月で−13.8万＝実質ゼロ</b>で、会社の営業利益47万はまるごと車両物販の粗利（62.5万）。さらに<b>当期純利益670万の64.8%（434万）は車両売却益</b>。資金繰りは健全だが、稼ぐ力の低下を資産の売却益が覆い隠している。</div>
-      <ul class="rpt-ul">
-        <li><b>① 本業が損益トントン。</b>サービス事業の損益分岐点は月561万（税抜）に対し実績556万＝<span class="rpt-neg">月4.6万の不足</span>。物販とフリップ益が無ければ営業赤字が表面化する。</li>
-        <li><b>② レンタカーは「件数」でなく「日数と単価」で削られている。</b>返却ラグを除いた対称比較（4/1-5/31開始・60日打切り）で件数−3.8%に対し<b class="rpt-neg">日数−10.8%・日額−12.2%＝売上−24.6%</b>。JAは件数横ばい（124→126件）で延日数−38%・売上−42%。</li>
-        <li><b>③ 単一顧客依存（最大リスク）。</b>3事業すべてが1社依存（JA共済 <span id="rl-conc-r2">62.8</span>%／次郎工業66%／プロシード98%）。<span class="rpt-neg">電装は受注残が1件2.3万まで枯渇。</span></li>
-      </ul>
-      <div class="rpt-p"><b>直近の主な動き:</b> 売却18台の生涯ROIが <b class="rpt-pos">+2,220万</b> に（ハイラックス売却額の訂正で+20万）／夏繁忙で本日稼働 <b id="rl-util">74%（55/74台）</b>／7月に長期借入 +800万を実行（残6,184万）。<b>運用システムの「未請求709万」は誤読</b>＝48件693万はfreeeで既に請求済みで、真に未請求は4件15.9万のみ（→04カード）。</div>
-      <div class="rpt-note"><b>進行期(FY26)と現在の数字（部門別構成・集中度・AR・稼働率・売却ROI）はこのタブを開くたびにライブ再計算。</b>過去確定(FY24/25)・分析コメント・外部環境(09)はスナップショット。出典: freee会計（年次/累計が正本）・3事業 data.json・Fleet正本。</div>
-    </div>
+  <div id="rpt-host"></div>
+  <div class="card" id="rpt-locked">
+    <div class="rpt-h">経営分析</div>
+    <p class="rpt-p">取引先名や債権の内訳を含むため、この内容は公開ファイルに入れていません。Dropbox に連携すると読み込まれます。</p>
+    <p class="rpt-note" id="rpt-lock-note">設定タブから Dropbox 連携してください。</p>
+  </div>
+</section>
 
-    <div class="card">
-      <div class="rpt-sec">01 / 全社財務</div>
-      <div class="rpt-h">3期P/L・利益の質・B/S</div>
-      <table class="rpt-tbl">
-        <tr><th>万円・税込</th><th class="n">FY2024</th><th class="n">FY2025</th><th class="n">FY26 4〜7月※</th></tr>
-        <tr><td>売上高</td><td class="n">6,048</td><td class="n"><b>9,620</b> <span class="rpt-pos">+59%</span></td><td class="n">3,359</td></tr>
-        <tr><td>営業利益（率）</td><td class="n">151<br><span class="ink3">2.5%</span></td><td class="n"><b>694</b><br><span class="rpt-pos">7.2%</span></td><td class="n">696※</td></tr>
-        <tr><td>経常利益</td><td class="n">1,095</td><td class="n">658</td><td class="n">680</td></tr>
-        <tr class="tot"><td>当期純利益</td><td class="n">559</td><td class="n">755</td><td class="n">680<br><span class="ink3">税前</span></td></tr>
-      </table>
-      <div class="rpt-p"><b>利益の質が改善（最重要）。</b>FY2024は営業利益わずか151万＝薄利。<b>助成金987万は圧縮記帳で同額の圧縮損と相殺され、損益はプラマイ0＝利益への寄与はゼロ</b>（効くのは将来、圧縮した資産の減価償却が減る＝課税の繰り延べ）。FY2024を「助成金頼み」とするのは誤り。<b>利益の質は営業利益で見るのが正しく、151→694万（率2.5→7.2%）＝本業の稼ぐ力が着実に伸びた</b>。</div>
-      <div class="rpt-call"><b>「粗利率73.5%→46.8%」は悪化ではない。</b>減価償却の計上場所の変更（FY24=販管費15.7M→FY25=売上原価27.5M）による会計上の組み替え。年度比較は組み替えに影響されない<b>営業利益率（2.5%→7.2%）で見るのが正しい</b>。</div>
-      <div class="rpt-h" style="margin-top:14px">🚨 進行期は「完全計上月」で見る（4〜6月）</div>
-      <table class="rpt-tbl">
-        <tr><th>万円・税抜</th><th class="n">FY25 4-6月</th><th class="n">FY26 4-6月</th><th class="n">増減</th></tr>
-        <tr><td>売上高</td><td class="n">1,853</td><td class="n">2,408</td><td class="n rpt-pos">+29.9%</td></tr>
-        <tr><td>　うち減価償却(原価)</td><td class="n">564</td><td class="n">326</td><td class="n">−42%</td></tr>
-        <tr><td>販管費</td><td class="n">737</td><td class="n">958</td><td class="n rpt-neg">+29.9%</td></tr>
-        <tr class="tot"><td>営業利益（率）</td><td class="n"><b>194</b><br><span class="ink3">10.5%</span></td><td class="n"><b>47</b><br><span class="rpt-neg">2.0%</span></td><td class="n rpt-neg">−75.7%</td></tr>
-        <tr><td>EBITDA</td><td class="n">771</td><td class="n">386</td><td class="n rpt-neg">−50.0%</td></tr>
-      </table>
-      <div class="rpt-call"><b>7月を混ぜると利益が過大に出る（毎月起きる）。</b>7/20時点のfreee 7月は役員報酬・給料手当・地代家賃・保険料がいずれも<b>0円</b>、販管費は通常319万に対し57万、リース料も76万（通常131万）＝<b class="rpt-neg">未計上の固定費 約317万</b>。だから「FY26 4〜7月の営業利益率8.3%」は幻で、実力は上表の<b>2.0%</b>。<b>月次の判断は必ず「前月まで＝完全計上月」で行うこと。</b></div>
-      <div class="rpt-kpis">
-        <div class="rpt-kpi g"><div class="k">現預金</div><div class="v">3,889<small>万</small></div><div class="s">純有利子負債 2,295万</div></div>
-        <div class="rpt-kpi"><div class="k">自己資本比率</div><div class="v">24<small>%</small></div><div class="s">純資産1,880万(FY25) / 借入6,184万</div></div>
-        <div class="rpt-kpi g"><div class="k">流動比率</div><div class="v">約10<small>倍</small></div><div class="s">短期支払能力は十分</div></div>
-        <div class="rpt-kpi a"><div class="k">減価償却(原価)</div><div class="v">229→111<small>万/月</small></div><div class="s">半減＝分岐点を押し下げ</div></div>
-      </div>
-      <div class="rpt-note">※FY26 4〜7月は進行期・未締（7月給料・役員報酬等の月次費用が未計上）・期末棚卸0・税0計上の歪みを含む上限寄りの値。純利益680万は税前。投資判断には使わない（補正後の実力営業利益率は約2〜3%と薄い）。B/S（現預金・借入）は2026-07-16 freeeライブ実額。長期借入は7/10比+800万＝7月の借入実行を反映（予定1,500万との差は資金タブ・freeeで要突合）。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">01b / 利益の出どころ</div>
-      <div class="rpt-h">本業はトントン。利益は車を売って作っている</div>
-      <table class="rpt-tbl">
-        <tr><th>FY26 4-6月・万円</th><th class="n">売上</th><th class="n">費用</th><th class="n">利益</th></tr>
-        <tr><td>サービス3事業<br><span class="ink3">レンタカー・DETALIA・電装</span></td><td class="n">1,669</td><td class="n">限界利益1,664<br><span class="ink3">共通固定費1,678</span></td><td class="n rpt-neg"><b>−13.8</b></td></tr>
-        <tr><td>車両物販<br><span class="ink3">仕入れて売る中古車</span></td><td class="n">739</td><td class="n">676<br><span class="ink3">期首棚卸390+仕入286</span></td><td class="n rpt-pos"><b>+62.5</b></td></tr>
-        <tr class="tot"><td>営業利益 合計</td><td class="n">2,408</td><td class="n">—</td><td class="n"><b>+48.7</b></td></tr>
-        <tr><td>＋ 車両売却益（特別利益・4-7月純額）</td><td class="n">—</td><td class="n">—</td><td class="n rpt-pos"><b>+434</b></td></tr>
-      </table>
-      <div class="rpt-call"><b>積み上げ48.7万 vs freee実績の営業利益47.0万＝誤差1.7万。</b>分解は正しい。会社が出した営業利益はまるごと車両物販の粗利で、<b>サービス3事業の合計は−13.8万（月−4.6万）</b>。さらに当期純利益670万のうち<b class="rpt-pos">434万（64.8%）が車両売却益</b>＝利益の3分の2は資産の売却で作られている。</div>
-      <div class="rpt-p"><b>物販もフリップも悪い判断ではない。</b>中古車相場が高値圏の今、売却18台で+2,220万を実現しているのは結果を出している。危ないのは<b>それが本業の失速を数字の上で覆い隠していること</b>。売れる車には限りがあり、相場は永久には続かない。<b>本業（サービス3事業）の月次営業利益を単独で追う指標を持つべき。</b></div>
-      <div class="rpt-note">算出: freee売上（税抜）− 運用3システムのサービス売上（税込→税抜換算）＝物販売上と推計。共通固定費＝リース料(原価)+減価償却(原価)+販管費。サービス事業の損益分岐点は<b>月561万（税抜）</b>に対し実績556万＝月4.6万の不足。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">02 / ポートフォリオ</div>
-      <div class="rpt-h">実質レンタカー1本足、芽吹く2本目は電装</div>
-      <table class="rpt-tbl">
-        <tr><th>事業（FY26 4〜7/16・運用ベース）</th><th class="n">売上</th><th class="n">構成</th><th class="n">粗利率</th></tr>
-        <tr><td>レンタカー（損保代車）</td><td class="n" id="rl-pf-r">1,785万</td><td class="n" id="rl-pf-rp">80%</td><td class="n">約47%</td></tr>
-        <tr><td>電装取付</td><td class="n" id="rl-pf-e">241万</td><td class="n" id="rl-pf-ep">11%</td><td class="n"><b class="rpt-pos">74.8%</b></td></tr>
-        <tr><td>DETALIA</td><td class="n" id="rl-pf-d">202万</td><td class="n" id="rl-pf-dp">9%</td><td class="n">高</td></tr>
-        <tr class="tot"><td>3事業 計</td><td class="n" id="rl-pf-tot">2,228万</td><td class="n">100%</td><td class="n">—</td></tr>
-      </table>
-      <div class="rpt-p"><b>電装が最有望の2本目。</b>全事業で最高採算（粗利率74.8%・部品支給で原価ほぼ0）。ただし電装もDETALIAも単独で月610万（分岐点）を支える規模には程遠く、当面は「レンタカーが底を支え、2事業を積み増す」構造。</div>
-      <div class="rpt-note">構成比は運用ベースの近似（FY2025通年ではレンタカーが全社の約95%）。freee 4〜7月売上3,359万と運用合計2,228万の差は計上タイミング差（返却待ちの貸出中売上は未計上）＋車両物販（フリップ売却・NX300等）＋八重瀬町役場の案件外契約等。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">03 / 最大リスク</div>
-      <div class="rpt-h">顧客集中 — 3事業すべて単一顧客依存</div>
-      <table class="rpt-tbl">
-        <tr><th>事業</th><th>最大顧客</th><th class="n">FY25</th><th class="n">FY26 7/16</th></tr>
-        <tr><td>レンタカー</td><td>全国共済(JA)</td><td class="n">59.9%</td><td class="n"><span class="rpt-neg" id="rl-conc-r">62.2%</span></td></tr>
-        <tr><td>DETALIA</td><td>次郎工業</td><td class="n">68.4%</td><td class="n"><span class="rpt-neg">66.2%</span></td></tr>
-        <tr><td>電装</td><td>プロシード</td><td class="n">—</td><td class="n">97.9%</td></tr>
-      </table>
-      <div class="rpt-live" id="rpt-live-conc" style="display:none"></div>
-      <button class="drill-btn" onclick="drillConc()">取引先別ランキングを見る ›</button>
-      <div class="rpt-call r"><b>JA共済喪失シミュレーション:</b> JA共済は月平均約440万を供給（FY25実績）＝全社月商777万の約6割。これが抜けると月商は<b>約340万に半減</b>し、通常分岐点610万どころか<b>現金下限425万さえ割り込む</b>。最大顧客1社の喪失＝即・赤字転落という単一障害点。</div>
-      <div class="rpt-p">損保代車は発注が事故数連動・<b>価格決定力ゼロ（平均単価¥5,508固定）</b>の受動型。自力開拓の成功例＝八重瀬町役場の法人レンタル（年契約・1台で月約9万）の横展開が分散の鍵。電装は2社目バンクレンタカー1.1%・3社目金城モータース1.0%＝分散の芽。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">04 / 運転資本・債権</div>
-      <div class="rpt-h">「未請求」の正体はデータ不整合。回収そのものは速い</div>
-      <table class="rpt-tbl">
-        <tr><th>区分</th><th class="n">金額</th><th class="n">件数</th><th>滞留</th></tr>
-        <tr><td>請求済・未入金(R)</td><td class="n" id="rl-ar-liveR">98万</td><td class="n" id="rl-ar-liveRN">9</td><td>90日超 40万(1件)</td></tr>
-        <tr><td>台帳輸入分(2024)</td><td class="n">270万</td><td class="n">4</td><td>要個別確認</td></tr>
-        <tr><td><b>回収済・未請求(R)</b></td><td class="n"><span class="rpt-warn" id="rl-ar-unbR">621万</span></td><td class="n" id="rl-ar-unbRN">46</td><td>依然高水準（発行遅れ）</td></tr>
-        <tr><td>DETALIA未入金</td><td class="n" id="rl-ar-liveD">102万</td><td class="n" id="rl-ar-liveDN">28</td><td>30日超 62万(15件)</td></tr>
-        <tr><td>電装 請求済＋月またぎ未請求</td><td class="n">147＋0.8万</td><td class="n">13＋1</td><td>発行漏れ疑い1件</td></tr>
-      </table>
-      <ul class="rpt-ul">
-        <li><b class="rpt-pos">前回指摘の大口は解消</b> — 西日本自動車共済¥1,440,000（636日）・全国共済¥207,900（664日）とも入金済へ前進済み。</li>
-        <li>AR最古・最大 = 全国共済 ¥396,000（2024-01-0349・464日）が唯一の90日超。</li>
-      </ul>
-      <div class="rpt-live" id="rpt-live-ar" style="display:none"></div>
-      <button class="drill-btn" onclick="drillUnbilled()">未請求リストを見る ›</button>
-      <div class="rpt-call"><b>🚨「未請求＝請求すれば入る金」は誤読だった（2026-07-20 freee突合で判明）。</b>運用システムが未請求としている52件709万を freee の収入取引1,122件と1件ずつ照合したところ、<b class="rpt-pos">48件693万は freee で既に請求・計上済み</b>＝運用側の「請求書発行日」が入力されていないだけ。<b>真に未請求は4件15.9万</b>（うち3件は7月返却の直近分＝正常）。<b>現金の機会ではなく、入力の不整合。</b></div>
-      <div class="rpt-call"><b class="rpt-warn">逆方向の不一致に注意。</b>運用が「請求済・未入金」とする12件387万のうち<b>5件303万が freee に存在しない</b>。うち3件291万は2024年の台帳輸入（西日本自動車共済158万・658日経過など）＝実在する債権か、輸入時の状態が残っているだけかを書類で確認する必要がある。残る2件11.6万はlive案件。</div>
-      <div class="rpt-p"><b class="rpt-pos">回収力そのものは強い。</b>請求書発行→入金の実測サイクルは <b>JA共済で中央値4日・平均6日（n=33）</b>。請求さえ出れば即入金される相手。売掛金が期首611万→1,222万と倍増しているのは回収難ではなく、売上（物販含む）の増加と計上タイミングによるもの。</div>
-      <div class="rpt-note">正本はfreee売掛金1,222万。上表の「回収済・未請求(R)」は運用システム基準の数値（ライブ）で、上記のとおり大半は実際には請求済み。<b>この欄を現金予測に使わないこと。</b>運用側の入力を揃えれば指標が正常化する。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">05 / 車両資産</div>
-      <div class="rpt-h">夏繁忙で稼働74%、フリップ戦略は成功継続</div>
-      <div class="rpt-kpis">
-        <div class="rpt-kpi g"><div class="k">本日稼働率</div><div class="v"><span id="rl-veh-utiln">74</span><small>%</small></div><div class="s" id="rl-veh-utils">55/74台・分岐点50%を大幅超</div></div>
-        <div class="rpt-kpi"><div class="k">リース / 自社</div><div class="v"><span id="rl-veh-lease">40 / 34</span><small>台</small></div><div class="s" id="rl-veh-leasefee">リース月額計 132万</div></div>
-        <div class="rpt-kpi g"><div class="k" id="rl-veh-soldk">売却18台 生涯ROI</div><div class="v">+<span id="rl-veh-soldnum">2,200</span><small>万</small></div><div class="s">NX300で+244万上乗せ</div></div>
-        <div class="rpt-kpi a"><div class="k">低稼働リース車</div><div class="v"><span id="rl-veh-lown">2</span><small>台</small></div><div class="s" id="rl-veh-lowfee">月15万・整理候補(30日稼働&lt;30%)</div></div>
-      </div>
-      <button class="drill-btn" onclick="drillLowVeh()">リース車 稼働ランキングを見る ›</button>
-      <div class="rpt-call"><b>売却18台ROI +2,220万の内訳</b> ＝ 生涯レンタル売上 約2,714万 ＋ 売却額 約3,495万 − 投資額 約3,961万 − 整備費 約27万。リースは固定費＝<b>低稼働車の整理が分岐点を直接下げる最速のレバー</b>。</div>
-      <div class="rpt-h" style="margin-top:14px">現役74台の回収状況（2026-07-20 実測）</div>
-      <ul class="rpt-ul">
-        <li><b>投下資本を回収済（回収率100%超）は27台／74台＝36%。</b>残り47台は契約途中のため回収途上＝これ自体は正常。判断は「回収率」と「稼働日数」の<b>両方が低い車</b>で行う。</li>
-        <li><b class="rpt-neg">高単価クラスに金が寝ている。</b>直近90日の稼働率は 軽57% / ミドル52% / コンパクト51% に対し、<b>ワゴン7台=30%（リース月31.3万）・プレミアム2台=16%（月8.6万）</b>。需要は軽に寄っている（日数シェア47%→53%）。</li>
-        <li><b class="rpt-neg">VOXY 2台は現金がマイナス。</b>リース月11万×2に対し直近90日の稼働39日・57日、90日の現金貢献 <b>−11.1万（年換算−44万）</b>。リース40台で現金貢献がマイナスなのはこの2台のみ。<b>契約残6ヶ月＝返却/買取の判断が近い。</b></li>
-        <li><b>アルファード40 HV</b>：回収率9%・12ヶ月稼働48日・リース月8.6万。※マスタの取得日が「2026-12-20」＝未来日でデータ誤り。契約残月数の算定が狂うため要修正。</li>
-        <li><b>稼働ゼロの自社車は実質1台。</b>ジムニーノマド（取得2026-03-24・256万）が4ヶ月稼働ゼロ。クラウンスポーツ・プリウスは7/8〜9納車直後、サクラは7/10に社用車→稼働可へ変更直後＝いずれも正常。</li>
-        <li><b class="rpt-pos">売り時候補（自社保有・回収率100%超・稼働少）</b>：ワゴンR(120%/79日)・プリウス(168%/102日)・アクア(112%/118日)・ワゴンR(149%/126日)・プリウス(163%/154日)・N-WGN(201%/179日)。投資は回収済みで、売却代金がそのまま利益になる。</li>
-      </ul>
-      <div class="rpt-note">季節方針どおり夏（7-9月）は保持、10月に夏の稼働実績で仕分け判断。上のリストは10月仕分けの判断材料。生涯ROIは Fleet正本（histRev/kinjoLife/extraRev）＋当年度ライブ売上。<b>保険料・租税公課の按分は未計上のため、実際のROIはやや辛くなる。</b>別途 納車待ち5台（仕入787万）＝納車で稼働分母が増える。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">06 / 損益分岐点</div>
-      <div class="rpt-h">月610万は正しい。ただし「現金の分岐点」は上がっている</div>
-      <table class="rpt-tbl">
-        <tr><th>段階</th><th class="n">必要月商</th><th class="n">レンタカー稼働</th></tr>
-        <tr><td>通常（会計黒字）</td><td class="n"><b>610万</b></td><td class="n">37台/日(50%)</td></tr>
-        <tr><td>限界（絶対固定費）</td><td class="n">470万</td><td class="n">28台/日(38%)</td></tr>
-        <tr><td>真の現金下限</td><td class="n">425万</td><td class="n">26台/日(35%)</td></tr>
-      </table>
-      <div class="rpt-call"><b>2026-07-20 に FY26 4〜6月の実績で再検算し、月610万の妥当性を確認した。</b>固定費 月559万（リース131＋減価償却109＋販管費319）÷ サービス事業の限界利益率99.7% ＝ <b>月561万（税抜）＝617万（税込）</b>。既存定数610万との差は1%以内＝<b>定数は据え置きで正しい</b>。</div>
-      <ul class="rpt-ul">
-        <li><b class="rpt-warn">会計の分岐点は下がったが、現金の分岐点は上がった。</b>減価償却（非現金）が月233万→109万に急減したため、固定費は月659→559万に軽くなり<b>会計分岐点は737→617万（税込）へ低下</b>。一方、償却による現金のシールドが減ったので<b>現金分岐点は約524→497万（税込）へ上昇</b>。<b>「利益は良く見えるのに現金が残らない」局面に入っている</b>（実際、4ヶ月で純利益670万・借入800万に対し現預金は+12万）。</li>
-        <li>サービス3事業の実績は月556万（税抜）＝分岐点561万に対し<b class="rpt-neg">月4.6万の不足</b>。物販の粗利で辛うじて黒字。</li>
-        <li>感度: 稼働率+5pt ≒ 月売上+約61万／リース1台整理 ≒ 月固定費−3.4万。分岐点近傍では小さな売上減で利益が急速に蒸発する。</li>
-        <li>限界利益率が高い（89〜99%）＝<b>売上が1万増えれば利益もほぼ1万増える構造</b>。裏を返すと売上減はそのまま利益減になる。日数・単価の回復が最も効く。</li>
-      </ul>
-    </div>
-
-    <div class="card sim-card">
-      <div class="rpt-sec">06b / シミュレーター</div>
-      <div class="rpt-h">「もし〜したら」利益はどう動く</div>
-      <div class="sim-note-top">ベース＝実力月商850万・営業利益58万（FY2025実績 694万/年）。稼働・単価・整理の変化を限界利益率89.4%で加減。月商が実力の損益ライン（≒785万・営業利益0）を超えれば黒字（MDの会計分岐点610万より高いのが薄利の正体）。低稼働リースの台数・月額は実データ連動。</div>
-      <div class="sim-outs">
-        <div class="sim-out hero"><div class="ok">営業利益（月）</div><div class="ov" id="sim-op">＋58万</div><div class="os" id="sim-op-s">利益率6.8% ・ 年換算＋696万</div></div>
-        <div class="sim-out"><div class="ok">月商（3事業）</div><div class="ov" id="sim-rev">850万</div><div class="os" id="sim-rev-s">レンタ700 / D75 / 電装75</div></div>
-        <div class="sim-out"><div class="ok">損益ラインまで</div><div class="ov" id="sim-mgn">＋65万</div><div class="os" id="sim-mgn-s">安全余裕率 +8%</div></div>
-      </div>
-      <div class="sim-bar-wrap">
-        <div class="sim-bar-lbl"><span>月商 vs 実力の損益ライン（≒785万）</span><span id="sim-bar-cap">黒字圏</span></div>
-        <div class="sim-track"><div class="sim-fill" id="sim-fill" style="width:71%"></div><div class="sim-beline" id="sim-beline" style="left:65%"></div></div>
-      </div>
-      <!-- ② 資金ランウェイ連動 (2026-07-16): 営業利益の変化分を資金タブ cashFlowPlan の営業CFに加減した「現金の谷」 -->
-      <div class="sim-cash tap" id="sim-cash" onclick="showTab('kane')" style="display:none"></div>
-      <div class="sim-ctrl">
-        <div class="sim-ctop"><span class="sim-cname">🚗 レンタカー稼働率</span><span class="sim-cval" id="sim-v-occ">70%</span></div>
-        <input type="range" id="sim-occ" min="55" max="90" value="70" step="1" oninput="simCalc()">
-        <div class="sim-chint">稼働+1pt ≒ 月売上+12.2万（年間平均を70%と仮定）</div>
-      </div>
-      <div class="sim-ctrl">
-        <div class="sim-ctop"><span class="sim-cname">💴 平均単価の引き上げ</span><span class="sim-cval" id="sim-v-price">±0%</span></div>
-        <input type="range" id="sim-price" min="0" max="15" value="0" step="1" oninput="simCalc()">
-        <div class="sim-chint">損保代車は価格決定力ゼロ＝「仮に」の感度。¥5,505 → 引き上げ%</div>
-      </div>
-      <div class="sim-ctrl">
-        <div class="sim-ctop"><span class="sim-cname">🔧 低稼働リース車の整理</span><span class="sim-cval" id="sim-v-cut">0台</span></div>
-        <input type="range" id="sim-cut" min="0" max="8" value="0" step="1" oninput="simCalc()">
-        <div class="sim-chint" id="sim-cut-hint">1台整理 ≒ 月固定費が減る（低稼働リースをKPIから取得）</div>
-      </div>
-      <button class="sim-reset" onclick="simReset()">現状にリセット</button>
-      <div class="rpt-note">概算シミュレーション（感度モデル）。「現金の谷」は資金タブの12ヶ月投影と連動（営業利益の変化分を月次営業CFに加減・タップで資金タブへ）。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">07 / 成長・季節性</div>
-      <div class="rpt-h">秋〜冬ピーク型。閑散は1・3・4・5月</div>
-      <div class="rpt-note">レンタカー月次（FY2025・運用値・万円）</div>
-      <div class="rpt-bars">
-        <div class="r"><div class="l">4月 閑散69%</div><div class="t"><div class="f lo" style="width:44%"></div></div><div class="v">510</div></div>
-        <div class="r"><div class="l">5月</div><div class="t"><div class="f lo" style="width:53%"></div></div><div class="v">608</div></div>
-        <div class="r"><div class="l">6月</div><div class="t"><div class="f" style="width:54%"></div></div><div class="v">624</div></div>
-        <div class="r"><div class="l">7月</div><div class="t"><div class="f" style="width:69%"></div></div><div class="v">789</div></div>
-        <div class="r"><div class="l">8月</div><div class="t"><div class="f" style="width:55%"></div></div><div class="v">626</div></div>
-        <div class="r"><div class="l">9月 繁忙155%</div><div class="t"><div class="f pk" style="width:100%"></div></div><div class="v">1147</div></div>
-        <div class="r"><div class="l">10月</div><div class="t"><div class="f" style="width:84%"></div></div><div class="v">969</div></div>
-        <div class="r"><div class="l">11月</div><div class="t"><div class="f" style="width:70%"></div></div><div class="v">801</div></div>
-        <div class="r"><div class="l">12月</div><div class="t"><div class="f" style="width:72%"></div></div><div class="v">824</div></div>
-        <div class="r"><div class="l">1月 閑散72%</div><div class="t"><div class="f lo" style="width:46%"></div></div><div class="v">530</div></div>
-        <div class="r"><div class="l">2月</div><div class="t"><div class="f" style="width:79%"></div></div><div class="v">904</div></div>
-        <div class="r"><div class="l">3月 閑散71%</div><div class="t"><div class="f lo" style="width:46%"></div></div><div class="v">526</div></div>
-      </div>
-      <div class="rpt-p">レンタカーは FY2024 5,531万→FY2025 8,858万（<b>+60%</b>）。FY2026は4月 <b class="rpt-pos">+11.6%</b>（569万）、5月 −22%（472万）、6月 −35%（408万・返却処理で確定中）。ただし売上は返却日に計上されるため、<b>貸出中55台（稼働74%）の売上が直近月に未計上＝5月以降の前年比は構造的に低く出る</b>（返却が進む8月以降に確定・実態は下のLIVE速報行）。閑散期の谷をDETALIA/電装で埋められるかが利益安定の課題。</div>
-      <!-- ③ 当月売上の実態速報 (発生ベース・2026-07-16): 上の「見かけの前年比」を返却ラグ補正で読み替える LIVE 行 -->
-      <div class="rpt-live" id="rl-flash" style="display:none"></div>
-      <table class="rpt-tbl">
-        <tr><th>FY2027シナリオ</th><th class="n">通期売上</th><th class="n">前年比</th></tr>
-        <tr><td>保守</td><td class="n">1.04億</td><td class="n">+11.5%</td></tr>
-        <tr><td>中位</td><td class="n">1.16億</td><td class="n">+24.4%</td></tr>
-        <tr><td>強気</td><td class="n">1.28億</td><td class="n">+37.2%</td></tr>
-      </table>
-      <div class="rpt-note">全シナリオで年間分岐点7,320万を上回る。FY2027は3事業が揃う初の満年度。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">07b / トレンド</div>
-      <div class="rpt-h">主要指標の推移（直近12ヶ月）</div>
-      <div id="trend-body"></div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">07c / 要因分解</div>
-      <div class="rpt-h">増収は何で伸びたか</div>
-      <div class="fac-toggle"><button class="fac-tbtn on" id="fac-t-confirmed" onclick="setFactorMode('confirmed')">FY24→FY25（確定）</button><button class="fac-tbtn" id="fac-t-progress" onclick="setFactorMode('progress')">今年度（進行中）</button></div>
-      <div id="factor-body"></div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">08 / 追加観点</div>
-      <div class="rpt-h">人件費・税・設備投資・基盤</div>
-      <ul class="rpt-ul">
-        <li><b>人件費は重石ではない。</b>労働分配率は対売上9.1%、売上/人 約3,280万（FTE2.93）＝少人数・資本集約型。利益の重石は人ではなく<b>車両</b>。</li>
-        <li><b>税。</b>FY2025実効税率22.5%。FY26 4〜7月は中間期で税0計上＝純利益680万は<b>税前</b>。経常段階で評価が安全。</li>
-        <li><b>低い分岐点は恒久ではない。</b>減価償却半減（非現金の追い風）が今の好調の主因。長期借入6,184万（7月に+800万実行）＞車両簿価＝「投資の谷」。<b>借入実行＋車両6台（1,293万）＋プレハブ180万でフリート更新が始動＝償却・借入が再増加し分岐点は再上昇する</b>（資金繰りは資金タブで健全を確認済み）。</li>
-        <li><b>ダッシュボードの盲点 → 解消済み。</b>集中度KPI（JA62.2%）は部門別売上カード＋本タブLIVE行で定点観測化済み（2026-07-04〜）。残タスクは売上の正本をfreeeに明文化すること。</li>
-      </ul>
-    </div>
-
-    <div class="card" id="rpt-ext-card"><!-- RPT-EXT: 外部環境カード。5日ごとルーチン(analysis-report-refresh)がこのカードの中身を最新ニュースで差し替える。2026-07-16にユーザー選択で4→7テーマ化(🌀気象台風/🏛損保共済/💰金利を追加)・テーマ構成はルーチンSKILL.mdと揃えること -->
-      <div class="rpt-sec">09 / 外部環境</div>
-      <div class="rpt-h">台風シーズン本格化・観光レンタカーは価格破壊・金利1%時代へ</div>
-      <div class="rpt-note">調査日 2026-07-20（7テーマを再確認。参考純率+14.4%・レンタカー供給過剰・中古車相場・金利1.00%はいずれも7/16時点から<b>変化なし</b>を確認。観光は4〜6月実績を追記）・ 毎日自動チェック/5日ごとフル更新（一次資料優先）</div>
-      <ul class="rpt-ul">
-        <li><b>🌀 気象・台風。</b>台風9号が7/10〜11に先島直撃・本島も暴風＝<b>県内発着499便欠航・5.7万人に影響</b>（琉球新報）。現在接近中の台風はなし（11号は熱帯低気圧化）だが、南海上は海面水温30℃超で発生しやすい環境。<span class="rpt-warn">今季発生数は平年超の28個前後・日本接近14個予想＝8月以降の接近増が前提</span>（WNI/気象協会）。7月の沖縄は気温平年並み・降水量は平年並みか多め。</li>
-        <li><b>🏝 沖縄観光。</b>2025年度の入域観光客は<b>1,093.6万人（+9.9%）で過去最高が確定</b>・外国人294万人はコロナ前の98%まで回復（県統計 6/25確定）。夏（6〜8月）見通しも<b>291万700人（前年比+1.7%）</b>と高水準継続（OCVB 6/30）。直近の4〜6月は<b>263万8,400人（前年度比+2.9%）</b>と発表済（OCVB）＝伸び率は1桁前半に鈍化。ただし<span class="rpt-warn">5月実績83.3万人は前年比−1.2%と約4年半ぶりのマイナス（外国客減）・中国本土便の欠航減便も25年末から継続</span>＝絶対量は高原状態だが「右肩上がりが当然」の局面は終了、外的ショックで月次がマイナスに振れる時代に。</li>
-        <li><b>🚗 レンタカー業界。</b><span class="rpt-warn">観光向けは供給過剰＝価格破壊が進行</span>: 那覇空港圏3市（那覇・糸満・豊見城）の乗用レンタカーは<b>2026年3月末 31,906台とコロナ前の約1.5倍</b>（2020年21,503台→底15,294台→急増・沖縄総合事務局の一次統計）、事業者も3年で324→749社に倍増。全県ではR6年度末 2,186社・56,658台（5年で事業者2.3倍）。実勢は軽1日1,350円の投げ売りが出現する一方、<b>大手3社は最安1万円台で価格競争から離脱＝二極化が確定</b>（乗りものニュース）。豊見城市（人口6.6万人に1.7万台）は<span class="rpt-warn">全国初の「レンタカー税」導入を検討</span>＝規制も締め付け方向。1日1,350円では償却が回らず、<b>2〜3年で中小の淘汰・退出が本格化する公算</b>。<span class="rpt-pos">価格崩壊は観光BtoCの話＝単価固定のBtoB損保代車モデルの相対優位が一段と鮮明に</span>。</li>
-        <li><b>📈 他社の予約状況。</b>ピーク期は通常の1.5〜2倍の料金とされる一方、<b>今夏は大手がキャンペーン価格を併売</b>（オリックス7〜8月 SAクラス6時間7,590円〜）＝「全社満車」だった22〜23年から様変わりし、直前でも取れる環境に接近。<span class="rpt-pos">他社借の調達は前年より容易・コスト低下の公算</span>。</li>
-        <li><b>🏛 損保・共済。</b>損保料率機構が<b>自動車保険の参考純率を平均+14.4%引き上げ届出（6/23・過去最大・2027年1月以降の契約から反映見込み）</b>。値上げ理由に<b>「修理期間の長期化による間接損害（代車料等）の増加」が明記</b>＝損保業界自身が代車需要の実在を公式に認めた形。ただし<span class="rpt-warn">保険料を過去最大で上げる以上、代車料は「削りやすい間接損害」として日数・クラス・単価の査定目線が厳格化するリスク</span>。<b>注意: +14.4%は「沖縄県以外」のセット契約平均で、沖縄は別の料率区分＝県内の改定率は別途要ウォッチ</b>（届出原文・例は乗用セット+17.2%/軽+17.5%）。先行して損保Jが26年7月+1.8%・東京海上が10月+6.5%の値上げ実施。板金は職人高齢化に加え<span class="rpt-warn">中東情勢のシンナー・塗料供給危機が直撃（594社調査で88.7%が入手困難・65.5%が「3ヶ月以内に経営継続困難」）＝修理はさらに長期化（代車日数は伸びる）が、提携工場が受注停止すると代車開始自体が遅れる両面リスク</span>。JA共済は2026/1に仕組改訂（掛金の大幅改定の発表なし）。</li>
-        <li><b>💴 中古車相場。</b>USSオークション6月の成約単価131.5万円・<b>前年比+6.9%と高値圏維持も伸びは鈍化</b>（5月+10.6%→6月+6.9%）。4〜6月期は出品+4.7%/成約台数+8.4%/成約率65.1%と需給は締まったまま（USS公式四半期速報）。輸出はロシア・タンザニア・南アに分散しつつ総量維持、円安162円台が下支え。先行きは「横ばい〜緩やかな下落」見方が主流＝<span class="rpt-pos">「売りやすく買いにくい」非対称＝フリップ売却は高いうちに・10月仕分けは前倒し検討の価値</span>。仕入れ側は高値掴みリスク継続。</li>
-        <li><b>💰 金利・資金調達。</b><b>日銀が6/16に政策金利1.00%へ引き上げ（約31年ぶりの1%台）</b>。短期プライムレートは2.125%→<span class="rpt-warn">8/3から大手行2.375%へ再引き上げ</span>。7月末会合は据え置き・次の利上げは12月が有力視（市場観測）。銀行は貸出を増やしつつ「金利上昇に耐えられる先の選別」を始めたとの指摘＝<span class="rpt-warn">変動金利の既存借入（長期5,384万＋海邦1,500万）は利払い増を前提に。借換え・固定化の点検は年内に</span>。</li>
-      </ul>
-      <div class="rpt-call"><b>LIMEへの示唆:</b> ①台風シーズンは平年超予想＝回収計画に余裕を持たせ、台風後の事故代車需要は在庫回転で取りにいく ②損保代車の需要関数は「観光客数」でなく「事故件数×修理期間」＝観光の価格崩壊とは別世界。消耗戦を横目に現路線（BtoB集中）が正解・他社借は調達しやすい環境 ③2027年1月の料率改定実装後は損保の代車料査定が厳格化する前提で、手配書・写真・FAX履歴・回収記録で日数の妥当性を示せる今の運用を崩さない（+14.4%は県外平均＝沖縄の改定率は別区分で要ウォッチ） ④売り時の車は相場の伸びが鈍る前に・金利1%時代の増車は選別を ⑤提携工場（金城等）の資材事情（シンナー・塗料）を月次で軽く確認＝工場が止まると入庫も代車開始も止まる。</div>
-      <div class="rpt-note">出典: 沖縄総合事務局レンタカー統計（一次）・沖縄県入域観光客統計（一次）・損害保険料率算出機構 届出原文（一次）・USS公式月次/四半期速報（一次）・琉球新報・沖縄タイムス・ウェザーニュース/日本気象協会・OCVB・乗りものニュース/WEB CARTOP・プロトリオス板金594社調査・JA共済リリース・日銀/大手行公表（短プラ）ほか。定性情報（予約の埋まり方・支払い姿勢）は出典の性質に留意し断定しない。</div>
-    </div>
-
-    <div class="card">
-      <div class="rpt-sec">10 / 打ち手</div>
-      <div class="rpt-h">優先度つき Top 7</div>
-      <!-- ① 打ち手トラッカー (2026-07-16): 測定可能な打ち手にライブKPIを紐づけ基準日比で自動追跡=「言いっぱなし」を防ぐ -->
-      <div class="act-track" id="act-track" style="display:none">
-        <div class="act-head"><span>📍 進捗トラッカー — 主要打ち手のKPIをライブ追跡（基準 <span id="act-base-date">—</span> 比・この端末で記録）</span><button class="act-reset" onclick="actBaseReset()">基準を今日に</button></div>
-        <div id="act-rows"></div>
-      </div>
-      <table class="rpt-act">
-        <tr><td class="n">1</td><td><b>月次を「完全計上月」で締める</b> — 7月は役員報酬・給料・家賃・保険料が0円計上＝<b class="rpt-neg">固定費 約317万が未計上</b>。これがある限り毎月、月半ばに利益率が過大表示される。<b>判断は必ず前月まで（完全計上月）で行う</b>ルールを固定し、月次の費用計上を締める <span class="due">／ 今週</span></td></tr>
-        <tr><td class="n">2</td><td><b>JAと代車日数・単価の再交渉</b> — 件数は横ばい（124→126件）なのに<b class="rpt-neg">延日数−38%・売上−42%</b>。減収の主因は受注減ではなく日数−10.8%・日額−12.2%。那覇SCと「認定日数の運用がいつ・なぜ変わったか」を確認。<b>JA売上を10%戻せば年+120万</b> <span class="due">／ 3ヶ月以内</span></td></tr>
-        <tr><td class="n">3</td><td><b>VOXY 2台のリース処遇を決める</b> — 月11万×2に対し90日稼働39日/57日、<b class="rpt-neg">90日の現金貢献−11.1万（年−44万）</b>＝リース40台で唯一のマイナス。<b>契約残6ヶ月＝返却/買取の判断が近い</b>。あわせて高単価車（ワゴン7台=稼働30%・プレミアム2台=16%）の10月仕分けリストを今のうちに作る <span class="due">／ 今月（実行は10月）</span></td></tr>
-        <tr><td class="n">4</td><td><b>債権の実在確認と入力整合</b> — 運用が「請求済・未入金」とする<b class="rpt-warn">5件303万がfreeeに無い</b>（うち台帳輸入3件291万＝西日本158万など）＝実在なら請求、しないなら落とす。逆に「未請求」52件709万は<b class="rpt-pos">48件693万がfreee請求済＝入力漏れ</b>なので発行日を入力して指標を正常化 <span class="due">／ 今月</span></td></tr>
-        <tr><td class="n">5</td><td><b>電装を「2本目の柱」に育成</b> — 貢献利益率が3事業で最高だが<b class="rpt-neg">プロシード98%依存・受注残1件2.3万まで枯渇</b>。2社目の開拓が急務（バンクレンタカーの線を拡大） <span class="due">／ 3ヶ月以内</span></td></tr>
-        <tr><td class="n">6</td><td><b>本業（サービス3事業）の営業利益を単独で追う</b> — 現状は物販・売却益と混ざって見えない。<b>「サービス3事業だけの月次営業利益」を毎月出す</b>。4〜6月は−13.8万＝トントン。ここが黒字化しない限り、利益は車の売却に依存し続ける <span class="due">／ 8月から</span></td></tr>
-        <tr><td class="n">7</td><td><b>裁量固定費のゼロベース見直し＋データ基盤の根治</b>（交際費467万・消耗品208万・地代378万／1案件1ファイル化） <span class="due">／ 通期・FY26下期</span></td></tr>
-      </table>
-      <div class="rpt-note">本タブ＝<b>2026-07-20更新版</b>（3事業data.json・Fleet正本・freee月次PL/BSで再計算。7月の固定費未計上を検出したため、損益の前年比較は<b>完全計上月＝4〜6月</b>で実施）。完全版（印刷・共有用HTML）＝ システム一時保管/HariTerrace経営分析_2026-06-28.html（初版のまま）。Generated by Claude.</div>
-    </div>
-  </section>
-
-  <!-- ========== 資金繰り (2026-07-04 神アプリ第4波・freeeライブ+納車待ち車両capex連動) ========== -->
-  <section id="sec-kane">
+<section id="sec-kane">
     <!-- 現金ポジション (freeeライブ) -->
     <div class="card" id="cf-pos-card">
       <div class="lbl">現金ポジション · freee ライブ</div>
@@ -1559,17 +1278,6 @@
       </div>
       <div class="cf-grid" id="cf-pos-grid"></div>
       <div class="cf-runway" id="cf-runway"></div>
-    </div>
-
-    <!-- 🛡️ 無収入サバイバル (2026-07-25): 売上が完全に止まっても会社が持つ月数 -->
-    <div class="card" id="sv-card">
-      <div class="lbl">無収入サバイバル · 売上ゼロでも持つ期間</div>
-      <div class="cf-hero">
-        <div class="cf-hero-l">現預金だけで</div>
-        <div class="cf-hero-v num" id="sv-months">—<span class="unit">ヶ月</span></div>
-      </div>
-      <div class="cf-grid" id="sv-grid"></div>
-      <div class="cf-runway" id="sv-note"></div>
     </div>
 
     <!-- 12ヶ月 資金繰り予定 チャート -->
@@ -1660,7 +1368,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-25b';
+const APP_VERSION = '2026-07-29';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1972,7 +1680,7 @@ function receptionStats(){
     const k=ymOf(d);if(!k) return;
     tally(c, rental, d, k);
   });
-  // DETALIA: 全体集計 + 区分別 (一般 / 業販 / うち次郎工業)
+  // DETALIA: 全体集計 + 区分別 (一般 / 業販 / うち主要取引先)
   const general=init(), wholesale=init(), jiro=init();
   detaliaCases().forEach(c=>{
     const d=String(c.receptionDate||c.arrival||'').slice(0,10);
@@ -2517,15 +2225,6 @@ const BREAK_EVEN = {
 //   現状は空 (推測で税額を入れて資金繰りを誤らせない)。UIに「未設定・要入力」と明示する。
 const CASH_CFG = { loanRepay: 740000, opCFfallback: 1400000, floor: 4250000 };
 const CASH_SPECIAL = {}; // 例) '2027-05': 2500000  ← 法人税・消費税・賞与の予定を入れる
-// 🛡️ 無収入サバイバル (2026-07-25): 売上ゼロが続いた場合の月次固定キャッシュアウト (実勢・消費税込み)。
-//   FY26 4〜6月のfreee実測から: リース料142.7万(税込) + 人件費(役員+給料+法定福利)100万 + 保険料34万
-//   + 地代家賃27.5万 + 車両費・事務系の固定分約60万 + 支払利息8.4万 + 借入元金返済74万 ≒ 495万/月。
-//   縮小策(リース返却・車両売却・保険見直し)を打たず「今の体制のまま」の保守値。月次PLの実績で随時見直すこと。
-const SURVIVAL_CFG = {
-  monthlyOut: 4950000,                           // 無収入時の月次流出 (円/月)
-  cashFallback: 37758651, arFallback: 12543891,  // freee未接続時の既知値 (2026-07-24 BS)
-  kyosaiRefund: Math.round(4800000*0.9)          // 倒産防止共済 即解約の概算返戻 (40ヶ月未満≒90%)
-};
 // 資金イベント (借入実行・車両以外の設備投資) — 月キー YYYY-MM → 額
 const CASH_LOAN_DRAWS  = { '2026-07': 15000000 };                              // 海邦銀行 借入 1,500万 (7月実行)
 const CASH_EXTRA_CAPEX = { '2026-07': { amount: 1800000, label: 'プレハブ' } };// 設備投資(車両以外)。プレハブ 180万
@@ -2806,34 +2505,7 @@ function cashFlowPlan(opAdj){
     pendCount:pend.length, rows, trough, floor:CASH_CFG.floor,
     hasSpecial:Object.keys(CASH_SPECIAL).length>0, newLoanAssumed:!!CASH_NEW_LOAN.assumed};
 }
-// 🛡️ 無収入サバイバル (2026-07-25): 「売上が明日から0でも、今の体制のまま何ヶ月生きられるか」。
-//   freee B/Sライブ(現預金・売掛金)があればライブ値、なければ既知値。月次流出は SURVIVAL_CFG.monthlyOut。
-function renderSurvival(){
-  const el=$('sv-months'); if(!el) return;
-  const live=!!(FREEE_BS&&FREEE_BS.cash!=null);
-  const cash=live?FREEE_BS.cash:SURVIVAL_CFG.cashFallback;
-  const ar=(FREEE_BS&&FREEE_BS.ar)?FREEE_BS.ar:SURVIVAL_CFG.arFallback;
-  const out=SURVIVAL_CFG.monthlyOut;
-  const m1=cash/out;                                   // 現預金のみ
-  const m1f=Math.max(0,(cash-CASH_CFG.floor)/out);     // 現金下限425万を守りながら
-  const m2=(cash+ar)/out;                              // +売掛回収 (JA系=貸倒实質ゼロ)
-  const m3=(cash+ar+SURVIVAL_CFG.kyosaiRefund)/out;    // +倒産防止共済 即解約
-  const f1=n=>(Math.round(n*10)/10).toFixed(1);
-  el.innerHTML=f1(m1)+'<span class="unit">ヶ月</span>';
-  const g=$('sv-grid');
-  if(g) g.innerHTML=
-    '<div><span class="cf-k">現預金 '+(live?'(freeeライブ)':'(2026-07-24時点)')+'</span><span class="cf-v num">'+yen(cash)+'</span></div>'+
-    '<div><span class="cf-k">無収入時の月次流出 (固定費+返済)</span><span class="cf-v num dn">−'+yen(out)+' /月</span></div>'+
-    '<div><span class="cf-k">現金下限425万を割らずに</span><span class="cf-v num">'+f1(m1f)+' ヶ月</span></div>'+
-    '<div><span class="cf-k">＋売掛金 '+yen(ar)+' を回収したら</span><span class="cf-v num" style="color:var(--acc)">'+f1(m2)+' ヶ月</span></div>'+
-    '<div><span class="cf-k">＋倒産防止共済を解約したら (概算'+yen(SURVIVAL_CFG.kyosaiRefund)+')</span><span class="cf-v num">'+f1(m3)+' ヶ月</span></div>';
-  const n=$('sv-note');
-  if(n) n.innerHTML='売上が明日から完全に0になり、<b>縮小策を何も打たない</b>最悪前提で <b>約'+f1(m1)+'ヶ月</b>。'+
-    '実際はリース返却(月−143万)・自社車両の売却(実勢約5,000万)・保険見直しで大幅に延命できるため、これは<b>下限値</b>。'+
-    '月次流出495万の内訳: リース143＋人件費100＋元利82＋保険34＋家賃28＋車両費・事務系ほか108 (FY26 4〜6月 freee実測・税込実勢)。';
-}
 function renderCash(){
-  try{ renderSurvival(); }catch(e){ console.warn('survival',e); }
   const card=$('cf-pos-card'); if(!card) return;
   const p=cashFlowPlan();
   const man=n=>Math.round(n/10000).toLocaleString(); // 万円
@@ -3343,8 +3015,7 @@ function _parseBS(res){
   let cash=0, hasCash=false;
   bal.forEach(b=>{ if(!b.total_line&&b.account_category_name==='現金・預金'){ cash+=Number(b.closing_balance||0); hasCash=true; } });
   const loan=(_plItem(bal,'長期借入金')||0)+(_plItem(bal,'短期借入金')||0);
-  const ar=_plItem(bal,'売掛金')||0;  // 🛡️ 無収入サバイバル: 売掛回収込みの生存月数に使用
-  return {cash:hasCash?Math.round(cash):null, loan:Math.round(loan), ar:Math.round(ar)};
+  return {cash:hasCash?Math.round(cash):null, loan:Math.round(loan)};
 }
 function _jsonpGAS(params,cbPrefix,onDone,parse){
   const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url){ onDone(null); return; }
@@ -3886,7 +3557,7 @@ function polar(cx,cy,r,deg){ const a=(deg-90)*Math.PI/180; return [cx+r*Math.cos
 // ===== ③ 車両別 採算 (freee固定資産台帳の年間減価償却 × 直近12ヶ月売上) 2026-06-05 =====
 // ナンバー→年間減価償却(本年分の償却費合計)。freee固定資産台帳CSV(FY2026)由来・年1回CSVで更新。0=償却済の古い車。
 const FREEE_VEHICLE_DEP = {"沖縄480わ4285":0,"沖縄480わ4317":0,"沖縄506れ3844":0,"沖縄582わ5563":0,"沖縄582わ5564":0,"沖縄582わ5565":0,"沖縄506れ4826":424999,"沖縄582わ5893":181249,"沖縄582わ5894":181249,"沖縄506れ6611":380479,"沖縄582わ6765":228520,"沖縄582わ7503":0,"沖縄303わ6857":0,"沖縄303わ7659":0,"沖縄303わ7874":0,"沖縄507れ8153":381361,"沖縄507れ8794":0,"沖縄507れ8811":0,"沖縄303わ9565":714394,"沖縄508れ1881":715023,"沖縄304わ2141":780010,"沖縄58Aわ5141":322325,"沖縄58Aわ5140":346781,"沖縄58Aわ5139":352839,"沖縄304わ502":720303,"沖縄58Aわ4210":89829,"沖縄58Aわ4057":492382,"沖縄58Aわ4503":449479,"沖縄508れ3632":301363,"沖縄58Aわ":650435,"沖縄507れ4411":707799,"沖縄58Aわ6699":849726,"沖縄58Aわ6700":835277,"沖縄508れ6171":1004914,"沖縄508れ6167":1004914,"沖縄508れ6974":1226514};
-// 金城モータース 車両別 整備費(直近12ヶ月・証憑から実額抽出・売却車除外・正規ナンバー)。年数回更新。
+// 提携整備工場の車両別 整備費(直近12ヶ月・証憑から実額抽出・売却車除外・正規ナンバー)。年数回更新。
 const FREEE_KINJO_COST = {"沖縄507れ8794":51000,"沖縄58Aわ2329":11200,"沖縄420わ4285":32400,"沖縄506れ9006":61000,"沖縄582わ7229":57500,"沖縄582わ6765":48000,"沖縄304わ502":26100,"沖縄582わ7095":48000,"沖縄507れ5335":24300,"沖縄506れ2657":61800,"沖縄582わ4619":37000,"沖縄58Aわ1077":18100,"沖縄506れ9538":60600,"沖縄303わ6792":13300,"沖縄506れ9005":61000,"沖縄480わ5523":22400,"沖縄303わ6857":67200,"沖縄58Aわ4210":13200,"沖縄58Aわ267":74200,"沖縄58Aわ2993":23000,"沖縄58Aわ1075":10600,"沖縄303わ7441":72900,"沖縄303わ7659":50800,"沖縄507れ8811":11900,"沖縄507れ8153":23000,"沖縄58Aわ1076":22100,"沖縄480わ4775":22000,"沖縄506れ4057":78000,"沖縄582わ5894":22300,"沖縄582わ5893":47300,"沖縄527わ4317":60000,"沖縄506れ4058":77900,"沖縄303わ7874":82700,"沖縄582わ5565":11000,"沖縄582わ4422":20500,"沖縄582わ4390":20700,"沖縄582わ4391":20500,"沖縄582わ4457":22400,"沖縄58Aわ4503":11000,"沖縄506れ6611":90000,"沖縄58Aわ4692":11700,"沖縄58Aわ4507":11300,"沖縄58Aわ5140":11000,"沖縄58Aわ5139":11000,"沖縄304わ2141":12700,"沖縄58Aわ5471":10600,"沖縄58Aわ2994":11300,"沖縄58Aわ5602":23800,"沖縄58Aわ5472":9800,"沖縄508れ6974":8800,"沖縄506れ3844":70000,"沖縄508れ4411":11800,"沖縄302わ8959":68000,"沖縄507れ9962":10400,"沖縄508れ585":11900,"沖縄58Aわ6699":11300,"沖縄508れ586":11500,"沖縄58Aわ6700":10800,"沖縄58Aわ1914":11900,"沖縄58Aわ265":49000};
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -4402,7 +4073,45 @@ function renderAll(){
 // ---------- TABS / CROWN FAB ----------
 const TAB_LABELS = {now:'TOP', rev:'売上', ops:'稼働', kane:'資金', pipe:'案件', report:'分析', set:'設定'};
 let _currentTab = 'now';
+
+/* ===== 経営分析レポート(非公開)の読み込み =====
+   取引先名・債権内訳を含むため公開HTMLには置かず、Dropbox の非共有フォルダから取得する。 */
+const RPT_PATH='/HT経営レポート/report.html';
+let _rptLoaded=false;
+async function loadReportBody(){
+  if(_rptLoaded) return true;
+  const host=$('rpt-host'), lock=$('rpt-locked');
+  if(!host) return false;
+  const note=lock? lock.querySelector('#rpt-lock-note') : null;
+  if(DEMO){ if(note) note.textContent='デモモードでは表示しません。'; return false; }
+  if(!DBX_TOKEN){ if(note) note.textContent='設定タブから Dropbox 連携してください。'; return false; }
+  const get=()=>fetch('https://content.dropboxapi.com/2/files/download',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+DBX_TOKEN,'Dropbox-API-Arg':_asciiSafe({path:RPT_PATH})}
+  });
+  try{
+    let r=await get();
+    if(r.status===401){ const ok=await dbxRefresh(); if(ok) r=await get(); }
+    if(!r.ok){
+      if(note) note.textContent = r.status===409
+        ? 'レポートファイルが見つかりません('+RPT_PATH+')'
+        : '読み込みに失敗しました('+r.status+')';
+      return false;
+    }
+    host.innerHTML=await r.text();
+    if(lock) lock.style.display='none';
+    _rptLoaded=true;
+    try{ if(typeof renderReport==='function') renderReport(); }catch(e){ console.warn('renderReport',e); }
+    return true;
+  }catch(e){
+    console.warn('report load',e);
+    if(note) note.textContent='読み込みに失敗しました(通信エラー)。';
+    return false;
+  }
+}
+
 function showTab(t){
+  if(t==='report') loadReportBody();
   _currentTab = t;
   ['now','rev','ops','kane','pipe','report','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
   // Crown 中央表示と petal 現在地ハイライト
@@ -4432,46 +4141,6 @@ async function enterApp(){
   renderAll();
 }
 
-// 🗂️ 章折りたたみ (2026-07-25b): 経営分析(sec-report)・稼働(sec-ops)のカードを見出しタップで開閉。
-//   - デフォルト: report=総括のみ開く / ops=先頭2枚(先々の埋まり・クラス別稼働率)のみ開く
-//   - 開閉状態は localStorage に記憶 (admFolds_v1)
-//   - report 先頭に目次チップ (タップで該当章へスクロール＋展開)
-//   - DOMは移動のみ(削除なし)=既存のID・イベント・ライブ再計算に影響しない
-const FOLD_LS='admFolds_v1';
-function initFolds(){
-  let saved={}; try{ saved=JSON.parse(localStorage.getItem(FOLD_LS)||'{}'); }catch(_){}
-  const save=()=>{ try{ localStorage.setItem(FOLD_LS,JSON.stringify(saved)); }catch(_){} };
-  const toc=[];
-  [['sec-report',1],['sec-ops',2]].forEach(([sid,openN])=>{
-    const sec=document.getElementById(sid); if(!sec) return;
-    [...sec.querySelectorAll(':scope > .card')].forEach((card,i)=>{
-      const hd=card.querySelector(':scope > .lbl')||card.querySelector(':scope > .rpt-h'); if(!hd) return;
-      const key=sid+':'+i;
-      // 見出しの直前にある小見出し(.rpt-sec/.rpt-date)は開閉時も見せたままにする
-      const keep=new Set([hd]); let n=hd.previousElementSibling;
-      while(n&&(n.classList.contains('rpt-sec')||n.classList.contains('rpt-date'))){ keep.add(n); n=n.previousElementSibling; }
-      const bd=document.createElement('div'); bd.className='fold-bd';
-      [...card.children].filter(el=>!keep.has(el)).forEach(el=>bd.appendChild(el));
-      card.appendChild(bd);
-      hd.classList.add('fold-hd');
-      const open=(key in saved)?saved[key]:(i<openN);
-      if(!open) card.classList.add('folded');
-      hd.addEventListener('click',()=>{ card.classList.toggle('folded'); saved[key]=!card.classList.contains('folded'); save(); });
-      if(sid==='sec-report'){
-        const rs=card.querySelector('.rpt-sec');
-        const label=rs?rs.textContent.split('/').pop().trim():(i===0?'総括':'');
-        if(label) toc.push({card,label});
-      }
-    });
-    if(sid==='sec-report'&&toc.length){
-      const bar=document.createElement('div'); bar.className='rpt-toc';
-      toc.forEach(t=>{ const b=document.createElement('button'); b.type='button'; b.className='tc'; b.textContent=t.label;
-        b.onclick=()=>{ t.card.classList.remove('folded'); const k=[...sec.querySelectorAll(':scope > .card')].indexOf(t.card); saved[sid+':'+k]=true; save(); t.card.scrollIntoView({behavior:'smooth',block:'start'}); };
-        bar.appendChild(b); });
-      sec.insertBefore(bar,sec.firstElementChild);
-    }
-  });
-}
 function setupTabs(){
   // Crown FAB
   $('crown-btn').onclick=(e)=>{e.stopPropagation();toggleCrown()};
@@ -4648,17 +4317,17 @@ function DEMO_D(){
     const dt=new Date(today.getFullYear(),today.getMonth()-monthsBack,1+Math.floor(Math.random()*27));
     if(dt>today) dt.setDate(today.getDate());
     const isoDay=dt.toISOString().slice(0,10);
-    // category 分布: 業販70% (うち次郎工業90% = 全体63%), 一般30%
+    // category 分布: 業販70% (うち主要取引先90% = 全体63%), 一般30%
     const r=Math.random();
     const isGeneral = r<0.30;
     const cat = isGeneral?'一般':'業販';
-    const cust = isGeneral?('顧客'+i):(Math.random()<0.9?'株式会社次郎工業':('業販'+i));
+    const cust = isGeneral?('顧客'+i):(Math.random()<0.9?'株式会社サンプル工業':('業販'+i));
     cases.push({id:'D'+i,category:cat,customer:cust,receptionDate:isoDay,arrival:isoDay+'T10:00',delivery:monthsBack===0&&i%3===0?null:isoDay,paidDate:monthsBack>0||i%5===0?isoDay:null,billMonth:(dt.getMonth()+1)+'月',plan:plans[i%4],size:sizes[i%4],optExt:[30000,50000,100000,200000][i%4],optInt:[0,20000,0,0][i%4],optOther:0,discount:0,carModel:'車両'+i,deleted:false});
   }
   // ── 神アプリ第1波 検証用 (2026-07-04): 今日の入出庫 / 古い未入金 / 納車入力漏れ ──
   const tIso=todayISO();
   cases.push(
-    {id:'DT1',category:'業販',customer:'株式会社次郎工業',carModel:'プリウス',receptionDate:tIso,arrival:tIso+'T11:00',delivery:null,paidDate:null,plan:'セラミック',size:'M',optExt:120000,optInt:0,optOther:0,discount:0,deleted:false},
+    {id:'DT1',category:'業販',customer:'株式会社サンプル工業',carModel:'プリウス',receptionDate:tIso,arrival:tIso+'T11:00',delivery:null,paidDate:null,plan:'セラミック',size:'M',optExt:120000,optInt:0,optOther:0,discount:0,deleted:false},
     {id:'DT2',category:'一般',customer:'本日納車予定K',carModel:'ワゴンR',receptionDate:addDays(tIso,-6),arrival:addDays(tIso,-6)+'T10:00',deliveryPlan:tIso+'T16:00',delivery:null,paidDate:null,plan:'スタンダード',size:'S',optExt:50000,optInt:0,optOther:0,discount:0,deleted:false},
     {id:'DT3',category:'業販',customer:'古い未入金L',carModel:'ノア',receptionDate:addDays(tIso,-50),arrival:addDays(tIso,-50)+'T09:00',delivery:addDays(tIso,-42),paidDate:null,plan:'ガラスコーティング',size:'L',optExt:80000,optInt:0,optOther:0,discount:0,deleted:false},
     {id:'DT4',category:'一般',customer:'納車未入力M',carModel:'タント',receptionDate:addDays(tIso,-48),arrival:addDays(tIso,-45)+'T13:00',delivery:null,paidDate:null,plan:'スタンダード',size:'S',optExt:40000,optInt:0,optOther:0,discount:0,deleted:false}
@@ -4692,7 +4361,6 @@ function DEMO_E(){
 // ---------- BOOTSTRAP ----------
 async function bootstrap(){
   setupTabs();
-  try{ initFolds(); }catch(e){ console.warn('folds',e); }  // 🗂️ 章折りたたみ (2026-07-25b)
   // Dropbox OAuth コールバック処理 (URLに code パラメータがあれば交換)
   if(new URL(location.href).searchParams.get('code')){
     await dbxHandleCallback();
