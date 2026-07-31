@@ -976,6 +976,8 @@
       <div class="sm ink3" id="be-note" style="margin-top:9px">固定費 約545万 ÷ 限界利益率 89.4%（FY2026確定・暦日ベース・年1回見直し）</div>
       <!-- 受注ランレート (売上タブに埋没していた値を分岐点に接続・2026-07-04 第1波) -->
       <div class="sm" id="be-runrate" style="margin-top:8px;padding-top:8px;border-top:1px dotted var(--line)"></div>
+      <!-- 売上ゼロ ランウェイ 1行サマリー (本体は資金タブ・2026-07-31) -->
+      <div class="sm tap" id="be-runway" style="margin-top:8px;padding-top:8px;border-top:1px dotted var(--line)" onclick="showTab('kane')"></div>
     </div>
 
     <!-- ③b 未回収 · 請求待ち (お金の詰まり・2026-07-04 第1波)
@@ -1280,6 +1282,18 @@
       <div class="cf-runway" id="cf-runway"></div>
     </div>
 
+    <!-- 売上ゼロ ランウェイ (2026-07-31) -->
+    <div class="card" id="rw-card">
+      <div class="lbl">売上ゼロなら何ヶ月もつか <span class="sm ink3" style="font-weight:normal">耐久力</span></div>
+      <div class="med num" id="rw-months">—<span class="unit">ヶ月</span></div>
+      <div class="unit-sm" style="margin-top:3px">明日から売上が1円も無い場合</div>
+      <div class="sm" id="rw-verdict" style="margin-top:8px">—</div>
+      <div class="bar" style="margin-top:14px"><i id="rw-bar" style="width:0%"></i></div>
+      <div class="sm ink3" id="rw-scale" style="margin-top:6px;text-align:center"></div>
+      <div class="cf-grid" id="rw-grid" style="margin-top:12px"></div>
+      <div class="sm ink3" id="rw-note" style="margin-top:10px;line-height:1.7"></div>
+    </div>
+
     <!-- 12ヶ月 資金繰り予定 チャート -->
     <div class="card">
       <div class="lbl">資金繰り予定 · 今後12ヶ月（各月末の現金）</div>
@@ -1368,7 +1382,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-31';
+const APP_VERSION = '2026-07-31a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2214,10 +2228,15 @@ function staffLoad(){
 // 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値) — memory project-lime-break-even / 損益分岐点分析_2026-06-16.md
 // 固定費 約545万/月 ÷ 限界利益率 89.4% = 月約610万・暦日ベース 日約20万。freee実額ベースの静的値=年1回見直し。
 // 3段階: 通常(全固定費545万)610万 / 限界(絶対固定費418万)470万 / 真の現金下限(元金返済74万込)425万
+// 売上ゼロ時の月次現金流出(バーン) = fixedCash + 借入元金返済。
+//   fixedCash = 現金下限売上 425万 × 限界利益率 89.4% − 元金返済 74万 ≒ 306万/月
+//   = 人件費・家賃・リース料・保険など「売上が止まっても出ていく現金」。減価償却は非現金なので含めない。
+//   ★MD(損益分岐点分析)の見直し時は monthly/limit/cash と一緒に fixedCash も更新すること。
 const BREAK_EVEN = {
   monthly: 6100000, daily: 200000,        // 損益分岐点 (利益が出る)
   limit:   4700000, limitDaily: 155000,   // 会計トントン (絶対固定費のみ・日15.5万=正本MD/レジェンドと一致)
-  cash:    4250000, cashDaily: 140000      // 現金下限 (借入元金返済込み)
+  cash:    4250000, cashDaily: 140000,     // 現金下限 (借入元金返済込み)
+  margin:  0.894,  fixedCash: 3060000      // 限界利益率 / 売上ゼロ時に出ていく現金固定費(月)
 };
 // ===== 資金繰り (第4波・2026-07-04) 前提定数 =====
 // 借入元金返済 = 損益分岐点MD (freee B/S 連続月差で確定・元金74万/月)。営業CFはfreee営業利益÷経過月でライブ算出。
@@ -2509,7 +2528,53 @@ function cashFlowPlan(opAdj){
     pendCount:pend.length, rows, trough, floor:CASH_CFG.floor,
     hasSpecial:Object.keys(CASH_SPECIAL).length>0, newLoanAssumed:!!CASH_NEW_LOAN.assumed};
 }
+// ===== 売上ゼロ ランウェイ (2026-07-31) =====
+// 「明日から売上が1円も無くなったら、何ヶ月もつか」。手元現金 ÷ 月次バーン。
+// バーン = 現金固定費(BREAK_EVEN.fixedCash) + 借入元金返済(既存 + 新規借入)。売上ゼロなら変動費は出ないので含めない。
+// 設備投資・税金・賞与は「止められる/時期をずらせる」ので含めない = 最も素直な耐久月数。
+function zeroRevenueRunway(){
+  const cash=(FREEE_BS && FREEE_BS.cash!=null) ? FREEE_BS.cash : 36087108;
+  const ar  =(FREEE_BS && FREEE_BS.ar!=null)   ? FREEE_BS.ar   : 0;
+  const newLoanMo=(CASH_NEW_LOAN.amount>0&&CASH_NEW_LOAN.months>0)?Math.round(CASH_NEW_LOAN.amount/CASH_NEW_LOAN.months):0;
+  const repay=CASH_CFG.loanRepay+newLoanMo;
+  const burn=BREAK_EVEN.fixedCash+repay;
+  const floor=CASH_CFG.floor;
+  const mo=v=>burn>0?Math.max(0,v)/burn:0;
+  return {cash, ar, burn, repay, fixedCash:BREAK_EVEN.fixedCash, floor, live:!!(FREEE_BS&&FREEE_BS.cash!=null),
+          months:mo(cash), monthsToFloor:mo(cash-floor), monthsWithAR:mo(cash+ar)};
+}
+function renderRunway(){
+  const r=zeroRevenueRunway();
+  const f1=n=>(Math.floor(n*10)/10).toFixed(1);
+  // 判定 (損益分岐点カードの4ゾーンと同じ粒度: 1年以上 / 半年〜1年 / 3〜6ヶ月 / 3ヶ月未満)
+  const zone = r.months>=12 ? {t:'🟢 1年以上もつ ・ 十分な体力',c:'var(--acc)',b:''}
+             : r.months>=6  ? {t:'🟡 半年〜1年 ・ 手元は厚い',c:'var(--warn)',b:'warn'}
+             : r.months>=3  ? {t:'🟠 3〜6ヶ月 ・ 早めに手を打つ水準',c:'var(--warn)',b:'warn'}
+                            : {t:'🔴 3ヶ月未満 ・ 危険水準',c:'var(--danger)',b:'danger'};
+  // TOP 損益分岐点カードの1行サマリー
+  const top=$('be-runway');
+  if(top) top.innerHTML='売上ゼロでも <b class="num" style="color:'+zone.c+'">'+f1(r.months)+'ヶ月</b> もつ'+
+    '<span class="ink3" style="font-weight:normal">（手元現金 '+yen(r.cash)+'円 ÷ 出ていく現金 '+yen(r.burn)+'円/月）</span>';
+  // 資金タブの本体カード
+  const card=$('rw-card'); if(!card) return;
+  $('rw-months').innerHTML=f1(r.months)+'<span class="unit">ヶ月</span>';
+  const v=$('rw-verdict'); v.style.color=zone.c;
+  v.innerHTML=zone.t+' <span class="ink3" style="font-weight:normal">（'+(r.live?'freeeライブ':'前回値')+'の現預金 '+yen(r.cash)+'円が尽きるまで）</span>';
+  const bar=$('rw-bar'); bar.style.width=Math.min(100,Math.round(r.months/24*100))+'%'; bar.className=zone.b;
+  $('rw-scale').innerHTML='0 ─────── 12ヶ月 ─────── 24ヶ月';
+  const g=$('rw-grid');
+  if(g) g.innerHTML=
+    '<div><span class="cf-k">毎月 出ていく現金（売上ゼロ時）</span><span class="cf-v num dn">−'+yen(r.burn)+'</span></div>'+
+    '<div><span class="cf-k">　うち 固定費（人件費・家賃・リース等）</span><span class="cf-v num">'+yen(r.fixedCash)+'</span></div>'+
+    '<div><span class="cf-k">　うち 借入元金の返済</span><span class="cf-v num">'+yen(r.repay)+'</span></div>'+
+    '<div><span class="cf-k">現金下限 '+Math.round(r.floor/10000).toLocaleString()+'万 を割るまで</span><span class="cf-v num">'+f1(r.monthsToFloor)+' ヶ月</span></div>'+
+    (r.ar>0?'<div><span class="cf-k">売掛金 '+yen(r.ar)+'円 の回収を含めれば</span><span class="cf-v num" style="color:var(--acc)">'+f1(r.monthsWithAR)+' ヶ月</span></div>':'');
+  $('rw-note').innerHTML='【前提】売上が1円も入らない代わりに、仕入・外注などの変動費も出ない想定。'+
+    '人件費・家賃・車両リース料・保険は止まらない固定費として計上。減価償却は現金が出ないので含めない。'+
+    '設備投資・税金・賞与は時期をずらせる前提で含めていません（含めるとこれより短くなります）。';
+}
 function renderCash(){
+  renderRunway();
   const card=$('cf-pos-card'); if(!card) return;
   const p=cashFlowPlan();
   const man=n=>Math.round(n/10000).toLocaleString(); // 万円
@@ -3021,7 +3086,8 @@ function _parseBS(res){
   let cash=0, hasCash=false;
   bal.forEach(b=>{ if(!b.total_line&&b.account_category_name==='現金・預金'){ cash+=Number(b.closing_balance||0); hasCash=true; } });
   const loan=(_plItem(bal,'長期借入金')||0)+(_plItem(bal,'短期借入金')||0);
-  return {cash:hasCash?Math.round(cash):null, loan:Math.round(loan)};
+  const ar=_plItem(bal,'売掛金')||0;   // 売上ゼロ時ランウェイの「回収して繋げる分」に使う
+  return {cash:hasCash?Math.round(cash):null, loan:Math.round(loan), ar:Math.round(ar)};
 }
 function _jsonpGAS(params,cbPrefix,onDone,parse){
   const url=((DR&&DR.settings&&DR.settings.freeeApiUrl)||'').trim(); if(!url){ onDone(null); return; }
@@ -3035,7 +3101,7 @@ function _jsonpGAS(params,cbPrefix,onDone,parse){
 }
 function freeeFetchBSPaid(force){
   if(DEMO){
-    if(!FREEE_BS){ FREEE_BS={cash:40460000,loan:54579000}; FREEE_PAID={'demo-TA1':{date:todayISO()}}; }
+    if(!FREEE_BS){ FREEE_BS={cash:40460000,loan:54579000,ar:9870000}; FREEE_PAID={'demo-TA1':{date:todayISO()}}; }
     _renderFreeeBS(); try{ renderAR(); }catch(e){} try{ renderCash(); }catch(e){}
     return;
   }
