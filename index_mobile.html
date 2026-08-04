@@ -2091,7 +2091,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-04b';
+const APP_VERSION = '2026-08-04c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4090,11 +4090,14 @@ function getRecoveryCases(tab){
   // ★2026-05-22 α方針: 一般貸渡は recoveryCalledAt が空 (回収予定の登録なし) のため
   //   useEnd(返却日) で today/upcoming に拾う。pending には載せない (PC専用管理)。
   const dayKey = c => c.category === '一般' ? (c.useEnd||'') : (c.recoveryCalledAt||'');
-  // ★2026-07-04 「今日」タブは未完了のみ (ユーザー「残り3だから3件のみ表示して」)。
-  //   ホームKPIの「残り」と件数が常に一致する。完了済みはKPIの「完了N/全M」と履歴タブで確認。
+  // ★2026-08-04 [mobile c]: 「今日」タブも配車と同じく完了済みを残して薄表示 (未完了→完了の順)。
+  //   ユーザー「配車で終了したのは薄く見れるのに回収は見れない」→左右対称に統一。
+  //   (旧2026-07-04は完了済みを除外していたが、完了カードの「FAXを送り直す」にも当日リストから
+  //    届かなくなっていた。未完了が常に上に並ぶので「残り」の把握は損なわれない)
   if(tab === 'today'){
-    return cases.filter(c => dayKey(c).startsWith(today) && !c.recoveryCompleted)
-      .sort((a,b) => dayKey(a).localeCompare(dayKey(b)));
+    return cases.filter(c => dayKey(c).startsWith(today))
+      .sort((a,b) => Number(!!a.recoveryCompleted) - Number(!!b.recoveryCompleted)
+        || dayKey(a).localeCompare(dayKey(b)));
   }
   if(tab === 'upcoming'){
     const limit = new Date(); limit.setDate(limit.getDate()+7);
