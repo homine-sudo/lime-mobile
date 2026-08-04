@@ -1217,6 +1217,13 @@ body.kb-open .m-confirm-card{display:none}
 .sheet.faxinv .fi-detail-tbl .billed td:last-child{font-size:14px}
 .sheet.faxinv .fi-totals tr.due-date th{background:#000;color:#fff;border:2px solid #000;font-weight:bold;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .sheet.faxinv .fi-totals tr.due-date td{color:#000;font-weight:bold;font-size:13px;background:#fff;border:2px solid #000}
+/* 案件カード「詳細」ボタン + フロー画面「案件詳細を見る」リンク (2026-08-04b 現場UX: フローに入らず全情報へ) */
+.m-card-detail-btn{margin-left:auto;flex-shrink:0;display:inline-flex;align-items:center;gap:3px;border:1px solid var(--border);background:#fff;border-radius:14px;padding:6px 11px;font-size:11.5px;font-weight:700;color:var(--navy);cursor:pointer;min-height:30px}
+.m-card-detail-btn:active{background:#EEF3FA}
+.m-info-detail-link{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:10px;padding:11px 12px;border:1.5px dashed var(--border);border-radius:9px;background:#FAFBFD;color:var(--navy);font-size:12.5px;font-weight:700;cursor:pointer}
+.m-info-detail-link:active{background:#EEF3FA}
+/* 回収先が配車先と別のときの注意バッジ */
+.m-dest-diff{display:inline-block;background:#FDEBD0;color:#8A4B00;border:1px solid #E6B77A;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;vertical-align:middle}
 /* 案2: 外枠なし・安全マージン (FAX端クリップ対策で枠を排す)。
    ※flex/min-height は html2canvas が捕捉できずアスペクト自己検証と衝突し
      fail-close するため使わない (2026-05-17 確定)。 */
@@ -2084,7 +2091,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-04a';
+const APP_VERSION = '2026-08-04b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3989,9 +3996,25 @@ function _renderCaseCard(c, kind){
     tel(c.driverTel)
   ].filter(Boolean).join(' ');
 
-  // 車両ナンバーは _mPlateHero(c) で大表示 (2026-07-23)。回収カードは 受付No / 車両ナンバー / 運転者 / 回収先 / 社内メモ
-  // (配車カードは従来どおり 配車予約・住所マップリンクも表示)
+  // ⓘ詳細ボタン (2026-08-04b 現場UX): タップ=即フロー のカードから、フローに入らず案件詳細(全情報)へ行ける導線
+  const detailBtn = `<button type="button" class="m-card-detail-btn" onclick="event.stopPropagation();openCaseDetail('${c.id}')"><svg class="m-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>詳細</button>`;
+
+  // 車両ナンバーは _mPlateHero(c) で大表示 (2026-07-23)。回収カードは 受付No / 車両ナンバー / 運転者 / 回収先 / 住所 / 社内メモ
   if(kind === 'recovery'){
+    // 🚨2026-08-04b: 回収先は _recoveryDest (配車先と別指定なら回収先) を使う。
+    //   旧実装は配車先を「回収先」と表示しており、別指定の案件では間違った行き先が出ていた。
+    //   あわせて住所+地図リンクを追加 (配車カードには元からあり回収だけ無かった)。
+    const _rd = (typeof _recoveryDest === 'function') ? _recoveryDest(c)
+      : { name:c.dispatchToName||'', address:c.dispatchToAddress||'', tel:c.dispatchToTel||'', isDifferent:false };
+    const _recName = _rd.name ? `<b>${esc(_rd.name)}</b>${_rd.isDifferent?' <span class="m-dest-diff">配車先と別</span>':''}` : '';
+    const _recSub = [
+      (!_rd.isDifferent && c.dispatchToContact) ? `${esc(c.dispatchToContact)} 様` : '',
+      tel(_rd.isDifferent ? _rd.tel : (c.dispatchToContactTel || _rd.tel))
+    ].filter(Boolean).join('　');
+    const recToLine = [_recName, _recSub].filter(Boolean).join('<br>');
+    const recMapsLink = _rd.address
+      ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(_rd.address)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg class="m-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg> 地図</a>`
+      : '';
     return `
       <div class="m-card flow-${kind} ${isDone?'done':''}" onclick="enterRecoveryFlow('${c.id}')">
         <div class="m-card-left">
@@ -3999,10 +4022,12 @@ function _renderCaseCard(c, kind){
             <span class="m-card-time">${time}</span>
             <span class="m-card-caseno">${esc(c.caseNo||'(No未設定)')}</span>
             <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
+            ${detailBtn}
           </div>
           ${_mPlateHero(c)}
           ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
-          ${toLine ? `<div class="m-card-row"><span class="lbl">回収先</span><span class="val">${toLine}</span></div>` : ''}
+          ${recToLine ? `<div class="m-card-row"><span class="lbl">回収先</span><span class="val">${recToLine}</span></div>` : ''}
+          ${_rd.address ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(_rd.address)} ${recMapsLink}</span></div>` : ''}
           ${c.category === '一般' && (c.useStart || c.useEnd) ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>` : ''}
           ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
           ${resendBtn}
@@ -4022,6 +4047,10 @@ function _renderCaseCard(c, kind){
   const _dVehRow = (_dCls || _dName || _dPlate)
     ? `<div class="m-card-row"><span class="lbl">車両</span><span class="val">${_dCls?`<span class="m-cls-badge" style="background:${_dClsCol.bg};color:${_dClsCol.fg}">${esc(_dCls)}</span> `:''}${_dName?esc(_dName):(_dClsName?`<span style="color:var(--muted)">${esc(_dClsName)}</span>`:'')}${_dPlate?` <b>${esc(_dPlate)}</b>`:''}</span></div>`
     : '';
+  // 期間行 (2026-08-04b): 「いつからいつまでの貸出か」が配車一覧から見えなかった。使用期限は現場の判断材料
+  const _periodRow = (c.category !== '一般' && (c.useStart || c.useDeadline))
+    ? `<div class="m-card-row"><span class="lbl">期間</span><span class="val">${esc(fmtDate(c.useStart)||'―')} 〜 ${c.useDeadline?`期限 <b>${esc(fmtDate(c.useDeadline))}</b>${c.deadlineNote?` <span style="color:var(--muted);font-size:11px">(${esc(c.deadlineNote)})</span>`:''}`:'未定'}</span></div>`
+    : '';
   return `
     <div class="m-card flow-${kind} ${isDone?'done':''}" onclick="enter${kind==='dispatch'?'Dispatch':'Recovery'}Flow('${c.id}')">
       <div class="m-card-left">
@@ -4029,10 +4058,12 @@ function _renderCaseCard(c, kind){
           <span class="m-card-time">${time}</span>
           <span class="m-card-caseno">${esc(c.caseNo||'(No未設定)')}</span>
           <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
+          ${detailBtn}
         </div>
         ${c.category === '一般'
           ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>`
           : `<div class="m-card-row"><span class="lbl">配車予約</span><span class="val">${dispatchInfo}</span></div>`}
+        ${_periodRow}
         ${_dVehRow}
         ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
         ${toLine ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${toLine}</span></div>` : ''}
@@ -4142,7 +4173,27 @@ function renderInfoBox(c, hostId, kind){
     ? `<div class="m-info-row" style="background:#FFF9E6;border-radius:6px;border:1px solid #F0D58A"><span class="lbl" style="color:#7A4500">${ic('<path d="M7 10h3v-3l-3.5-3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8l3.5 3.5"/>')} 点検期日</span><span class="val" style="color:#7A4500"><b>${esc(_va.kind)}</b> ${_va.daysLeft<0?`<span style="color:#A32D2D;font-weight:bold">${-_va.daysLeft}日超過</span>`:`残${_va.daysLeft}日`} <span style="color:var(--muted)">(${esc(fmtDateFull(_va.date))})</span><br><b>→ 回収後そのまま工場へ</b></span></div>`
     : '';
 
-  // 🌞 現場(炎天下)優先の並び: どこへ(行き先)→住所/地図→いつ→運転者(誰に電話) を上に。保険会社/担当/メモは下 (2026-07-23e)
+  // 🚗 車両行 (2026-08-04b): 配車フロー(撮影/FAX画面)で「どの車か」が見えなかった。回収はヒーロー大表示があるので配車系のみ
+  const _vehRowIB = (!_isRec) ? (function(){
+    const v = (c.vehicleId && DATA && DATA.vehicles) ? DATA.vehicles.find(x=>x.id===c.vehicleId) : null;
+    const nm  = c.isBorrowed ? (c.borrowedVehicleInfo||'').trim() : (((v&&v.name) || c.vehicleName || '')).trim();
+    const cls = c.isBorrowed ? (c.vehicleClass||'').trim() : (((v&&v.vehicleClass) || c.vehicleClass || '')).trim();
+    const col = ((v&&v.color)||'').trim();
+    const pl  = c.isBorrowed ? (c.borrowedPlate||'').trim() : [c.plateArea,c.plateNo,c.plateKana,c.plateTail].filter(Boolean).join(' ');
+    if(!(nm||cls||pl)) return '';
+    const cb = (cls && typeof _clsColor==='function') ? (function(){ const cc=_clsColor(cls); return `<span class="m-cls-badge" style="background:${cc.bg};color:${cc.fg}">${esc(cls)}</span> `; })() : '';
+    return `<div class="m-info-row"><span class="lbl">車両</span><span class="val">${cb}${nm?`<b>${esc(nm)}</b>`:''}${col?` <span class="m-color-dot" style="background:${_colorHex(col)}"></span>${esc(col)}`:''}${pl?`<br><span style="font-size:14.5px;font-weight:800;letter-spacing:.04em">${esc(pl)}</span>`:''}</span></div>`;
+  })() : '';
+  // 📅 期間行 (2026-08-04b): 「いつからいつまでの貸出か」がフロー画面で見えなかった。損保=使用期限 / 一般=返却日
+  const _periodRowIB = (c.useStart || c.useEnd || c.useDeadline)
+    ? `<div class="m-info-row"><span class="lbl">期間</span><span class="val">${fmtDateFull(c.useStart)||'―'} 〜 ${c.category==='一般'
+        ? (fmtDateFull(c.useEnd)||'未定')
+        : (c.useEnd ? fmtDateFull(c.useEnd) : (c.useDeadline ? `<b>期限 ${fmtDateFull(c.useDeadline)}</b>${c.deadlineNote?` <span style="color:var(--muted);font-size:11px">(${esc(c.deadlineNote)})</span>`:''}` : '未定'))}</span></div>`
+    : '';
+  // 📋 案件詳細への導線 (2026-08-04b): フロー中でも全情報(事故情報/保険連絡先/写真/FAX履歴)へ1タップで行ける
+  const _detailLinkIB = `<button type="button" class="m-info-detail-link" onclick="openCaseDetail('${c.id}')">${ic('<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>',15)} 案件詳細を見る（事故情報・写真・FAX履歴 など全情報）</button>`;
+
+  // 🌞 現場(炎天下)優先の並び: どこへ(行き先)→住所/地図→いつ→車両→期間→運転者(誰に電話) を上に。保険会社/担当/メモは下 (2026-07-23e)
   $(hostId).innerHTML = `
     <div class="caseno">${ic('<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>',15)} ${esc(c.caseNo||'')}</div>
     ${_isRec?_mPlateHero(c):''}
@@ -4150,11 +4201,14 @@ function renderInfoBox(c, hostId, kind){
     ${_destAddr?`<div class="m-info-row"><span class="lbl">住所</span><span class="val">${esc(_destAddr)} ${_destMapBtn}</span></div>`:''}
     <div class="m-info-row"><span class="lbl">${kind==='recovery'?'回収予定':'配車予約'}</span><span class="val strong">${kind==='recovery'?(fmtDateFull(c.recoveryCalledAt)||'<span class="empty">未設定</span>'):dispatchInfo}</span></div>
     ${_vaRow}
+    ${_vehRowIB}
+    ${_periodRowIB}
     <div class="m-info-row"><span class="lbl">運転者</span><span class="val">${driver?`<b>${esc(driver)}</b>`:'<span class="empty">―</span>'} ${c.driverTel?tel(c.driverTel):''}</span></div>
     <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
     ${_staffRow}
     <div class="m-info-row m-memo-edit-row" onclick="openMemoEdit('${c.id}')" style="cursor:pointer" title="タップで社内メモを編集"><span class="lbl">社内メモ</span><span class="val" style="color:#5A3F00;background:#FFF9E6;padding:6px 8px;border-radius:6px">${c.internalMemo?esc(c.internalMemo):'<span style="color:var(--muted);font-style:italic">＋ タップで追加</span>'} <span style="float:right;color:var(--muted)">${ic('<path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/>')}</span></span></div>
     ${c.negotiationLog?`<div class="m-info-row"><span class="lbl">交渉記録</span><span class="val" style="color:#3D2459;background:#FAF5FE;padding:6px 8px;border-radius:6px;white-space:pre-wrap;line-height:1.6">${esc(c.negotiationLog)}</span></div>`:''}
+    ${_detailLinkIB}
   `;
 }
 
@@ -4241,14 +4295,17 @@ function renderPrepVehicleSection(c){
   const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
   const hasVehicle = !!(c.vehicleId || c.vehicleName || plate);
   if(hasVehicle){
+    // 2026-08-04b 現場UX: 準備画面も回収と同じ大表示 (_mPlateHero=車種+クラス+色チップ+ナンバー大)。実車照合を配車/回収で対称に
+    const _hero = _mPlateHero(c);
     host.innerHTML = `
+      ${_hero || `
       <div class="m-vehicle-current">
         <div class="v-ico-big"><svg class="m-svg" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9"/></svg></div>
         <div class="v-info">
           <div class="v-name">${esc(c.vehicleName||c.vehicleClass||'(車種未設定)')}</div>
           <div class="v-plate">${esc(plate)||'<span style="color:#BBB">ナンバー未設定</span>'}</div>
         </div>
-      </div>
+      </div>`}
       <button class="m-btn m-btn-outline m-btn-block" style="margin-top:10px" onclick="openVehiclePicker()"><svg class="m-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/></svg>別の車両に変更</button>
     `;
   } else {
