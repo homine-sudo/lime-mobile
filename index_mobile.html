@@ -2091,7 +2091,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-04c';
+const APP_VERSION = '2026-08-04d';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3624,7 +3624,10 @@ function renderHome(){
   }
   const cases = (DATA.cases || []).filter(_isActive);
   // 今日の配車: 大きい数字=残り(未完了)件数 → 全部終わると0。サブに「完了N / 全M」。
-  const dispToday = cases.filter(c => (c.dispatchAt||'').startsWith(today));
+  // ★2026-08-04 [mobile d]: 母集団を配車リスト「今日」タブと同一基準に統一 (一般=貸渡日useStart / 損保=dispatchAt)。
+  //   回収KPIは 2026-07-04 に同じ統一を済ませていたが配車KPIが未統一で、一般貸出日にリストとズレていた。
+  const _dispDayKey = c => c.category === '一般' ? (c.useStart||'') : (c.dispatchAt||'');
+  const dispToday = cases.filter(c => _dispDayKey(c).startsWith(today));
   const dispDone  = dispToday.filter(c => c.dispatchDoneAt).length;
   const dispLeft  = Math.max(0, dispToday.length - dispDone);
   // 今日の回収: 同上 (残り件数 → 完了で0)
@@ -3708,8 +3711,10 @@ function renderHomeCalendar(){
     const tz = d.getTimezoneOffset()*60000;
     const iso = new Date(d - tz).toISOString().slice(0,10);
     const dow = d.getDay();
-    const dispCount = cases.filter(c => (c.dispatchAt||'').startsWith(iso) && !c.dispatchDoneAt).length;
-    const recCount = cases.filter(c => (c.recoveryCalledAt||'').startsWith(iso) && !c.recoveryCompleted).length;
+    // ★2026-08-04 [mobile d]: 日付キーを日別シート(renderDaySheet)と同一に (一般=useStart/useEnd)。
+    //   旧実装は一般貸渡を数えず、バッジ件数とタップで開くシートの中身が食い違っていた。
+    const dispCount = cases.filter(c => (c.category==='一般' ? (c.useStart||'') : (c.dispatchAt||'')).startsWith(iso) && !c.dispatchDoneAt).length;
+    const recCount = cases.filter(c => (c.category==='一般' ? (c.useEnd||'') : (c.recoveryCalledAt||'')).startsWith(iso) && !c.recoveryCompleted).length;
     let lbl = '';
     if(i === 0) lbl = '今日';
     else if(i === 1) lbl = '明日';
@@ -3833,12 +3838,17 @@ function _renderSearchResultCard(c){
     `;
   }
 
+  // ⓘ詳細 (2026-08-04 [mobile d]): 配車/回収対象の検索結果もタップ=即フローのため、一覧カードと同じ詳細導線を付ける
+  const _searchDetailBtn = (kind !== 'detail')
+    ? `<button type="button" class="m-card-detail-btn" onclick="event.stopPropagation();openCaseDetail('${c.id}')"><svg class="m-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>詳細</button>`
+    : '';
   return `
     <div class="m-card flow-${kind === 'dispatch' ? 'dispatch' : (kind === 'recovery' ? 'recovery' : 'dispatch')}" onclick="${flowFn}">
       <div class="m-card-left">
         <div class="m-card-row1">
           <span class="m-card-caseno">${esc(c.caseNo||'(No未設定)')}</span>
           <span class="m-card-badge ${badgeCls}">${esc(badgeTxt)}</span>
+          ${_searchDetailBtn}
         </div>
         <div class="m-card-row"><span class="lbl">契約者</span><span class="val"><b>${esc(c.contractorName||c.driverName||'')}</b></span></div>
         ${ins.name ? `<div class="m-card-row"><span class="lbl">保険</span><span class="val">${esc(ins.name)}</span></div>` : ''}
