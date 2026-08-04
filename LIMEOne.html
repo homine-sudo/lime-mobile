@@ -2699,12 +2699,12 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           <div style="font-size:11px;color:var(--orange);font-weight:bold;margin-bottom:6px;display:flex;align-items:center;gap:6px">
             <span style="background:var(--orange);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px">②</span>
             値引・調整
-            <span style="color:#888;font-weight:normal;font-size:10px;margin-left:4px">(値引日数を入れると 日数×日額 で自動計算。手動入力も可)</span>
+            <span style="color:#888;font-weight:normal;font-size:10px;margin-left:4px">(請求額 = 日額 × (請求日数 − 値引日数) − 値引額。日数と金額は別々に引かれます)</span>
           </div>
           <div style="display:grid;grid-template-columns:90px 1.2fr 130px auto 1fr;gap:10px;align-items:end">
             <div class="form-group"><label class="form-label" style="color:var(--orange)">値引日数</label><input class="form-control" id="f-discountDays" type="number" placeholder="0" min="0" oninput="onDiscountDaysChange()" style="text-align:center"></div>
-            <div class="form-group"><label class="form-label" style="font-size:11px">計算式</label><input class="form-control" id="f-discountCalc" readonly style="background:#F8F8F8;font-size:12px;color:#666" placeholder="日数 × 日額(税込) = 値引額(自動)"></div>
-            <div class="form-group"><label class="form-label" style="color:var(--orange)">値引(税込)</label><input class="form-control" id="f-discount" type="number" placeholder="0" oninput="onDiscountManualChange()" style="text-align:right;font-weight:bold;color:var(--orange)"></div>
+            <div class="form-group"><label class="form-label" style="font-size:11px">値引の内訳(合計)</label><input class="form-control" id="f-discountCalc" readonly style="background:#F8F8F8;font-size:12px;color:#666" placeholder="日数分 ＋ 金額調整 = 値引合計"></div>
+            <div class="form-group"><label class="form-label" style="color:var(--orange)" title="日数で引く分は左の「値引日数」。ここは円単位の調整だけを入れます">値引額(円)</label><input class="form-control" id="f-discount" type="number" placeholder="0" oninput="onDiscountManualChange()" style="text-align:right;font-weight:bold;color:var(--orange)" title="日数で引く分は左の「値引日数」。ここは円単位の調整だけ"></div>
             <div class="form-group"><button type="button" class="btn btn-orange" onclick="confirmDiscount()" style="height:36px;padding:0 14px;font-weight:bold;white-space:nowrap" title="値引を確定 → 請求合計に反映 + 保存">💰 値引確定</button></div>
             <div class="form-group"><label class="form-label">値引理由・備考</label><input class="form-control" id="f-discountNote" placeholder="例: 長期利用割引 / 先方調整など"></div>
           </div>
@@ -2969,16 +2969,20 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <div class="gr-step-micro">1日の料金を入れると、②の期間から合計を自動で計算します。</div>
         <div class="form-grid cols3">
           <div class="form-group"><label class="form-label">1日の料金 (税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="8,800" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">車を選ぶと自動で入ります</div></div>
-          <div class="form-group"><label class="form-label">値引額</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"></div>
+          <div class="form-group"><label class="form-label">値引額 (円)</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">円で引く分だけ。日数で引くのは下の調整欄</div></div>
           <div class="form-group"></div>
         </div>
         <div id="gr-period-display" class="gr-total-card"></div>
         <details class="gr-det" id="gr-det-billing"><summary>請求の調整（普段は不要）<span class="gr-det-badge" id="gr-badge-billadj"></span></summary>
           <div class="gr-det-body">
+            <div style="font-size:11px;color:#666;background:#F4F7F2;border-left:3px solid #4F8A3E;padding:6px 9px;margin-bottom:9px;line-height:1.6">
+              請求額 ＝ <b>1日料金</b>（下で上書き可）× （<b>請求日数</b> − <b>無料サービス日数</b>） − <b>値引額</b><br>
+              入力するとすぐ上の内訳カードに反映され、<b>その金額がそのまま請求書・手配書に出ます</b>。
+            </div>
             <div class="form-grid cols3">
               <div class="form-group"><label class="form-label">請求だけ別単価</label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄=1日料金" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">キャンペーン等で請求額だけ変える時</div></div>
               <div class="form-group"><label class="form-label">請求日数を手で固定</label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="空欄=期間から自動" oninput="updateGRPeriod()"></div>
-              <div class="form-group"><label class="form-label">無料サービス日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">例: 1日サービスなら 1</div></div>
+              <div class="form-group"><label class="form-label">無料サービス日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">例: 1日サービスなら 1 (日数×単価が引かれる)</div></div>
             </div>
           </div>
         </details>
@@ -3122,7 +3126,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-07-25b';
+const APP_VERSION = '2026-08-04';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5666,19 +5670,41 @@ function calcAmounts(c){
   const effectiveUseEnd = c.useEnd || (c.recoveryCalledAt ? c.recoveryCalledAt.slice(0,10) : '');
   const days = (c.useStart && effectiveUseEnd)? daysBetween(c.useStart, effectiveUseEnd) : 0;
   const unitPrice = Number(c.unitPrice||0);
-  // v2026.04.29bz: 請求上書き機能は廃止。常に「利用日数 × 日額」で計算
-  const invDays = days;
-  const invUnit = unitPrice;
-  const grossUsage = days * unitPrice;
-  const gross = invDays * invUnit;
-  const discount = Number(c.discount||0);        // 値引額(税込)
+  // 2026-08-04: 請求額の計算式を全経路で1本に統一 (旧 v2026.04.29bz の「請求上書き廃止」を撤回)
+  //   請求額 = (請求単価||貸渡料金) × ((請求日数||利用日数) − 値引日数) − 値引額
+  //   撤回の理由: 一般貸渡モーダルが invoiceUnitPrice/invoiceDays/discountDays を保存し
+  //   独自計算で表示していたのに、請求書側の本関数がそれを一切読まず、編集画面と請求書で
+  //   金額が食い違っていた (案件 2026-08-0279 で発覚。編集画面 19,800 / 請求書 49,500)。
+  //   ★この関数が請求額の唯一の計算源。編集画面・請求書・手配書・freee・BI は必ずここを通すこと。
+  //     別の場所で式を再実装するな (それが今回の事故の原因)。
+  const invUnit  = Number(c.invoiceUnitPrice||0) || unitPrice;  // 請求単価(空なら貸渡料金)
+  const billDays = Number(c.invoiceDays||0) || days;            // 請求日数(空なら利用日数)
+  const discountDays = Math.max(0, Number(c.discountDays||0));  // 値引日数(協定による日数調整)
+  const invDays = Math.max(0, billDays - discountDays);         // 請求対象日数
+  const dayDiscount  = discountDays * invUnit;                  // 日数調整額
+  // ★値引額(c.discount) は「日数調整とは別の、円単位の調整」のみ。日数分を含めない。
+  let lumpDiscount = Number(c.discount||0);
+  // 旧仕様互換 (これを消すと過去案件が二重値引きになる):
+  //   2026-08-04 より前は「値引額 = 値引日数 × 日額」を自動代入していたため、旧レコードの
+  //   値引額には日数分が既に入っている。そのまま足すと二重に引かれるので日数分として扱う。
+  //   discountModel:'v2' は新UIで保存し直した印。付いていれば値引額は純粋な金額調整。
+  //   ※データ移行でなくコード側で吸収しているのは、他PCのブラウザが旧コードを保持したまま
+  //     (§4.7b) データだけ変わると、そちらで値引が丸ごと消えた満額請求書が出てしまうため。
+  if(c.discountModel !== 'v2' && discountDays > 0 && lumpDiscount > 0
+     && (lumpDiscount === dayDiscount || lumpDiscount === discountDays * unitPrice)){
+    lumpDiscount = 0;
+  }
+  const discount = dayDiscount + lumpDiscount;   // 調整合計(税込)
+  const grossUsage = days * unitPrice;           // 調整前の利用額 (対比表示用)
+  const gross = billDays * invUnit;              // 請求ベース総額 (調整前)
   const total = Math.max(0, gross - discount);   // 請求額(税込) = 差引後総額
   const taxRate = Number(DATA.settings.taxRate||10)/100;
   // 内税: 税抜 = 税込 / 1.1 , 消費税 = 税込 - 税抜
   const subExcl = taxRate>0 ? Math.round(total / (1+taxRate)) : total;
   const tax = total - subExcl;
   // 互換のため sub = total (差引/税込) を維持
-  return { days, invDays, invUnit, grossUsage, gross, discount, sub: total, subExcl, tax, total };
+  return { days, billDays, invDays, invUnit, discountDays, dayDiscount, lumpDiscount,
+           grossUsage, gross, discount, sub: total, subExcl, tax, total };
 }
 // クラスマスターの日額(税込) を返す。R7.4-incl 以降は dailyRate 自体が税込。
 function classDailyIncl(cls){
@@ -6665,7 +6691,8 @@ function renderBIAdjustments(cases){
   const summary = $('bi-adjust-summary');
   const totalAdjust = adjusted.reduce((s,c)=>{
     const a = calcAmounts(c);
-    return s + (a.invUnit * Number(c.discountDays||0)) + Number(c.discount||0);
+    // 2026-08-04: a.discount が既に「日数調整+金額調整」の合計。足し直すと二重計上になる
+    return s + Number(a.discount||0);
   }, 0);
   if(summary){
     summary.textContent = adjusted.length
@@ -6684,8 +6711,8 @@ function renderBIAdjustments(cases){
     const unit = a.invUnit || 0;
     const grossUse = useDays * unit;
     const discDays = Number(c.discountDays||0);
-    const discDaysAmt = discDays * unit;
-    const discLump = Number(c.discount||0);
+    const discDaysAmt = a.dayDiscount || 0;
+    const discLump = a.lumpDiscount || 0;
     const ins = findInsurer(c.insurerId)||{};
     const period = (c.useStart||c.useEnd)? `${fmtDate(c.useStart)||'―'}〜${fmtDate(c.useEnd)||'―'}` : '';
     return `<tr onclick="openCaseModal('${c.id}')" style="cursor:pointer">
@@ -7192,7 +7219,7 @@ function renderBIMatrix(){
   DATA.cases.filter(c => c.status !== 'キャンセル').forEach(c => {
     const sk = _staffKey(c);
     const a = calcAmounts(c);
-    const disc = Number(a.discount||0) + (Number(c.discountDays||0) * (a.invUnit||0));
+    const disc = Number(a.discount||0);  // 2026-08-04: 日数調整込みの合計。足し直さない
     // v2026.04.29ct: 件数=受付月 / 売上・調整額=売上月 で別集計 (整合性)
     const ymCount = _caseReceivedYM(c);
     const ymSales = _caseSalesYM(c);
@@ -7397,7 +7424,7 @@ function renderBIAdjustAnalysis(cases){
     const ym = _caseSalesYM(c);
     if(!months.includes(ym)) return;
     const a = calcAmounts(c);
-    const adj = Number(a.discount||0) + (Number(c.discountDays||0) * (a.invUnit||0));
+    const adj = Number(a.discount||0);   // 2026-08-04: 日数調整込みの合計。足し直さない
     if(adj > 0) byMonth[ym] += adj;
   });
   const ctx = document.getElementById('bi-chart-adjust-trend');
@@ -7427,7 +7454,7 @@ function renderBIAdjustAnalysis(cases){
     if(!byStaff[sk.key]) byStaff[sk.key] = { label: sk.label, count:0, gross:0, discount:0 };
     const a = calcAmounts(c);
     const gross = (a.days||0) * (a.invUnit||0);  // 利用額(調整前)
-    const adj = Number(a.discount||0) + (Number(c.discountDays||0) * (a.invUnit||0));
+    const adj = Number(a.discount||0);   // 2026-08-04: 日数調整込みの合計。足し直さない
     if(gross > 0){
       byStaff[sk.key].count++;
       byStaff[sk.key].gross += gross;
@@ -9564,18 +9591,24 @@ function updateGRPeriod(){
   }
   _grAutoDays = autoDays;
 
-  // ── 料金内訳 (貸渡証/請求書と同じ計算で表示) ──
-  //   1日料金 = 請求単価(あれば) || 貸渡料金(1日税込)
-  //   日数    = 請求日数(あれば) || 自動日数
-  //   合計    = 1日料金 × 日数 − 値引額 − (値引日数 × 1日料金)
+  // ── 料金内訳 ──
+  // ★式をここで書くな。請求書・手配書・freee と1円でも食い違うと取引先に出る書面が壊れる。
+  //   必ず calcAmounts() を通す (2026-08-04 統一。案件 2026-08-0279 の乖離事故対策)。
+  //   モーダルは未保存の入力値を扱うので、フォームから仮の案件オブジェクトを組んで渡す。
   const baseUnit = Number(($('gr-unitPrice')||{}).value||0);
   const invUnit  = Number(($('gr-invoiceUnitPrice')||{}).value||0);
-  const rate = invUnit || baseUnit;
-  const billDays = Number((idDays||{}).value||0) || autoDays;
   const discount = Number(($('gr-discount')||{}).value||0);
   const discDays = Number(($('gr-discountDays')||{}).value||0);
-  const discTotal = discount + discDays * rate;
-  const total = Math.max(0, rate * billDays - discTotal);
+  const _a = calcAmounts({
+    useStart: us, useEnd: ee,
+    unitPrice: baseUnit, invoiceUnitPrice: invUnit,
+    invoiceDays: Number((idDays||{}).value||0) || autoDays,   // 期間から自動補完済の日数
+    discountDays: discDays, discount: discount
+  });
+  const rate = _a.invUnit;
+  const billDays = _a.billDays;
+  const discTotal = _a.discount;
+  const total = _a.total;
   const yen = n => '¥' + (Number(n)||0).toLocaleString();
   const periodTxt = (hours <= 24) ? `${hours}時間（1日）` : `${nights}泊${nights+1}日（${hours}時間）`;
   setNH((hours <= 24 ? `${hours}時間` : `${nights}泊${nights+1}日`) + `（請求${billDays}日）`);
@@ -9587,15 +9620,14 @@ function updateGRPeriod(){
     disp.style.color = 'var(--navy)';
     return;
   }
+  // 内訳は請求書の明細と同じ並び・同じ数字で出す (見た目が揃っていないと「反映されてない」と誤解される)
+  const row = (l,v,c) => `<div style="display:flex;justify-content:space-between;padding:2px 0${c?';color:'+c:''}"><span${c?'':' style="color:#555"'}>${l}</span><b>${v}</b></div>`;
   const rows = [];
-  rows.push(`<div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:#555">1日料金（税込）${invUnit?' <span style="color:#888;font-size:11px">※請求単価</span>':''}</span><b>${yen(rate)}</b></div>`);
-  rows.push(`<div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:#555">日数</span><b>${billDays} 日</b></div>`);
-  if(discTotal > 0){
-    let dlbl = '値引';
-    if(discDays>0 && discount>0) dlbl = `値引（${discDays}日分 ＋ 値引額）`;
-    else if(discDays>0) dlbl = `値引（${discDays}日分）`;
-    rows.push(`<div style="display:flex;justify-content:space-between;padding:2px 0;color:#C05621"><span>${dlbl}</span><b>− ${yen(discTotal)}</b></div>`);
-  }
+  rows.push(row(`1日料金（税込）${invUnit?' <span style="color:#888;font-size:11px">※請求単価</span>':''}`, yen(rate)));
+  rows.push(row('請求日数', `${billDays} 日`));
+  if(_a.dayDiscount > 0) rows.push(row(`値引（${discDays}日分 × ${yen(rate)}）`, `− ${yen(_a.dayDiscount)}`, '#C05621'));
+  if(_a.lumpDiscount > 0) rows.push(row('値引（金額調整）', `− ${yen(_a.lumpDiscount)}`, '#C05621'));
+  if(discTotal > 0) rows.push(row(`請求対象　${_a.invDays} 日 × ${yen(rate)}`, yen(total), '#2C5282'));
   disp.innerHTML =
     `<div style="font-size:13px">📅 利用期間: <b>${periodTxt}</b></div>`
     + `<div style="margin-top:8px;max-width:360px;font-weight:normal;font-size:13px">`
@@ -9604,6 +9636,7 @@ function updateGRPeriod(){
     +     `<span style="font-size:14px;font-weight:bold;color:var(--navy)">貸渡料金 合計（税込）</span>`
     +     `<b style="font-size:22px;color:#2C5282">${yen(total)}</b>`
     +   `</div>`
+    +   `<div style="margin-top:4px;font-size:11px;color:#888">この金額がそのまま請求書に出ます</div>`
     + `</div>`;
   disp.style.color = 'var(--navy)';
 }
@@ -9732,6 +9765,7 @@ function closeGeneralRentalModal(){
 
 // case → フォームへ
 function fillGRForm(c){
+  c = _normalizeLegacyDiscount(c);   // 2026-08-04: 旧仕様の値引額を新仕様の見え方に揃える
   GR_FIELDS.forEach(k=>{
     const el = $('gr-'+k); if(!el) return;
     if(el.type === 'checkbox') el.checked = !!c[k];
@@ -9747,6 +9781,7 @@ function collectGRForm(){
   const o = existing ? Object.assign({}, existing) : { id: uniqueUid('c-', DATA.cases), checks: [] };
   // 区分・コール種別を一般固定
   o.category = '一般';
+  o.discountModel = 'v2';   // 値引額は日数分を含まない純粋な金額調整 (2026-08-04)
   // GR_FIELDS の値を上書き
   GR_FIELDS.forEach(k=>{
     const el = $('gr-'+k); if(!el) return;
@@ -9972,7 +10007,22 @@ let _grDirty = false;
   });
 })();
 
+// 旧仕様レコードを新仕様の見え方に正規化してからフォームへ入れる (2026-08-04)
+//   旧仕様は「値引額 = 値引日数 × 日額」を自動代入していた。そのまま編集画面に出すと、
+//   保存時に discountModel:'v2' が付いて値引額が金額調整として二重に引かれてしまう。
+//   ★開いた時点で値引額を0に見せる = 表示・計算・保存の3つが常に一致する。
+//   calcAmounts() の互換ブロックと同じ判定条件を使うこと (片方だけ変えるとズレる)。
+function _normalizeLegacyDiscount(c){
+  if(!c || c.discountModel === 'v2') return c;
+  const dd = Math.max(0, Number(c.discountDays||0));
+  const ds = Number(c.discount||0);
+  const up = Number(c.unitPrice||0);
+  const iu = Number(c.invoiceUnitPrice||0) || up;
+  if(dd > 0 && ds > 0 && (ds === dd*iu || ds === dd*up)) return Object.assign({}, c, { discount: 0 });
+  return c;
+}
 function fillForm(c){
+  c = _normalizeLegacyDiscount(c);
   FORM_FIELDS.forEach(k=>{
     const el=$('f-'+k); if(!el) return;
     // checkbox は checked プロパティで反映
@@ -10200,7 +10250,8 @@ function toggleVehicleNoteChip(t){
   inp.dispatchEvent(new Event('input', {bubbles:true}));
   refreshVehicleNoteChipState();
 }
-function collectForm(){ const o={id: editingCaseId||uid('c-')}; FORM_FIELDS.forEach(k=>{ const el=$('f-'+k); if(!el) return; let v; if(el.type==='checkbox') v = el.checked; else { v = el.value; if(el.type==='number' && v!=='') v=Number(v); } o[k]=v; }); o.checks = JSON.parse(JSON.stringify(_modalChecks||[])); return o; }
+// discountModel:'v2' = 値引額が「日数分を含まない純粋な金額調整」であることの印 (2026-08-04)
+function collectForm(){ const o={id: editingCaseId||uid('c-'), discountModel:'v2'}; FORM_FIELDS.forEach(k=>{ const el=$('f-'+k); if(!el) return; let v; if(el.type==='checkbox') v = el.checked; else { v = el.value; if(el.type==='number' && v!=='') v=Number(v); } o[k]=v; }); o.checks = JSON.parse(JSON.stringify(_modalChecks||[])); return o; }
 // 🏢 他社借トグル: チェックON時は通常車両選択を非表示、フリー入力エリアを表示
 function onBorrowedToggle(){
   const chk = $('f-isBorrowed');
@@ -10996,50 +11047,33 @@ function markFreeeFromForm(){
   toast('✅ freee登録済としてマークしました');
   updateFreeeStatusUI(c);
 }
-// 値引日数 × 日額(税込) → 値引額 を自動セット / v24at: 0になったら自動値引額もクリア
-function applyDiscountDaysToDiscount(){
-  const daysEl = $('f-discountDays'); if(!daysEl) return;
-  const d = Number(daysEl.value||0);
-  const discEl = $('f-discount');
-  if(d <= 0){
-    // 値引日数ゼロ: 自動セットされていた値引額をクリア (手動入力分は保持)
-    if(discEl && discEl.dataset.auto === '1'){
-      discEl.value = '';
-      discEl.dataset.auto = '';
-    }
-    return;
-  }
-  const unit = Number(($('f-unitPrice')||{}).value || 0);
-  const amount = d * unit;
-  if(discEl){
-    discEl.value = amount;
-    discEl.dataset.auto = '1'; // 自動セットであることをマーク
-  }
-}
-// 「計算式」欄の表示を更新
+// 2026-08-04: 値引日数 → 値引額 の自動代入を廃止。
+//   旧仕様は「値引額 = 値引日数 × 日額」を自動で書き込んでいたため、値引額に日数分が
+//   含まれる状態だった。統一式 (値引日数と値引額を別々に引く) では二重計上になる。
+//   値引日数=「協定による日数調整」/ 値引額=「それとは別の円単位の調整」で意味を分離した。
+//   関数は他所からの呼び出し互換のため残すが、何もしない。
+function applyDiscountDaysToDiscount(){ /* 廃止: 自動代入すると値引が二重に引かれる */ }
+// 「計算式」欄の表示を更新 — 日数調整と金額調整の両方を足した実際の値引額を出す
 function updateDiscountCalcDisplay(){
   const box = $('f-discountCalc'); if(!box) return;
   const d = Number(($('f-discountDays')||{}).value || 0);
   const unit = Number(($('f-unitPrice')||{}).value || 0);
   const disc = Number(($('f-discount')||{}).value || 0);
-  if(d > 0 && unit > 0){
-    box.value = `${d} 日 × ${yen(unit)} = ${yen(d*unit)}`;
-  } else if(disc > 0){
-    box.value = `手動入力: ${yen(disc)}`;
-  } else {
-    box.value = '';
-  }
+  const parts = [];
+  if(d > 0 && unit > 0) parts.push(`${d}日 × ${yen(unit)}`);
+  if(disc > 0) parts.push(`金額調整 ${yen(disc)}`);
+  box.value = parts.length ? `${parts.join(' ＋ ')} = ${yen(d*unit + disc)}` : '';
 }
-// 値引日数入力時: 値引額を上書き計算
+// 値引日数入力時
 function onDiscountDaysChange(){
-  applyDiscountDaysToDiscount();
+  updateDiscountCalcDisplay();
   recalcAmounts();
 }
-// 値引額を手動で変更した場合: 値引日数をクリア(整合性維持)
-// oninputはユーザー入力時にのみ発火。プログラムからの value代入では発火しない。
+// 値引額を手動で変更した場合。
+// ★値引日数をクリアするな (2026-08-04): 両方が同時に成立する独立した調整になった。
+//   「4日分の協定調整 ＋ 端数の金額調整」を同時に入れられる。
 function onDiscountManualChange(){
-  const daysEl = $('f-discountDays');
-  if(daysEl) daysEl.value = '';
+  updateDiscountCalcDisplay();
   const discEl = $('f-discount');
   if(discEl) discEl.dataset.auto = '';
   recalcAmounts();
@@ -11054,15 +11088,8 @@ window.confirmDiscount = function confirmDiscount(){
     if(!c){ toast('案件が見つかりません','error'); return; }
     // 1. フォーム→案件にコピー
     Object.assign(c, collectForm());
-    // 2. 値引日数=0 の場合、自動セットされた値引額もクリア (残留対策)
-    if(Number(c.discountDays||0) === 0){
-      const discEl = $('f-discount');
-      if(discEl && discEl.dataset.auto === '1'){
-        c.discount = 0;
-        discEl.value = '';
-        discEl.dataset.auto = '';
-      }
-    }
+    // 2. (2026-08-04 削除) 値引日数=0 で値引額を自動クリアする処理は廃止。
+    //    自動代入をやめたので、値引額は常にユーザーが入れた金額調整そのもの。
     // 3. 計算
     const a = calcAmounts(c);
     // 4. 保存
@@ -11085,9 +11112,8 @@ window.confirmDiscount = function confirmDiscount(){
     if(invPage && invPage.classList.contains('active') && typeof renderInvoice === 'function'){
       renderInvoice();
     }
-    // 7. トースト (確実表示)
-    const discVal = Number(c.discount||0);
-    const msg = `💰 値引確定: 利用額 ${yen(a.grossUsage||0)} − 値引 ${yen(discVal)} = 請求合計 ${yen(a.total||0)}`;
+    // 7. トースト (確実表示) — 値引は日数調整+金額調整の合計 (a.discount) を出す
+    const msg = `💰 値引確定: 請求ベース ${yen(a.gross||0)} − 値引 ${yen(a.discount||0)} = 請求合計 ${yen(a.total||0)}`;
     toast(msg);
   } catch(e){
     toast('エラー: ' + (e && e.message ? e.message : String(e)), 'error');
@@ -12900,7 +12926,9 @@ function renderInstruction(){
   const a = calcAmounts(c);
   // 日額は税込入力。税抜は 税込/1.1 で逆算して参考表示
   const taxRate = Number(DATA.settings.taxRate||10)/100;
-  const unitIn = Number(c.unitPrice||0);
+  // 2026-08-04: 手配書は「手配報告書兼請求書」なので日額は請求単価(未設定なら貸渡料金)を出す。
+  //   calcAmounts() が唯一の計算源。ここで金額を組み立て直すな (請求書と食い違う)。
+  const unitIn = a.invUnit || 0;
   const unitEx = unitIn? Math.round(unitIn / (1+taxRate)) : 0;
   const fmtDT = v => {
     if(!v) return '';
@@ -12931,16 +12959,16 @@ function renderInstruction(){
   const periodLabel = isInUse
     ? `${fmtD(c.useStart)||'―'}　〜　<span class="ho-sub">利用中</span>`
     : `${fmtD(c.useStart)||'―'}　〜　${fmtD(c.useEnd)||'―'}`;
-  const usageDays = periodDays; // 利用中は0(=金額未確定)、返却済のみ確定値
-  // 税込小計 → 値引(税込) → 差引(税込) → 内税逆算
-  const usageAmountIn = usageDays && unitIn ? usageDays * unitIn : 0;
-  const finalAmountIn = Math.max(0, usageAmountIn - Number(c.discount||0));
-  const subExclIn = taxRate>0 ? Math.round(finalAmountIn / (1+taxRate)) : finalAmountIn;
-  const taxAmt = finalAmountIn - subExclIn;
+  const usageDays = a.billDays || 0; // 請求ベースの日数 (請求日数の指定があればそれ)
+  // 税込小計 → 調整(税込) → 差引(税込) → 内税逆算 … すべて calcAmounts() の値をそのまま使う
+  const usageAmountIn = (usageDays && unitIn) ? (a.gross||0) : 0;
+  const finalAmountIn = a.total || 0;
+  const subExclIn = a.subExcl || 0;
+  const taxAmt = a.tax || 0;
   const amountDisplay = usageAmountIn
     ? `<b class="ho-amt">${fmtNum(finalAmountIn)}</b> 円 <b>(税込)</b>　<span class="ho-sub">／ 内訳: 税抜 ${fmtNum(subExclIn)} 円 ＋ 消費税 ${fmtNum(taxAmt)} 円</span>`
     : (isInUse ? '<span class="ho-sub">（返却完了後に自動算出）</span>' : '<span class="ho-sub">（利用期間確定後に自動表示）</span>');
-  const discountDisplay = c.discount? `　<span class="ho-sub">(値引 ${fmtNum(c.discount)} 円適用済)</span>` : '';
+  const discountDisplay = a.discount? `　<span class="ho-sub">(値引 ${fmtNum(a.discount)} 円適用済)</span>` : '';
 
   $('instruction-body').innerHTML = `
     <div class="sheet handover">
@@ -14419,15 +14447,14 @@ function renderInvoiceSingle(id){
   // 車両クラス情報 (例: 軽トラック/TK)
   const cls = c.vehicleClass ? findClass(c.vehicleClass) : null;
   const classLabel = cls ? `${cls.name||''}/${c.vehicleClass}` : (c.vehicleClass||'');
-  const useDays = a.days || 0;
-  const discountDays = Number(c.discountDays||0);
-  // 請求対象日数 = 利用日数 - 調整日数 (表示用)
-  const invDays = Math.max(0, useDays - discountDays);
-  // 日数差による調整額 = 調整日数 × 単価
-  const dayDiscountAmt = discountDays * (a.invUnit||0);
-  // 金額調整(lump sum) = discount total から日数調整相当分を除いた残余
-  //   discountDays×unit が lump sum と一致する場合 → 残余ゼロで lump sum 行は非表示
-  const residualDiscount = Math.max(0, Number(a.discount||0) - dayDiscountAmt);
+  // 2026-08-04: ここで金額を再計算するな。すべて calcAmounts() の返り値を使う。
+  //   旧実装は独自に invDays/dayDiscountAmt を出しつつ合計は a.total を使っていたため、
+  //   「調整 −1日 −¥16,500」と印字しながら合計から引かれない矛盾した請求書が出ていた。
+  const useDays = a.billDays || 0;          // 請求ベースの日数 (請求日数の指定があればそれ)
+  const discountDays = a.discountDays || 0;
+  const invDays = a.invDays || 0;           // 請求対象日数 = 請求日数 − 値引日数
+  const dayDiscountAmt = a.dayDiscount || 0;
+  const residualDiscount = a.lumpDiscount || 0;
   // 請求先(宛名)の上書き: billingToName があれば その宛名+敬称で発行 (保険会社ではなく個人・別会社へ請求する時)。
   //   空なら従来どおり保険会社名+御中+支店+担当。FAX送信先・freee取引先は変えない (宛名の見た目のみ)。
   const _billTo = (c.billingToName||'').trim();
@@ -14532,9 +14559,9 @@ function _sealParts(raw){
   if(!raw) return null;
   // ／ / | ｜ 改行 = 明示的な行区切り (縦書き列なし・主文のみ複数行)
   if(/[\/／\n|｜]/.test(raw)) return { side:'', main: raw.split(/[\/／\n|｜]+/).map(x=>x.trim()).filter(Boolean) };
-  // 会社形態の接頭辞 → 右側に縦書き / 残りを主文に (株式会社Hari Terrace → 縦「株式会社」+主「Hari Terrace」)
+  // 会社形態の接頭辞 → 1行目に横書き / 残りを下に積む (株式会社Hari Terrace → 株式会社 / Hari / Terrace の3行)
   const CO = raw.match(/^(株式会社|有限会社|合同会社|合資会社|合名会社|一般社団法人|一般財団法人|社会福祉法人|医療法人)\s*(.+)$/);
-  if(CO && CO[2].trim()) return { side: CO[1], main: _sealMainLines(CO[2].trim()) };
+  if(CO && CO[2].trim()) return { side:'', main: [CO[1]].concat(_sealMainLines(CO[2].trim())) };
   return { side:'', main: _sealMainLines(raw) };
 }
 function _sealDataUrl(rawText){
@@ -14542,58 +14569,70 @@ function _sealDataUrl(rawText){
   if(_sealCache[key]) return _sealCache[key];
   const parts = _sealParts(rawText);
   if(!parts || !parts.main.length) return '';
-  const S = 360;  // 高解像度で描いてCSSで縮小=印刷でも鮮明
-  const cv = document.createElement('canvas'); cv.width = S; cv.height = S;
-  const ctx = cv.getContext('2d');
-  const RED = '#c0322c';  // 朱肉風の赤
+  const S = 400;  // 高解像度で描いてCSSで縮小=印刷でも鮮明
   const MJ = '"Yu Mincho","Hiragino Mincho ProN","MS Mincho","Yu Mincho JP",serif';
-  ctx.strokeStyle = RED; ctx.fillStyle = RED; ctx.lineJoin = 'miter';
-  // 二重枠 (角印らしさ)
-  const p1 = S*0.045; ctx.lineWidth = S*0.060; ctx.strokeRect(p1, p1, S-2*p1, S-2*p1);
-  const p2 = S*0.120; ctx.lineWidth = S*0.013; ctx.strokeRect(p2, p2, S-2*p2, S-2*p2);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  // コンテンツ領域
-  const pad = S*0.045;
-  const cL = p2+pad, cR = S-p2-pad, cT = p2+pad, cB = S-p2-pad;
-  const cW = cR-cL, cH = cB-cT;
+  const RED = '#be3b2d';  // 朱肉(やや臙脂寄りの朱)
+  // ── インク層をオフスクリーンに描く (塗り+太い縁取りで肉厚に) ──
+  const ink = document.createElement('canvas'); ink.width = ink.height = S;
+  const g = ink.getContext('2d');
+  g.strokeStyle = RED; g.fillStyle = RED; g.lineJoin = 'round'; g.lineCap = 'round';
+  const rrect = (x,y,w,h,r)=>{ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); g.stroke(); };
+  // 二重枠 (角丸・外太/内細)
+  const p1 = S*0.050; g.lineWidth = S*0.060; rrect(p1, p1, S-2*p1, S-2*p1, S*0.028);
+  const p2 = S*0.106; g.lineWidth = S*0.016; rrect(p2, p2, S-2*p2, S-2*p2, S*0.020);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const pad = S*0.026;
+  const cL = p2+pad, cR = S-p2-pad, cT = p2+pad, cB = S-p2-pad, cW = cR-cL, cH = cB-cT;
   let mainLeft = cL, mainRight = cR;
-  // 右側の縦書き列 (会社形態・株式会社 等)
+  // 右側の縦書き列 (会社形態・太く枠いっぱいに)
   if(parts.side){
     const chars = parts.side.split('');
-    const colW = cW*0.22;
-    const colCx = cR - colW/2;
-    let vfs = colW*0.94;
-    while(vfs*chars.length*1.02 > cH*0.94 && vfs > 6) vfs *= 0.95;
-    ctx.font = 'bold ' + vfs + 'px ' + MJ;
-    const vGap = vfs*1.02;
-    const vStart = (cT+cB)/2 - vGap*(chars.length-1)/2;
-    chars.forEach((ch,i)=> ctx.fillText(ch, colCx, vStart + i*vGap));
-    mainRight = cR - colW - S*0.02;
+    const colW = cW*0.25, colCx = cR - colW*0.5;
+    let vfs = colW*1.08;
+    while(vfs*chars.length > cH*1.0 && vfs > 6) vfs *= 0.96;
+    g.font = 'bold ' + vfs + 'px ' + MJ; g.lineWidth = vfs*0.085;
+    const vGap = vfs*0.99, vStart = (cT+cB)/2 - vGap*(chars.length-1)/2;
+    chars.forEach((ch,i)=>{ const y = vStart + i*vGap; g.strokeText(ch, colCx, y); g.fillText(ch, colCx, y); });
+    mainRight = cR - colW - S*0.008;
   }
-  // 主文 (中央〜左・大きめ) — 枠内に収まるよう自動縮小
-  const lines = parts.main;
+  // 主文 (中央〜左・大きく太く)
+  const lines = parts.main, GAP = 1.05;
   const mW = mainRight - mainLeft, mCx = (mainLeft+mainRight)/2, mCy = (cT+cB)/2;
-  const GAP = 1.14;
-  let fs = Math.min(cH*0.6, mW*0.95);
-  for(let g=0; g<70; g++){
-    ctx.font = 'bold ' + fs + 'px ' + MJ;
-    const maxW = Math.max.apply(null, lines.map(l => ctx.measureText(l).width || 1));
-    const totalH = fs + fs*GAP*(lines.length-1);
-    if(maxW <= mW && totalH <= cH*0.98) break;
-    fs *= 0.95;
+  let fs = Math.min(cH*0.66, mW*1.05);
+  for(let k=0;k<90;k++){
+    g.font = 'bold ' + fs + 'px ' + MJ;
+    const mx = Math.max.apply(null, lines.map(l => g.measureText(l).width || 1));
+    if(mx <= mW && fs + fs*GAP*(lines.length-1) <= cH*1.0) break;
+    fs *= 0.96;
   }
-  ctx.font = 'bold ' + fs + 'px ' + MJ;
-  const lineGap = fs*GAP;
-  const yStart = mCy - lineGap*(lines.length-1)/2;
-  lines.forEach((l,i)=> ctx.fillText(l, mCx, yStart + i*lineGap));
-  // 朱肉のかすれ質感 — インクの抜けを destination-out で薄く彫る (実印っぽさ)
-  ctx.globalCompositeOperation = 'destination-out';
-  const specks = Math.floor(S*S*0.010);
-  for(let i=0;i<specks;i++){
-    ctx.globalAlpha = 0.35 + Math.random()*0.5;
-    ctx.beginPath(); ctx.arc(Math.random()*S, Math.random()*S, Math.random()*1.7, 0, 6.2832); ctx.fill();
+  g.font = 'bold ' + fs + 'px ' + MJ; g.lineWidth = fs*0.06;
+  const lg = fs*GAP, ys = mCy - lg*(lines.length-1)/2;
+  lines.forEach((l,i)=>{ const y = ys + i*lg; g.strokeText(l, mCx, y); g.fillText(l, mCx, y); });
+  // ── 朱肉の質感: インクのムラ・抜け・にじみ・縁の欠け を destination-out で彫る ──
+  g.globalCompositeOperation = 'destination-out';
+  g.filter = 'blur(0.7px)';   // (a) 細かな抜け
+  let n = Math.floor(S*S*0.007);
+  for(let i=0;i<n;i++){ g.globalAlpha = 0.3 + Math.random()*0.6; g.beginPath(); g.arc(Math.random()*S, Math.random()*S, Math.random()*2.2, 0, 6.2832); g.fill(); }
+  g.filter = 'blur(2.2px)';   // (b) 中くらいの有機的な抜け
+  n = Math.floor(S*0.8);
+  for(let i=0;i<n;i++){ g.globalAlpha = 0.14 + Math.random()*0.3; const rx = 2+Math.random()*8; g.beginPath(); g.ellipse(Math.random()*S, Math.random()*S, rx, rx*(0.4+Math.random()), Math.random()*6.28, 0, 6.2832); g.fill(); }
+  g.filter = 'blur(2.6px)';   // (c) 枠まわり・角の摩耗
+  n = Math.floor(S*1.1);
+  for(let i=0;i<n;i++){
+    const band = p1*0.4 + Math.random()*(S*0.10), sd = i&3; let x,y;
+    if(sd===0){ x=band; y=Math.random()*S; } else if(sd===1){ x=S-band; y=Math.random()*S; }
+    else if(sd===2){ x=Math.random()*S; y=band; } else { x=Math.random()*S; y=S-band; }
+    g.globalAlpha = 0.18 + Math.random()*0.45; g.beginPath(); g.arc(x, y, 1+Math.random()*4.5, 0, 6.2832); g.fill();
   }
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  g.filter = 'blur(11px)';    // (d) 大きな押しムラ (濃淡)
+  for(let i=0;i<11;i++){ g.globalAlpha = 0.05 + Math.random()*0.14; g.beginPath(); g.arc(Math.random()*S, Math.random()*S, 28+Math.random()*80, 0, 6.2832); g.fill(); }
+  g.filter = 'none'; g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  // ── わずかに傾けて合成 (手押しのゆらぎ) ──
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const rot = (0.6 + Math.random()*1.5) * Math.PI/180;   // 時計回りに少し
+  ctx.translate(S/2, S/2); ctx.rotate(rot); ctx.translate(-S/2, -S/2);
+  ctx.drawImage(ink, 0, 0);
   const url = cv.toDataURL('image/png');
   _sealCache[key] = url;
   return url;
@@ -14675,7 +14714,20 @@ function renderFaxInvoiceSingle(v){
       <td class="rt">−¥${fmtNumeric(v.dayDiscountAmt)}</td>
     </tr>`);
   }
-  // 行3(任意): 追加の金額調整 (lump sum)
+  // 行3(任意): 請求対象行 = 日数調整を引いた後の小計。
+  //   ★金額は必ず 日数 × 単価 と一致させる (2026-08-04)。
+  //   旧実装はここに v.total を出していたため「2日 × ¥16,500 = ¥49,500」という
+  //   計算の合わない請求書が取引先に出る状態だった。金額調整はこの行の後で引く。
+  if(hasDayDiscount){
+    detailRows.push(`<tr class="billed">
+      <td>請求対象</td>
+      <td class="ct" style="font-size:11px;color:#333">${periodStr}</td>
+      <td class="ct">${v.invDays||0}日</td>
+      <td class="rt">¥${fmtNumeric(v.unit)}</td>
+      <td class="rt">¥${fmtNumeric((v.invDays||0) * (v.unit||0))}</td>
+    </tr>`);
+  }
+  // 行4(任意): 追加の金額調整 (lump sum)
   if(hasLumpDiscount){
     detailRows.push(`<tr class="discount">
       <td>─ 調整 <span style="font-size:11px">(金額調整)</span></td>
@@ -14683,17 +14735,6 @@ function renderFaxInvoiceSingle(v){
       <td class="ct">―</td>
       <td class="rt">―</td>
       <td class="rt">−¥${fmtNumeric(v.discount)}</td>
-    </tr>`);
-  }
-  // 行4(任意): 請求対象行を強調 (調整があった場合のみ)
-  //   請求対象日数 = 利用日数 - 調整日数 (= v.invDays)
-  if(hasAnyDiscount){
-    detailRows.push(`<tr class="billed">
-      <td>請求対象</td>
-      <td class="ct" style="font-size:11px;color:#333">${periodStr}</td>
-      <td class="ct">${v.invDays||0}日</td>
-      <td class="rt">¥${fmtNumeric(v.unit)}</td>
-      <td class="rt">¥${fmtNumeric(v.total)}</td>
     </tr>`);
   }
   // 合計サマリ (振込期日を合計直下に表示 - 案②)
@@ -17720,7 +17761,7 @@ function exportToExcel(){
       配車日時:c.dispatchAt||'', 配車備考:c.dispatchNote||'',
       車種:c.vehicleName||'', クラス:c.vehicleClass||'', 日額:c.unitPrice||0,
       車両番号:[c.plateArea,c.plateNo,c.plateKana,c.plateTail].filter(Boolean).join(' '),
-      利用開始:c.useStart||'', 利用終了:c.useEnd||'', 日数:a.days, 利用額:a.invDays*a.invUnit,
+      利用開始:c.useStart||'', 利用終了:c.useEnd||'', 日数:a.days, 利用額:a.gross,
       請求書No:c.invoiceNo||'', 請求書発行日:c.invoiceIssuedAt||'', 振込期日:c.paymentDueAt||'',
       請求日数:a.invDays, 請求単価:a.invUnit, 小計:a.sub, 消費税:a.tax, 請求合計:a.total,
       決済:c.paymentMethod||'', 入金日:c.paidAt||'', 入金額:c.paidAmount||'',

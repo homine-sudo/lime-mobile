@@ -2033,7 +2033,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-07-24a';
+const APP_VERSION = '2026-08-04';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3763,16 +3763,15 @@ function _renderSearchResultCard(c){
   // 回収完了済の場合: 利用期間・利用金額を計算して表示
   let completedHtml = '';
   if(isCompleted){
-    const days = calcDays(c.useStart, c.useEnd);
-    const unitIn = Number(c.unitPrice||0);
-    const usageAmount = days && unitIn ? days * unitIn : 0;
-    const finalAmount = Math.max(0, usageAmount - Number(c.discount||0));
+    const _a = calcAmounts(c);   // 2026-08-04: 請求書・手配書と同じ計算源を使う
+    const days = _a.days;
+    const finalAmount = _a.total;
     const periodLabel = c.useStart && c.useEnd
       ? `${fmtDate(c.useStart)} 〜 ${fmtDate(c.useEnd)}${days?` (${days}日)`:''}`
       : (c.useStart ? `${fmtDate(c.useStart)} 〜 ―` : '―');
     completedHtml = `
       <div class="m-card-row" style="background:#F4FBF6;border-radius:6px;padding:6px 8px;margin-top:6px"><span class="lbl">利用期間</span><span class="val">${esc(periodLabel)}</span></div>
-      ${finalAmount ? `<div class="m-card-row" style="background:#F4FBF6;border-radius:6px;padding:6px 8px;margin-top:3px"><span class="lbl">利用金額</span><span class="val"><b style="color:var(--green)">${fmtNum(finalAmount)} 円</b> <span style="font-size:11px;color:var(--muted)">(税込)</span>${c.discount?` <span style="font-size:11px;color:var(--muted)">/ 値引 ${fmtNum(c.discount)}</span>`:''}</span></div>` : ''}
+      ${finalAmount ? `<div class="m-card-row" style="background:#F4FBF6;border-radius:6px;padding:6px 8px;margin-top:3px"><span class="lbl">利用金額</span><span class="val"><b style="color:var(--green)">${fmtNum(finalAmount)} 円</b> <span style="font-size:11px;color:var(--muted)">(税込)</span>${_a.discount?` <span style="font-size:11px;color:var(--muted)">/ 値引 ${fmtNum(_a.discount)}</span>`:''}</span></div>` : ''}
     `;
   }
 
@@ -6439,7 +6438,8 @@ function closeHandoverModal(){ $('m-handover-modal').classList.remove('active');
 // ============================================================
 function buildHandoverHTML(c, ins, s, upperOnly){
   const taxRate = Number(s.taxRate||10)/100;
-  const unitIn = Number(c.unitPrice||0);
+  // 手配報告書兼請求書なので日額は請求単価(未設定なら貸渡料金)。PC版 renderInstruction と同じ (2026-08-04)
+  const unitIn = calcAmounts(c).invUnit || 0;
   const unitEx = unitIn ? Math.round(unitIn/(1+taxRate)) : 0;
   const fmtD = v => { const d=parseDate(v); return d? `${d.getMonth()+1}月${d.getDate()}日` : ''; };
   const fmtDT = v => {
@@ -6455,10 +6455,12 @@ function buildHandoverHTML(c, ins, s, upperOnly){
   const periodLabel = isInUse
     ? `${fmtD(c.useStart)||'―'}　〜　<span class="ho-sub">利用中</span>`
     : `${fmtD(c.useStart)||'―'}　〜　${fmtD(c.useEnd)||'―'}`;
-  const usageAmountIn = periodDays && unitIn ? periodDays*unitIn : 0;
-  const finalAmountIn = Math.max(0, usageAmountIn - Number(c.discount||0));
-  const subExclIn = taxRate>0 ? Math.round(finalAmountIn/(1+taxRate)) : finalAmountIn;
-  const taxAmt = finalAmountIn - subExclIn;
+  // 2026-08-04: 金額はここで組み立て直さず calcAmounts() の値をそのまま使う (PC請求書と一致させる)
+  const _a = calcAmounts(c);
+  const usageAmountIn = (_a.billDays && _a.invUnit) ? _a.gross : 0;
+  const finalAmountIn = _a.total;
+  const subExclIn = _a.subExcl;
+  const taxAmt = _a.tax;
   const amountDisplay = usageAmountIn
     ? `<b class="ho-amt">${fmtNum(finalAmountIn)}</b> 円 <b>(税込)</b>　<span class="ho-sub">／ 内訳: 税抜 ${fmtNum(subExclIn)} 円 ＋ 消費税 ${fmtNum(taxAmt)} 円</span>`
     : (isInUse ? '<span class="ho-sub">（返却完了後に自動算出）</span>' : '<span class="ho-sub">（利用期間確定後に自動表示）</span>');
@@ -6549,6 +6551,39 @@ function calcDays(start, end){
   const s = parseDate(start), e = parseDate(end);
   if(!s || !e) return 0;
   return Math.max(0, Math.round((e-s)/86400000) + 1);
+}
+
+// ============================================================
+// 金額計算 (2026-08-04) — ★PC版 LIMEOne.html の calcAmounts と完全に同一の式にすること。
+//   請求額 = (請求単価||貸渡料金) × ((請求日数||利用日数) − 値引日数) − 値引額
+//   モバイルの手配書はFAXで取引先に届くため、PCと1円でも違ってはいけない。
+//   PC側を変更したら必ずこちらも同時に変更する (片方だけ直すと端末で書面が食い違う)。
+// ============================================================
+function calcAmounts(c){
+  const effectiveUseEnd = c.useEnd || (c.recoveryCalledAt ? String(c.recoveryCalledAt).slice(0,10) : '');
+  const days = (c.useStart && effectiveUseEnd) ? calcDays(c.useStart, effectiveUseEnd) : 0;
+  const unitPrice = Number(c.unitPrice||0);
+  const invUnit  = Number(c.invoiceUnitPrice||0) || unitPrice;
+  const billDays = Number(c.invoiceDays||0) || days;
+  const discountDays = Math.max(0, Number(c.discountDays||0));
+  const invDays = Math.max(0, billDays - discountDays);
+  const dayDiscount = discountDays * invUnit;
+  let lumpDiscount = Number(c.discount||0);
+  // 旧仕様互換: 2026-08-04 以前は「値引額 = 値引日数 × 日額」を自動代入していたため、
+  //   旧レコードの値引額には日数分が含まれる。二重に引かないよう日数分として扱う。
+  if(c.discountModel !== 'v2' && discountDays > 0 && lumpDiscount > 0
+     && (lumpDiscount === dayDiscount || lumpDiscount === discountDays * unitPrice)){
+    lumpDiscount = 0;
+  }
+  const discount = dayDiscount + lumpDiscount;
+  const grossUsage = days * unitPrice;
+  const gross = billDays * invUnit;
+  const total = Math.max(0, gross - discount);
+  const taxRate = Number((DATA?.settings?.taxRate) || 10)/100;
+  const subExcl = taxRate>0 ? Math.round(total / (1+taxRate)) : total;
+  const tax = total - subExcl;
+  return { days, billDays, invDays, invUnit, discountDays, dayDiscount, lumpDiscount,
+           grossUsage, gross, discount, sub: total, subExcl, tax, total };
 }
 
 // ============================================================
