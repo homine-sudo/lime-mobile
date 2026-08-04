@@ -2966,23 +2966,25 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <!-- ====== ④ 料金 ====== -->
       <div class="gr-step-card" id="gr-step-price">
         <div class="gr-step-head"><span class="gr-step-num">4</span><span class="gr-step-title">いくら ― 料金</span></div>
-        <div class="gr-step-micro">1日の料金を入れると、②の期間から合計を自動で計算します。</div>
+        <div class="gr-step-micro">1日の料金を入れると、②の期間から合計を自動で計算します。値引がある時だけ右の2欄を使います。</div>
+        <!-- 2026-08-04: 「料金と値引」は必ず全部ここに並べる。値引の入力を折りたたみへ分散させない
+             (値引額=上/無料サービス日数=折りたたみ内 に分かれていて分かりにくい、という指摘への対応) -->
         <div class="form-grid cols3">
-          <div class="form-group"><label class="form-label">1日の料金 (税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="8,800" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">車を選ぶと自動で入ります</div></div>
-          <div class="form-group"><label class="form-label">値引額 (円)</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">円で引く分だけ。日数で引くのは下の調整欄</div></div>
-          <div class="form-group"></div>
+          <div class="form-group"><label class="form-label">1日の料金 (税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="8,800" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px" id="gr-unitPrice-hint">車を選ぶと自動で入ります</div></div>
+          <div class="form-group"><label class="form-label">無料サービス日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">1日サービスなら 1（1日分の料金を引く）</div></div>
+          <div class="form-group"><label class="form-label">値引額 (円)</label><input class="form-control" id="gr-discount" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">円で引く時（日数で引くなら左）</div></div>
         </div>
         <div id="gr-period-display" class="gr-total-card"></div>
-        <details class="gr-det" id="gr-det-billing"><summary>請求の調整（普段は不要）<span class="gr-det-badge" id="gr-badge-billadj"></span></summary>
+        <details class="gr-det" id="gr-det-billing"><summary>単価・日数の上書き（普段は不要）<span class="gr-det-badge" id="gr-badge-billadj"></span></summary>
           <div class="gr-det-body">
             <div style="font-size:11px;color:#666;background:#F4F7F2;border-left:3px solid #4F8A3E;padding:6px 9px;margin-bottom:9px;line-height:1.6">
-              請求額 ＝ <b>1日料金</b>（下で上書き可）× （<b>請求日数</b> − <b>無料サービス日数</b>） − <b>値引額</b><br>
-              入力するとすぐ上の内訳カードに反映され、<b>その金額がそのまま請求書・手配書に出ます</b>。
+              ここは<b>普段は空のまま</b>で構いません。入れると「1日の料金」「期間から出した日数」の代わりに使われます。<br>
+              請求額 ＝ <b>単価</b> ×（<b>日数</b> − <b>無料サービス日数</b>）− <b>値引額</b>
             </div>
             <div class="form-grid cols3">
-              <div class="form-group"><label class="form-label">請求だけ別単価</label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄=1日料金" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">キャンペーン等で請求額だけ変える時</div></div>
-              <div class="form-group"><label class="form-label">請求日数を手で固定</label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="空欄=期間から自動" oninput="updateGRPeriod()"></div>
-              <div class="form-group"><label class="form-label">無料サービス日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">例: 1日サービスなら 1 (日数×単価が引かれる)</div></div>
+              <div class="form-group"><label class="form-label">請求単価（上書き）</label><input class="form-control" id="gr-invoiceUnitPrice" type="number" min="0" placeholder="空欄＝1日の料金" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">入れると請求はこの単価で計算</div></div>
+              <div class="form-group"><label class="form-label">請求日数（上書き）</label><input class="form-control" id="gr-invoiceDays" type="number" min="0" placeholder="空欄＝期間から自動" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px" id="gr-invoiceDays-hint">&nbsp;</div></div>
+              <div class="form-group"></div>
             </div>
           </div>
         </details>
@@ -3126,7 +3128,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-04';
+const APP_VERSION = '2026-08-04a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -9613,21 +9615,41 @@ function updateGRPeriod(){
   const periodTxt = (hours <= 24) ? `${hours}時間（1日）` : `${nights}泊${nights+1}日（${hours}時間）`;
   setNH((hours <= 24 ? `${hours}時間` : `${nights}泊${nights+1}日`) + `（請求${billDays}日）`);
 
+  // ★上書きが効いている時は、上書きされた側の欄にその旨を出す (2026-08-04)
+  //   「1日の料金 16,500 と入れたのに内訳は 9,900」がどこから来たのか分からない、という指摘への対応。
+  //   原因(請求単価)は折りたたみの中にあるので、気づく場所=1日の料金欄 に理由を書く。
+  const daysOverridden = billDays !== autoDays;
+  const uHint = $('gr-unitPrice-hint');
+  if(uHint){
+    uHint.innerHTML = (invUnit && invUnit !== baseUnit)
+      ? `<span style="color:#C05621">⚠ 請求は <b>${yen(invUnit)}</b> で計算中（下で上書き）</span>`
+      : '車を選ぶと自動で入ります';
+  }
+  const dHint = $('gr-invoiceDays-hint');
+  if(dHint) dHint.innerHTML = daysOverridden
+    ? `<span style="color:#C05621">期間からは ${autoDays} 日</span>`
+    : `期間から自動で ${autoDays} 日`;
+
   if(!rate){
     // 料金未入力: 期間のみ表示 + 案内
     disp.innerHTML = `<div style="font-size:13px">📅 利用期間: <b>${periodTxt}</b></div>`
-      + `<div style="margin-top:6px;font-size:12px;color:#888;font-weight:normal">「貸渡料金 (1日 税込)」を入力すると合計が表示されます</div>`;
+      + `<div style="margin-top:6px;font-size:12px;color:#888;font-weight:normal">「1日の料金 (税込)」を入力すると合計が表示されます</div>`;
     disp.style.color = 'var(--navy)';
     return;
   }
   // 内訳は請求書の明細と同じ並び・同じ数字で出す (見た目が揃っていないと「反映されてない」と誤解される)
+  // ★ラベルは入力欄の名前と一字一句そろえる。同じ数字に別の名前を付けると必ず混乱する。
   const row = (l,v,c) => `<div style="display:flex;justify-content:space-between;padding:2px 0${c?';color:'+c:''}"><span${c?'':' style="color:#555"'}>${l}</span><b>${v}</b></div>`;
+  const ovr = '<span style="color:#C05621;font-size:11px;font-weight:normal">（上書き）</span>';
   const rows = [];
-  rows.push(row(`1日料金（税込）${invUnit?' <span style="color:#888;font-size:11px">※請求単価</span>':''}`, yen(rate)));
-  rows.push(row('請求日数', `${billDays} 日`));
-  if(_a.dayDiscount > 0) rows.push(row(`値引（${discDays}日分 × ${yen(rate)}）`, `− ${yen(_a.dayDiscount)}`, '#C05621'));
-  if(_a.lumpDiscount > 0) rows.push(row('値引（金額調整）', `− ${yen(_a.lumpDiscount)}`, '#C05621'));
-  if(discTotal > 0) rows.push(row(`請求対象　${_a.invDays} 日 × ${yen(rate)}`, yen(total), '#2C5282'));
+  rows.push(row((invUnit && invUnit !== baseUnit) ? `請求単価${ovr}` : '1日の料金（税込）', yen(rate)));
+  rows.push(row(daysOverridden ? `請求日数${ovr}` : '日数', `${billDays} 日`));
+  // 並びは請求書の明細と同じ: 単価/日数 → 無料サービス日数 → 請求対象 → 値引額 → 合計
+  if(_a.dayDiscount > 0){
+    rows.push(row(`無料サービス日数　${discDays}日 × ${yen(rate)}`, `− ${yen(_a.dayDiscount)}`, '#C05621'));
+    rows.push(row(`請求対象　${_a.invDays} 日 × ${yen(rate)}`, yen(_a.invDays * rate), '#2C5282'));
+  }
+  if(_a.lumpDiscount > 0) rows.push(row('値引額', `− ${yen(_a.lumpDiscount)}`, '#C05621'));
   disp.innerHTML =
     `<div style="font-size:13px">📅 利用期間: <b>${periodTxt}</b></div>`
     + `<div style="margin-top:8px;max-width:360px;font-weight:normal;font-size:13px">`
@@ -9662,8 +9684,11 @@ function grUpdateDetailBadges(){
   setB('customer', _grCountFilled(lic)+'/'+lic.length+' 入力済');
   const opt=_grCountFilled(['hasCDW','hasWide','preferSmoke','preferAT','rentalNote']);
   setB('option', opt? opt+' 件':'なし');
-  const adjOn = _grVal('invoiceUnitPrice')!=='' || _grVal('invoiceDays')!=='' || Number(_grVal('discountDays'))>0;
-  setB('billadj', adjOn? '調整あり':'なし');
+  // 2026-08-04: 請求日数は期間から常に自動補完されるので「値が入っている」だけでは調整ではない。
+  //   自動値と違う時だけ上書き扱い。値引日数は料金欄へ移したのでここでは見ない。
+  const _ovrDays = Number(_grVal('invoiceDays'))>0 && Number(_grVal('invoiceDays'))!==_grAutoDays;
+  const adjOn = _grVal('invoiceUnitPrice')!=='' || _ovrDays;
+  setB('billadj', adjOn? '上書きあり':'なし');
   setB('pickup', _grVal('pickupLocation')||'未設定');
   const pay=_grCountFilled(['invoiceNo','paymentMethod','invoiceIssuedAt','paidAt','paidAmount']);
   setB('pay', pay? pay+' 件記録':'未入力');
@@ -9673,6 +9698,9 @@ function grAutoExpandDetails(){
   document.querySelectorAll('#gr-modal details.gr-det').forEach(d=>{
     let has=false;
     d.querySelectorAll('input,select,textarea').forEach(el=>{
+      // 請求日数は期間から常に自動補完されるので、自動値のままなら「入力あり」と見なさない
+      // (見なすと「単価・日数の上書き」が毎回開いてしまい『普段は不要』の意味が消える / 2026-08-04)
+      if(el.id==='gr-invoiceDays' && Number(el.value||0)===_grAutoDays) return;
       if(el.type==='checkbox'){ if(el.checked) has=true; }
       else { const v=String(el.value||'').trim(); if(v!=='' && v!=='0') has=true; }
     });
