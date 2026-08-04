@@ -1166,6 +1166,57 @@ body.kb-open .m-confirm-card{display:none}
 
 /* === 手配書 (handover) - FAX用、画面外でレンダリング === */
 #m-fax-host{position:absolute;left:-9999px;top:0;width:900px}
+/* 請求書 (モノクロ印刷最適化版 v24b) — 🚨 PC LIMEOne の .sheet.faxinv と一字一句同一に保つ (2026-08-04e 移植・端末で書面が食い違うと事故) */
+.sheet.faxinv{background:#fff;color:#000;font-family:"Yu Gothic","Hiragino Sans","メイリオ",sans-serif;max-width:820px;margin:0 auto;padding:30px 40px;border:1px solid #999;box-sizing:border-box}
+.sheet.faxinv .fi-meta-tr{text-align:right;font-size:12px;line-height:1.7;margin-bottom:0;color:#000}
+.sheet.faxinv .fi-title{text-align:center;font-size:32px;font-weight:bold;letter-spacing:0.6em;margin:8px 0 30px;padding-right:0.6em;border-bottom:none;color:#000}
+.sheet.faxinv .fi-top{display:grid;grid-template-columns:1.05fr 1fr;gap:36px;margin-bottom:30px;align-items:flex-start}
+.sheet.faxinv .fi-to{font-size:14px;padding-top:6px}
+.sheet.faxinv .fi-to .fi-to-name{font-size:18px;font-weight:bold;border-bottom:1.5px solid #000;padding:0 2px 6px;display:block;margin-bottom:10px;line-height:1.35}
+.sheet.faxinv .fi-to .fi-to-name .fi-onchu{font-size:13px;font-weight:normal;margin-left:8px;white-space:nowrap}
+.sheet.faxinv .fi-to .fi-to-staff{margin:4px 0 0 16px;font-size:13px}
+.sheet.faxinv .fi-to .fi-to-msg{margin-top:22px;font-size:13px;letter-spacing:.04em}
+.sheet.faxinv .fi-issuer{font-size:12px;text-align:left;line-height:1.8;border-left:2px solid #888;padding-left:16px;min-height:120px;position:relative}
+.sheet.faxinv .fi-seal{position:absolute;top:-4px;right:2px;width:76px;height:76px;opacity:.85;pointer-events:none}
+.sheet.faxinv .fi-issuer .fi-issuer-name{font-size:14px;font-weight:bold;margin-bottom:3px}
+.sheet.faxinv .fi-issuer .fi-issuer-trade{font-size:12px;margin-bottom:6px;color:#333}
+.sheet.faxinv .fi-amt-row{display:flex;align-items:center;justify-content:center;gap:20px;margin:26px 0 34px;padding:6px 0}
+.sheet.faxinv .fi-amt-lbl{background:#fff;border:2.5px solid #000;padding:10px 22px;font-size:15px;font-weight:bold;border-radius:0;letter-spacing:.1em;color:#000}
+.sheet.faxinv .fi-amt-val{font-size:36px;font-weight:bold;letter-spacing:.04em;color:#000}
+.sheet.faxinv .fi-amt-tail{font-size:22px;color:#000;margin-left:4px}
+.sheet.faxinv .fi-footer-row{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:22px;align-items:flex-start}
+.sheet.faxinv .fi-bank{border-collapse:collapse;font-size:12px;width:100%}
+.sheet.faxinv .fi-bank th,.sheet.faxinv .fi-bank td{border:1px solid #000;padding:7px 12px;vertical-align:middle;color:#000}
+.sheet.faxinv .fi-bank th{background:#fff;width:70px;text-align:center;white-space:nowrap;font-weight:bold;border-right:2px solid #000}
+.sheet.faxinv .fi-bank td{background:#fff}
+.sheet.faxinv .fi-totals{display:flex;justify-content:flex-end;align-items:flex-start}
+.sheet.faxinv .fi-totals table{border-collapse:collapse;font-size:13px;width:100%;max-width:320px}
+.sheet.faxinv .fi-totals th,.sheet.faxinv .fi-totals td{border:1px solid #000;padding:8px 14px;color:#000}
+.sheet.faxinv .fi-totals th{background:#fff;width:45%;text-align:center;white-space:nowrap;font-weight:bold;border-right:2px solid #000}
+.sheet.faxinv .fi-totals td{text-align:right;font-size:14px;font-variant-numeric:tabular-nums;background:#fff}
+.sheet.faxinv .fi-totals tr.total th{background:#fff;font-size:14px;font-weight:bold;border:2.5px solid #000;border-right:2.5px solid #000}
+.sheet.faxinv .fi-totals tr.total td{font-weight:bold;font-size:17px;background:#fff;border:2.5px solid #000}
+.sheet.faxinv .fi-foot-note{font-size:11px;margin-top:20px;color:#000;border-top:1px dashed #888;padding-top:10px}
+.sheet.faxinv .fi-section-title{font-size:12px;color:#000;margin:18px 0 6px;letter-spacing:.12em;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px}
+.sheet.faxinv .fi-info-tbl{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:4px;border-top:1.5px solid #000;border-bottom:1.5px solid #000}
+.sheet.faxinv .fi-info-tbl td{padding:7px 8px;border-bottom:1px solid #000;vertical-align:middle;color:#000;background:#fff}
+.sheet.faxinv .fi-info-tbl td.lbl{width:22%;color:#000;font-size:12px;font-weight:bold;background:#fff;border-right:2px solid #000;padding-left:10px}
+.sheet.faxinv .fi-info-tbl td.val{color:#000}
+.sheet.faxinv .fi-info-tbl tr:last-child td{border-bottom:none}
+.sheet.faxinv .fi-detail-tbl{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:10px;border:1.5px solid #000}
+.sheet.faxinv .fi-detail-tbl thead th{background:#fff;color:#000;font-weight:bold;padding:9px 10px;border-bottom:2px solid #000;font-size:12px}
+.sheet.faxinv .fi-detail-tbl thead th.lt{text-align:left}
+.sheet.faxinv .fi-detail-tbl thead th.ct{text-align:center}
+.sheet.faxinv .fi-detail-tbl thead th.rt{text-align:right}
+.sheet.faxinv .fi-detail-tbl td{padding:9px 10px;border-bottom:0.5px solid #000;vertical-align:middle;color:#000;background:#fff}
+.sheet.faxinv .fi-detail-tbl .rt{text-align:right;font-variant-numeric:tabular-nums}
+.sheet.faxinv .fi-detail-tbl .ct{text-align:center}
+.sheet.faxinv .fi-detail-tbl .discount td{color:#000}
+.sheet.faxinv .fi-detail-tbl .discount td:first-child::before{content:'▲ '}
+.sheet.faxinv .fi-detail-tbl .billed td{background:#fff;font-weight:bold;border-top:2px solid #000;border-bottom:2px solid #000}
+.sheet.faxinv .fi-detail-tbl .billed td:last-child{font-size:14px}
+.sheet.faxinv .fi-totals tr.due-date th{background:#000;color:#fff;border:2px solid #000;font-weight:bold;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet.faxinv .fi-totals tr.due-date td{color:#000;font-weight:bold;font-size:13px;background:#fff;border:2px solid #000}
 /* 案2: 外枠なし・安全マージン (FAX端クリップ対策で枠を排す)。
    ※flex/min-height は html2canvas が捕捉できずアスペクト自己検証と衝突し
      fail-close するため使わない (2026-05-17 確定)。 */
@@ -2033,7 +2084,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-04';
+const APP_VERSION = '2026-08-04a';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -5397,6 +5448,408 @@ function _finishFaxFlow(c){
 }
 
 // ============================================================
+// 📄 請求書FAX (2026-08-04a 新設・§0例外=経営者の出先送信用)
+//   🚨 シートのマークアップ/CSS/金額計算は PC LIMEOne (renderFaxInvoiceSingle) と
+//     一字一句同一に保つ。片方だけ変えると端末で取引先に届く書面が食い違う。
+//   🚨 PDF生成/送信は既存3層防御 (_genHandoverPDF→_validatePdfPlacement→
+//     confirmPdfBeforeSend→GAS優先→.emlフォールバック) を必ず通す。新経路を作るな。
+//   操作制限: 操作者名に「大嶺」「金城」を含む場合のみ (請求情報の表示も同じ制限)。
+// ============================================================
+function _mBillingAllowed(){
+  const nm = (localStorage.getItem(LS_KEYS.editor) || '').trim();
+  return /大嶺|金城/.test(nm);
+}
+// ── PCから移植した表示ヘルパー (PC LIMEOne と同一実装) ──
+const fmtSlash = s => { const d=parseDate(s); return d? `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`:''; };
+const fmtDateJP = s => { const d=parseDate(s); return d? `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`:''; };
+const fmtDateJPDaySep = s => { const d=parseDate(s); return d? `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日`:''; };
+const fmtNumeric = n => (n!=null)? Number(n).toLocaleString():'';
+const addDays = (iso, n) => { const d=parseDate(iso); if(!d) return ''; d.setDate(d.getDate()+Number(n||0)); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
+function insurerLabel(ins){ return ins? (ins.name + (ins.branch?` ${ins.branch}`:'')) : ''; }
+function findClass(code){ return (DATA?.classes||[]).find(x => x && x.code === code); }
+function caseVehicleDisplayName(c){
+  if(!c) return '';
+  let v = c.vehicleId? (DATA?.vehicles||[]).find(x=>x.id===c.vehicleId) : null;
+  if(!v && c.plateTail) v = (DATA?.vehicles||[]).find(x=>((x.plate||{}).tail||'')===c.plateTail);
+  if(v && v.name) return v.name;
+  return c.vehicleName||'';
+}
+// ── 電子印 (角印) — PC LIMEOne (2026-07-14a) と同一実装。html2canvas で確実に写るよう PNG data URI ──
+let _sealCache = {};
+function _sealMainLines(s){
+  s = (s||'').trim();
+  if(/\s/.test(s)){ const w = s.split(/\s+/).filter(Boolean); if(w.length>=1 && w.length<=3) return w; }
+  const t = s.replace(/\s+/g,''); const n = t.length;
+  const L = Math.max(1, Math.min(3, Math.round(Math.sqrt(n/1.8))));
+  const per = Math.ceil(n/L); const out = [];
+  for(let i=0;i<t.length;i+=per) out.push(t.slice(i, i+per));
+  return out;
+}
+function _sealParts(raw){
+  raw = (raw||'').trim();
+  if(!raw) return null;
+  if(/[\/／\n|｜]/.test(raw)) return { side:'', main: raw.split(/[\/／\n|｜]+/).map(x=>x.trim()).filter(Boolean) };
+  const CO = raw.match(/^(株式会社|有限会社|合同会社|合資会社|合名会社|一般社団法人|一般財団法人|社会福祉法人|医療法人)\s*(.+)$/);
+  if(CO && CO[2].trim()) return { side:'', main: [CO[1]].concat(_sealMainLines(CO[2].trim())) };
+  return { side:'', main: _sealMainLines(raw) };
+}
+function _sealDataUrl(rawText){
+  const key = rawText||'';
+  if(_sealCache[key]) return _sealCache[key];
+  const parts = _sealParts(rawText);
+  if(!parts || !parts.main.length) return '';
+  const S = 400;
+  const MJ = '"Yu Mincho","Hiragino Mincho ProN","MS Mincho","Yu Mincho JP",serif';
+  const RED = '#be3b2d';
+  const ink = document.createElement('canvas'); ink.width = ink.height = S;
+  const g = ink.getContext('2d');
+  g.strokeStyle = RED; g.fillStyle = RED; g.lineJoin = 'round'; g.lineCap = 'round';
+  const rrect = (x,y,w,h,r)=>{ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); g.stroke(); };
+  const p1 = S*0.050; g.lineWidth = S*0.060; rrect(p1, p1, S-2*p1, S-2*p1, S*0.028);
+  const p2 = S*0.106; g.lineWidth = S*0.016; rrect(p2, p2, S-2*p2, S-2*p2, S*0.020);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const pad = S*0.026;
+  const cL = p2+pad, cR = S-p2-pad, cT = p2+pad, cB = S-p2-pad, cW = cR-cL, cH = cB-cT;
+  let mainLeft = cL, mainRight = cR;
+  if(parts.side){
+    const chars = parts.side.split('');
+    const colW = cW*0.25, colCx = cR - colW*0.5;
+    let vfs = colW*1.08;
+    while(vfs*chars.length > cH*1.0 && vfs > 6) vfs *= 0.96;
+    g.font = 'bold ' + vfs + 'px ' + MJ; g.lineWidth = vfs*0.085;
+    const vGap = vfs*0.99, vStart = (cT+cB)/2 - vGap*(chars.length-1)/2;
+    chars.forEach((ch,i)=>{ const y = vStart + i*vGap; g.strokeText(ch, colCx, y); g.fillText(ch, colCx, y); });
+    mainRight = cR - colW - S*0.008;
+  }
+  const lines = parts.main, GAP = 1.05;
+  const mW = mainRight - mainLeft, mCx = (mainLeft+mainRight)/2, mCy = (cT+cB)/2;
+  let fs = Math.min(cH*0.66, mW*1.05);
+  for(let k=0;k<90;k++){
+    g.font = 'bold ' + fs + 'px ' + MJ;
+    const mx = Math.max.apply(null, lines.map(l => g.measureText(l).width || 1));
+    if(mx <= mW && fs + fs*GAP*(lines.length-1) <= cH*1.0) break;
+    fs *= 0.96;
+  }
+  g.font = 'bold ' + fs + 'px ' + MJ; g.lineWidth = fs*0.06;
+  const lg = fs*GAP, ys = mCy - lg*(lines.length-1)/2;
+  lines.forEach((l,i)=>{ const y = ys + i*lg; g.strokeText(l, mCx, y); g.fillText(l, mCx, y); });
+  g.globalCompositeOperation = 'destination-out';
+  g.filter = 'blur(0.7px)';
+  let n = Math.floor(S*S*0.007);
+  for(let i=0;i<n;i++){ g.globalAlpha = 0.3 + Math.random()*0.6; g.beginPath(); g.arc(Math.random()*S, Math.random()*S, Math.random()*2.2, 0, 6.2832); g.fill(); }
+  g.filter = 'blur(2.2px)';
+  n = Math.floor(S*0.8);
+  for(let i=0;i<n;i++){ g.globalAlpha = 0.14 + Math.random()*0.3; const rx = 2+Math.random()*8; g.beginPath(); g.ellipse(Math.random()*S, Math.random()*S, rx, rx*(0.4+Math.random()), Math.random()*6.28, 0, 6.2832); g.fill(); }
+  g.filter = 'blur(2.6px)';
+  n = Math.floor(S*1.1);
+  for(let i=0;i<n;i++){
+    const band = p1*0.4 + Math.random()*(S*0.10), sd = i&3; let x,y;
+    if(sd===0){ x=band; y=Math.random()*S; } else if(sd===1){ x=S-band; y=Math.random()*S; }
+    else if(sd===2){ x=Math.random()*S; y=band; } else { x=Math.random()*S; y=S-band; }
+    g.globalAlpha = 0.18 + Math.random()*0.45; g.beginPath(); g.arc(x, y, 1+Math.random()*4.5, 0, 6.2832); g.fill();
+  }
+  g.filter = 'blur(11px)';
+  for(let i=0;i<11;i++){ g.globalAlpha = 0.05 + Math.random()*0.14; g.beginPath(); g.arc(Math.random()*S, Math.random()*S, 28+Math.random()*80, 0, 6.2832); g.fill(); }
+  g.filter = 'none'; g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const rot = (0.6 + Math.random()*1.5) * Math.PI/180;
+  ctx.translate(S/2, S/2); ctx.rotate(rot); ctx.translate(-S/2, -S/2);
+  ctx.drawImage(ink, 0, 0);
+  const url = cv.toDataURL('image/png');
+  _sealCache[key] = url;
+  return url;
+}
+function _sealTextOf(s){ s = s||DATA.settings||{}; return (s.sealText && s.sealText.trim()) || s.companyName || ''; }
+function _sealEnabled(s){ s = s||DATA.settings||{}; return s.sealEnabled !== false; }
+function _sealTag(s, cls){
+  s = s || DATA.settings || {};
+  if(!_sealEnabled(s)) return '';
+  const url = _sealDataUrl(_sealTextOf(s));
+  if(!url) return '';
+  return '<img class="fi-seal ' + (cls||'') + '" src="' + url + '" alt="社印">';
+}
+function _issuerBlock(s){
+  return `<div class="fi-issuer">${_sealTag(s)}
+      <div class="fi-issuer-name">${esc(s.companyName||'株式会社Hari Terrace')}</div>
+      <div class="fi-issuer-trade">${esc(s.tradeName||'ライムレンタカーOKINAWA')}</div>
+      <div>${esc(s.address||'')}</div>
+      <div>TEL：${esc(s.tel||'')}　FAX：${esc(s.fax||'')}</div>
+      <div>登録番号：${esc(s.invoiceReg||'')}</div>
+    </div>`;
+}
+function _bankBlock(s, dueDate){
+  return `<table class="fi-bank">
+      <tr>
+        <th style="white-space:nowrap">振込先</th>
+        <td>${esc(s.bankName||'')}（${esc(s.bankCode||'0596')}）　${esc(s.bankBranch||'')}（${esc(s.branchCode||'058')}）<br>${esc(s.bankType||'普通')}預金　${esc(s.bankNumber||'')}　　<b>${esc(s.bankHolder||'')}</b></td>
+      </tr>
+    </table>`;
+}
+// PC LIMEOne renderFaxInvoiceSingle と一字一句同一 (2026-08-04 統一版・金額はすべて calcAmounts 由来)
+function renderFaxInvoiceSingle(v){
+  const s = DATA.settings;
+  const hasDayDiscount = (v.discountDays||0) > 0 && (v.dayDiscountAmt||0) > 0;
+  const hasLumpDiscount = Number(v.discount||0) > 0;
+  const hasAnyDiscount = hasDayDiscount || hasLumpDiscount;
+  const periodStr = v.useEnd
+    ? `${esc(fmtSlash(v.useStart)||'―')} 〜 ${esc(fmtSlash(v.useEnd))}`
+    : `${esc(fmtSlash(v.useStart)||'―')} 〜 <span style="color:#555">利用中</span>`;
+  const grossUseAmt = (v.useDays||0) * (v.unit||0);
+  const detailRows = [];
+  detailRows.push(`<tr>
+    <td></td>
+    <td class="ct" style="font-size:11px;color:#333">${periodStr}</td>
+    <td class="ct">${v.useDays||0}日</td>
+    <td class="rt">¥${fmtNumeric(v.unit)}</td>
+    <td class="rt">¥${fmtNumeric(grossUseAmt)}</td>
+  </tr>`);
+  if(hasDayDiscount){
+    detailRows.push(`<tr class="discount">
+      <td>─ 調整 <span style="font-size:11px">(協定による)</span></td>
+      <td class="ct" style="color:#888">―</td>
+      <td class="ct">−${v.discountDays}日</td>
+      <td class="rt">¥${fmtNumeric(v.unit)}</td>
+      <td class="rt">−¥${fmtNumeric(v.dayDiscountAmt)}</td>
+    </tr>`);
+  }
+  if(hasDayDiscount){
+    detailRows.push(`<tr class="billed">
+      <td>請求対象</td>
+      <td class="ct" style="font-size:11px;color:#333">${periodStr}</td>
+      <td class="ct">${v.invDays||0}日</td>
+      <td class="rt">¥${fmtNumeric(v.unit)}</td>
+      <td class="rt">¥${fmtNumeric((v.invDays||0) * (v.unit||0))}</td>
+    </tr>`);
+  }
+  if(hasLumpDiscount){
+    detailRows.push(`<tr class="discount">
+      <td>─ 調整 <span style="font-size:11px">(金額調整)</span></td>
+      <td class="ct" style="color:#888">―</td>
+      <td class="ct">―</td>
+      <td class="rt">―</td>
+      <td class="rt">−¥${fmtNumeric(v.discount)}</td>
+    </tr>`);
+  }
+  const totalsRows = [];
+  if(hasAnyDiscount){
+    totalsRows.push(`<tr><th>利用額</th><td>¥${fmtNumeric(grossUseAmt)}</td></tr>`);
+    if(hasDayDiscount) totalsRows.push(`<tr><th>日数調整</th><td>−¥${fmtNumeric(v.dayDiscountAmt)}</td></tr>`);
+    if(hasLumpDiscount) totalsRows.push(`<tr><th>金額調整</th><td>−¥${fmtNumeric(v.discount)}</td></tr>`);
+  }
+  totalsRows.push(`<tr><th>小計(税抜)</th><td>¥${fmtNumeric((v.total||0) - (v.tax||0))}</td></tr>`);
+  totalsRows.push(`<tr><th>消費税 ${s.taxRate||10}%</th><td>¥${fmtNumeric(v.tax)}</td></tr>`);
+  totalsRows.push(`<tr class="total"><th>合計(税込)</th><td>¥${fmtNumeric(v.total)}</td></tr>`);
+  totalsRows.push(`<tr class="due-date"><th>振込期日</th><td>${esc(v.dueDate||'―')}</td></tr>`);
+  return `
+    <div class="sheet faxinv">
+      <div class="fi-meta-tr">発行日: ${esc(v.issueDate||'')}<br/>請求書No: ${esc(v.invNo||'')}</div>
+      <div class="fi-title">御請求書</div>
+      <div class="fi-top">
+        <div class="fi-to">
+          <div class="fi-to-name">${esc(v.insurerName||'')}<span class="fi-onchu">${esc(v.honorific||'御中')}</span></div>
+          ${v.insurerBranch? `<div class="fi-to-staff">${esc(v.insurerBranch)}</div>`:''}
+          ${v.staffName? `<div class="fi-to-staff">担当　${esc(v.staffName)}　様</div>`:''}
+          <div class="fi-to-msg">下記のとおり御請求申し上げます。</div>
+        </div>
+        ${_issuerBlock(s)}
+      </div>
+      <div class="fi-amt-row">
+        <span class="fi-amt-lbl">御請求金額</span>
+        <span class="fi-amt-val">¥${fmtNumeric(v.total)}</span>
+        <span class="fi-amt-tail">−</span>
+      </div>
+      <div class="fi-section-title">■ ご利用情報</div>
+      <table class="fi-info-tbl">
+        <tr><td class="lbl">事故受付No</td><td class="val">${esc(v.caseNo||'')}</td></tr>
+        <tr><td class="lbl">ご利用者</td><td class="val">${esc(v.driverName||'')} 様</td></tr>
+        <tr><td class="lbl">貸出車両</td><td class="val"><b>${esc(v.vehName||'')}</b>${v.classLabel?` <span style="color:#555;font-size:11px">(${esc(v.classLabel)})</span>`:''}　<span style="font-size:12px">${esc(v.plate||'')}</span></td></tr>
+      </table>
+      <div class="fi-section-title">■ ご請求明細</div>
+      <table class="fi-detail-tbl">
+        <thead>
+          <tr>
+            <th class="lt">内容</th>
+            <th class="ct" style="width:180px">利用期間</th>
+            <th class="ct" style="width:75px">日数</th>
+            <th class="rt" style="width:85px">単価(税込)</th>
+            <th class="rt" style="width:105px">金額(税込)</th>
+          </tr>
+        </thead>
+        <tbody>${detailRows.join('')}</tbody>
+      </table>
+      <div class="fi-footer-row">
+        ${_bankBlock(s, '')}
+        <div class="fi-totals"><table>${totalsRows.join('')}</table></div>
+      </div>
+      <div class="fi-foot-note">恐れ入りますが、振込手数料は貴社にてご負担ください。</div>
+    </div>`;
+}
+// PC renderInvoiceSingle の値マッピングと同一 (DOM書込せずHTMLを返す)
+function buildInvoiceHTMLForCase(c){
+  const ins = findInsurer(c.insurerId)||{};
+  const a = calcAmounts(c);
+  const s = DATA.settings;
+  const due = c.paymentDueAt || addDays(c.invoiceIssuedAt, s.payDueDays||45);
+  const vehName = caseVehicleDisplayName(c);
+  const plate = [c.plateArea||'沖縄', c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  const cls = c.vehicleClass ? findClass(c.vehicleClass) : null;
+  const classLabel = cls ? `${cls.name||''}/${c.vehicleClass}` : (c.vehicleClass||'');
+  const useDays = a.billDays || 0;
+  const discountDays = a.discountDays || 0;
+  const invDays = a.invDays || 0;
+  const dayDiscountAmt = a.dayDiscount || 0;
+  const residualDiscount = a.lumpDiscount || 0;
+  const _billTo = (c.billingToName||'').trim();
+  const _billOverride = !!_billTo;
+  return renderFaxInvoiceSingle({
+    insurerName: _billOverride ? _billTo : insurerLabel(ins),
+    honorific: _billOverride ? (c.billingToHonorific||'様') : '御中',
+    insurerBranch: _billOverride ? '' : (ins.branch||''),
+    staffName: _billOverride ? '' : (c.insurerContact||''),
+    invNo: c.invoiceNo || '未発行',
+    issueDate: fmtDateJP(c.invoiceIssuedAt||todayISO()),
+    dueDate: fmtDateJPDaySep(due),
+    useStart: c.useStart||'', useEnd: c.useEnd||'',
+    useDays, invDays, discountDays, dayDiscountAmt,
+    unit: a.invUnit,
+    gross: a.gross, discount: residualDiscount, totalDiscount: Number(a.discount||0),
+    sub: a.sub, tax: a.tax, total: a.total,
+    caseNo: c.accidentNo || c.caseNo || '',
+    driverName: c.driverName||c.contractorName||'',
+    vehName, plate, classLabel
+  });
+}
+// 請求書FAX送信 (案件詳細から。損保のみ・返却済以降・大嶺/金城のみ)
+async function sendInvoiceFax(caseId){
+  const c = findCaseById(caseId); if(!c){ toast('案件が見つかりません','error'); return; }
+  if(!_mBillingAllowed()){ toast('請求書FAXは 大嶺・金城 のみ操作できます','error'); return; }
+  if(c.category === '一般'){ toast('一般貸渡の請求はPCで対応してください','error'); return; }
+  if(!c.useEnd){ toast('利用終了日が未入力のため請求書を作成できません','error'); return; }
+  if(!['返却済','仮請求','請求済','入金済'].includes(c.status)){
+    toast(`まだ「${c.status}」のため送信できません (返却済み以降で送信可)`, 'error'); return;
+  }
+  const ins = findInsurer(c.insurerId)||{};
+  let rawFax = (c.insurerContactFax || ins.fax || '').trim();
+  if(!rawFax){
+    const v = await promptModal('FAX番号を入力', `${esc(ins.name||'保険会社')} のFAX番号が未登録です。送信先FAX番号を入力してください`, '');
+    if(v === null) return;
+    rawFax = v.trim();
+  }
+  const targetFax = toEfaxNumber(rawFax);
+  if(!targetFax){ toast('FAX番号が無効です','error'); return; }
+  // ★二重送信防止: 請求書の送信履歴 (PC送信分も data.json 同期で検知)
+  const priorInv = (c.faxHistory||[]).filter(h => (h.kind||'') === '請求書');
+  if(priorInv.length){
+    const last = priorInv[priorInv.length-1];
+    const ok = await confirmModal('⚠️ 二重送信の確認',
+      `この案件の<b>請求書FAX</b>は <b>${esc(last.ts||last.sentAt||'')}</b> に<b>送信済み</b>です。<br>（PC版で送信した場合も含みます）<br><br>もう一度送ると取引先に<b>二重で届きます</b>。<br>本当に再送しますか？`,
+      '二重送信を承知で再送', 'm-btn-danger');
+    if(!ok){ toast('FAX送信を中止しました (二重送信防止)', 'error'); return; }
+  }
+  const settings = getSettings();
+  const domain = (settings.faxSendDomain || 'efaxsend.com').trim();
+  const toEmail = `${targetFax}@${domain}`;
+  const safeCaseNo = (c.caseNo||'nocase').replace(/[^A-Za-z0-9_\-]/g,'_');
+  const filename = priorInv.length === 0 ? `${safeCaseNo}.pdf` : `${safeCaseNo}_${String(priorInv.length+1).padStart(2,'0')}.pdf`;
+  showSpinner('請求書PDFを生成中...');
+  try {
+    if(typeof html2pdf === 'undefined') throw new Error('PDFライブラリ未読込 (オフライン or CDN遮断)');
+    const host = $('m-fax-host');
+    host.innerHTML = buildInvoiceHTMLForCase(c);
+    const sheetEl = host.querySelector('.sheet.faxinv');
+    const opt = {
+      filename,
+      margin: [10,12,10,12],   // PC版請求書と同設定 (FAX端クリップの安全マージン)
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all'] }
+    };
+    const pdfBlob = await _genHandoverPDF(sheetEl, opt);   // 3層防御パイプライン (アスペクト検証+配置検証+インク検証)
+    host.innerHTML = '';
+    if(!isDemoMode()){
+      showSpinner('PDFをDropboxに保存中...');
+      try {
+        const yr = new Date().getFullYear();
+        await dbxUploadImage(`/ライム共有DB/システムデータ（R）/請求書${yr}/${filename}`, pdfBlob);
+      } catch(e){ console.warn('請求書PDF Dropbox保存失敗 (続行):', e); }
+    }
+    hideSpinner();
+    // ★送信前に実PDF画像を人間が確認 (最重要チェックポイント・飛ばすな)
+    const okToSend = await confirmPdfBeforeSend({
+      to: toEmail,
+      faxDisplay: fmtFaxDisplay(targetFax) || rawFax,
+      partnerName: ins.name || '',
+      docLabel: '御請求書'
+    });
+    if(!okToSend){ toast('FAX送信を中止しました (PDFは保存済み)', 'error'); return; }
+    await _sendInvoiceFaxSmart(pdfBlob, toEmail, filename, c, targetFax);
+  } catch(e){
+    hideSpinner();
+    toast('請求書FAXエラー: '+e.message, 'error');
+  }
+}
+// GAS優先→.emlフォールバック (手配書 sendFaxSmart と同形。_flow に依存しない請求書専用版)
+async function _sendInvoiceFaxSmart(pdfBlob, toEmail, filename, c, faxNumber){
+  const settings = getSettings();
+  const gasUrl = (settings.gasWebAppUrl||'').trim();
+  const subject = '', body = '{nocoverpage}';
+  if(isDemoMode()){
+    await _recordInvoiceFax(c, toEmail, faxNumber, filename);
+    await alertModal('🧪 デモモード', `請求書FAXのシミュレーションが完了しました。<br><br>実環境では <code>${esc(toEmail)}</code> へGAS経由で自動送信されます。`);
+    if(_currentScreen === 'case-detail') renderCaseDetail(c);
+    return;
+  }
+  if(gasUrl){
+    showSpinner('📠 GAS経由で自動送信中...');
+    try {
+      const base64 = await blobToBase64(pdfBlob);
+      const r = await sendExternalNotify('sendFax', {
+        toFax: faxNumber, subject, body, filename,
+        pdfBase64: base64, caseNo: c.caseNo,
+        fromName: settings.tradeName || 'ライムレンタカー'
+      });
+      hideSpinner();
+      if(r.ok){
+        const _ok = await _recordInvoiceFax(c, toEmail, faxNumber, filename);
+        if(_ok) toast('📠 請求書FAX送信完了 (GAS自動)', 'success');
+        if(_currentScreen === 'case-detail') renderCaseDetail(c);
+        return;
+      }
+      console.warn('GAS請求書FAX失敗、.emlへフォールバック:', r);
+    } catch(e){ hideSpinner(); console.warn('GAS請求書FAX例外、.emlへフォールバック:', e); }
+  }
+  showSpinner('.eml ファイル生成中...');
+  try {
+    await _generateAndDownloadEml(toEmail, subject, body, pdfBlob, filename);
+    await _recordInvoiceFax(c, toEmail, faxNumber, filename);
+    hideSpinner();
+    await alertModal('📧 .eml ダウンロード完了',
+      `.eml をメールアプリで開いて送信してください。<br><br>うまくいかない場合は Dropbox の請求書フォルダに保存されたPDFを<br><code>${esc(toEmail)}</code><br>宛に手動添付で送れます。`);
+    if(_currentScreen === 'case-detail') renderCaseDetail(c);
+  } catch(e){
+    hideSpinner();
+    toast('.eml生成エラー: '+e.message, 'error');
+  }
+}
+// 送信記録: PC recordFaxHistory と同形 (kind:'請求書')。PC同様ステータス/faxSentAt系は触らない
+async function _recordInvoiceFax(c, toEmail, faxNum, filename){
+  c.faxHistory = c.faxHistory || [];
+  const now = new Date();
+  const ts = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  c.faxHistory.push({
+    ts, kind: '請求書', to: toEmail, faxNumber: faxNum, filename,
+    editor: (localStorage.getItem(LS_KEYS.editor)||'').trim() || 'mobile'
+  });
+  _stampUpdated(c);
+  const _ok = await saveToDropbox();
+  if(!_ok){
+    toast('⚠️ FAXは送信できましたが送信記録の保存に失敗しました。必ず🔄同期して記録を確定してください（でないと二重送信の恐れ）', 'error');
+  }
+  return _ok;
+}
+
+// ============================================================
 // 簡易版 新規案件登録
 // ============================================================
 // editCaseId を渡すと「編集モード」: 既存案件の値をプリフィルし、保存で intake項目だけ上書きする。
@@ -7529,13 +7982,14 @@ async function renderCaseDetail(c){
       </div>
     `;
   }
+  // 2026-08-04a: PC形式のエントリ ({ts, kind, editor}) も表示できるように (請求書FAX・PC送信分)
   const faxHistHtml = (c.faxHistory && c.faxHistory.length) ? `
     <div class="m-detail-section">
       <h3>📠 FAX送信履歴</h3>
       ${c.faxHistory.slice().reverse().map(h => `
         <div class="m-kv">
-          <span class="k">${esc(h.flow==='dispatch'?'配車後':h.flow==='recovery'?'回収後':'-')}</span>
-          <span class="v">${esc(h.sentAt||'')} ${h.to?'→ '+esc(fmtFaxDisplay(h.to)):''}${h.by?' / '+esc(h.by):''}</span>
+          <span class="k">${esc(h.kind==='請求書'?'請求書':h.flow==='dispatch'?'配車後':h.flow==='recovery'?'回収後':(h.kind&&h.kind!=='instruction'?h.kind:'-'))}</span>
+          <span class="v">${esc(h.sentAt||h.ts||'')} ${h.to?'→ '+esc(fmtFaxDisplay(h.to)):''}${(h.by||h.editor)?' / '+esc(h.by||h.editor):''}</span>
         </div>
       `).join('')}
     </div>
@@ -7567,7 +8021,29 @@ async function renderCaseDetail(c){
     (c.recoveryCalledAt ? `<div class="m-kv"><span class="k">回収予定</span><span class="v">${fmtDateFull(c.recoveryCalledAt)}</span></div>` : '');
   const dateHtml = _dateRows ? `<div class="m-detail-section"><h3>📅 日付</h3>${_dateRows}</div>` : '';
 
-  $('m-cd-vehicle').innerHTML = accHtml + insHtml + dateHtml + vehHtml;
+  // ── 💴 請求情報 (2026-08-04a: 閲覧のみ・操作者が大嶺/金城のみ表示) ──
+  //   金額は必ず calcAmounts を通す (PC と同一式・別実装を書くな = 2026-08-04 鉄則1)
+  let billingHtml = '';
+  if(_mBillingAllowed() && typeof calcAmounts === 'function'){
+    const _a = calcAmounts(c);
+    const _yenB = n => '¥' + Math.round(Number(n)||0).toLocaleString();
+    const _ovrUnit = Number(c.invoiceUnitPrice||0) > 0 && Number(c.invoiceUnitPrice) !== Number(c.unitPrice||0);
+    const _bRows =
+      `<div class="m-kv"><span class="k">請求単価(日額)</span><span class="v">${_yenB(_a.invUnit)}${_ovrUnit?' <span style="color:#B45309;font-size:10px">(上書き)</span>':''}</span></div>` +
+      `<div class="m-kv"><span class="k">請求日数</span><span class="v">${_a.billDays||0}日${_a.discountDays?` − 値引 ${_a.discountDays}日 = ${_a.invDays||0}日`:''}</span></div>` +
+      (_a.dayDiscount>0 ? `<div class="m-kv"><span class="k">値引(日数分)</span><span class="v">−${_yenB(_a.dayDiscount)}</span></div>` : '') +
+      (_a.lumpDiscount>0 ? `<div class="m-kv"><span class="k">値引額</span><span class="v">−${_yenB(_a.lumpDiscount)}</span></div>` : '') +
+      `<div class="m-kv"><span class="k">請求額(税込)</span><span class="v"><b style="font-size:15px">${_yenB(_a.total)}</b></span></div>` +
+      `<div class="m-kv"><span class="k">状態</span><span class="v">${esc(c.status||'')}</span></div>` +
+      (c.invoiceNo ? `<div class="m-kv"><span class="k">請求書No</span><span class="v">${esc(c.invoiceNo)}</span></div>` : '') +
+      (c.invoiceIssuedAt ? `<div class="m-kv"><span class="k">請求日</span><span class="v">${fmtDateFull(c.invoiceIssuedAt)}</span></div>` : '') +
+      (c.paymentDueAt ? `<div class="m-kv"><span class="k">振込期日</span><span class="v">${fmtDateFull(c.paymentDueAt)}</span></div>` : '') +
+      (c.paidAt ? `<div class="m-kv"><span class="k">入金日</span><span class="v">${fmtDateFull(c.paidAt)}</span></div>` : '') +
+      (c.paidAmount ? `<div class="m-kv"><span class="k">入金額</span><span class="v">${_yenB(c.paidAmount)}</span></div>` : '');
+    billingHtml = `<div class="m-detail-section"><h3>💴 請求情報 <span style="font-size:10px;color:var(--muted);font-weight:400">閲覧のみ・PCと同一計算</span></h3>${_bRows}</div>`;
+  }
+
+  $('m-cd-vehicle').innerHTML = accHtml + insHtml + dateHtml + vehHtml + billingHtml;
   $('m-cd-history').innerHTML = sheetHtml + faxHistHtml;
 
   // 4. アクションボタン (状態に応じて)
@@ -7589,6 +8065,13 @@ async function renderCaseDetail(c){
     } else {
       acts.push(`<button class="m-btn m-btn-outline m-btn-block" onclick="openVehiclePicker()">${_svg('<path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/>')}車両を変更</button>`);
     }
+  }
+  // 📄 請求書FAX (2026-08-04a: 大嶺・金城のみ・損保・返却済以降・利用終了日必須)
+  const canInvoiceFax = _mBillingAllowed() && c.category !== '一般' && !!c.useEnd
+    && ['返却済','仮請求','請求済','入金済'].includes(c.status);
+  if(canInvoiceFax){
+    const _invSent = (c.faxHistory||[]).some(h => (h.kind||'') === '請求書');
+    acts.push(`<button class="m-btn ${_invSent?'m-btn-outline':'m-btn-primary'} m-btn-block" onclick="sendInvoiceFax('${c.id}')">${_svg('<path d="M6 9V4h12v5"/><rect x="6" y="13" width="12" height="8" rx="1"/><path d="M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/>')}${_invSent?'📠 請求書を再FAX (送信済み)':'📠 請求書をFAX送信'}</button>`);
   }
   if(c.dispatchToTel || c.driverTel){
     const tel = c.dispatchToContactTel || c.dispatchToTel || c.driverTel;
