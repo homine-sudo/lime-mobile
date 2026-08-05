@@ -762,6 +762,13 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 .bi-section-header{font-size:13px;font-weight:bold;color:var(--navy);padding:4px 10px;margin:0 0 6px 0;border-left:3px solid var(--navy);background:transparent;letter-spacing:0.5px}
 .bi-rank-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 @media(max-width:1100px){.bi-rank-row{grid-template-columns:1fr}}
+/* BIサブタブ (2026-08-04b 案B再構成: 1画面1テーマ) */
+.bi-tabbar{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 8px;margin-bottom:8px;flex-wrap:wrap}
+.bi-tab-btn{padding:7px 16px;border:none;background:transparent;cursor:pointer;font-size:12.5px;border-radius:5px;color:#555;font-weight:600;transition:all .15s}
+.bi-tab-btn:hover{background:#F0F0F0}
+.bi-tab-btn.active{background:var(--navy);color:#fff;font-weight:bold;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.bi-tab-pane{display:none}
+.bi-tab-pane.active{display:block}
 
 /* マスター画面レイアウト: 左サブナビ + 右コンテンツ */
 .mst-layout{display:grid;grid-template-columns:210px 1fr;gap:14px;min-height:70vh}
@@ -1705,8 +1712,19 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 <!-- 📈 経営分析 (BI) : v24al リニューアル版 -->
 <div class="page" id="page-bi">
 
-  <!-- ==== ① 期間セレクタ ==== -->
-  <div class="card bi-section-period" style="padding:6px 10px;margin-bottom:8px">
+  <!-- ==== サブタブバー (2026-08-04b 案B再構成: TOP/売上・予測/取引先/車両・稼働/詳細) ==== -->
+  <div class="bi-tabbar no-print">
+    <button class="bi-tab-btn active" data-bitab="top" onclick="showBiTab('top')" title="今月・今年度を前年と比較 (固定表示)">🎯 TOP</button>
+    <button class="bi-tab-btn" data-bitab="kpi" onclick="showBiTab('kpi')" title="主要KPI・日額積み上げ・季節変動と予測">💹 売上・予測</button>
+    <button class="bi-tab-btn" data-bitab="partner" onclick="showBiTab('partner')" title="保険会社・担当者・コール/配車先">🏢 取引先</button>
+    <button class="bi-tab-btn" data-bitab="fleet" onclick="showBiTab('fleet')" title="クラス別件数・稼働率・車両別生涯ROI">🚗 車両・稼働</button>
+    <button class="bi-tab-btn" data-bitab="detail" onclick="showBiTab('detail')" title="年度別件数・曜日別・調整額推移">🔧 詳細</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-outline btn-sm no-print" onclick="printBIReport()" title="表示中のタブを PDFとして印刷/保存" style="font-size:12px;padding:4px 10px;font-weight:bold">📄 PDF出力</button>
+  </div>
+
+  <!-- ==== ① 期間セレクタ (TOP以外のタブに効く。TOPは今月/今年度固定なので非表示) ==== -->
+  <div class="card bi-section-period" id="bi-period-bar" style="padding:6px 10px;margin-bottom:8px;display:none">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="font-size:12px;font-weight:bold;color:var(--navy)">📅 対象期間:</span>
       <div class="bi-period-group">
@@ -1716,7 +1734,6 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <button class="bi-period-btn" data-period="lastMonth" onclick="setBiPeriod('lastMonth')">先月</button>
         <button class="bi-period-btn active" data-period="fiscal" onclick="setBiPeriod('fiscal')">今年度</button>
         <button class="bi-period-btn" data-period="lastFiscal" onclick="setBiPeriod('lastFiscal')">前年度</button>
-        <button class="bi-period-btn" data-period="yoy" onclick="setBiPeriod('yoy')">年度比較</button>
       </div>
       <div style="display:flex;align-items:center;gap:4px;font-size:12px">
         <label class="text-muted">年度:</label>
@@ -1732,11 +1749,11 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       </div>
       <div style="flex:1"></div>
       <span id="bi-range-label" style="font-size:12px;font-weight:bold;color:var(--navy);background:#FFFFFF;padding:4px 10px;border-radius:4px;border:1px solid #CFDEF7"></span>
-      <button class="btn btn-outline btn-sm no-print" onclick="printBIReport()" title="経営分析を PDFとして印刷/保存" style="font-size:12px;padding:4px 10px;font-weight:bold">📄 PDF出力</button>
     </div>
   </div>
 
-  <!-- ==== 🎯 今、順調？ (ひと目判定 + 今月/今年度を前年比) 2026-06-29g 再設計トップ ==== -->
+  <!-- ==== 🎯 TOPタブ (固定・今月/今年度を前年比。期間セレクタ非連動) ==== -->
+  <div class="bi-tab-pane active" id="bi-tab-top">
   <div class="bi-section-header">🎯 今、順調？ <span style="font-size:11px;color:#888;font-weight:normal">今月・今年度を前年・前々年と比較</span></div>
   <div id="bi-summary" style="margin-bottom:14px"></div>
 
@@ -1744,73 +1761,19 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   <div class="bi-section-header" style="margin-top:12px">📅 月別 前年比較（12ヶ月） <span style="font-size:11px;color:#888;font-weight:normal">各月を 今年度／去年／一昨年 で比較</span></div>
   <div class="card" id="bi-month-yoy" style="padding:10px;margin-bottom:14px"></div>
 
-  <!-- ==== ▼ もっと詳しく (折りたたみ・既存の詳細分析をすべて格納) 2026-06-29g ==== -->
-  <details id="bi-more" style="margin-top:10px" ontoggle="if(this.open && typeof renderBI==='function') setTimeout(renderBI,40)">
-    <summary style="cursor:pointer;font-size:13px;font-weight:bold;color:var(--navy);padding:8px 10px;border-left:3px solid var(--navy);background:#FAFAF8;margin-bottom:10px">▸ もっと詳しく（稼働率・車両ROI・取引先・担当者・予測 など全分析）</summary>
+  </div><!-- /bi-tab-top -->
 
-  <!-- ==== 📊 現状把握 (いま・主要指標を一望) ==== -->
-  <div class="bi-section-header">📊 現状把握 <span style="font-size:11px;color:#888;font-weight:normal">いま / 前年同期比</span></div>
-  <div id="bi-healthboard" style="margin-bottom:14px"></div>
-
-  <!-- ==== 📈 過去との比較 (当期 vs 前年同期) ==== -->
-  <div class="bi-section-header">📈 過去との比較 <span style="font-size:11px;color:#888;font-weight:normal">当期 vs 前年同期</span></div>
-  <div id="bi-compare" style="margin-bottom:14px"></div>
-
-  <!-- ==== 📊 年度別 受付件数 (昨年・一昨年... と複数年比較) 2026-06-29d ==== -->
-  <div class="bi-section-header" style="margin-top:12px">📊 年度別 受付件数 <span style="font-size:11px;color:#888;font-weight:normal">昨年・一昨年… と比較</span></div>
-  <div class="card" id="bi-yearly-count" style="padding:10px;margin-bottom:14px"></div>
-
-  <!-- ==== 🔮 予測 (年度着地・月次の見込み) ==== -->
-  <div class="bi-section-header">🔮 予測 <span style="font-size:11px;color:#888;font-weight:normal">年度着地・月次の見込み</span></div>
-  <div id="bi-outlook" style="margin-bottom:14px"></div>
-
-  <!-- ==== ② 主要KPI ==== -->
-  <div class="bi-section-header">💹 主要指標 <span style="font-size:11px;color:#888;font-weight:normal">詳細KPI</span></div>
+  <!-- ==== 💹 売上・予測タブ (期間セレクタ連動) 2026-08-04b 案B再構成 ==== -->
+  <!--   旧「現状把握」「過去との比較」「予測(年度着地)」「年度比較サマリー」は重複のため廃止し、主要指標+補助指標に統合 -->
+  <div class="bi-tab-pane" id="bi-tab-kpi">
+  <div class="bi-section-header">💹 主要指標 <span style="font-size:11px;color:#888;font-weight:normal">当期 / 前期比・スパークラインは直近12ヶ月</span></div>
   <div class="bi-hero-grid" id="bi-hero-grid"></div>
-  <!-- 補助指標 (折りたたみ) -->
-  <details style="margin-bottom:10px">
-    <summary style="cursor:pointer;font-size:12px;color:#666;padding:4px 8px;display:inline-block">▸ 補助指標を表示 (利用日数 / 入金額 / 稼働率)</summary>
-    <div class="bi-kpi-grid" id="bi-kpi-grid" style="margin-top:6px"></div>
-  </details>
-
-  <div id="bi-yoy-section" class="bi-section-header" style="margin-top:12px;display:none">📊 年度比較サマリー</div>
-  <div id="bi-yoy-card" class="card" style="padding:10px;display:none">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:5px">
-      <span style="font-size:12px;font-weight:bold;color:var(--navy)">📌 比較対象:</span>
-      <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px">A:
-        <select id="bi-yoy-year-a" onchange="updateBiYoyCompare()" style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px"></select>
-      </label>
-      <span class="text-muted text-sm">vs</span>
-      <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px">B:
-        <select id="bi-yoy-year-b" onchange="updateBiYoyCompare()" style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px"></select>
-      </label>
-      <div style="flex:1"></div>
-      <span style="font-size:11px;color:#666">グラフ単位:</span>
-      <div class="bi-chart-toggle" id="bi-yoy-gran-group">
-        <button class="bi-toggle-btn" data-yoygran="day" onclick="setBiYoyGranularity('day')">📅 日</button>
-        <button class="bi-toggle-btn active" data-yoygran="month" onclick="setBiYoyGranularity('month')">📆 月</button>
-        <button class="bi-toggle-btn" data-yoygran="year" onclick="setBiYoyGranularity('year')">🗓 年</button>
-      </div>
-    </div>
-    <div class="tbl-wrap">
-      <table style="font-size:12px">
-        <thead><tr>
-          <th>指標</th>
-          <th class="money" id="bi-yoy-cur-label">A</th>
-          <th class="money" id="bi-yoy-prev-label">B</th>
-          <th class="money" style="width:80px">差分</th>
-          <th style="width:90px">前年比</th>
-        </tr></thead>
-        <tbody id="bi-yoy-tbody"></tbody>
-      </table>
-    </div>
-    <div style="height:240px;margin-top:10px"><canvas id="bi-chart-yoy"></canvas></div>
-  </div>
+  <div class="bi-kpi-grid" id="bi-kpi-grid" style="margin-bottom:12px"></div>
 
   <!-- ============================================== -->
   <!-- 🌡 サマリー (メインチャート) -->
   <!-- ============================================== -->
-  <div class="bi-section-header" style="margin-top:14px">🌡 サマリー</div>
+  <div class="bi-section-header" style="margin-top:14px">🌡 日額積み上げ推移</div>
   <div class="card" style="padding:10px">
     <div class="card-title" style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
       📊 <span>日額積み上げ推移</span>
@@ -1842,11 +1805,12 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     <div style="height:260px"><canvas id="bi-chart-seasonality"></canvas></div>
     <div id="bi-seasonality-table" style="margin-top:10px"></div>
   </div>
+  </div><!-- /bi-tab-kpi -->
 
-  <!-- ============================================== -->
+  <!-- ==== 🏢 取引先タブ (保険会社担当者・保険会社・コール/配車先) ==== -->
+  <div class="bi-tab-pane" id="bi-tab-partner">
   <!-- 👤 保険会社担当者別 (v25av: 当社担当者→保険会社担当者中心に変更) -->
-  <!-- ============================================== -->
-  <div class="bi-section-header" style="margin-top:18px">👤 保険会社担当者別</div>
+  <div class="bi-section-header">👤 保険会社担当者別</div>
   <div class="card" style="padding:10px">
     <div class="card-title" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
       🏆 <span>担当者ランキング (件数/売上)</span>
@@ -1930,11 +1894,11 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       </div>
     </div>
   </div>
+  </div><!-- /bi-tab-partner -->
 
-  <!-- ============================================== -->
-  <!-- 🚗 車両 / クラス -->
-  <!-- ============================================== -->
-  <div class="bi-section-header" style="margin-top:18px">🚗 車両 / クラス</div>
+  <!-- ==== 🚗 車両・稼働タブ (クラス別件数・稼働率・生涯ROI) ==== -->
+  <div class="bi-tab-pane" id="bi-tab-fleet">
+  <div class="bi-section-header">🚗 車両 / クラス</div>
   <div class="bi-rank-row">
     <div class="card" style="padding:10px">
       <div class="card-title" style="margin-bottom:4px">🚗 クラス別 件数</div>
@@ -1975,42 +1939,28 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     <div id="bi-life-roi"></div>
   </div>
 
-  <!-- ============================================== -->
-  <!-- 📅 時間別 -->
-  <!-- ============================================== -->
-  <div class="bi-section-header" style="margin-top:18px">📅 時間別</div>
+  </div><!-- /bi-tab-fleet -->
+
+  <!-- ==== 🔧 詳細タブ (年度別 受付件数・曜日別・調整額推移) ==== -->
+  <!--   旧「時間別: 月別推移」はTOPの月別前年比較・売上予測タブの日額積み上げと重複のため廃止 -->
+  <div class="bi-tab-pane" id="bi-tab-detail">
+  <div class="bi-section-header">📊 年度別 受付件数 <span style="font-size:11px;color:#888;font-weight:normal">昨年・一昨年… と比較 (期間セレクタ非連動)</span></div>
+  <div class="card" id="bi-yearly-count" style="padding:10px;margin-bottom:14px"></div>
+
+  <div class="bi-section-header" style="margin-top:12px">📅 曜日別 / 💸 調整額</div>
   <div class="bi-rank-row">
-    <div class="card" style="padding:10px">
-      <div class="card-title" style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-        📈 <span>月別推移</span>
-        <div style="flex:1"></div>
-        <div class="bi-chart-toggle">
-          <button class="bi-toggle-btn active" data-metric="sales" onclick="setBiTrendMetric('sales')">💴 売上</button>
-          <button class="bi-toggle-btn" data-metric="count" onclick="setBiTrendMetric('count')">📊 件数</button>
-          <button class="bi-toggle-btn" data-metric="paid" onclick="setBiTrendMetric('paid')">✅ 入金額</button>
-        </div>
-      </div>
-      <div style="height:200px"><canvas id="bi-chart-trend"></canvas></div>
-    </div>
     <div class="card" style="padding:10px">
       <div class="card-title" style="margin-bottom:4px">📅 曜日別 件数</div>
       <div style="height:200px"><canvas id="bi-chart-dow"></canvas></div>
     </div>
-  </div>
-
-  <!-- ============================================== -->
-  <!-- 🔧 詳細 (折りたたみ) -->
-  <!-- ============================================== -->
-  <details style="margin-top:18px">
-    <summary style="cursor:pointer;font-size:13px;color:#666;padding:6px 10px;border-left:3px solid #999;background:#F6F6F6">▸ 詳細分析を表示 (調整額推移など)</summary>
-    <div class="card" style="padding:10px;margin-top:6px">
+    <div class="card" style="padding:10px">
       <div class="card-title" style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         💸 <span>月別 調整額推移</span>
       </div>
       <div style="height:200px"><canvas id="bi-chart-adjust-trend"></canvas></div>
     </div>
-  </details>
-  </details>
+  </div>
+  </div><!-- /bi-tab-detail -->
 </div>
 
 <div class="page" id="page-sales">
@@ -3128,7 +3078,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-04a';
+const APP_VERSION = '2026-08-04e';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5669,7 +5619,7 @@ function toast(msg, type){
 // 入力・表示・データは税込が基本。消費税は内税で逆算(総額/1.1 = 税抜)して内訳表示に使う。
 function calcAmounts(c){
   // 利用終了日 > 車両回収日 のフォールバックのみ
-  const effectiveUseEnd = c.useEnd || (c.recoveryCalledAt ? c.recoveryCalledAt.slice(0,10) : '');
+  const effectiveUseEnd = c.useEnd || (c.recoveryCalledAt ? String(c.recoveryCalledAt).slice(0,10) : '');
   const days = (c.useStart && effectiveUseEnd)? daysBetween(c.useStart, effectiveUseEnd) : 0;
   const unitPrice = Number(c.unitPrice||0);
   // 2026-08-04: 請求額の計算式を全経路で1本に統一 (旧 v2026.04.29bz の「請求上書き廃止」を撤回)
@@ -6261,8 +6211,9 @@ function renderBiSummary(){
   const curFy = getNendo(new Date());
   const realCaseNos = _biRealCaseNos();
   const cntRange = (f,t) => biFilterCasesByReceived(f,t).length;
-  const salesRange = (f,t) => {
-    let s = 0;
+  // 売上と平均貸出日数は同一母集団 (利用終了日ベース・キャンセル除く・一般は請求済以降・履歴重複排除)
+  const statsRange = (f,t) => {
+    let s = 0, d = 0, n = 0;
     (DATA.cases||[]).forEach(c => {
       if(c.status === 'キャンセル') return;
       if(!c.useEnd) return;
@@ -6270,42 +6221,59 @@ function renderBiSummary(){
       if(u < f || u > t) return;
       if(c.isHistorical && realCaseNos.has(c.caseNo)) return;
       if(c.category === '一般' && !['請求済','入金済'].includes(c.status)) return;
-      s += (calcAmounts(c).total || 0);
+      const a = calcAmounts(c);
+      s += (a.total || 0);
+      if(a.days > 0){ d += a.days; n++; }  // 2026-08-04d: biCalcKpis の平均利用日数と同定義 (a.days>0 のみ母数)
     });
-    return s;
+    return { sales: s, avgDays: n ? d/n : 0 };
   };
+  const salesRange = (f,t) => statsRange(f,t).sales;
   const mC = y => cntRange(`${y}-${mm}-01`, `${y}-${mm}-31`);
   const mS = y => salesRange(`${y}-${mm}-01`, `${y}-${mm}-31`);
-  const curMC = mC(Y), pMC = mC(Y-1), p2MC = mC(Y-2);
-  const curMS = mS(Y), pMS = mS(Y-1), p2MS = mS(Y-2);
+  // 2026-08-04c: 今月の前年比較は「同じ経過日数(1日〜本日と同日)」で公平比較。
+  //   従来は前年フル月と比べていたため月初ほど不当に悪く見えた。年度カードは元から同期比でOK。
+  const mCTo = y => cntRange(`${y}-${mm}-01`, `${y}-${mm}-${dd}`);
+  const mSTo = y => salesRange(`${y}-${mm}-01`, `${y}-${mm}-${dd}`);
+  const curMC = mC(Y), pMC = mCTo(Y-1), p2MC = mCTo(Y-2);
+  const curMS = mS(Y), pMS = mSTo(Y-1), p2MS = mSTo(Y-2);
+  // 2026-08-04d: 平均貸出日数 (今月=当月フル/比較は同日まで・今年度=同期比。売上と同じ母集団)
+  const mD = y => statsRange(`${y}-${mm}-01`, `${y}-${mm}-31`).avgDays;
+  const mDTo = y => statsRange(`${y}-${mm}-01`, `${y}-${mm}-${dd}`).avgDays;
+  const curMD = mD(Y), pMD = mDTo(Y-1), p2MD = mDTo(Y-2);
   const curFC = cntRange(`${curFy}-04-01`, today), pFC = cntRange(`${curFy-1}-04-01`, `${Y-1}-${mm}-${dd}`), p2FC = cntRange(`${curFy-2}-04-01`, `${Y-2}-${mm}-${dd}`);
   const curFS = salesRange(`${curFy}-04-01`, today), pFS = salesRange(`${curFy-1}-04-01`, `${Y-1}-${mm}-${dd}`), p2FS = salesRange(`${curFy-2}-04-01`, `${Y-2}-${mm}-${dd}`);
+  const curFD = statsRange(`${curFy}-04-01`, today).avgDays, pFD = statsRange(`${curFy-1}-04-01`, `${Y-1}-${mm}-${dd}`).avgDays, p2FD = statsRange(`${curFy-2}-04-01`, `${Y-2}-${mm}-${dd}`).avgDays;
   const pctTxt = (c,p) => {
     if(p>0){ const v = Math.round((c-p)/p*100); const col = v>0?'#2E7D32':v<0?'#C0392B':'#888'; const sg = v>0?'+':v<0?'−':''; return `<span style="color:${col};font-weight:bold">${sg}${Math.abs(v)}%</span>`; }
     return c>0 ? '<span style="color:#2E7D32;font-weight:bold">新規</span>' : '<span style="color:#888">—</span>';
   };
-  const metric = (lbl, c, p, p2, peer, isYen) => `
+  // kind: 'count'=件数 / 'yen'=金額 / 'days'=日数(小数1桁)
+  const metric = (lbl, c, p, p2, peer, kind) => {
+    const f = v => kind==='yen' ? yen(v) : kind==='days' ? v.toFixed(1)+'日' : v;
+    const big = kind==='yen' ? yen(c) : kind==='days' ? c.toFixed(1)+'<span style="font-size:13px">日</span>' : c+'<span style="font-size:13px">件</span>';
+    return `
     <div style="margin-bottom:10px">
       <div style="font-size:11px;color:#888">${lbl}</div>
-      <div style="font-size:24px;font-weight:bold;color:var(--navy);line-height:1.2">${isYen ? yen(c) : c+'<span style="font-size:13px">件</span>'}</div>
+      <div style="font-size:24px;font-weight:bold;color:var(--navy);line-height:1.2">${big}</div>
       <div style="font-size:12px;margin-top:2px">
-        <span style="color:#888">${peer} ${isYen ? yen(p) : p}</span> ${pctTxt(c,p)}
-        <span style="color:#888">${peer==='去年'?'一昨年':'一昨年同期'} ${isYen ? yen(p2) : p2}</span> ${pctTxt(c,p2)}
+        <span style="color:#888">${peer} ${f(p)}</span> ${pctTxt(c,p)}
+        <span style="color:#888">${peer.replace('去年','一昨年')} ${f(p2)}</span> ${pctTxt(c,p2)}
       </div>
     </div>`;
+  };
   const card = (title, inner) => `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px">
       <div style="font-size:13px;color:#555;margin-bottom:10px;font-weight:bold">${title}</div>${inner}</div>`;
   const arrow = v => v==null ? '—' : (v>0?`<span style="color:#2E7D32;font-weight:bold">↑ ${v}%</span>` : v<0?`<span style="color:#C0392B;font-weight:bold">↓ ${Math.abs(v)}%</span>` : '<span style="color:#888">±0%</span>');
   const vL = pMC>0 ? Math.round((curMC-pMC)/pMC*100) : null;
   const v2 = p2MC>0 ? Math.round((curMC-p2MC)/p2MC*100) : null;
   const verdict = `<div style="background:#fff;border:1px solid var(--border);border-left:3px solid var(--navy);padding:11px 14px;margin-bottom:12px">
-    <div style="font-size:12px;color:#888;margin-bottom:3px">🎯 ひと目の判定 — 今月（${monthNum}月）の受付</div>
-    <div style="font-size:15px;color:var(--navy)">今月 <b>${curMC}件</b>　・　去年同月比 ${arrow(vL)}　／　一昨年同月比 ${arrow(v2)}</div>
+    <div style="font-size:12px;color:#888;margin-bottom:3px">🎯 ひと目の判定 — 今月（${monthNum}月）の受付 <span style="font-size:10px">※去年・一昨年も ${monthNum}/1〜${monthNum}/${Number(dd)} の同日までで公平比較</span></div>
+    <div style="font-size:15px;color:var(--navy)">今月 <b>${curMC}件</b>　・　去年同日比 ${arrow(vL)}　／　一昨年同日比 ${arrow(v2)}</div>
   </div>`;
   host.innerHTML = verdict
     + `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">`
-    + card(`今月（${Y}年${monthNum}月・進行中）`, metric('受付件数', curMC, pMC, p2MC, '去年', false) + metric('売上（発生ベース・税込）', curMS, pMS, p2MS, '去年', true))
-    + card(`今年度（4月〜${monthNum}月・同期比）`, metric('受付件数', curFC, pFC, p2FC, '去年同期', false) + metric('売上（発生ベース・税込）', curFS, pFS, p2FS, '去年同期', true))
+    + card(`今月（${Y}年${monthNum}月・1〜${Number(dd)}日の同日比較）`, metric('受付件数', curMC, pMC, p2MC, '去年同日', 'count') + metric('売上（発生ベース・税込）', curMS, pMS, p2MS, '去年同日', 'yen') + metric('平均貸出日数（返却ベース）', curMD, pMD, p2MD, '去年同日', 'days'))
+    + card(`今年度（4月〜${monthNum}月・同期比）`, metric('受付件数', curFC, pFC, p2FC, '去年同期', 'count') + metric('売上（発生ベース・税込）', curFS, pFS, p2FS, '去年同期', 'yen') + metric('平均貸出日数（返却ベース）', curFD, pFD, p2FD, '去年同期', 'days'))
     + `</div>`;
 }
 // 📅 月別 前年比較 (12ヶ月) (2026-06-29f): 年度(4月〜翌3月)の各月を 今年度/前年度/前々年度 で並べる。
@@ -6320,9 +6288,10 @@ function renderBiMonthYoY(){
   const curFy = getNendo(new Date());
   const realCaseNos = _biRealCaseNos();
   const metric = (window._biMonthMetric === 'sales') ? 'sales' : 'count';
-  const cntMonth = (y,m) => biFilterCasesByReceived(`${y}-${pad2(m)}-01`, `${y}-${pad2(m)}-31`).length;
-  const salesMonth = (y,m) => {
-    const from = `${y}-${pad2(m)}-01`, to = `${y}-${pad2(m)}-31`;
+  const dd = today.slice(8,10);  // 2026-08-04c: 今月行の前年比は同日(1日〜本日と同日)までで公平比較
+  const cntMonth = (y,m,d) => biFilterCasesByReceived(`${y}-${pad2(m)}-01`, `${y}-${pad2(m)}-${d||'31'}`).length;
+  const salesMonth = (y,m,d) => {
+    const from = `${y}-${pad2(m)}-01`, to = `${y}-${pad2(m)}-${d||'31'}`;
     let s = 0;
     (DATA.cases||[]).forEach(c => {
       if(c.status === 'キャンセル') return;
@@ -6335,7 +6304,7 @@ function renderBiMonthYoY(){
     });
     return s;
   };
-  const val = (y,m) => metric === 'sales' ? salesMonth(y,m) : cntMonth(y,m);
+  const val = (y,m,d) => metric === 'sales' ? salesMonth(y,m,d) : cntMonth(y,m,d);
   const disp = v => metric === 'sales' ? yen(v) : `${v}件`;
   const isFuture = (y,m) => (y > thisYear) || (y === thisYear && m > thisMonth);
   const isCurrent = (y,m) => (y === thisYear && m === thisMonth);
@@ -6357,7 +6326,10 @@ function renderBiMonthYoY(){
     const fut = isFuture(y,m), cur_ = isCurrent(y,m);
     const a = fut ? null : val(y,m);
     const b = val(y-1,m), c2 = val(y-2,m);
-    if(!fut){ sumA += a; sumBytd += b; sumCytd += c2; }
+    // 今月行だけ比較値を「去年/一昨年の同日まで」に差し替え (列の表示値=過去年フル月は従来どおり)
+    const bCmp = cur_ ? val(y-1,m,dd) : b;
+    const cCmp = cur_ ? val(y-2,m,dd) : c2;
+    if(!fut){ sumA += a; sumBytd += bCmp; sumCytd += cCmp; }
     sumB += b; sumC += c2;
     const hl = cur_ ? 'background:#F7FBEF;' : '';
     return `<tr style="${hl}">
@@ -6365,7 +6337,7 @@ function renderBiMonthYoY(){
       <td class="money" style="padding:3px 8px;font-weight:${cur_?'bold':'normal'}">${fut ? '<span class="text-muted">—</span>' : disp(a)}</td>
       <td class="money" style="padding:3px 8px;color:#555">${disp(b)}</td>
       <td class="money" style="padding:3px 8px;color:#999">${disp(c2)}</td>
-      <td style="padding:3px 8px;white-space:nowrap">${pctTag(a===null?0:a, b, fut)}</td>
+      <td style="padding:3px 8px;white-space:nowrap">${pctTag(a===null?0:a, bCmp, fut)}${cur_ ? `<br><span style="color:#999;font-size:9px">同日比 (去年${Number(dd)}日まで ${disp(bCmp)})</span>` : ''}</td>
     </tr>`;
   }).join('');
   const totalPct = pctTag(sumA, sumBytd, false);
@@ -6391,7 +6363,7 @@ function renderBiMonthYoY(){
     <button class="bi-toggle-btn ${metric==='sales'?'active':''}" onclick="setBiMonthMetric('sales')">💴 売上</button>
   </div>`;
   host.innerHTML = toggle + table
-    + `<div class="text-muted" style="font-size:10px;margin-top:6px">※年度=4月〜翌3月。前年比=${yA}年度 vs ${yB}年度の同月。${metric==='sales' ? '売上=利用終了日(キャンセル除く・一般は請求済以降・税込)' : '受付件数=受付日(キャンセル除く)'}。今月(${thisMonth}月)は本日までの実績／未到来の月の今年度は「—」。合計の前年比は同期間(4〜${thisMonth}月)で比較。</div>`;
+    + `<div class="text-muted" style="font-size:10px;margin-top:6px">※年度=4月〜翌3月。前年比=${yA}年度 vs ${yB}年度の同月。${metric==='sales' ? '売上=利用終了日(キャンセル除く・一般は請求済以降・税込)' : '受付件数=受付日(キャンセル除く)'}。今月(${thisMonth}月)は本日までの実績で、前年比は去年の同日(1〜${Number(dd)}日)までと公平比較(列の${yB}/${yC}年度はフル月表示)／未到来の月の今年度は「—」。合計の前年比は同期間(4月〜今月は同日まで)で比較。</div>`;
 }
 function setBiMonthMetric(m){ window._biMonthMetric = m; if(typeof renderBiMonthYoY === 'function') renderBiMonthYoY(); }
 // 📊 年度別 受付件数 (2026-06-29d): 昨年・一昨年... と複数年で件数を比較。期間セレクタに依らず常に年度ベース。
@@ -6491,29 +6463,45 @@ function renderBI(){
     prevUtilOverall = biCalcUtilization(range.compare.from, pTo).overall;
   }
 
-  // 📊 現状把握 → 📈 過去との比較 → 🔮 予測
-  renderBiSummary();       // 🎯 今、順調？ (再設計トップ・今月/今年度を前年比)
-  renderBiHealthboard(range, cases, kpi, kpiPrev, util, prevUtilOverall);
-  renderBiCompare(kpi, kpiPrev, util, prevUtilOverall, range);
-  renderBiMonthYoY();      // 📅 月別 前年比較 (12ヶ月)
-  renderBiYearlyCount();   // 📊 年度別 受付件数 (複数年比較・期間セレクタ非依存)
-  renderBiOutlook();
-
-  renderBIKpis(kpi, kpiPrev, util);
-  renderBIChartTrend();
-  renderBIChartsBreakdown(cases);
-  renderBIRankings(cases);
-  renderBIUtilTable(util);
-  renderBIGroupUtil(util);
-  renderBIVehicleROI();
-  renderBIForecast();
-  renderBIMatrix();
-  renderBIPareto(cases);
-  renderBIStaffTrend();
-  renderBIAdjustAnalysis(cases);
-  renderBIYearOverYear(range, cases, kpi, kpiPrev);
-  renderBIAdjustments(cases);
-  if(typeof renderBISeasonality === 'function') renderBISeasonality();
+  // 2026-08-04b 案B再構成: サブタブ化。TOP(固定・今月/今年度)は常時描画、他タブは表示中のものだけ描画。
+  //   集計コンテキストは _biCtx に保持し、タブ切替時に _renderBiTab が再利用 (集計式・calcAmounts は不変)。
+  //   旧: renderBiHealthboard/renderBiCompare/renderBiOutlook/renderBIChartTrend/renderBIYearOverYear は
+  //   重複統合のため呼び出し廃止 (関数は温存・ホスト無しで早期return)。
+  window._biCtx = { range, cases, kpi, kpiPrev, util };
+  renderBiSummary();       // 🎯 今、順調？ (TOP・今月/今年度を前年比)
+  renderBiMonthYoY();      // 📅 月別 前年比較 (TOP・12ヶ月)
+  _renderBiTab(window._biTab || 'top');
+}
+// タブごとの描画。非表示タブのチャートは描かない (canvas は非表示中に描くとサイズ0になるため、表示時に再描画する方式)
+function _renderBiTab(tab){
+  const c = window._biCtx; if(!c) return;
+  const { cases, kpi, kpiPrev, util } = c;
+  if(tab === 'kpi'){
+    renderBIKpis(kpi, kpiPrev, util);          // 💹 主要指標 (hero+補助を統合表示)
+    renderBIForecast();                        // 🌡 日額積み上げ推移
+    if(typeof renderBISeasonality === 'function') renderBISeasonality();  // 🔮 季節変動&予測
+  } else if(tab === 'partner'){
+    renderBIRankings(cases);                   // 👤 担当者ランキング + 🏢 保険会社TOP10
+    renderBIMatrix();                          // 📋 担当者×月次マトリックス
+    renderBIChartsBreakdown(cases);            // 保険会社/コール種別チャート + 工場別
+  } else if(tab === 'fleet'){
+    renderBIChartsBreakdown(cases);            // クラス別件数チャート
+    renderBIUtilTable(util);                   // 車両稼働率
+    renderBIGroupUtil(util);                   // クラスグループ別稼働率
+    renderBIVehicleROI();                      // 車両別 生涯ROI
+  } else if(tab === 'detail'){
+    renderBiYearlyCount();                     // 年度別 受付件数
+    renderBIChartsBreakdown(cases);            // 曜日別チャート
+    renderBIAdjustAnalysis(cases);             // 調整額推移
+  }
+}
+// BIサブタブ切替。TOPは今月/今年度固定のため期間セレクタはTOP以外でのみ表示。
+function showBiTab(t){
+  window._biTab = t;
+  document.querySelectorAll('#page-bi .bi-tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.bitab===t));
+  document.querySelectorAll('#page-bi .bi-tab-pane').forEach(p=>p.classList.toggle('active', p.id==='bi-tab-'+t));
+  const bar = $('bi-period-bar'); if(bar) bar.style.display = (t==='top') ? 'none' : '';
+  setTimeout(()=>_renderBiTab(t), 30);  // 表示切替後にチャート描画 (サイズ確定を待つ)
 }
 // 📊 日額積み上げ推移 (v24ag): 過去の日別売上累積をチャート表示
 // 対象期間内の各日について、稼働していた案件の日額を合計し、累積/日次の推移グラフを描画
