@@ -1382,7 +1382,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-07-31a';
+const APP_VERSION = '2026-08-05';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2250,7 +2250,17 @@ const CASH_SPECIAL = {}; // 例) '2027-05': 2500000  ← 法人税・消費税�
 // ★2026-07 実行済みの証書貸付は freee B/S (期首現金・長期借入) に反映済み。
 //   ここに載せると二重計上になる → 空。今後「これから実行する」借入が決まったら月キーで足すこと。
 const CASH_LOAN_DRAWS  = {};
-const CASH_EXTRA_CAPEX = { '2026-07': { amount: 1800000, label: 'プレハブ' } };// 設備投資(車両以外)。プレハブ 180万
+// 設備投資・一時支出のうち「まだ現金が出ていない」ものを月キーで置く (支払期日の月に置く)。
+// 2026-08-05: プレハブ180万は購入なしになったため削除。代わりに納車済み車両3台の未払分を支払期日の月に計上。
+// 🚨公開ページのため取引先名は書かない (2026-07-29 方針)。請求書原本・支払先は freee と共有DBに。
+const CASH_EXTRA_CAPEX = { '2026-08': { amount: 4760000, label: '車両の未払分' } };
+// 支払済みの「納車待ち」車両ID = 資金繰りの投資には計上しない。
+// 🚨鉄則 (2026-08-05 制定): 納車待ち≠未払い。支払と納車のタイミングは別物。
+//   実例: N-WGN v-077/078 は納車前だが支払済み(freee固定資産計上済・現預金から出済み) /
+//         スズキ3台は納車済みだが未払い(支払期日 8/30)。
+//   支払済みを載せると freee 現預金から二重に引くことになる (2026-07-31 の借入二重計上と同じ構図)。
+//   判定基準は車両ステータスではなく「freee で決済済みか」。新車を登録したら、支払った時点でここに ID を足す。
+const CASH_CAPEX_SETTLED = ['v-077','v-078'];
 // 新規借入の返済 (返済予定表の実額・元金均等・据置なし)。初回分は実行済み&freee反映済のため残元金を翌月から計上。
 const CASH_NEW_LOAN = { amount: 7885000, startYM: '2026-08', months: 83, label: '新規借入', assumed: false };
 function renderBreakEven(){
@@ -2488,6 +2498,9 @@ function renderIntakeNote(){
 
 // ===== 資金繰り予定 (第4波・2026-07-04) — freeeライブ(現預金/営業利益/借入) + 納車待ち車両capex連動 =====
 function vehiclesPending(){ return ((DR&&DR.vehicles)||[]).filter(v=>v.status==='納車待ち'); }
+// 資金繰りに載せるのは「納車待ち かつ 未払い」の車両だけ (CASH_CAPEX_SETTLED の鉄則を参照)
+function vehiclesUnpaid(){ return vehiclesPending().filter(v=>CASH_CAPEX_SETTLED.indexOf(v.id)<0); }
+function vehiclesSettledPending(){ return vehiclesPending().filter(v=>CASH_CAPEX_SETTLED.indexOf(v.id)>=0); }
 function cashFlowPlan(opAdj){
   // 期首現金 = freee 現預金 (ライブ) / fallback は既知値
   const openCash = (FREEE_BS && FREEE_BS.cash!=null) ? FREEE_BS.cash : 36087108;
@@ -2498,8 +2511,11 @@ function cashFlowPlan(opAdj){
   opCF += Math.round(Number(opAdj)||0);  // ② シミュレーター連動 (2026-07-16): 打ち手の営業利益変化分(円/月)を加減。renderCash は引数なし=0で従来どおり
   const baseRepay = CASH_CFG.loanRepay;
   // 車両仕入 (納車待ち・全額現金・今月=index0 に計上=最も現金が下がる保守的置き方)
-  const pend = vehiclesPending();
+  const pend = vehiclesUnpaid();
   const capex = pend.reduce((s,v)=>s+Number(v.vehiclePrice||0),0);
+  // 支払済みの納車待ち車両 (投資には計上しないが、前提注記で「除外した」と明示する)
+  const settled = vehiclesSettledPending();
+  const settledTotal = settled.reduce((s,v)=>s+Number(v.vehiclePrice||0),0);
   // 新規借入の月々元金 (元金均等)
   const newLoanMo = (CASH_NEW_LOAN.amount>0 && CASH_NEW_LOAN.months>0) ? Math.round(CASH_NEW_LOAN.amount/CASH_NEW_LOAN.months) : 0;
   const _ymDiff=(a,b)=>{const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);return (ay-by)*12+(am-bm);};
@@ -2525,7 +2541,7 @@ function cashFlowPlan(opAdj){
     c=close;
   }
   return {openCash, loan, loanAfter:loan+loanDrawTotal, opCF, opCFlive, baseRepay, newLoanMo, capex, extraCapexTotal, loanDrawTotal,
-    pendCount:pend.length, rows, trough, floor:CASH_CFG.floor,
+    pendCount:pend.length, settledCount:settled.length, settledTotal, rows, trough, floor:CASH_CFG.floor,
     hasSpecial:Object.keys(CASH_SPECIAL).length>0, newLoanAssumed:!!CASH_NEW_LOAN.assumed};
 }
 // ===== 売上ゼロ ランウェイ (2026-07-31) =====
@@ -2583,16 +2599,24 @@ function renderCash(){
   $('cf-cash').innerHTML=yen(p.openCash)+'<span class="unit">円</span>';
   const grid=$('cf-pos-grid');
   const investTotal=p.capex+p.extraCapexTotal;
+  // 投資の内訳ラベル (車両capex + CASH_EXTRA_CAPEX の label を連結。0円の項目は出さない)
+  const invItems=[];
+  if(p.capex>0) invItems.push({t:'車両'+p.pendCount+'台', a:p.capex});
+  Object.keys(CASH_EXTRA_CAPEX).forEach(k=>{ const e=CASH_EXTRA_CAPEX[k];
+    if(e&&Number(e.amount)>0) invItems.push({t:e.label||'設備', a:Number(e.amount)}); });
+  // 内訳が2件以上の時だけ各項目に金額を添える (1件なら総額と重複するので出さない)
+  const invLabel=invItems.length
+    ? invItems.map(x=>x.t+(invItems.length>1?man(x.a)+'万':'')).join('＋') : 'なし';
   if(grid){
     let rows='';
     if(p.loanDrawTotal>0) rows+='<div><span class="cf-k">新規借入（今月実行）</span><span class="cf-v num" style="color:var(--acc)">+'+yen(p.loanDrawTotal)+'</span></div>';
-    rows+='<div><span class="cf-k">設備投資（車両'+p.pendCount+'台'+(p.extraCapexTotal>0?'＋プレハブ':'')+'・現金）</span><span class="cf-v num dn">−'+yen(investTotal)+'</span></div>';
+    rows+='<div><span class="cf-k">設備投資（'+invLabel+'・現金）</span><span class="cf-v num dn">−'+yen(investTotal)+'</span></div>';
     rows+='<div><span class="cf-k">今月末 手元現金（見込み）</span><span class="cf-v num'+(july.close<p.floor?' dn':'')+'">'+yen(july.close)+'</span></div>';
     rows+='<div><span class="cf-k">借入金 残高'+(p.loanDrawTotal>0?'（実行後 見込み）':'')+'</span><span class="cf-v num">'+yen(p.loanAfter)+'</span></div>';
     rows+='<div><span class="cf-k">実質有利子負債（借入後−手元現金）</span><span class="cf-v num">'+yen(Math.max(0,p.loanAfter-july.close))+'</span></div>';
     grid.innerHTML=rows;
   }
-  $('cf-runway').innerHTML='設備投資 '+yen(investTotal)+'円（車両'+p.pendCount+'台'+(p.extraCapexTotal>0?'＋プレハブ'+man(p.extraCapexTotal)+'万':'')+'）'+
+  $('cf-runway').innerHTML='設備投資 '+yen(investTotal)+'円（'+invLabel+'）'+
     (p.loanDrawTotal>0?'を、新規借入'+man(p.loanDrawTotal)+'万で手元を厚くしつつ実行。':'を現金で実行。')+
     ' 最も下がる '+p.trough.label+'でも <b>'+yen(p.trough.close)+'円</b>（現金下限'+man(p.floor)+'万まで +'+yen(p.trough.close-p.floor)+'円）。'+
     (p.opCF>p.baseRepay+p.newLoanMo?' 営業CFが返済を上回り以後は毎月プラス。':'');
@@ -2646,7 +2670,8 @@ function renderCash(){
   // 前提
   let assump='【前提】期首現金・借入残＝freee'+(FREEE_BS?'ライブ':'（前回値）')+
     '。 月次営業CF ＝ '+yen(p.opCF)+'円'+(p.opCFlive?'（freee営業利益 4〜当月 ÷ 経過月）':'（概算）')+
-    '。 既存の借入元金返済 ＝ '+yen(p.baseRepay)+'円/月。 投資 ＝ 納車待ち車両'+p.pendCount+'台'+(p.extraCapexTotal>0?'＋プレハブ'+man(p.extraCapexTotal)+'万':'')+'を今月に全額現金計上。';
+    '。 既存の借入元金返済 ＝ '+yen(p.baseRepay)+'円/月。 投資 ＝ '+invLabel+'（'+yen(investTotal)+'円）を支払月に全額現金計上。';
+  if(p.settledTotal>0) assump+='<br><span class="ink3">※ 納車待ち'+p.settledCount+'台（'+man(p.settledTotal)+'万）は支払済み＝すでに期首現金から出ているため、投資には計上していません（二重計上の防止）。</span>';
   if(p.loanDrawTotal>0) assump+=' 借入 ＝ '+man(p.loanDrawTotal)+'万を今月実行。';
   if(p.newLoanMo>0) assump+= p.newLoanAssumed
     ? '<br><span style="color:var(--warn)">※ 新規借入'+man(p.loanDrawTotal)+'万の返済は仮条件（7年・元金均等 ＝ 月約'+man(p.newLoanMo)+'万・翌月開始）で計上中。実際の返済期間・金利・据置を教えてもらえれば正確に反映します。</span>'
