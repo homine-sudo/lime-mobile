@@ -1382,7 +1382,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-08-05';
+const APP_VERSION = '2026-08-06';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -3167,7 +3167,7 @@ function renderReport(){
     const man=n=>Math.round((n||0)/10000).toLocaleString();
     const setT=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
     const now=new Date();
-    setT('rpt-date','ライブ再計算 '+todayISO()+' '+pad2(now.getHours())+':'+pad2(now.getMinutes())+' ・ 分析(文章)更新 2026-07-20 / 初版 2026-06-28');
+    setT('rpt-date','ライブ再計算 '+todayISO()+' '+pad2(now.getHours())+':'+pad2(now.getMinutes())+' ・ 分析(文章)更新 2026-08-06 / 初版 2026-06-28');
     // ── 02 ポートフォリオ FY26 部門別 (monthlyTotals・売上/構成はライブ、粗利率は推計で静的)
     const fy=_currentFY(), mt=monthlyTotals(fy);
     const sumR=mt.rental.reduce((a,b)=>a+b,0), sumD=mt.detalia.reduce((a,b)=>a+b,0), sumE=mt.denso.reduce((a,b)=>a+b,0), tot=sumR+sumD+sumE;
