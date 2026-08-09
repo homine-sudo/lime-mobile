@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="現金出納帳">
+<meta name="theme-color" content="#1c1c1a">
+<title>小口現金出納帳</title>
+<style>
+/* ============================================================
+   小口現金出納帳 — ㈱Hari Terrace
+   単一HTML / Dropbox PKCE / 保存は fail-closed + CAS(rev)
+   ============================================================ */
+:root{
+  --bg:#f7f6f3; --paper:#fff; --ink:#1c1c1a; --sub:#6f6c65; --line:#e3e0d9;
+  --in:#1f6f4a; --out:#a8352c; --accent:#1c1c1a;
+  --warn:#b7791f; --danger:#a8352c;
+  --r:14px; --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+  font-size:15px; line-height:1.6;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  -webkit-text-size-adjust:100%;
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
+
+/* ---- header ---- */
+header{
+  position:sticky;top:0;z-index:40;background:rgba(247,246,243,.94);
+  backdrop-filter:saturate(180%) blur(12px);
+  border-bottom:1px solid var(--line);
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  display:flex;align-items:baseline;gap:10px;
+}
+header h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.06em}
+header .who{margin-left:auto;font-size:11px;color:var(--sub)}
+header .ver{font-size:10px;color:var(--sub);letter-spacing:.04em}
+
+/* ---- banners ---- */
+.banner{margin:10px 14px 0;padding:11px 13px;border-radius:12px;font-size:13px;line-height:1.5;display:none}
+.banner.on{display:block}
+.banner.err{background:#fdecea;color:#7d241d;border:1px solid #f3c6c1}
+.banner.warn{background:#fdf6e3;color:#7a5410;border:1px solid #efdfb4}
+.banner button{margin-top:8px;background:#fff;border:1px solid currentColor;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600}
+
+/* ---- layout ---- */
+main{padding:14px 14px 24px;max-width:720px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--sub)}
+
+/* ---- balance hero ---- */
+.hero{text-align:center;padding:26px 16px 22px}
+.hero .lbl{font-size:11px;letter-spacing:.16em;color:var(--sub)}
+.hero .amt{font-size:46px;font-weight:300;letter-spacing:-.02em;margin:6px 0 2px;line-height:1.1}
+.hero .amt .yen{font-size:22px;font-weight:400;margin-right:3px;vertical-align:.08em}
+.hero .amt.neg{color:var(--danger)}
+.hero .meta{font-size:11.5px;color:var(--sub)}
+.hero .stale{color:var(--warn)}
+
+/* ---- big action buttons ---- */
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.acts button{
+  border:1px solid var(--line);background:var(--paper);border-radius:var(--r);
+  padding:18px 10px;font-size:16px;font-weight:700;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+}
+.acts button .ico{font-size:22px;line-height:1}
+.acts .b-out{color:var(--out)}
+.acts .b-in{color:var(--in)}
+.acts button:active{transform:translateY(1px)}
+
+/* ---- entry rows ---- */
+.rows{margin:0;padding:0;list-style:none}
+.row{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.row:last-child{border-bottom:0}
+.row .d{width:44px;flex:none;font-size:11px;color:var(--sub);padding-top:3px}
+.row .body{flex:1;min-width:0}
+.row .cat{font-weight:600;font-size:14px}
+.row .note{font-size:12px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .amt{flex:none;text-align:right;font-size:15px;font-weight:600;padding-top:1px}
+.row .amt.in{color:var(--in)}.row .amt.out{color:var(--out)}
+.row .bal{display:block;font-size:10.5px;color:var(--sub);font-weight:400}
+.row.void .cat,.row.void .amt{text-decoration:line-through;opacity:.45}
+.empty{text-align:center;color:var(--sub);font-size:13px;padding:22px 0}
+
+/* ---- month nav ---- */
+.mnav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.mnav button{border:1px solid var(--line);background:var(--paper);border-radius:10px;width:38px;height:38px;font-size:16px}
+.mnav .m{flex:1;text-align:center;font-size:16px;font-weight:700;letter-spacing:.04em}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;text-align:center}
+.sum div{background:#faf9f6;border:1px solid var(--line);border-radius:10px;padding:9px 4px}
+.sum .k{font-size:10px;color:var(--sub);letter-spacing:.06em}
+.sum .v{font-size:15px;font-weight:600;margin-top:1px}
+.sum .v.in{color:var(--in)}.sum .v.out{color:var(--out)}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--sub);vertical-align:1px}
+.badge.closed{background:#eef3ee;color:var(--in);border-color:#cfe0d3}
+
+/* ---- forms ---- */
+label.f{display:block;margin-bottom:12px}
+label.f .k{display:block;font-size:11px;letter-spacing:.08em;color:var(--sub);margin-bottom:5px}
+input[type=text],input[type=date],input[type=number],select,textarea{
+  width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;
+}
+.btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;font-size:15px}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:#fff;color:var(--danger);border:1px solid #f0cdc9}
+.btn:disabled{opacity:.4}
+.btn+.btn{margin-top:9px}
+.hint{font-size:11.5px;color:var(--sub);margin:6px 0 0}
+
+/* ---- tabs ---- */
+nav.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;
+  background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);
+}
+nav.tabs button{flex:1;border:0;background:none;padding:9px 2px 8px;font-size:10px;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button .ico{font-size:19px;line-height:1}
+nav.tabs button.on{color:var(--ink);font-weight:700}
+
+/* ---- modal ---- */
+.mask{position:fixed;inset:0;background:rgba(28,28,26,.42);z-index:60;display:none}
+.mask.on{display:block}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--paper);
+  border-radius:20px 20px 0 0;max-height:94vh;overflow:auto;display:none;
+  padding:8px 16px calc(20px + env(safe-area-inset-bottom));
+}
+.sheet.on{display:block}
+.grab{width:38px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px}
+.sheet h3{margin:0 0 14px;font-size:16px;text-align:center;font-weight:700}
+.sheet h3 .tag{font-size:11px;padding:2px 9px;border-radius:99px;margin-right:6px;vertical-align:2px;color:#fff}
+.tag.out{background:var(--out)}.tag.in{background:var(--in)}
+
+/* ---- amount display + keypad ---- */
+.amtbox{text-align:center;padding:6px 0 12px}
+.amtbox .v{font-size:40px;font-weight:300;letter-spacing:-.01em;line-height:1.15}
+.amtbox .v .yen{font-size:20px;margin-right:2px}
+.amtbox .v.zero{color:#c9c5bc}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.keys button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:14px 0;font-size:21px;font-weight:500}
+.keys button.fn{font-size:14px;color:var(--sub);font-weight:600}
+.keys button:active{background:#f0efeb}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.chips button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 13px;font-size:13px}
+.chips button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+
+/* ---- misc ---- */
+.kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--sub)}
+.kv .v{font-weight:600;text-align:right}
+.toast-host{position:fixed;left:0;right:0;bottom:calc(84px + env(safe-area-inset-bottom));z-index:80;display:flex;flex-direction:column;align-items:center;gap:7px;pointer-events:none}
+.toast{background:rgba(28,28,26,.93);color:#fff;padding:9px 17px;border-radius:99px;font-size:13px;transition:opacity .4s;max-width:90%}
+.toast.ok{background:rgba(31,111,74,.95)}
+.toast.err{background:rgba(168,53,44,.95)}
+.spin{position:fixed;inset:0;background:rgba(247,246,243,.6);z-index:90;display:none;align-items:center;justify-content:center}
+.spin.on{display:flex}
+.spin i{width:26px;height:26px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:sp .8s linear infinite;display:block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.diffbox{text-align:center;padding:14px;border-radius:12px;background:#faf9f6;border:1px solid var(--line);margin-bottom:12px}
+.diffbox .v{font-size:26px;font-weight:600}
+.diffbox .v.ok{color:var(--in)}
+.diffbox .v.ng{color:var(--danger)}
+.diffbox .k{font-size:11px;color:var(--sub);letter-spacing:.08em}
+@media(min-width:640px){ .hero .amt{font-size:54px} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>小口現金出納帳</h1>
+  <span class="ver" id="hd-ver"></span>
+  <span class="who" id="hd-who"></span>
+</header>
+
+<div class="banner err" id="bn-unsaved">
+  <b>未送信の記録があります</b><br>
+  <span id="bn-unsaved-txt"></span>
+  <button onclick="retrySave()">今すぐ再送信</button>
+</div>
+<div class="banner warn" id="bn-auth">
+  <b>Dropbox に未連携です</b><br>この端末の記録はまだ共有されていません。設定タブから連携してください。
+</div>
+
+<main>
+  <!-- ============ TOP ============ -->
+  <section class="view on" id="v-top">
+    <div class="card hero">
+      <div class="lbl">現在の現金残高</div>
+      <div class="amt num" id="top-bal"><span class="yen">¥</span>—</div>
+      <div class="meta" id="top-meta"></div>
+    </div>
+    <div class="acts">
+      <button class="b-out" onclick="openEntry('out')"><span class="ico">💴</span>出金（使った）</button>
+      <button class="b-in" onclick="openEntry('in')"><span class="ico">💰</span>入金（入れた）</button>
+    </div>
+    <div class="card">
+      <h2>最近の記録</h2>
+      <ul class="rows" id="top-rows"></ul>
+    </div>
+  </section>
+
+  <!-- ============ 一覧 ============ -->
+  <section class="view" id="v-list">
+    <div class="mnav">
+      <button onclick="moveMonth(-1)">‹</button>
+      <div class="m" id="ls-month"></div>
+      <button onclick="moveMonth(1)">›</button>
+    </div>
+    <div class="card">
+      <div class="sum">
+        <div><div class="k">月初残高</div><div class="v num" id="ls-open">—</div></div>
+        <div><div class="k">入金</div><div class="v in num" id="ls-in">—</div></div>
+        <div><div class="k">出金</div><div class="v out num" id="ls-out">—</div></div>
+      </div>
+      <div class="kv"><span class="k">月末残高</span><span class="v num" id="ls-close">—</span></div>
+      <div class="kv"><span class="k">状態</span><span class="v" id="ls-state">—</span></div>
+    </div>
+    <div class="card">
+      <h2>明細</h2>
+      <ul class="rows" id="ls-rows"></ul>
+    </div>
+    <div class="card">
+      <h2>科目べつ集計</h2>
+      <div id="ls-bycat"></div>
+    </div>
+    <button class="btn ghost" onclick="exportCsv()">この月を CSV 出力</button>
+  </section>
+
+  <!-- ============ 実査・締め ============ -->
+  <section class="view" id="v-close">
+    <div class="card">
+      <h2>現金実査（金庫を数える）</h2>
+      <p class="hint" style="margin-top:0">金庫の中の現金を数えて、実際の金額を入れてください。帳簿と合っているか確認できます。</p>
+      <label class="f"><span class="k">数えた日</span><input type="date" id="cn-date"></label>
+      <label class="f"><span class="k">実際にあった金額（円）</span><input type="number" id="cn-actual" inputmode="numeric" placeholder="例 8500"></label>
+      <div class="diffbox">
+        <div class="k">帳簿残高との差</div>
+        <div class="v num" id="cn-diff">—</div>
+        <div class="k" id="cn-book"></div>
+      </div>
+      <label class="f"><span class="k">メモ（任意）</span><input type="text" id="cn-note" placeholder="例 レシート待ちの立替あり"></label>
+      <button class="btn" onclick="saveCount()">実査を記録する</button>
+      <p class="hint">記録するだけです。帳簿の金額は変わりません。</p>
+    </div>
+
+    <div class="card" id="cn-closebox">
+      <h2>月次締め（大嶺さんのみ）</h2>
+      <p class="hint" style="margin-top:0">締めると、その月は修正できなくなります。差額があれば「現金過不足」として1件記録し、帳簿を実額に合わせます。</p>
+      <label class="f"><span class="k">締める月</span><input type="month" id="cl-month"></label>
+      <div class="kv"><span class="k">帳簿の月末残高</span><span class="v num" id="cl-book">—</span></div>
+      <div class="kv"><span class="k">実際にあった金額</span><span class="v num" id="cl-actual">—</span></div>
+      <div class="kv"><span class="k">差額</span><span class="v num" id="cl-diff">—</span></div>
+      <label class="f" style="margin-top:12px"><span class="k">月末に数えた実額（円）</span><input type="number" id="cl-input" inputmode="numeric" placeholder="金庫の実額"></label>
+      <button class="btn" onclick="doClose()">この月を締める</button>
+      <div id="cl-list" style="margin-top:16px"></div>
+    </div>
+
+    <div class="card">
+      <h2>実査の記録</h2>
+      <ul class="rows" id="cn-rows"></ul>
+    </div>
+  </section>
+
+  <!-- ============ 設定 ============ -->
+  <section class="view" id="v-set">
+    <div class="card">
+      <h2>操作する人</h2>
+      <label class="f"><span class="k">名前</span><input type="text" id="st-op" placeholder="例 金城"></label>
+      <button class="btn ghost" onclick="saveOperator()">保存</button>
+      <p class="hint">記録した人の名前として残ります。「大嶺」を含む名前のときだけ、月次締め・期首残高・科目の編集ができます。</p>
+    </div>
+
+    <div class="card">
+      <h2>Dropbox 連携</h2>
+      <div class="kv"><span class="k">状態</span><span class="v" id="st-dbx">—</span></div>
+      <div class="kv"><span class="k">保存先</span><span class="v" style="font-size:11px;word-break:break-all" id="st-path"></span></div>
+      <div class="kv"><span class="k">最終読込</span><span class="v" id="st-loaded">—</span></div>
+      <button class="btn ghost" style="margin-top:12px" onclick="dbxAuthorize()">Dropbox と連携する</button>
+      <button class="btn ghost" onclick="reloadAll()">今すぐ読み直す</button>
+    </div>
+
+    <div class="card" id="st-adminbox">
+      <h2>期首残高（大嶺さんのみ）</h2>
+      <label class="f"><span class="k">記帳を始める日</span><input type="date" id="st-obdate"></label>
+      <label class="f"><span class="k">その日の朝にあった現金（円）</span><input type="number" id="st-obamt" inputmode="numeric"></label>
+      <button class="btn ghost" onclick="saveOpening()">保存</button>
+      <p class="hint">この日より前の日付では記帳できません。残高は「期首残高 ＋ 以降の入出金」で毎回計算します（残高そのものは保存しません）。</p>
+    </div>
+
+    <div class="card" id="st-catbox">
+      <h2>科目（大嶺さんのみ）</h2>
+      <label class="f"><span class="k">出金の科目（1行に1つ）</span><textarea id="st-catout" rows="10"></textarea></label>
+      <label class="f"><span class="k">入金の科目（1行に1つ）</span><textarea id="st-catin" rows="5"></textarea></label>
+      <button class="btn ghost" onclick="saveCats()">保存</button>
+      <p class="hint">freee の勘定科目名に合わせてあります。よく使う科目ほど上に出ます（過去90日の使用回数順）。</p>
+    </div>
+
+    <div class="card">
+      <h2>この帳簿について</h2>
+      <div class="kv"><span class="k">版</span><span class="v" id="st-ver"></span></div>
+      <div class="kv"><span class="k">記録件数</span><span class="v num" id="st-count">—</span></div>
+      <div class="kv"><span class="k">未送信</span><span class="v" id="st-dirty">—</span></div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button class="on" data-v="top"   onclick="go('top')"><span class="ico">🏠</span>ホーム</button>
+  <button          data-v="list"  onclick="go('list')"><span class="ico">📖</span>一覧</button>
+  <button          data-v="close" onclick="go('close')"><span class="ico">🔐</span>実査・締め</button>
+  <button          data-v="set"   onclick="go('set')"><span class="ico">⚙️</span>設定</button>
+</nav>
+
+<div class="mask" id="mask" onclick="closeSheet()"></div>
+
+<!-- 入力シート -->
+<div class="sheet" id="sh-entry">
+  <div class="grab"></div>
+  <h3 id="en-title"></h3>
+  <div class="amtbox"><div class="v num zero" id="en-amt"><span class="yen">¥</span>0</div></div>
+  <div class="keys">
+    <button onclick="key('1')">1</button><button onclick="key('2')">2</button><button onclick="key('3')">3</button>
+    <button onclick="key('4')">4</button><button onclick="key('5')">5</button><button onclick="key('6')">6</button>
+    <button onclick="key('7')">7</button><button onclick="key('8')">8</button><button onclick="key('9')">9</button>
+    <button class="fn" onclick="key('000')">000</button><button onclick="key('0')">0</button><button class="fn" onclick="key('bs')">⌫</button>
+  </div>
+  <div style="font-size:11px;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">科目</div>
+  <div class="chips" id="en-cats"></div>
+  <label class="f"><span class="k">摘要（何に使ったか）</span><input type="text" id="en-note" placeholder="例 事務所のコピー用紙"></label>
+  <label class="f"><span class="k">相手先（任意）</span><input type="text" id="en-payee" placeholder="例 ローソン"></label>
+  <label class="f"><span class="k">日付</span><input type="date" id="en-date"></label>
+  <button class="btn" id="en-save" onclick="submitEntry()">記録する</button>
+  <button class="btn danger" id="en-void" style="display:none" onclick="voidEntry()">この記録を取り消す</button>
+  <button class="btn ghost" onclick="closeSheet()">やめる</button>
+  <p class="hint" id="en-hint"></p>
+</div>
+
+<div class="toast-host" id="toast-host"></div>
+<div class="spin" id="spin"><i></i></div>
+
+<script>
+/* ============================================================
+   小口現金出納帳 — ㈱Hari Terrace
+   ・保存先 /ライム共有DB/システムデータ現金/data.json (新設・既存3システムには触れない)
+   ・残高はデータに持たない。期首残高＋明細で毎回算出する
+   ・保存は fail-closed。Dropboxへの書込成功を確認するまで「保存済み」と言わない
+   ・書込は rev による CAS。409なら再取得→id単位マージ→再試行 (全体書き換えをしない)
+   ============================================================ */
+const APP_VERSION = '2026-08-09';
+
+const DBX_APP_KEY = 'fly154tcdbz09x9';
+const DATA_PATH   = '/ライム共有DB/システムデータ現金/data.json';
+
+const LS = {
+  token:'cash_dbxToken', refresh:'cash_dbxRefresh', verifier:'cash_dbxVerifier',
+  doc:'cash_doc', dirty:'cash_dirty', rev:'cash_rev',
+  op:'cash_operator', loadedAt:'cash_loadedAt'
+};
+const DEMO = new URLSearchParams(location.search).get('demo')==='1';
+
+/* ---------- helpers ---------- */
+const $  = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const yen = n => Math.round(Number(n)||0).toLocaleString('ja-JP');
+const pad2 = n => String(n).padStart(2,'0');
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function nowISO(){ return new Date().toISOString(); }
+function monthOf(iso){ return String(iso||'').slice(0,7); }
+function monthLabel(m){ const [y,mm]=String(m).split('-'); return y+'年 '+Number(mm)+'月'; }
+function lastDayOf(m){ const [y,mm]=String(m).split('-').map(Number); return m+'-'+pad2(new Date(y,mm,0).getDate()); }
+function prevMonthLastDay(m){ const [y,mm]=String(m).split('-').map(Number); const d=new Date(y,mm-1,0); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function shiftMonth(m,n){ const [y,mm]=String(m).split('-').map(Number); const d=new Date(y,mm-1+n,1); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
+function uid(){ return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function toast(msg,k){ const t=document.createElement('div'); t.className='toast'+(k?' '+k:''); t.textContent=msg; $('toast-host').appendChild(t); setTimeout(()=>t.style.opacity=0,2600); setTimeout(()=>t.remove(),3100); }
+function spin(on){ $('spin').classList.toggle('on',!!on); }
+function safeParse(s){ try{ return s?JSON.parse(s):null; }catch(_){ return null; } }
+
+/* ---------- 操作者・権限 ---------- */
+let OPERATOR = localStorage.getItem(LS.op) || '';
+function isAdmin(){ return /大嶺/.test(OPERATOR); }
+
+/* ============================================================
+   Dropbox PKCE  (既存3システムと同じ方式)
+   ============================================================ */
+function getRedirectUri(){ return location.origin + location.pathname; }
+function genVerifier(){ const a=new Uint8Array(48); crypto.getRandomValues(a); return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+async function shaB64Url(s){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+async function dbxAuthorize(){
+  if(DEMO){ toast('デモモードでは連携しません'); return; }
+  const v=genVerifier(), ch=await shaB64Url(v);
+  sessionStorage.setItem(LS.verifier,v);
+  const p=new URLSearchParams({client_id:DBX_APP_KEY,response_type:'code',code_challenge:ch,code_challenge_method:'S256',redirect_uri:getRedirectUri(),token_access_type:'offline'});
+  location.href='https://www.dropbox.com/oauth2/authorize?'+p;
+}
+let DBX_TOKEN = localStorage.getItem(LS.token) || null;
+async function dbxHandleCallback(){
+  const code = new URL(location.href).searchParams.get('code');
+  if(!code) return false;
+  const v = sessionStorage.getItem(LS.verifier);
+  if(!v){ toast('認証情報を紛失しました。もう一度お試しください','err'); return false; }
+  spin(true);
+  try{
+    const p=new URLSearchParams({code,grant_type:'authorization_code',client_id:DBX_APP_KEY,code_verifier:v,redirect_uri:getRedirectUri()});
+    const res=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:p.toString()});
+    if(!res.ok) throw new Error(res.status);
+    const d=await res.json();
+    DBX_TOKEN=d.access_token; localStorage.setItem(LS.token,DBX_TOKEN);
+    if(d.refresh_token) localStorage.setItem(LS.refresh,d.refresh_token);
+    sessionStorage.removeItem(LS.verifier);
+    history.replaceState({},'',getRedirectUri());
+    toast('Dropbox 連携が完了しました','ok');
+    return true;
+  }catch(e){ toast('連携に失敗しました '+e.message,'err'); return false; }
+  finally{ spin(false); }
+}
+async function dbxRefresh(){
+  const r=localStorage.getItem(LS.refresh); if(!r) return false;
+  try{
+    const p=new URLSearchParams({grant_type:'refresh_token',refresh_token:r,client_id:DBX_APP_KEY});
+    const res=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:p.toString()});
+    if(!res.ok){ console.warn('dbxRefresh http '+res.status); return false; }
+    const d=await res.json(); DBX_TOKEN=d.access_token; localStorage.setItem(LS.token,DBX_TOKEN); return true;
+  }catch(e){ console.warn('dbxRefresh',e); return false; }
+}
+// 日本語パスは Dropbox-API-Arg (ASCII限定ヘッダ) で \uXXXX に逃がす (CLAUDE.md §4.1)
+function _asciiSafeJson(o){ return JSON.stringify(o).replace(/[\x7F-\uFFFF]/g, c=>'\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4)); }
+
+async function dbxApi(endpoint,args,body,contentType,opts){
+  if(!DBX_TOKEN) throw new Error('未認証');
+  const timeoutMs = opts && opts.timeoutMs;
+  const doRequest = async () => {
+    const headers = { 'Authorization':'Bearer '+DBX_TOKEN };
+    if(args!==null && args!==undefined) headers['Dropbox-API-Arg']=_asciiSafeJson(args);
+    if(contentType) headers['Content-Type']=contentType;
+    const init={method:'POST',headers,body};
+    if(timeoutMs && typeof AbortController!=='undefined'){
+      const ac=new AbortController(); init.signal=ac.signal;
+      const t=setTimeout(()=>ac.abort(),timeoutMs);
+      try{ return await fetch(endpoint,init); } finally{ clearTimeout(t); }
+    }
+    return await fetch(endpoint,init);
+  };
+  let res=await doRequest();
+  if(res.status===401){ const ok=await dbxRefresh(); if(ok) res=await doRequest(); }
+  return res;
+}
+async function dbxLoad(){
+  const res=await dbxApi('https://content.dropboxapi.com/2/files/download',{path:DATA_PATH},null,null,{timeoutMs:30000});
+  if(res.status===409){ return {data:null,rev:null,notFound:true}; }   // 初回=ファイル未作成
+  if(res.status===401) throw new Error('認証の期限切れ — 設定から再連携してください');
+  if(!res.ok) throw new Error('読込失敗 '+res.status);
+  const meta=JSON.parse(res.headers.get('dropbox-api-result')||'{}');
+  return {data:JSON.parse(await res.text()), rev:meta.rev};
+}
+async function dbxSaveRaw(obj,rev){
+  const args={ path:DATA_PATH, mode: rev?{'.tag':'update',update:rev}:{'.tag':'add'}, autorename:false, mute:true };
+  const res=await dbxApi('https://content.dropboxapi.com/2/files/upload',args,
+    new Blob([JSON.stringify(obj,null,2)],{type:'application/octet-stream'}),'application/octet-stream',{timeoutMs:45000});
+  if(res.status===409){ const e=new Error('rev_conflict'); e.code='rev_conflict'; throw e; }
+  if(!res.ok) throw new Error('書込失敗 '+res.status+' '+(await res.text()).slice(0,120));
+  return (await res.json()).rev;
+}
+
+/* ============================================================
+   データ
+   ============================================================ */
+const DEFAULT_CATS = {
+  out:['消耗品費','旅費交通費','車両費','交際費','会議費','通信費','支払手数料','荷造運賃','修繕費','福利厚生費','新聞図書費','雑費'],
+  in :['銀行から補充','売上入金','立替金の返金','雑収入']
+};
+const CAT_ADJUST = '現金過不足';
+
+function emptyDoc(){
+  return {
+    version:1,
+    openingBalance:{ date:todayISO(), amount:10000, updatedAt:nowISO(), updatedBy:'' },
+    categories:{ out:DEFAULT_CATS.out.slice(), in:DEFAULT_CATS.in.slice(), updatedAt:nowISO(), updatedBy:'' },
+    entries:[], counts:[], closings:[]
+  };
+}
+let DOC = safeParse(localStorage.getItem(LS.doc)) || emptyDoc();
+let REV = localStorage.getItem(LS.rev) || null;
+let DIRTY = localStorage.getItem(LS.dirty)==='1';
+
+function normalize(d){
+  d = d || {};
+  if(!d.openingBalance) d.openingBalance={date:todayISO(),amount:0,updatedAt:'1970-01-01T00:00:00Z',updatedBy:''};
+  if(!d.categories) d.categories={out:DEFAULT_CATS.out.slice(),in:DEFAULT_CATS.in.slice(),updatedAt:'1970-01-01T00:00:00Z',updatedBy:''};
+  if(!Array.isArray(d.categories.out)) d.categories.out=DEFAULT_CATS.out.slice();
+  if(!Array.isArray(d.categories.in))  d.categories.in =DEFAULT_CATS.in.slice();
+  ['entries','counts','closings'].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
+  d.version = d.version||1;
+  return d;
+}
+
+/* --- id単位マージ: 全体書き換えをしない。新しい updatedAt が勝つ。片側だけの行は必ず残す --- */
+function mergeList(a,b){
+  const m=new Map();
+  const put=x=>{
+    if(!x || !x.id) return;
+    const cur=m.get(x.id);
+    if(!cur){ m.set(x.id,x); return; }
+    const ta=String(cur.updatedAt||cur.createdAt||''), tb=String(x.updatedAt||x.createdAt||'');
+    if(tb>ta) m.set(x.id,x);
+  };
+  (a||[]).forEach(put); (b||[]).forEach(put);
+  return [...m.values()];
+}
+function mergeDoc(local,remote){
+  local=normalize(local); remote=normalize(remote);
+  const newer=(x,y)=> String(x&&x.updatedAt||'') >= String(y&&y.updatedAt||'') ? x : y;
+  return {
+    version: Math.max(local.version,remote.version),
+    openingBalance: newer(local.openingBalance,remote.openingBalance),
+    categories:     newer(local.categories,remote.categories),
+    entries:  mergeList(local.entries,remote.entries),
+    counts:   mergeList(local.counts,remote.counts),
+    closings: mergeList(local.closings,remote.closings)
+  };
+}
+
+function cacheLocal(){ try{ localStorage.setItem(LS.doc,JSON.stringify(DOC)); }catch(e){ console.warn('cacheLocal',e); } }
+function setDirty(v){ DIRTY=!!v; localStorage.setItem(LS.dirty,v?'1':'0'); renderBanners(); }
+
+/* --- 保存: fail-closed。成功を確認するまで「保存済み」と言わない --- */
+async function saveDoc(){
+  DOC = normalize(DOC);
+  cacheLocal();                       // まず端末に退避 (通信が死んでも入力は消さない)
+  // ★どの経路でも必ず再描画する。ここを通さないと「記録したのに画面が変わらない」→
+  //   入っていないと思って二重入力する事故になる (2026-08-09 実機検証で発見)
+  if(DEMO){ setDirty(false); renderAll(); return true; }
+  if(!DBX_TOKEN){ setDirty(true); renderAll(); return false; }
+  spin(true);
+  try{
+    for(let i=0;i<3;i++){
+      try{
+        REV = await dbxSaveRaw(DOC,REV);
+        localStorage.setItem(LS.rev,REV||'');
+        setDirty(false);
+        return true;
+      }catch(e){
+        if(e.code!=='rev_conflict') throw e;
+        // 他端末が先に書いた → 取り直してマージしてやり直す
+        const got=await dbxLoad();
+        if(got.notFound){ REV=null; continue; }
+        DOC=mergeDoc(DOC,got.data); REV=got.rev; cacheLocal();
+      }
+    }
+    throw new Error('競合が続いたため保存できませんでした');
+  }catch(e){
+    console.error('saveDoc',e);
+    setDirty(true);
+    toast('保存できませんでした: '+e.message,'err');
+    return false;
+  }finally{ spin(false); renderAll(); }
+}
+async function retrySave(){
+  const ok=await saveDoc();
+  if(ok) toast('送信しました','ok');
+}
+
+async function reloadAll(){
+  if(DEMO){ renderAll(); toast('デモモードです'); return; }
+  if(!DBX_TOKEN){ renderAll(); return; }
+  spin(true);
+  try{
+    const got=await dbxLoad();
+    if(got.notFound){
+      // 初回: ファイルが無いので今のDOCで新規作成する
+      REV=null;
+      await saveDoc();
+      toast('出納帳を新規作成しました','ok');
+    }else{
+      DOC=mergeDoc(DOC,got.data); REV=got.rev;
+      localStorage.setItem(LS.rev,REV||''); cacheLocal();
+      if(DIRTY) await saveDoc();          // 端末に残っていた未送信を送る
+    }
+    localStorage.setItem(LS.loadedAt,nowISO());
+  }catch(e){
+    console.error('reloadAll',e);
+    toast('読み込めませんでした: '+e.message,'err');
+  }finally{ spin(false); renderAll(); }
+}
+
+/* ============================================================
+   計算 — 残高は必ずここで算出する (保存しない)
+   ============================================================ */
+function liveEntries(){
+  return DOC.entries.filter(e=>!e.deleted)
+    .sort((a,b)=> a.date!==b.date ? (a.date<b.date?-1:1) : (String(a.createdAt)<String(b.createdAt)?-1:1));
+}
+function signed(e){ return e.type==='in' ? Number(e.amount)||0 : -(Number(e.amount)||0); }
+function balanceAsOf(dateISO){
+  let b = Number(DOC.openingBalance.amount)||0;
+  for(const e of liveEntries()){ if(dateISO && e.date>dateISO) break; b += signed(e); }
+  return b;
+}
+function currentBalance(){ return balanceAsOf(null); }
+function monthStats(m){
+  const list=liveEntries().filter(e=>monthOf(e.date)===m);
+  const inSum =list.filter(e=>e.type==='in').reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const outSum=list.filter(e=>e.type==='out').reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const open  =balanceAsOf(prevMonthLastDay(m));
+  return {list,inSum,outSum,open,close:open+inSum-outSum};
+}
+function isClosed(m){ return DOC.closings.some(c=>c.month===m && !c.deleted); }
+/* 締め済みの月は編集不可。管理者だけ触れる */
+function canEdit(dateISO){
+  if(isAdmin()) return true;
+  return !isClosed(monthOf(dateISO));
+}
+/* 使用頻度順の科目 (過去90日) */
+function catsSorted(type){
+  const base=(DOC.categories[type]||[]).slice();
+  const since=new Date(Date.now()-90*86400000).toISOString().slice(0,10);
+  const cnt={};
+  liveEntries().forEach(e=>{ if(e.type===type && e.date>=since) cnt[e.category]=(cnt[e.category]||0)+1; });
+  return base.sort((a,b)=>(cnt[b]||0)-(cnt[a]||0));
+}
+
+/* ============================================================
+   画面
+   ============================================================ */
+let VIEW='top';
+let LS_MONTH=monthOf(todayISO());
+function go(v){
+  VIEW=v;
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on', s.id==='v-'+v));
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  window.scrollTo(0,0);
+  renderAll();
+}
+function moveMonth(n){ LS_MONTH=shiftMonth(LS_MONTH,n); renderList(); }
+
+function renderBanners(){
+  $('bn-unsaved').classList.toggle('on', DIRTY);
+  if(DIRTY){
+    $('bn-unsaved-txt').textContent = 'この端末に保存されていますが、まだ共有できていません。電波のある場所で再送信してください。';
+  }
+  $('bn-auth').classList.toggle('on', !DEMO && !DBX_TOKEN);
+}
+function rowHtml(e,showBal,bal){
+  const cls = e.type==='in'?'in':'out';
+  const sign= e.type==='in'?'+':'−';
+  return '<li class="row'+(e.deleted?' void':'')+'" onclick="openEntry(null,\''+e.id+'\')">'
+    + '<div class="d num">'+esc(e.date.slice(5).replace('-','/'))+'</div>'
+    + '<div class="body"><div class="cat">'+esc(e.category||'（科目なし）')+'</div>'
+    + '<div class="note">'+esc([e.note,e.payee].filter(Boolean).join(' / ')||'—')+'</div></div>'
+    + '<div class="amt '+cls+' num">'+sign+'¥'+yen(e.amount)
+    + (showBal?'<span class="bal">残 ¥'+yen(bal)+'</span>':'')
+    + '</div></li>';
+}
+function renderTop(){
+  const b=currentBalance();
+  $('top-bal').innerHTML='<span class="yen">¥</span>'+yen(b);
+  $('top-bal').classList.toggle('neg',b<0);
+  const loaded=localStorage.getItem(LS.loadedAt);
+  const ob=DOC.openingBalance;
+  $('top-meta').innerHTML = '記帳開始 '+esc(ob.date)+'（¥'+yen(ob.amount)+'）'
+    + ' ・ 記録 '+liveEntries().length+'件'
+    + (loaded?' ・ 最終読込 '+new Date(loaded).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'');
+  const list=liveEntries().slice(-8).reverse();
+  $('top-rows').innerHTML = list.length ? list.map(e=>rowHtml(e,false)).join('') : '<div class="empty">まだ記録がありません</div>';
+}
+function renderList(){
+  const m=LS_MONTH, st=monthStats(m);
+  $('ls-month').textContent=monthLabel(m);
+  $('ls-open').textContent='¥'+yen(st.open);
+  $('ls-in').textContent='+¥'+yen(st.inSum);
+  $('ls-out').textContent='−¥'+yen(st.outSum);
+  $('ls-close').textContent='¥'+yen(st.close);
+  const cl=DOC.closings.find(c=>c.month===m && !c.deleted);
+  $('ls-state').innerHTML = cl
+    ? '<span class="badge closed">締め済み</span> '+esc(String(cl.closedAt).slice(0,10))+' '+esc(cl.closedBy||'')
+    : '<span class="badge">未締め</span>';
+  // 明細 (日付昇順・走行残高つき)
+  let run=st.open, html='';
+  const all=DOC.entries.filter(e=>monthOf(e.date)===m)
+    .sort((a,b)=> a.date!==b.date ? (a.date<b.date?-1:1) : (String(a.createdAt)<String(b.createdAt)?-1:1));
+  all.forEach(e=>{ if(!e.deleted) run+=signed(e); html+=rowHtml(e,!e.deleted,run); });
+  $('ls-rows').innerHTML = html || '<div class="empty">この月の記録はありません</div>';
+  // 科目別
+  const by={};
+  st.list.forEach(e=>{ const k=(e.type==='in'?'［入］':'')+e.category; by[k]=(by[k]||0)+(Number(e.amount)||0); });
+  const keys=Object.keys(by).sort((a,b)=>by[b]-by[a]);
+  $('ls-bycat').innerHTML = keys.length
+    ? keys.map(k=>'<div class="kv"><span class="k">'+esc(k)+'</span><span class="v num">¥'+yen(by[k])+'</span></div>').join('')
+    : '<div class="empty">—</div>';
+}
+function renderClose(){
+  $('cn-closebox').style.display = isAdmin()?'':'none';
+  if(!$('cn-date').value) $('cn-date').value=todayISO();
+  updateCountDiff();
+  const rows=DOC.counts.filter(c=>!c.deleted).sort((a,b)=>a.date<b.date?1:-1).slice(0,12);
+  $('cn-rows').innerHTML = rows.length ? rows.map(c=>{
+    const book=balanceAsOf(c.date), d=(Number(c.actual)||0)-book;
+    return '<li class="row" style="cursor:default"><div class="d num">'+esc(c.date.slice(5).replace('-','/'))+'</div>'
+      +'<div class="body"><div class="cat">実額 ¥'+yen(c.actual)+'</div><div class="note">'+esc(c.note||'')+' '+esc(c.createdBy||'')+'</div></div>'
+      +'<div class="amt num" style="color:'+(d===0?'var(--in)':'var(--danger)')+'">'+(d===0?'一致':(d>0?'+':'−')+'¥'+yen(Math.abs(d)))+'</div></li>';
+  }).join('') : '<div class="empty">まだ実査の記録はありません</div>';
+
+  if(isAdmin()){
+    if(!$('cl-month').value) $('cl-month').value=monthOf(todayISO());
+    updateCloseBox();
+    const cls=DOC.closings.filter(c=>!c.deleted).sort((a,b)=>a.month<b.month?1:-1).slice(0,12);
+    $('cl-list').innerHTML = cls.length
+      ? '<div style="font-size:11px;letter-spacing:.1em;color:var(--sub);margin-bottom:6px">締めた月</div>'
+        + cls.map(c=>'<div class="kv"><span class="k">'+esc(monthLabel(c.month))+'</span><span class="v">¥'+yen(c.actual)
+        + (c.diff? ' <span style="color:var(--danger)">（差 '+(c.diff>0?'+':'−')+'¥'+yen(Math.abs(c.diff))+'）</span>':'')
+        + ' <button class="badge" style="background:#fff" onclick="unclose(\''+c.id+'\')">解除</button></span></div>').join('')
+      : '';
+  }
+}
+function updateCountDiff(){
+  const d=$('cn-date').value||todayISO();
+  const book=balanceAsOf(d);
+  const a=$('cn-actual').value;
+  $('cn-book').textContent='帳簿残高 ¥'+yen(book)+'（'+d+' 時点）';
+  if(a===''){ $('cn-diff').textContent='—'; $('cn-diff').className='v num'; return; }
+  const diff=(Number(a)||0)-book;
+  $('cn-diff').textContent = diff===0 ? '一致' : (diff>0?'+':'−')+'¥'+yen(Math.abs(diff));
+  $('cn-diff').className='v num '+(diff===0?'ok':'ng');
+}
+function updateCloseBox(){
+  const m=$('cl-month').value; if(!m) return;
+  const st=monthStats(m), last=lastDayOf(m);
+  const a=$('cl-input').value;
+  $('cl-book').textContent='¥'+yen(st.close);
+  $('cl-actual').textContent = a===''?'—':'¥'+yen(Number(a)||0);
+  if(a===''){ $('cl-diff').textContent='—'; return; }
+  const diff=(Number(a)||0)-st.close;
+  $('cl-diff').innerHTML = diff===0 ? '一致' : '<span style="color:var(--danger)">'+(diff>0?'+':'−')+'¥'+yen(Math.abs(diff))+'</span>';
+}
+function renderSet(){
+  $('st-op').value=OPERATOR;
+  $('st-dbx').textContent = DEMO?'デモモード（通信しません）' : (DBX_TOKEN?'連携済み':'未連携');
+  $('st-path').textContent = DATA_PATH;
+  const l=localStorage.getItem(LS.loadedAt);
+  $('st-loaded').textContent = l? new Date(l).toLocaleString('ja-JP') : '—';
+  $('st-ver').textContent = APP_VERSION;
+  $('st-count').textContent = liveEntries().length+'件';
+  $('st-dirty').textContent = DIRTY?'あり（未送信）':'なし';
+  $('st-adminbox').style.display = isAdmin()?'':'none';
+  $('st-catbox').style.display   = isAdmin()?'':'none';
+  if(isAdmin()){
+    if(document.activeElement!==$('st-obdate')) $('st-obdate').value=DOC.openingBalance.date;
+    if(document.activeElement!==$('st-obamt'))  $('st-obamt').value =DOC.openingBalance.amount;
+    if(document.activeElement!==$('st-catout')) $('st-catout').value=(DOC.categories.out||[]).join('\n');
+    if(document.activeElement!==$('st-catin'))  $('st-catin').value =(DOC.categories.in||[]).join('\n');
+  }
+}
+function renderAll(){
+  $('hd-ver').textContent='v'+APP_VERSION+(DEMO?' DEMO':'');
+  $('hd-who').textContent=OPERATOR?('記録者 '+OPERATOR):'名前 未設定';
+  renderBanners();
+  if(VIEW==='top') renderTop();
+  if(VIEW==='list') renderList();
+  if(VIEW==='close') renderClose();
+  if(VIEW==='set') renderSet();
+}
+
+/* ============================================================
+   入力シート
+   ============================================================ */
+let EN = { type:'out', amount:0, cat:'', id:null };
+function openSheet(id){ $('mask').classList.add('on'); $(id).classList.add('on'); }
+function closeSheet(){ $('mask').classList.remove('on'); document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on')); }
+
+function openEntry(type,id){
+  const ex = id ? DOC.entries.find(e=>e.id===id) : null;
+  EN = { type: ex?ex.type:type, amount: ex?Number(ex.amount)||0:0, cat: ex?ex.category:'', id: id||null };
+  $('en-title').innerHTML = ex
+    ? '<span class="tag '+EN.type+'">'+(EN.type==='in'?'入金':'出金')+'</span>記録をなおす'
+    : '<span class="tag '+EN.type+'">'+(EN.type==='in'?'入金':'出金')+'</span>'+(EN.type==='in'?'いくら入れましたか？':'いくら使いましたか？');
+  $('en-note').value  = ex?ex.note||'':'';
+  $('en-payee').value = ex?ex.payee||'':'';
+  $('en-date').value  = ex?ex.date:todayISO();
+  $('en-date').min    = DOC.openingBalance.date;
+  $('en-void').style.display = (ex && !ex.deleted) ? '' : 'none';
+  $('en-save').textContent = ex ? 'この内容に直す' : '記録する';
+  let hint='';
+  if(ex && ex.deleted) hint='この記録は取り消し済みです。';
+  if(ex) hint += ' 記録者 '+(ex.createdBy||'—');
+  $('en-hint').textContent=hint;
+  drawAmount(); drawCats();
+  openSheet('sh-entry');
+}
+function drawAmount(){
+  const el=$('en-amt');
+  el.innerHTML='<span class="yen">¥</span>'+yen(EN.amount);
+  el.classList.toggle('zero',!EN.amount);
+}
+function drawCats(){
+  const list=catsSorted(EN.type).slice();
+  if(EN.cat && !list.includes(EN.cat)) list.unshift(EN.cat);   // 廃止済み科目の既存記録も表示できるように
+  $('en-cats').innerHTML=list.map(c=>'<button class="'+(c===EN.cat?'on':'')+'" onclick="pickCat(this,\''+esc(c).replace(/'/g,"\\'")+'\')">'+esc(c)+'</button>').join('');
+}
+function pickCat(btn,c){ EN.cat=c; drawCats(); }
+function key(k){
+  if(k==='bs') EN.amount=Math.floor(EN.amount/10);
+  else{
+    const nx=String(EN.amount)+k;
+    if(nx.length>9) return;              // 上限 1億円未満 (打ち間違いの暴走を止める)
+    EN.amount=Number(nx)||0;
+  }
+  drawAmount();
+}
+async function submitEntry(){
+  const date=$('en-date').value||todayISO();
+  if(!OPERATOR){ toast('先に設定タブで名前を入れてください','err'); return; }
+  if(!EN.amount){ toast('金額を入れてください','err'); return; }
+  if(!EN.cat){ toast('科目を選んでください','err'); return; }
+  if(date < DOC.openingBalance.date){ toast('記帳開始日（'+DOC.openingBalance.date+'）より前は記録できません','err'); return; }
+  if(!canEdit(date)){ toast(monthLabel(monthOf(date))+' は締め済みです。大嶺さんに解除を頼んでください','err'); return; }
+  const ex = EN.id ? DOC.entries.find(e=>e.id===EN.id) : null;
+  if(ex && !canEdit(ex.date)){ toast('締め済みの月の記録は直せません','err'); return; }
+
+  // 残高がマイナスになる入力は止める (金庫に無い金は出せない)
+  const after = balanceAsOf(null) + (EN.type==='in'?EN.amount:-EN.amount) - (ex? signed(ex) : 0);
+  if(after < 0){
+    if(!confirm('この記録を入れると残高が ¥'+yen(after)+' になります。\n金庫の現金より多く出金していませんか？\n\nこのまま記録しますか？')) return;
+  }
+  if(ex){
+    ex.type=EN.type; ex.amount=EN.amount; ex.category=EN.cat;
+    ex.note=$('en-note').value.trim(); ex.payee=$('en-payee').value.trim(); ex.date=date;
+    ex.updatedAt=nowISO(); ex.updatedBy=OPERATOR;
+  }else{
+    DOC.entries.push({
+      id:uid(), date, type:EN.type, amount:EN.amount, category:EN.cat,
+      note:$('en-note').value.trim(), payee:$('en-payee').value.trim(),
+      createdAt:nowISO(), createdBy:OPERATOR, updatedAt:nowISO(), updatedBy:OPERATOR, deleted:false
+    });
+  }
+  closeSheet();
+  const ok=await saveDoc();
+  toast(ok ? '記録しました（残高 ¥'+yen(currentBalance())+'）' : 'この端末に保存しました（未送信）', ok?'ok':'err');
+}
+async function voidEntry(){
+  const e=DOC.entries.find(x=>x.id===EN.id); if(!e) return;
+  if(!canEdit(e.date)){ toast('締め済みの月の記録は取り消せません','err'); return; }
+  if(!confirm('この記録を取り消します。\n\n'+e.date+' '+e.category+' ¥'+yen(e.amount)+'\n\n一覧には取り消し線つきで残ります。')) return;
+  e.deleted=true; e.updatedAt=nowISO(); e.updatedBy=OPERATOR;
+  closeSheet();
+  const ok=await saveDoc();
+  toast(ok?'取り消しました':'この端末に保存しました（未送信）', ok?'ok':'err');
+}
+
+/* ============================================================
+   実査・締め
+   ============================================================ */
+async function saveCount(){
+  if(!OPERATOR){ toast('先に設定タブで名前を入れてください','err'); return; }
+  const date=$('cn-date').value||todayISO();
+  const a=$('cn-actual').value;
+  if(a===''){ toast('実際にあった金額を入れてください','err'); return; }
+  DOC.counts.push({ id:uid(), date, actual:Number(a)||0, note:$('cn-note').value.trim(),
+    createdAt:nowISO(), createdBy:OPERATOR, updatedAt:nowISO(), updatedBy:OPERATOR, deleted:false });
+  $('cn-actual').value=''; $('cn-note').value='';
+  const ok=await saveDoc();
+  toast(ok?'実査を記録しました':'この端末に保存しました（未送信）', ok?'ok':'err');
+}
+async function doClose(){
+  if(!isAdmin()){ toast('締めは大嶺さんのみです','err'); return; }
+  const m=$('cl-month').value; if(!m){ toast('締める月を選んでください','err'); return; }
+  if(isClosed(m)){ toast('その月はすでに締め済みです','err'); return; }
+  const a=$('cl-input').value;
+  if(a===''){ toast('月末に数えた実額を入れてください','err'); return; }
+  const st=monthStats(m), actual=Number(a)||0, diff=actual-st.close, last=lastDayOf(m);
+  const msg='【'+monthLabel(m)+' を締めます】\n\n'
+    +'帳簿の月末残高　¥'+yen(st.close)+'\n'
+    +'実際にあった額　¥'+yen(actual)+'\n'
+    +'差額　　　　　　'+(diff===0?'一致':(diff>0?'+':'−')+'¥'+yen(Math.abs(diff)))+'\n\n'
+    +(diff===0?'':'差額は「'+CAT_ADJUST+'」として '+last+' 付けで1件記録し、帳簿を実額に合わせます。\n\n')
+    +'締めるとこの月は修正できなくなります。よろしいですか？';
+  if(!confirm(msg)) return;
+  if(diff!==0){
+    DOC.entries.push({
+      id:uid(), date:last, type: diff>0?'in':'out', amount:Math.abs(diff), category:CAT_ADJUST,
+      note:'月次締めの実査差額', payee:'',
+      createdAt:nowISO(), createdBy:OPERATOR, updatedAt:nowISO(), updatedBy:OPERATOR, deleted:false
+    });
+  }
+  DOC.counts.push({ id:uid(), date:last, actual, note:'月次締めの実査',
+    createdAt:nowISO(), createdBy:OPERATOR, updatedAt:nowISO(), updatedBy:OPERATOR, deleted:false });
+  DOC.closings.push({ id:uid(), month:m, actual, book:st.close, diff,
+    closedAt:nowISO(), closedBy:OPERATOR, createdAt:nowISO(), updatedAt:nowISO(), deleted:false });
+  $('cl-input').value='';
+  const ok=await saveDoc();
+  toast(ok?monthLabel(m)+' を締めました':'この端末に保存しました（未送信）', ok?'ok':'err');
+}
+async function unclose(id){
+  if(!isAdmin()) return;
+  const c=DOC.closings.find(x=>x.id===id); if(!c) return;
+  if(!confirm(monthLabel(c.month)+' の締めを解除します。\nこの月をまた修正できるようになります。\n\n※ 締めのときに作った「'+CAT_ADJUST+'」の記録は残ります（必要なら取り消してください）。')) return;
+  c.deleted=true; c.updatedAt=nowISO(); c.updatedBy=OPERATOR;
+  const ok=await saveDoc();
+  toast(ok?'解除しました':'この端末に保存しました（未送信）', ok?'ok':'err');
+}
+
+/* ============================================================
+   設定
+   ============================================================ */
+function saveOperator(){
+  OPERATOR=$('st-op').value.trim();
+  localStorage.setItem(LS.op,OPERATOR);
+  toast('保存しました','ok'); renderAll();
+}
+async function saveOpening(){
+  if(!isAdmin()) return;
+  const d=$('st-obdate').value, a=$('st-obamt').value;
+  if(!d || a===''){ toast('日付と金額を入れてください','err'); return; }
+  const early=liveEntries().filter(e=>e.date<d);
+  if(early.length && !confirm('記帳開始日より前の記録が '+early.length+'件 あります。\nそれらは残高の計算から外れます。よろしいですか？')) return;
+  DOC.openingBalance={ date:d, amount:Number(a)||0, updatedAt:nowISO(), updatedBy:OPERATOR };
+  const ok=await saveDoc();
+  toast(ok?'保存しました':'この端末に保存しました（未送信）', ok?'ok':'err');
+}
+async function saveCats(){
+  if(!isAdmin()) return;
+  const parse=v=>v.split('\n').map(s=>s.trim()).filter(Boolean).filter((s,i,a)=>a.indexOf(s)===i);
+  const out=parse($('st-catout').value), inn=parse($('st-catin').value);
+  if(!out.length||!inn.length){ toast('科目は1つ以上必要です','err'); return; }
+  DOC.categories={ out, in:inn, updatedAt:nowISO(), updatedBy:OPERATOR };
+  const ok=await saveDoc();
+  toast(ok?'保存しました':'この端末に保存しました（未送信）', ok?'ok':'err');
+}
+function exportCsv(){
+  const m=LS_MONTH, st=monthStats(m);
+  let run=st.open;
+  const rows=[['日付','区分','科目','摘要','相手先','入金','出金','残高','記録者']];
+  const all=DOC.entries.filter(e=>monthOf(e.date)===m && !e.deleted)
+    .sort((a,b)=> a.date!==b.date ? (a.date<b.date?-1:1) : (String(a.createdAt)<String(b.createdAt)?-1:1));
+  rows.push([prevMonthLastDay(m),'','前月繰越','','','','',String(st.open),'']);
+  all.forEach(e=>{
+    run+=signed(e);
+    rows.push([e.date, e.type==='in'?'入金':'出金', e.category, e.note||'', e.payee||'',
+      e.type==='in'?String(e.amount):'', e.type==='out'?String(e.amount):'', String(run), e.createdBy||'']);
+  });
+  const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  const a=document.createElement('a'); a.href=url; a.download='現金出納帳_'+m+'.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  toast('CSVを書き出しました','ok');
+}
+
+/* ============================================================
+   起動
+   ============================================================ */
+['cn-date','cn-actual'].forEach(id=>$(id).addEventListener('input',updateCountDiff));
+['cl-month','cl-input'].forEach(id=>$(id).addEventListener('input',updateCloseBox));
+
+function seedDemo(){
+  DOC=emptyDoc();
+  DOC.openingBalance={date:'2026-08-01',amount:10000,updatedAt:nowISO(),updatedBy:'demo'};
+  const mk=(date,type,amount,category,note)=>({id:uid(),date,type,amount,category,note,payee:'',
+    createdAt:date+'T09:00:00Z',createdBy:'デモ',updatedAt:date+'T09:00:00Z',updatedBy:'デモ',deleted:false});
+  DOC.entries=[
+    mk('2026-08-02','out',480,'消耗品費','コピー用紙'),
+    mk('2026-08-03','out',1200,'旅費交通費','駐車場代'),
+    mk('2026-08-05','in',20000,'銀行から補充','銀行から引き出し'),
+    mk('2026-08-06','out',3300,'車両費','ガソリン'),
+    mk('2026-08-08','out',860,'会議費','来客のお茶'),
+  ];
+  cacheLocal();
+}
+
+async function boot(){
+  if(DEMO && !safeParse(localStorage.getItem(LS.doc))) seedDemo();
+  DOC=normalize(DOC);
+  const cb=await dbxHandleCallback();
+  renderAll();
+  if(!DEMO && DBX_TOKEN) await reloadAll();
+  else renderAll();
+  if(!OPERATOR){ go('set'); setTimeout(()=>toast('はじめに、あなたの名前を入れてください'),600); }
+  // 3時間ごとにトークンを更新 (Dropboxのアクセストークンは4時間で失効する)
+  setInterval(()=>{ if(DBX_TOKEN) dbxRefresh(); }, 3*60*60*1000);
+  // 復帰時に読み直し + 未送信があれば送る
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden && !DEMO && DBX_TOKEN) reloadAll(); });
+}
+boot();
+</script>
+</body>
+</html>
