@@ -357,7 +357,7 @@ nav.tabs button.on{color:var(--ink);font-weight:700}
    ・保存は fail-closed。Dropboxへの書込成功を確認するまで「保存済み」と言わない
    ・書込は rev による CAS。409なら再取得→id単位マージ→再試行 (全体書き換えをしない)
    ============================================================ */
-const APP_VERSION = '2026-08-12';
+const APP_VERSION = '2026-08-12a';
 
 const DBX_APP_KEY = 'fly154tcdbz09x9';
 const DATA_PATH   = '/ライム共有DB/システムデータ現金/data.json';
@@ -475,15 +475,19 @@ async function dbxSaveRaw(obj,rev){
 /* ============================================================
    データ
    ============================================================ */
+// 現場が迷わないよう、実際に小口現金で出るものだけに絞ってある (2026-08-12 ユーザー確認)。
+// freee の勘定科目名ではなく現場の言葉を優先 (入力するのは現場・freee連携は無い)。
+// ガソリン代→車両費 / 高速道路→旅費交通費 として後で振り替える。
 const DEFAULT_CATS = {
-  out:['消耗品費','旅費交通費','車両費','交際費','会議費','通信費','支払手数料','荷造運賃','修繕費','福利厚生費','新聞図書費','雑費'],
+  out:['ガソリン代','高速道路','外注費','消耗品費','雑費'],
   in :['レンタカー売上','ディテーリング売上','銀行から補充','立替金の返金','雑収入']
 };
 const CAT_ADJUST = '現金過不足';
 // v2026-08-09 の初期セット。**大嶺さんが1度も科目を編集していないときだけ**新しい既定に載せ替える
 // (編集済みなら触らない)。data.json を直接書き換えるのではなくコード側で吸収する —
 // 旧コードを開いたままの端末があっても壊れないため (CLAUDE.md の請求額の教訓と同じ考え方)
-const LEGACY_CATS_IN_V1 = ['銀行から補充','売上入金','立替金の返金','雑収入'];
+const LEGACY_CATS_IN_V1  = ['銀行から補充','売上入金','立替金の返金','雑収入'];
+const LEGACY_CATS_OUT_V1 = ['消耗品費','旅費交通費','車両費','交際費','会議費','通信費','支払手数料','荷造運賃','修繕費','福利厚生費','新聞図書費','雑費'];
 
 function emptyDoc(){
   return {
@@ -503,9 +507,19 @@ function normalize(d){
   if(!d.categories) d.categories={out:DEFAULT_CATS.out.slice(),in:DEFAULT_CATS.in.slice(),updatedAt:'1970-01-01T00:00:00Z',updatedBy:''};
   if(!Array.isArray(d.categories.out)) d.categories.out=DEFAULT_CATS.out.slice();
   if(!Array.isArray(d.categories.in))  d.categories.in =DEFAULT_CATS.in.slice();
-  // 入金科目を事業別に (2026-08-12)。未編集のときだけ載せ替える
-  if(d.categories.in.length===LEGACY_CATS_IN_V1.length && d.categories.in.every((c,i)=>c===LEGACY_CATS_IN_V1[i])){
-    d.categories={ out:d.categories.out, in:DEFAULT_CATS.in.slice(), updatedAt:nowISO(), updatedBy:'科目更新' };
+  // 科目の初期セット更新 (2026-08-12)。**未編集のときだけ**載せ替える (編集済みなら触らない)。
+  // 使用中の科目は消さない — 過去の記録が「科目なし」に見えるのを防ぐ
+  const same=(a,b)=>a.length===b.length && a.every((c,i)=>c===b[i]);
+  const used=t=>[...new Set(d.entries.filter(e=>e && e.type===t && e.category).map(e=>e.category))];
+  if(same(d.categories.in,LEGACY_CATS_IN_V1) || same(d.categories.out,LEGACY_CATS_OUT_V1)){
+    const merge=(cur,legacy,next,t)=> same(cur,legacy)
+      ? [...next, ...used(t).filter(c=>!next.includes(c) && c!==CAT_ADJUST)]
+      : cur;
+    d.categories={
+      out: merge(d.categories.out, LEGACY_CATS_OUT_V1, DEFAULT_CATS.out, 'out'),
+      in : merge(d.categories.in,  LEGACY_CATS_IN_V1,  DEFAULT_CATS.in,  'in'),
+      updatedAt:nowISO(), updatedBy:'科目更新'
+    };
   }
   ['entries','counts','closings'].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
   d.version = d.version||1;
@@ -978,10 +992,10 @@ function seedDemo(){
     createdAt:date+'T09:00:00Z',createdBy:'デモ',updatedAt:date+'T09:00:00Z',updatedBy:'デモ',deleted:false});
   DOC.entries=[
     mk('2026-08-02','out',480,'消耗品費','コピー用紙'),
-    mk('2026-08-03','out',1200,'旅費交通費','駐車場代'),
+    mk('2026-08-03','out',1200,'高速道路','那覇→名護'),
     mk('2026-08-05','in',20000,'銀行から補充','銀行から引き出し'),
-    mk('2026-08-06','out',3300,'車両費','ガソリン'),
-    mk('2026-08-08','out',860,'会議費','来客のお茶'),
+    mk('2026-08-06','out',3300,'ガソリン代','ハスラー 満タン'),
+    mk('2026-08-08','in',5500,'ディテーリング売上','洗車代'),
   ];
   cacheLocal();
 }
