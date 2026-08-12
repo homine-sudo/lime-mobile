@@ -357,7 +357,7 @@ nav.tabs button.on{color:var(--ink);font-weight:700}
    ・保存は fail-closed。Dropboxへの書込成功を確認するまで「保存済み」と言わない
    ・書込は rev による CAS。409なら再取得→id単位マージ→再試行 (全体書き換えをしない)
    ============================================================ */
-const APP_VERSION = '2026-08-09';
+const APP_VERSION = '2026-08-12';
 
 const DBX_APP_KEY = 'fly154tcdbz09x9';
 const DATA_PATH   = '/ライム共有DB/システムデータ現金/data.json';
@@ -477,9 +477,13 @@ async function dbxSaveRaw(obj,rev){
    ============================================================ */
 const DEFAULT_CATS = {
   out:['消耗品費','旅費交通費','車両費','交際費','会議費','通信費','支払手数料','荷造運賃','修繕費','福利厚生費','新聞図書費','雑費'],
-  in :['銀行から補充','売上入金','立替金の返金','雑収入']
+  in :['レンタカー売上','ディテーリング売上','銀行から補充','立替金の返金','雑収入']
 };
 const CAT_ADJUST = '現金過不足';
+// v2026-08-09 の初期セット。**大嶺さんが1度も科目を編集していないときだけ**新しい既定に載せ替える
+// (編集済みなら触らない)。data.json を直接書き換えるのではなくコード側で吸収する —
+// 旧コードを開いたままの端末があっても壊れないため (CLAUDE.md の請求額の教訓と同じ考え方)
+const LEGACY_CATS_IN_V1 = ['銀行から補充','売上入金','立替金の返金','雑収入'];
 
 function emptyDoc(){
   return {
@@ -499,6 +503,10 @@ function normalize(d){
   if(!d.categories) d.categories={out:DEFAULT_CATS.out.slice(),in:DEFAULT_CATS.in.slice(),updatedAt:'1970-01-01T00:00:00Z',updatedBy:''};
   if(!Array.isArray(d.categories.out)) d.categories.out=DEFAULT_CATS.out.slice();
   if(!Array.isArray(d.categories.in))  d.categories.in =DEFAULT_CATS.in.slice();
+  // 入金科目を事業別に (2026-08-12)。未編集のときだけ載せ替える
+  if(d.categories.in.length===LEGACY_CATS_IN_V1.length && d.categories.in.every((c,i)=>c===LEGACY_CATS_IN_V1[i])){
+    d.categories={ out:d.categories.out, in:DEFAULT_CATS.in.slice(), updatedAt:nowISO(), updatedBy:'科目更新' };
+  }
   ['entries','counts','closings'].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
   d.version = d.version||1;
   return d;
@@ -785,6 +793,9 @@ function openEntry(type,id){
     : '<span class="tag '+EN.type+'">'+(EN.type==='in'?'入金':'出金')+'</span>'+(EN.type==='in'?'いくら入れましたか？':'いくら使いましたか？');
   $('en-note').value  = ex?ex.note||'':'';
   $('en-payee').value = ex?ex.payee||'':'';
+  // 入金と出金で例文を変える (出金の例文のままだと入金のとき何を書くか迷う)
+  $('en-note').placeholder  = EN.type==='in' ? '例 洗車代の入金'   : '例 事務所のコピー用紙';
+  $('en-payee').placeholder = EN.type==='in' ? '例 お客様 / 銀行' : '例 ローソン';
   $('en-date').value  = ex?ex.date:todayISO();
   $('en-date').min    = DOC.openingBalance.date;
   $('en-void').style.display = (ex && !ex.deleted) ? '' : 'none';
