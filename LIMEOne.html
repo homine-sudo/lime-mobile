@@ -3078,7 +3078,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-04e';
+const APP_VERSION = '2026-08-09';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3606,6 +3606,14 @@ function getEditorName(){
   return localStorage.getItem('editorName') || '';
 }
 function setEditorName(v){ localStorage.setItem('editorName', v||''); updateSyncStatus(); }
+// 2026-08-09: 「誰が操作したか」の表示名。操作者名(未設定なら端末ID)を返す。
+//   ★これが無いと updatedBy が空 or 'PC削除' 等の固定文字列になり、後から誰の操作か追えない。
+//     実際に競合コピー148個から復元した変更履歴1,227件のうち約120件(10%)が追跡不能だった。
+//   ★戻り値を「システム」で始めるな: モバイル _isSysUpd (/^システム/) が人間操作の表示から
+//     除外してしまい、担当表示とLINE通知の「担当」が空になる。
+//   ★端末IDを含めるのは、同期事故で「古い端末が巻き戻した」のと「本人が編集した」を
+//     区別するため (2026-07-22 18:35 の巻き戻しがまさにこれで、人名だけでは判別不能だった)。
+function _whoPC(){ const n = getEditorName(); return n ? n : getPcId(); }
 
 /* --- IndexedDB にディレクトリハンドルを保存 --- */
 const IDB_NAME = 'loanerCarSync', IDB_STORE = 'handles';
@@ -4767,6 +4775,96 @@ async function releaseLock(){
   if(!dirHandle) return;
   try { await dirHandle.removeEntry(getPcId()+'.lock'); } catch(e){}
 }
+/* ===== 📋 監査ログ (2026-08-09 新設・PC/モバイル共通仕様) =====
+   目的: 「誰が・いつ・どの案件の・何を・いくらから いくらに変えたか」を残す。
+   なぜ必要か: 2026-08-09 の遡及検査で、競合コピー148個から復元した変更履歴1,227件のうち
+     約120件(10%)が「誰の操作か不明」だった。さらに 2026-07-22 18:35 に古い端末が
+     data.json を巻き戻し、案件 2026-04-0017 の値引¥17,600 と 2026-06-0104 の利用終了日
+     (6/30→6/20・¥44,000相当) が壊れていたが、証跡が無いため事故と不正の区別ができなかった。
+   ★鉄則1: data.json には一切書かない。別ファイル・1端末1ファイルの追記専用。
+     マージ経路(§4.5)に触れると案件消失リスクに直結するため、絶対に混ぜるな。
+   ★鉄則2: この機能は絶対に例外を投げない。監査ログの失敗で保存処理を巻き込んだら本末転倒。
+     すべて try/catch で握りつぶし、console.warn だけ出して業務は継続させる。
+   ★鉄則3: 個人情報(利用者名・電話・住所)は記録しない。金額/期間/状態/車両のみ。
+   ★鉄則4: 端末IDを必ず含める。「本人が編集した」と「本人の古い端末が巻き戻した」は
+     人名だけでは区別できない (上記 2026-07-22 の事故がまさにそれ)。 */
+const AUDIT_FIELDS = {
+  unitPrice:'貸渡料金', invoiceUnitPrice:'請求単価', invoiceDays:'請求日数',
+  discount:'値引額', discountDays:'値引日数', discountModel:'値引方式',
+  paidAmount:'入金額', paidAt:'入金日',
+  freeeExportedAmount:'freee出力額', freeeExportedAt:'freee出力日', freeePaidAt:'freee入金日',
+  invoiceNo:'請求No', invoiceIssuedAt:'請求日',
+  useStart:'利用開始', useEnd:'利用終了', useDeadline:'利用期限',
+  dispatchAt:'配車予定', dispatchDoneAt:'配車完了', departedAt:'出発',
+  recoveryCalledAt:'回収連絡', recoveryCompleted:'回収完了', returnStatus:'返却状態',
+  status:'状態', caseNo:'受付No', staff:'担当',
+  vehicleId:'車両', vehicleClass:'クラス',
+  meterAtDispatch:'出庫メーター', meterAtReturn:'返却メーター',
+  isDeleted:'削除', isCancelled:'キャンセル'
+};
+let _auditQueue = [];
+let _auditWriting = false;
+function _auditQueueSave(){
+  // 書込前にブラウザを閉じてもログが消えないよう localStorage に退避 (上限500件)
+  try{ if(_auditQueue.length > 500) _auditQueue = _auditQueue.slice(-500);
+       localStorage.setItem('auditQueue', JSON.stringify(_auditQueue)); }catch(_){}
+}
+function _auditQueueLoad(){
+  try{ const v = JSON.parse(localStorage.getItem('auditQueue')||'[]'); _auditQueue = Array.isArray(v)?v:[]; }
+  catch(_){ _auditQueue = []; }
+}
+function _auditDiff(before, after){
+  const ch = [];
+  for(const f of Object.keys(AUDIT_FIELDS)){
+    const a = (before && before[f] !== undefined) ? before[f] : null;
+    const b = (after  && after[f]  !== undefined) ? after[f]  : null;
+    if(JSON.stringify(a) === JSON.stringify(b)) continue;
+    ch.push({ f, a, b });
+  }
+  return ch;
+}
+// 監査ログに1件積む。before 省略時は新規作成扱い。★例外を投げないこと
+function _auditRecord(action, after, before){
+  try{
+    if(typeof isDemoMode === 'function' && isDemoMode()) return;   // デモは外部通信も記録もしない
+    const ch = _auditDiff(before, after);
+    if(before && !ch.length) return;        // 追跡対象に変化なし → 記録しない (ログを薄く保つ)
+    _auditQueue.push({
+      t: Date.now(), who: getEditorName()||'', dev: getPcId(), src: 'PC', act: action,
+      no: (after && after.caseNo) || (before && before.caseNo) || '',
+      id: (after && after.id) || (before && before.id) || '',
+      ch
+    });
+    _auditQueueSave();
+    setTimeout(()=>{ _auditFlush(); }, 0);
+  }catch(e){ try{ console.warn('[audit] 記録失敗(業務は継続):', e); }catch(_){} }
+}
+async function _auditFlush(){
+  if(_auditWriting || !_auditQueue.length) return;
+  if(!dirHandle) return;                    // 共有フォルダ未接続 → キューに溜めて次回書く
+  _auditWriting = true;
+  try{
+    const batch = _auditQueue.slice();
+    const lines = batch.map(x=>JSON.stringify(x)).join('\n') + '\n';
+    const d = new Date();
+    const ym = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    const dir = await dirHandle.getDirectoryHandle('audit', {create:true});
+    const fh  = await dir.getFileHandle(ym+'_'+getPcId()+'.jsonl', {create:true});
+    const cur = await fh.getFile();
+    const w   = await fh.createWritable({ keepExistingData:true });
+    await w.seek(cur.size);                 // ★必ず末尾に追記。seek を忘れると既存ログを上書きして壊す
+    await w.write(lines);
+    await w.close();
+    _auditQueue = _auditQueue.slice(batch.length);   // 書込中に増えた分は残す
+    _auditQueueSave();
+  }catch(e){
+    try{ console.warn('[audit] 書込失敗(業務は継続):', e); }catch(_){}
+  }finally{
+    _auditWriting = false;
+    if(_auditQueue.length) setTimeout(()=>{ _auditFlush(); }, 5000);
+  }
+}
+
 async function checkOthersLock(){
   if(!dirHandle) return null;
   const myPc = getPcId();
@@ -9847,12 +9945,15 @@ function saveGeneralRental(closeAfter){
   if(typeof preserveExtraCaseFields === 'function') preserveExtraCaseFields(c);
   // v2026.05: 共有モードのマージ衝突解決で「最後に編集したPC」が勝てるよう updatedAt をセット
   c.updatedAt = Date.now();
+  c.updatedBy = _whoPC();   // 2026-08-09: 誰が保存したかを記録 (従来PCは未設定=(不明)だった)
   if(_grNotifyIsNew && !c.createdAt) c.createdAt = c.updatedAt;
+  if(_grNotifyIsNew && !c.createdBy) c.createdBy = _whoPC();
   // DATA.cases に反映
   const idx = DATA.cases.findIndex(x=>x.id===c.id);
   if(idx >= 0) DATA.cases[idx] = c;
   else DATA.cases.unshift(c);
   save();
+  _auditRecord(_grNotifyIsNew?'新規(一般貸渡)':'編集(一般貸渡)', c, _grNotifyOld);
   if(typeof saveLastCaseDefaults === 'function') saveLastCaseDefaults(c);
   _grDirty = false;
   const ind = $('gr-save-indicator');
@@ -9898,8 +9999,9 @@ function grDeleteCase(){
   c.isDeleted = true;
   c.isCancelled = true;
   c.updatedAt = Date.now();
-  c.updatedBy = 'PC削除';
+  c.updatedBy = _whoPC()+'(PC削除)';
   save();
+  _auditRecord('削除', c, cSnapshot);
   toast('🗑️ 案件をキャンセル/非表示にしました');
   // 外部通知: 削除 → カレンダーイベント削除 + LINE通知
   if(typeof _fireCancelDeleteNotify === 'function') _fireCancelDeleteNotify(cSnapshot, 'delete');
@@ -9922,8 +10024,9 @@ function grCancelCase(){
   c.status = 'キャンセル';
   c.isCancelled = true;
   c.updatedAt = Date.now();
-  c.updatedBy = 'PCキャンセル';
+  c.updatedBy = _whoPC()+'(PCキャンセル)';
   save();
+  _auditRecord('キャンセル', c, cSnapshot);
   toast('📛 一般貸渡をキャンセルしました (受付No: '+(c.caseNo||'未採番')+')');
   // 外部通知: キャンセル → カレンダーイベント削除 + LINE通知
   if(typeof _fireCancelDeleteNotify === 'function') _fireCancelDeleteNotify(cSnapshot, 'cancel');
@@ -11042,9 +11145,12 @@ function clearFreeeFromForm(){
   if(!c){ toast('案件が見つかりません','error'); return; }
   if(!c.freeeExportedAt){ toast('そもそもfreee登録済フラグが立っていません'); return; }
   if(!confirm(`案件 ${c.caseNo} のfreee登録済フラグを解除しますか?\n\n解除後はfreee出力候補に再表示されます。\n(freee側の取引は影響を受けません)`)) return;
+  const _afBefore = { freeeExportedAt: c.freeeExportedAt, freeeExportedAmount: c.freeeExportedAmount };
   delete c.freeeExportedAt;
   delete c.freeeExportedAmount;
   c.updatedAt = Date.now();  // 共有モードのマージで他PCの古い版に負けないように
+  c.updatedBy = _whoPC()+'(freee解除)';
+  _auditRecord('freee解除', c, Object.assign({}, c, _afBefore));
   save();
   toast('✅ freee登録済フラグを解除しました');
   updateFreeeStatusUI(c);
@@ -11056,9 +11162,12 @@ function markFreeeFromForm(){
   const a = (typeof calcAmounts==='function') ? calcAmounts(c) : null;
   const cur = a ? Math.round(a.total||0) : Number(c.invoiceAmount||0);
   if(!confirm(`案件 ${c.caseNo} を「freee登録済」としてマークします。\n金額: ¥${cur.toLocaleString()}\n\nCSV出力候補から除外されます。\n続行しますか?`)) return;
+  const _afBefore2 = { freeeExportedAt: c.freeeExportedAt, freeeExportedAmount: c.freeeExportedAmount };
   c.freeeExportedAt = todayISO();
   c.freeeExportedAmount = cur;
   c.updatedAt = Date.now();  // 共有モードのマージで他PCの古い版に負けないように
+  c.updatedBy = _whoPC()+'(freee登録)';
+  _auditRecord('freee登録', c, Object.assign({}, c, _afBefore2));
   save();
   toast('✅ freee登録済としてマークしました');
   updateFreeeStatusUI(c);
@@ -11218,12 +11327,15 @@ function saveCase(){
   preserveExtraCaseFields(c);
   // v2026.05: 共有モードのマージ衝突解決で「最後に編集したPC」が勝てるよう updatedAt をセット
   c.updatedAt = Date.now();
+  c.updatedBy = _whoPC();   // 2026-08-09: 誰が保存したかを記録 (従来PCは未設定=(不明)だった)
   if(_notifyIsNew && !c.createdAt) c.createdAt = c.updatedAt;
+  if(_notifyIsNew && !c.createdBy) c.createdBy = _whoPC();
   const idx = DATA.cases.findIndex(x=>x.id===c.id);
   if(idx>=0) DATA.cases[idx] = c; else DATA.cases.unshift(c);
   _syncVehicleMileage(c);  // 返却メーター → 車両マスタ mileage へ追従 (走行距離を定位置に最新化)
   try { _borrowFaxBookRemember(c); } catch(_){}  // 🚗 他社借の連絡先を記憶 (次回は会社名で自動補完)
   save();
+  _auditRecord(_notifyIsNew?'新規(損保)':'編集(損保)', c, _notifyOld);
   // v2026.04.29cd: 次回新規案件のデフォルトとして担当者などを記憶
   if(typeof saveLastCaseDefaults === 'function') saveLastCaseDefaults(c);
   markCaseSaved();  // 未保存状態を解除
@@ -11395,8 +11507,9 @@ function deleteCase(){
   c.isDeleted = true;
   c.isCancelled = true;
   c.updatedAt = Date.now();
-  c.updatedBy = 'PC削除';
+  c.updatedBy = _whoPC()+'(PC削除)';
   save();
+  _auditRecord('削除', c, cSnapshot);
   toast('🗑️ 案件をキャンセル/非表示にしました');
   // 外部通知: 削除 → カレンダーイベント削除 + LINE通知
   if(typeof _fireCancelDeleteNotify === 'function') _fireCancelDeleteNotify(cSnapshot, 'delete');
@@ -11522,7 +11635,7 @@ async function swapVehicleContinue(){
   c.internalMemo = ((c.internalMemo || '') + (c.internalMemo ? '\n' : '') +
     `【車両乗り換え ${today}】この車を返却し ${contNo} で継続。利用は ${_oldEnd} まで(乗り換え日は次の車で計上=二重請求なし)。返却メーターは必要なら後で入力。`).trim();
   c.updatedAt = now;
-  c.updatedBy = 'PC乗り換え(返却締め)';
+  c.updatedBy = _whoPC()+'(PC乗り換え・返却締め)';
 
   // 2) 継続案件(=新しい車)を作成。顧客/保険/事故/配車先を引き継ぎ、車両・期間・請求・写真・FAXはリセット。
   const newId = (typeof uniqueUid === 'function') ? uniqueUid('c-', DATA.cases) : uid('c-');
@@ -11552,8 +11665,8 @@ async function swapVehicleContinue(){
   delete cont.freeeExportedAt; delete cont.freeeExportedAmount;
   delete cont._conflictHistory;
   cont.checkSheets = [];
-  cont.createdAt = now; cont.createdBy = 'PC乗り換え';
-  cont.updatedAt = now; cont.updatedBy = 'PC乗り換え';
+  cont.createdAt = now; cont.createdBy = _whoPC()+'(PC乗り換え)';
+  cont.updatedAt = now; cont.updatedBy = _whoPC()+'(PC乗り換え)';
 
   DATA.cases.unshift(cont);
   save();
@@ -11684,7 +11797,7 @@ function gotoInvoice(){ const id = editingCaseId; if(!id) return; _returnToCaseI
 
 // FAX番号を eFax送信形式(国際番号・頭に81)に変換
 //   例: "03-1234-5678"   → "81312345678"
-//       "098-831-5324"   → "81988315324"
+//       "098-000-0000"   → "81980000000"   ※市外局番の例 (実在の取引先番号は書かない)
 //       "090-1234-5678"  → "819012345678"
 //       "+81 3-1234-5678"→ "81312345678"
 //   ルール: 全角→半角正規化 → 数字以外除去 → 「+81」「0081」「81」を一旦剥がす → 先頭0も削除 → 先頭に「81」を付与
@@ -11700,7 +11813,7 @@ function toEfaxNumber(fax){
   // 既存の国際形式プレフィックス(0081 / 81先頭)を一旦剥がして正規化
   if(/^0081/.test(digits)) digits = digits.slice(4);
   else if(/^81\d{9,10}$/.test(digits)) digits = digits.slice(2);
-  // 先頭0を削除 (例: 098-831-5324 → 988315324)
+  // 先頭0を削除 (例: 098-000-0000 → 980000000)
   digits = digits.replace(/^0+/,'');
   if(!digits) return '';
   // 頭に国番号81を付与 (ユーザー要望: 「FAXは頭に81をつけて」)
@@ -12611,6 +12724,7 @@ async function execNOCInvoice(mode){
     freeeExportedAmount: amountChanged ? 0 : (prevNoc.freeeExportedAmount || 0)
   };
   c.updatedAt = Date.now();
+  c.updatedBy = _whoPC()+'(NOC請求)';
   if(typeof save === 'function') save();
 
   // 画面外コンテナにレンダリング
@@ -15795,7 +15909,7 @@ function saveVehicle(){
   // 車両編集も updatedAt を刻む: これが無いと他端末とのマージで新旧を判定できず、
   //   古い版が勝って変更が静かに巻き戻る (クラスマスタで起きたのと同型)。
   v.updatedAt = Date.now();
-  v.updatedBy = 'PC車両編集';
+  v.updatedBy = _whoPC()+'(PC車両編集)';
   if(!editingVehicleId) DATA.vehicles.push(v);
   save(); toast('保存しました'); closeVehicleModal(); renderVehicles();
 }
@@ -18010,6 +18124,9 @@ async function initApp(){
   // Always show banner if any major data is missing
   maybeShowImportBanner();
   applyAdminMode();
+  // 2026-08-09: 監査ログ — 前回書けなかった分をキューから復帰し、以後60秒ごとに掃き出す。
+  //   共有フォルダ接続前は dirHandle が無く書けないので、接続後に自然に流れるよう定期実行にする。
+  try{ _auditQueueLoad(); setTimeout(()=>{ _auditFlush(); }, 8000); setInterval(()=>{ _auditFlush(); }, 60000); }catch(_){}
   // v2026.04.29bq: 起動時の重大整合性チェック (重複ID等)
   setTimeout(()=> { try { runStartupIntegrityCheck(); } catch(e){ console.warn('integrity check error', e); } }, 1500);
   // v2026.04.29cf: 起動時通知センター (今日対応すべき項目) — 2026-06-15 ユーザー要望で廃止 (呼び出し停止・関数本体は残置)
@@ -19032,9 +19149,12 @@ function bulkMarkFreeeExported(){
 function clearFreeeExported(caseId){
   const c = findCaseById(caseId); if(!c) return;
   if(!confirm(`案件 ${c.caseNo} の freee出力済みフラグをクリアしますか? (再エクスポート可能になります)`)) return;
+  const _afBefore = { freeeExportedAt: c.freeeExportedAt, freeeExportedAmount: c.freeeExportedAmount };
   delete c.freeeExportedAt;
   delete c.freeeExportedAmount;
   c.updatedAt = Date.now();  // 共有モードのマージで他PCの古い版に負けないように
+  c.updatedBy = _whoPC()+'(freee解除)';
+  _auditRecord('freee解除', c, Object.assign({}, c, _afBefore));
   save();
   toast('freee出力済みフラグをクリアしました');
 }

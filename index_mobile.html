@@ -2091,7 +2091,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-04d';
+const APP_VERSION = '2026-08-09b';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2102,6 +2102,8 @@ const DBX_APP_KEY = 'fly154tcdbz09x9';
 const DBX_DATA_PATH = '/ライム共有DB/システムデータ（R）/data.json';
 // チェックシート写真の保存ベース (なければ自動作成される)
 const DBX_PHOTO_BASE = '/ライム共有DB/システムデータ（R）/checksheets';
+// 監査ログの保存ベース (2026-08-09・1端末1ファイルの追記専用。PC版 audit/ と同じ場所)
+const DBX_AUDIT_BASE = '/ライム共有DB/システムデータ（R）/audit';
 
 const LS_KEYS = {
   token: 'limeMob_dbx_token', refresh: 'limeMob_dbx_refresh',
@@ -2110,7 +2112,8 @@ const LS_KEYS = {
   cachedSnap: 'limeMob_cachedSnap', dispTab: 'limeMob_dispTab',
   recTab: 'limeMob_recTab', histTab: 'limeMob_histTab',
   lastSyncAt: 'limeMob_lastSyncAt',
-  journal: 'limeMob_journal'
+  journal: 'limeMob_journal',
+  devId: 'limeMob_devId', auditQueue: 'limeMob_auditQueue'   // 2026-08-09 監査ログ
 };
 
 // ============================================================
@@ -3217,7 +3220,113 @@ function findCaseById(id){ return (DATA?.cases||[]).find(c => c.id === id); }
 function findInsurer(id){ return (DATA?.insurers||[]).find(x => x.id === id); }
 function getSettings(){ return DATA?.settings || {}; }
 
+/* ===== 📋 監査ログ (2026-08-09 新設・PC LIMEOne.html と同一仕様) =====
+   目的: 「誰が・いつ・どの案件の・何を・いくらから いくらに変えたか」を残す。
+   ★AUDIT_FIELDS は PC版と完全同一に保つこと。片方だけ増減させると、同じ操作なのに
+     端末によってログの粒度が変わり、突合できなくなる (calcAmounts と同じ扱い)。
+   ★鉄則1: data.json には書かない。別ファイル・1端末1ファイルの追記専用 (マージ経路に触れない)。
+   ★鉄則2: 絶対に例外を投げない。監査ログの失敗で保存処理を巻き込んだら本末転倒。
+   ★鉄則3: 個人情報(利用者名・電話・住所)は記録しない。金額/期間/状態/車両のみ。
+   ★鉄則4: 端末IDを必ず含める。操作者名は端末設定の自己申告なので、なりすましや
+     「古い端末による巻き戻し」を人名だけでは判別できない。 */
+const AUDIT_FIELDS = {
+  unitPrice:'貸渡料金', invoiceUnitPrice:'請求単価', invoiceDays:'請求日数',
+  discount:'値引額', discountDays:'値引日数', discountModel:'値引方式',
+  paidAmount:'入金額', paidAt:'入金日',
+  freeeExportedAmount:'freee出力額', freeeExportedAt:'freee出力日', freeePaidAt:'freee入金日',
+  invoiceNo:'請求No', invoiceIssuedAt:'請求日',
+  useStart:'利用開始', useEnd:'利用終了', useDeadline:'利用期限',
+  dispatchAt:'配車予定', dispatchDoneAt:'配車完了', departedAt:'出発',
+  recoveryCalledAt:'回収連絡', recoveryCompleted:'回収完了', returnStatus:'返却状態',
+  status:'状態', caseNo:'受付No', staff:'担当',
+  vehicleId:'車両', vehicleClass:'クラス',
+  meterAtDispatch:'出庫メーター', meterAtReturn:'返却メーター',
+  isDeleted:'削除', isCancelled:'キャンセル'
+};
+// 端末固有ID (初回生成して localStorage に保存。PC版 getPcId と同じ役割)
+function _mDevId(){
+  let d = localStorage.getItem(LS_KEYS.devId);
+  if(!d){ d = 'mb-'+Math.random().toString(36).slice(2,8); localStorage.setItem(LS_KEYS.devId, d); }
+  return d;
+}
+let _auditQueue = [];
+let _auditWriting = false;
+function _auditQueueSave(){
+  try{ if(_auditQueue.length > 500) _auditQueue = _auditQueue.slice(-500);
+       localStorage.setItem(LS_KEYS.auditQueue, JSON.stringify(_auditQueue)); }catch(_){}
+}
+function _auditQueueLoad(){
+  try{ const v = JSON.parse(localStorage.getItem(LS_KEYS.auditQueue)||'[]'); _auditQueue = Array.isArray(v)?v:[]; }
+  catch(_){ _auditQueue = []; }
+}
+function _auditDiff(before, after){
+  const ch = [];
+  for(const f of Object.keys(AUDIT_FIELDS)){
+    const a = (before && before[f] !== undefined) ? before[f] : null;
+    const b = (after  && after[f]  !== undefined) ? after[f]  : null;
+    if(JSON.stringify(a) === JSON.stringify(b)) continue;
+    ch.push({ f, a, b });
+  }
+  return ch;
+}
+// 監査ログに1件積む。★例外を投げないこと
+function _auditRecord(action, after, before){
+  try{
+    if(typeof isDemoMode === 'function' && isDemoMode()) return;
+    const ch = _auditDiff(before, after);
+    if(before && !ch.length) return;
+    _auditQueue.push({
+      t: Date.now(), who: (localStorage.getItem(LS_KEYS.editor)||'').trim(), dev: _mDevId(),
+      src: 'mobile', act: action,
+      no: (after && after.caseNo) || (before && before.caseNo) || '',
+      id: (after && after.id) || (before && before.id) || '',
+      ch
+    });
+    _auditQueueSave();
+    setTimeout(()=>{ _auditFlush(); }, 0);
+  }catch(e){ try{ console.warn('[audit] 記録失敗(業務は継続):', e); }catch(_){} }
+}
+// Dropbox には追記APIが無いため read→append→overwrite。1端末1ファイルなので競合しない。
+async function _auditFlush(){
+  if(_auditWriting || !_auditQueue.length) return;
+  if(!DBX_TOKEN) return;                       // 未認証 → キューに溜めて次回
+  _auditWriting = true;
+  try{
+    const batch = _auditQueue.slice();
+    const add = batch.map(x=>JSON.stringify(x)).join('\n') + '\n';
+    const d = new Date();
+    const ym = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    const path = DBX_AUDIT_BASE + '/' + ym + '_' + _mDevId() + '.jsonl';
+    let cur = '';
+    try{
+      const r = await dbxApi('https://content.dropboxapi.com/2/files/download', {path}, null, null, {timeoutMs:20000});
+      if(r.ok) cur = await r.text();            // 404(初回) は空のまま進む
+    }catch(_){}
+    const body = cur + add;
+    const args = { path, mode:{'.tag':'overwrite'}, autorename:false, mute:true };
+    const up = await dbxApi('https://content.dropboxapi.com/2/files/upload', args,
+      new Blob([body], {type:'application/octet-stream'}), 'application/octet-stream', {timeoutMs:20000});
+    if(!up.ok) throw new Error('upload '+up.status);
+    _auditQueue = _auditQueue.slice(batch.length);
+    _auditQueueSave();
+  }catch(e){
+    try{ console.warn('[audit] 書込失敗(業務は継続):', e); }catch(_){}
+  }finally{
+    _auditWriting = false;
+    if(_auditQueue.length) setTimeout(()=>{ _auditFlush(); }, 5000);
+  }
+}
+
 function _stampUpdated(c){
+  // 2026-08-09: 監査ログ — 最後に同期した状態(_lastSyncSnapshot)を「変更前」として差分を取る。
+  //   saveToDropbox 成功のたびに captureSyncSnapshot で更新されるので、通常は1操作=1差分になる。
+  //   オフラインで保存が失敗し続けた場合だけ差分が累積するが、記録が重複する方が
+  //   取りこぼすより安全なのでこれで良い。
+  try{
+    const snapRaw = _lastSyncSnapshot && _lastSyncSnapshot.cases && c && _lastSyncSnapshot.cases[c.id];
+    const before = snapRaw ? JSON.parse(snapRaw) : null;
+    _auditRecord(before ? '編集' : '新規', c, before);
+  }catch(_){}
   c.updatedAt = Date.now();
   c.updatedBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
 }
@@ -5240,6 +5349,109 @@ async function onFaxSkip(){
   _flow = null;
 }
 
+/* ===== 🚗 車両乗り換えの前区間 (枝番) を最終回収時に一緒に送る (2026-08-09b) =====
+   受付No は base `YYYY-MM-NNNN` + `-N` が乗り換え連番 (PC swapVehicleContinue と同じ規則)。
+   最終回収時、それより前の枝番の「回収完了・利用金額入りの完成版」も続けてFAXし、
+   取引先に全区間の請求根拠を揃える。
+   ★前区間の status は絶対に触らない (既に請求済/入金済のことがあり、書き換えると
+     状態の巻き戻しになる = 監査ログ §11 で事故として検出される類の破壊)。 */
+function _priorBranchCases(c){
+  const m = String(c && c.caseNo || '').match(/^(\d{4}-\d{2}-\d{4})-(\d+)$/);
+  if(!m) return [];
+  const base = m[1], cur = Number(m[2]);
+  const alive = x => x && x.status !== 'キャンセル' && !x.isDeleted;
+  const all = (DATA && DATA.cases) || [];
+  const out = [];
+  for(const x of all){
+    if(!alive(x)) continue;
+    const mm = String(x.caseNo||'').match(/^(\d{4}-\d{2}-\d{4})-(\d+)$/);
+    if(mm && mm[1] === base && Number(mm[2]) < cur) out.push({ n: Number(mm[2]), c: x });
+  }
+  // ★改番もれの救済: 乗り換えは元案件を base → base-1 に改番する設計 (PC swapVehicleContinue)
+  //   だが、その改番が同期に失敗すると「枝番なしの base」と「-2」が並ぶ形が残る
+  //   (実データに9グループ存在)。この時 base が第1区間なので、拾わないと取りこぼす。
+  //   明示的な -1 が既にある場合は二重送信になるので拾わない。
+  //   ★cur > 1 が条件: 自分が -1 のときは base は「前区間」ではなく自分自身の改番前なので拾わない。
+  if(cur > 1 && !out.some(o => o.n === 1)){
+    const bare = all.find(x => x.caseNo === base && alive(x));
+    if(bare) out.push({ n: 1, c: bare });
+  }
+  return out.sort((a,b) => a.n - b.n).map(o => o.c);
+}
+// この案件が最終区間か (後ろにさらに枝番がないか)。
+//   ★「最終の回収の時に」がユーザー要件。途中区間で前の分を送ると、最終回収時にもう一度
+//     提案されて二重送信になる。最終区間のときだけまとめ送りを提案する。
+function _isFinalBranch(c){
+  const m = String(c && c.caseNo || '').match(/^(\d{4}-\d{2}-\d{4})-(\d+)$/);
+  if(!m) return false;
+  const base = m[1], cur = Number(m[2]);
+  return !(DATA && DATA.cases || []).some(x => {
+    if(!x || x.status === 'キャンセル' || x.isDeleted) return false;
+    const mm = String(x.caseNo||'').match(/^(\d{4}-\d{2}-\d{4})-(\d+)$/);
+    return mm && mm[1] === base && Number(mm[2]) > cur;
+  });
+}
+// 案件から手配書PDFを生成 (既存3層防御パイプラインをそのまま通す・新経路を作らない)
+async function _genHandoverPdfForCase(c, filename){
+  const host = $('m-fax-host');
+  host.innerHTML = buildHandoverHTML(c, findInsurer(c.insurerId)||{}, getSettings());
+  const sheetEl = host.querySelector('.sheet.handover');
+  if(!sheetEl) throw new Error('手配書シートを組み立てられません');
+  if(typeof html2pdf === 'undefined') throw new Error('html2pdf ライブラリ未読込 (オフライン or CDN遮断)');
+  try{
+    // opt は既存 onFaxSend と同一 (html2canvas に windowWidth/width/height を渡さない=🚨鉄則2)
+    return await _genHandoverPDF(sheetEl, {
+      filename: filename,
+      margin: [10,12,10,12],
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all'] }
+    });
+  } finally { host.innerHTML = ''; }
+}
+// 前区間の送信記録。★faxHistory に追記するだけ。status / faxSentAt* は触らない。
+async function _markPriorFaxSent(p, toEmail, method){
+  p.faxHistory = p.faxHistory || [];
+  p.faxHistory.push({
+    kind: 'instruction', sentAt: nowDateTimeLocal(), method: method, to: toEmail,
+    flow: 'recovery-prior',        // 最終回収時にまとめ送りした前区間分の印
+    by: localStorage.getItem(LS_KEYS.editor) || 'mobile'
+  });
+  _stampUpdated(p);
+  const ok = await saveToDropbox();
+  if(!ok) toast('⚠️ '+(p.caseNo||'')+' は送信できましたが記録の保存に失敗しました。🔄同期してください', 'error');
+  return ok;
+}
+// 前区間1件を送る (生成→検証→実物確認→GAS優先送信 の3層防御を必ず通す)
+async function _faxPriorHandover(p, faxNumber, toEmail, subject, body){
+  // ★保存名に「_再送YYYYMMDD」を付ける: 請求書2026/ の既存PDFは「実際に取引先へ送った金額」の
+  //   正本 (CLAUDE.md §11)。dbxUploadImage は autorename:true なので上書きはされないが、
+  //   放っておくと「2026-06-0102-1 (1).pdf」になり、原本と再送分の区別がつかなくなる。
+  //   ※FAX添付のファイル名 (filename) は受付No のまま = 取引先には従来どおり見える。
+  const safeNo = (p.caseNo||'nocase').replace(/[^A-Za-z0-9_\-]/g,'_');
+  const filename = `${safeNo}.pdf`;
+  const savedName = `${safeNo}_再送${todayISO().replace(/-/g,'')}.pdf`;
+  showSpinner(`前の車 ${p.caseNo} のPDFを生成中...`);
+  const pdfBlob = await _genHandoverPdfForCase(p, filename);
+  if(!isDemoMode()){
+    try{
+      showSpinner('PDFをDropboxに保存中...');
+      await dbxUploadImage(`/ライム共有DB/システムデータ（R）/請求書${new Date().getFullYear()}/${savedName}`, pdfBlob);
+    }catch(e){ console.warn('前区間PDFのDropbox保存失敗 (続行):', e); }
+  }
+  hideSpinner();
+  const okToSend = await confirmPdfBeforeSend({
+    to: toEmail,
+    faxDisplay: fmtFaxDisplay(faxNumber) || '',
+    partnerName: (findInsurer(p.insurerId)||{}).name || p.dispatchToName || '',
+    docLabel: `前の車の回収完了報告書 (${p.caseNo} / ${p.vehicleName||'車両不明'})`
+  });
+  if(!okToSend){ toast(`${p.caseNo} の送信を中止しました`, 'error'); return false; }
+  await sendFaxSmart(pdfBlob, toEmail, subject, body, filename, p, faxNumber,
+                     { prior: true, deferFinish: true });
+  return true;
+}
+
 async function onFaxSend(){
   if(!_flow) return;
   const c = findCaseById(_flow.caseId); if(!c) return;
@@ -5267,6 +5479,27 @@ async function onFaxSend(){
   const filename = `${(c.caseNo||'nocase').replace(/[^A-Za-z0-9_\-]/g,'_')}.pdf`;
   const subject = '';  // eFaxは件名空欄推奨 ({nocoverpage}を本文に入れる)
   const body = '{nocoverpage}';  // eFax がカバーページをスキップ
+
+  // 🚗 車両乗り換えの前区間を一緒に送るか (回収時のみ・送信を始める前に聞く)
+  //   ★先に聞いておく理由: 本命を送った後に聞くと、_finishFaxFlow が画面遷移して
+  //     _flow が null になり、続きを送れなくなる。
+  let _priors = [];
+  if(_flow.kind === 'recovery' && _isFinalBranch(c)){
+    const cand = _priorBranchCases(c);
+    if(cand.length){
+      const list = cand.map(p =>
+        `・<b>${esc(p.caseNo)}</b> ${esc(p.vehicleName||'車両不明')} (${esc(p.useStart||'')}〜${esc(p.useEnd||'')})`
+      ).join('<br>');
+      const ok = await confirmModal(
+        '🚗 前の車の分も送りますか？',
+        `この案件は車両乗り換えの最終区間です。<br>前の車の<b>回収完了報告書</b>も続けてFAXできます。<br><br>${list}<br><br>` +
+        `送ると取引先に<b>全区間の請求根拠</b>が揃います。<br>` +
+        `<b>${cand.length + 1} 通</b>を続けて送信します (1通ずつPDFを確認できます)。`,
+        `前の車の分も送る (${cand.length}通追加)`
+      );
+      if(ok) _priors = cand;
+    }
+  }
 
   showSpinner('手配書PDFを生成中...');
   try {
@@ -5325,7 +5558,27 @@ async function onFaxSend(){
       return;
     }
     // メール送信方法: GAS自動送信を優先 (1タップ完結) → 失敗時のみWeb Share/.emlにフォールバック
-    await sendFaxSmart(pdfBlob, toEmail, subject, body, filename, c, fax);
+    //   前区間も送る場合は画面遷移を最後まで保留する (deferFinish)
+    await sendFaxSmart(pdfBlob, toEmail, subject, body, filename, c, fax,
+                       _priors.length ? { deferFinish: true } : undefined);
+
+    // 🚗 前区間 (枝番) を古い順に続けて送る。
+    //   ★本命を先に送り終えてから回す: 前区間で失敗しても、最重要の最終回収分は届いている。
+    //   ★1件失敗しても残りは続ける (途中で止めると何が送れたか分からなくなる)。
+    if(_priors.length){
+      let sent = 0;
+      for(const p of _priors){
+        try {
+          if(await _faxPriorHandover(p, fax, toEmail, subject, body)) sent++;
+        } catch(e){
+          hideSpinner();
+          console.warn('前区間FAX失敗:', p.caseNo, e);
+          toast(`⚠️ ${p.caseNo} の送信に失敗しました: ${e.message}`, 'error');
+        }
+      }
+      toast(`📠 前の車の分 ${sent}/${_priors.length} 通を送信しました`, sent===_priors.length?'success':'error');
+      _finishFaxFlow(c);
+    }
   } catch(e){
     hideSpinner();
     toast('FAX送信エラー: '+e.message, 'error');
@@ -5335,18 +5588,25 @@ async function onFaxSend(){
 // ============================================================
 // スマートFAX送信: GAS自動送信を最優先 → 失敗時にWeb Share → .emlダウンロード
 // ============================================================
-async function sendFaxSmart(pdfBlob, toEmail, subject, body, filename, c, faxNumber){
+// opts (2026-08-09b・省略時は従来どおり):
+//   prior:true       → 前区間(枝番)の送信。faxHistory 追記のみで status を触らない
+//   deferFinish:true → 送信後に画面遷移しない (複数通を連続送信する途中のため)
+const _faxMark   = (c, to, method, opts) => (opts && opts.prior)
+  ? _markPriorFaxSent(c, to, method) : _markFaxSent(c, to, method);
+const _faxFinish = (c, opts) => { if(!(opts && opts.deferFinish)) _finishFaxFlow(c); };
+
+async function sendFaxSmart(pdfBlob, toEmail, subject, body, filename, c, faxNumber, opts){
   const settings = getSettings();
   const gasUrl = (settings.gasWebAppUrl||'').trim();
 
   // デモモード: GAS呼ばずに完了扱い
   if(isDemoMode()){
-    await _markFaxSent(c, toEmail, 'demo-mode');
+    await _faxMark(c, toEmail, 'demo-mode', opts);
     await alertModal('🧪 デモモード',
       `FAX送信のシミュレーションが完了しました。<br><br>` +
       `実環境では:<br>・宛先: <code>${esc(toEmail)}</code><br>・本文: <code>${esc(body)}</code><br>・添付: ${esc(filename)}<br>` +
       `がGAS経由で自動送信されます。`);
-    _finishFaxFlow(c);
+    _faxFinish(c, opts);
     return;
   }
 
@@ -5362,9 +5622,9 @@ async function sendFaxSmart(pdfBlob, toEmail, subject, body, filename, c, faxNum
       });
       hideSpinner();
       if(r.ok){
-        const _ok = await _markFaxSent(c, toEmail, 'gas-auto');
-        if(_ok) toast('📠 FAX送信完了 (GAS自動)', 'success');  // 保存成功時のみ「完了」表示 (失敗時は_markFaxSentが警告を出す)
-        _finishFaxFlow(c);
+        const _ok = await _faxMark(c, toEmail, 'gas-auto', opts);
+        if(_ok) toast('📠 FAX送信完了 (GAS自動)'+((opts&&opts.prior)?' — '+(c.caseNo||''):''), 'success');  // 保存成功時のみ「完了」表示 (失敗時は_markFaxSentが警告を出す)
+        _faxFinish(c, opts);
         return;
       }
       console.warn('GAS送信失敗、Web Share へフォールバック:', r);
@@ -5375,13 +5635,13 @@ async function sendFaxSmart(pdfBlob, toEmail, subject, body, filename, c, faxNum
   }
 
   // ② Web Share API (iOS推奨) — GAS未設定 or GAS失敗時のフォールバック
-  await sendFaxViaShare(pdfBlob, toEmail, subject, body, filename, c);
+  await sendFaxViaShare(pdfBlob, toEmail, subject, body, filename, c, opts);
 }
 
 // ============================================================
 // FAX送信方法の振り分け: Web Share API or .eml ダウンロード
 // ============================================================
-async function sendFaxViaShare(pdfBlob, toEmail, subject, body, filename, c){
+async function sendFaxViaShare(pdfBlob, toEmail, subject, body, filename, c, opts){
   const settings = getSettings();
   const file = new File([pdfBlob], filename, { type: 'application/pdf' });
   const canShareFile = (typeof navigator.canShare === 'function')
@@ -5398,27 +5658,27 @@ async function sendFaxViaShare(pdfBlob, toEmail, subject, body, filename, c){
         text: `📠 FAX送信用 PDF\n\n宛先 (クリップボードにコピー済): ${toEmail}\n本文に「${body}」を入れる (eFaxカバーページスキップ用)\n\n手順:\n1. 共有先「メール」を選択\n2. 宛先欄を長押し → ペースト\n3. 本文に ${body} を入力\n4. 送信`
       });
       // 共有完了後 (キャンセルされてもエラーは出さない)
-      const _ok = await _markFaxSent(c, toEmail, 'webshare-mail');
+      const _ok = await _faxMark(c, toEmail, 'webshare-mail', opts);
       if(_ok) toast('📠 メールAppで送信操作してください', 'success');  // 保存成功時のみ (失敗時は_markFaxSentが警告)
-      _finishFaxFlow(c);
+      _faxFinish(c, opts);
     } catch(e){
       // ユーザーがキャンセル(AbortError) → 何もしない
       if(e.name !== 'AbortError'){
         // 失敗時は.emlにフォールバック
-        await _sendFaxViaEml(pdfBlob, toEmail, subject, body, filename, c);
+        await _sendFaxViaEml(pdfBlob, toEmail, subject, body, filename, c, opts);
       }
     }
   } else {
     // 方式B: Web Share API非対応 → .emlダウンロード (PC版と同じ)
-    await _sendFaxViaEml(pdfBlob, toEmail, subject, body, filename, c);
+    await _sendFaxViaEml(pdfBlob, toEmail, subject, body, filename, c, opts);
   }
 }
 
-async function _sendFaxViaEml(pdfBlob, toEmail, subject, body, filename, c){
+async function _sendFaxViaEml(pdfBlob, toEmail, subject, body, filename, c, opts){
   showSpinner('.eml ファイル生成中...');
   try {
     await _generateAndDownloadEml(toEmail, subject, body, pdfBlob, filename);
-    await _markFaxSent(c, toEmail, 'eml-download');
+    await _faxMark(c, toEmail, 'eml-download', opts);
     hideSpinner();
     await alertModal('📧 .eml ダウンロード完了',
       `.eml ファイルがダウンロードされました。<br><br>` +
@@ -5430,7 +5690,7 @@ async function _sendFaxViaEml(pdfBlob, toEmail, subject, body, filename, c){
       `<b>うまくいかない場合</b>はDropbox に保存されたPDFをメールに手動添付して<br>` +
       `<code>${esc(toEmail)}</code><br>` +
       `宛に送ってください。`);
-    _finishFaxFlow(c);
+    _faxFinish(c, opts);
   } catch(e){
     hideSpinner();
     toast('.eml生成エラー: '+e.message, 'error');
@@ -8518,6 +8778,10 @@ async function init(){
   if(DBX_TOKEN){ await loadFromDropbox(); }
 
   _startProactiveRefresh();
+
+  // 2026-08-09: 監査ログ — 前回書けなかった分をキューから復帰し、以後60秒ごとに掃き出す。
+  //   現場は圏外になりやすいので、書けなければ溜めて後で流す (取りこぼしより重複の方が安全)。
+  try{ _auditQueueLoad(); setTimeout(()=>{ _auditFlush(); }, 8000); setInterval(()=>{ _auditFlush(); }, 60000); }catch(_){}
 
   // ★第2波: 裏での自動再同期 + 接続/鮮度バナー (stale端末上書きの構造的予防)
   try { _renderConnBanner(); } catch(_){}
