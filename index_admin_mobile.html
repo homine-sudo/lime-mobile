@@ -373,6 +373,48 @@
   .stat-grid .cell{padding:16px 10px;border:1px solid var(--line);background:var(--panel);text-align:center}
   .stat-grid .cell .lbl{margin-bottom:6px;font-size:8.5px;letter-spacing:.24em}
   .stat-grid .cell .v{font-family:var(--serif);font-size:24px;line-height:1;color:var(--ink);font-weight:500}
+  /* ===== 📈 レンタカー経営分析 (BI) — PC LIMEOne 経営分析タブの移植 (2026-08-12) =====
+     PC は Chart.js だが admin は自前SVGで統一 (CDN非依存・オフラインキャッシュを壊さない)。 */
+  .bi-tabs{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line2);background:var(--panel);margin-bottom:10px;scrollbar-width:none}
+  .bi-tabs::-webkit-scrollbar{display:none}
+  .bi-tabs button{flex:0 0 auto;padding:9px 13px;border:0;background:transparent;color:var(--ink3);font-size:11px;letter-spacing:.08em;font-family:var(--sans);white-space:nowrap}
+  .bi-tabs button.on{background:var(--acc);color:var(--panel);font-weight:600}
+  .bi-per{display:flex;flex-wrap:wrap;gap:5px}
+  .bi-per button{padding:5px 10px;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);font-size:11px;font-family:var(--sans);border-radius:3px}
+  .bi-per button.on{background:var(--acc);border-color:var(--acc);color:var(--panel);font-weight:600}
+  .bi-range{font-size:10.5px;color:var(--ink3);letter-spacing:.04em;margin-top:8px}
+  .bi-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
+  .bi-kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;overflow:hidden}
+  .bi-kpi .k{font-size:9.5px;color:var(--ink3);letter-spacing:.09em;text-transform:uppercase}
+  .bi-kpi .v{font-family:var(--serif);font-size:19px;color:var(--ink);font-weight:500;line-height:1.15;margin-top:3px}
+  .bi-kpi .v small{font-size:11px;color:var(--ink2)}
+  .bi-kpi .s{font-size:9.5px;color:var(--ink3);margin-top:2px}
+  .bi-kpi .d{font-size:10px;font-weight:600;float:right;margin-left:4px}
+  .bi-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.bi{width:100%;border-collapse:collapse;font-size:11.5px;font-family:var(--sans)}
+  table.bi th{padding:6px 7px;border-bottom:1px solid var(--line2);color:var(--ink3);font-size:9.5px;letter-spacing:.06em;font-weight:400;text-align:left;white-space:nowrap}
+  table.bi td{padding:6px 7px;border-bottom:1px dotted var(--line);color:var(--ink);white-space:nowrap}
+  table.bi td.n,table.bi th.n{text-align:right;font-family:var(--serif);font-feature-settings:"tnum" 1}
+  table.bi tr.hl{background:rgba(111,151,230,.09)}
+  table.bi tfoot td{border-top:1px solid var(--line2);border-bottom:0;font-weight:600}
+  table.bi .mut{color:var(--ink3)}
+  table.bi .dim{opacity:.45}
+  .bi-note{font-size:9.5px;color:var(--ink3);line-height:1.55;margin-top:7px}
+  .bi-sect{font-size:10.5px;color:var(--ink2);letter-spacing:.24em;text-transform:uppercase;margin:0 0 10px;font-family:var(--sans)}
+  .bi-tbar{display:inline-block;height:6px;border-radius:3px;background:var(--acc);opacity:.65;vertical-align:1px;min-width:2px}
+  .bi-chart{width:100%;display:block;margin-top:6px}
+  .bi-chart .bar{fill:var(--acc);opacity:.72}
+  .bi-chart .bar2{fill:var(--gold);opacity:.62}
+  .bi-chart .ln{stroke:var(--red);stroke-width:1.4;fill:none;stroke-linejoin:round}
+  .bi-chart .ln2{stroke:var(--acc-hi);stroke-width:1.3;fill:none;stroke-linejoin:round}
+  .bi-chart .lnf{stroke:var(--gold);stroke-width:1.4;fill:none;stroke-dasharray:4,3;stroke-linejoin:round}
+  .bi-chart .ax{stroke:var(--line2);stroke-width:.5}
+  .bi-chart .gd{stroke:var(--line);stroke-width:.5;stroke-dasharray:1,3;opacity:.6}
+  .bi-chart text{fill:var(--ink3);font-size:7.5px;font-family:var(--sans)}
+  .bi-lgd{display:flex;gap:12px;flex-wrap:wrap;font-size:9.5px;color:var(--ink3);margin-top:6px;justify-content:center}
+  .bi-lgd i{display:inline-block;width:11px;height:3px;vertical-align:3px;margin-right:4px;border-radius:2px}
+  .bi-jump{display:block;text-align:center;padding:11px;border:1px dashed var(--line2);border-radius:8px;color:var(--acc);font-size:12px;background:transparent;width:100%;font-family:var(--sans)}
+
   /* ===== Crown FAB = quiet pusher (装飾を激減) ===== */
   .crown{position:fixed;right:20px;bottom:calc(26px + env(safe-area-inset-bottom,0));width:64px;height:64px;z-index:20}
   .crown-btn{
@@ -1262,11 +1304,161 @@
 
   <!-- ========== 分析レポート ========== -->
   <section id="sec-report">
-  <div id="rpt-host"></div>
-  <div class="card" id="rpt-locked">
-    <div class="rpt-h">経営分析</div>
-    <p class="rpt-p">取引先名や債権の内訳を含むため、この内容は公開ファイルに入れていません。Dropbox に連携すると読み込まれます。</p>
-    <p class="rpt-note" id="rpt-lock-note">設定タブから Dropbox 連携してください。</p>
+  <!-- モード切替: レンタカー経営分析(ライブ・PC移植) / 全社レポート(Dropbox の静的HTML) -->
+  <div class="card tight" style="padding:12px 16px;margin-bottom:10px">
+    <div class="seg" id="rpt-mode-seg" style="width:100%">
+      <button data-mode="bi" class="on" style="flex:1">レンタカー</button>
+      <button data-mode="rpt" style="flex:1">全社レポート</button>
+    </div>
+  </div>
+
+  <!-- ========== レンタカー経営分析 (PC LIMEOne 経営分析タブと同一集計) ========== -->
+  <div id="rpt-mode-bi">
+    <div class="bi-tabs" id="bi-tabs">
+      <button data-bitab="top" class="on">🎯 TOP</button>
+      <button data-bitab="kpi">💹 売上・予測</button>
+      <button data-bitab="partner">🏢 取引先</button>
+      <button data-bitab="fleet">🚗 車両・稼働</button>
+      <button data-bitab="detail">🔧 詳細</button>
+    </div>
+
+    <!-- 期間セレクタ (TOP以外に効く。PC と同じ挙動) -->
+    <div class="card tight" id="bi-period-bar" style="display:none;padding:14px 16px;margin-bottom:10px">
+      <div class="lbl">対象期間</div>
+      <div class="bi-per" id="bi-per"></div>
+      <div class="bi-range" id="bi-range">—</div>
+    </div>
+
+    <!-- 🎯 TOP -->
+    <div class="bi-pane" id="bi-pane-top">
+      <div class="card">
+        <div class="bi-sect">今、順調？</div>
+        <div id="bi-summary"></div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">月別 前年比較 (12ヶ月)</div>
+        <div class="seg" id="bi-myoy-seg" style="margin-bottom:10px">
+          <button data-mm="count" class="on">受付件数</button>
+          <button data-mm="sales">売上</button>
+        </div>
+        <div id="bi-month-yoy"></div>
+      </div>
+    </div>
+
+    <!-- 💹 売上・予測 -->
+    <div class="bi-pane" id="bi-pane-kpi" style="display:none">
+      <div class="card">
+        <div class="bi-sect">主要指標</div>
+        <div class="bi-kpis" id="bi-kpi-grid"></div>
+        <div class="bi-note">当期 / 前期比。件数=受付日ベース、売上・日数=利用終了日ベース。</div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">日額積み上げ推移</div>
+        <div class="seg" id="bi-gran-seg" style="margin-bottom:8px">
+          <button data-gran="day" class="on">日</button>
+          <button data-gran="month">月</button>
+          <button data-gran="year">年</button>
+        </div>
+        <div class="bi-kpis" id="bi-forecast-kpi"></div>
+        <svg class="bi-chart" id="bi-chart-forecast" viewBox="0 0 320 150"></svg>
+        <div class="bi-lgd"><span><i style="background:var(--acc)"></i>期間合計 (棒)</span><span><i style="background:var(--red)"></i>累積 (線)</span></div>
+        <div class="bi-note" id="bi-forecast-cap">—</div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">季節変動 &amp; 予測</div>
+        <div class="bi-kpis" id="bi-seasonality-kpi"></div>
+        <svg class="bi-chart" id="bi-chart-seasonality" viewBox="0 0 320 150"></svg>
+        <div class="bi-lgd"><span><i style="background:var(--acc)"></i>月次売上</span><span><i style="background:var(--acc-hi)"></i>3ヶ月移動平均</span><span><i style="background:var(--gold)"></i>予測</span></div>
+        <div id="bi-seasonality-table"></div>
+      </div>
+    </div>
+
+    <!-- 🏢 取引先 -->
+    <div class="bi-pane" id="bi-pane-partner" style="display:none">
+      <div class="card">
+        <div class="bi-sect">保険会社担当者 ランキング</div>
+        <div class="bi-note" style="margin:0 0 8px" id="bi-contact-rank-summary"></div>
+        <div class="bi-wrap"><table class="bi" id="bi-contact-rank"></table></div>
+        <div class="bi-note">※件数=受付日ベース(貸出中も含む)／売上・平均単価・入金率=返却(利用終了)ベース</div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">担当者 × 月次マトリックス</div>
+        <div class="seg" id="bi-matrix-seg" style="margin-bottom:8px">
+          <button data-mx="count" class="on">件数</button>
+          <button data-mx="sales">売上</button>
+          <button data-mx="discount">調整額</button>
+        </div>
+        <div class="bi-wrap"><table class="bi" id="bi-matrix"></table></div>
+        <div class="bi-note" id="bi-matrix-summary"></div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">保険会社 TOP10</div>
+        <div class="bi-wrap"><table class="bi" id="bi-rank-insurer"></table></div>
+        <div class="bi-note">※件数=受付日ベース／売上・平均日数・入金率=返却(利用終了)ベース</div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">コール種別</div>
+        <div class="cls-util" id="bi-calltype"></div>
+        <div class="bi-note" id="bi-call-summary"></div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">工場別 案件数 (コール=工場)</div>
+        <div class="bi-note" style="margin:0 0 8px" id="bi-factory-summary"></div>
+        <div class="bi-wrap"><table class="bi" id="bi-factory"></table></div>
+      </div>
+    </div>
+
+    <!-- 🚗 車両・稼働 -->
+    <div class="bi-pane" id="bi-pane-fleet" style="display:none">
+      <div class="card">
+        <div class="bi-sect">クラス別 件数</div>
+        <div class="cls-util" id="bi-class-count"></div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">車両稼働率</div>
+        <div class="bi-note" style="margin:0 0 8px" id="bi-util-period-label"></div>
+        <div class="bi-wrap"><table class="bi" id="bi-util"></table></div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">クラスグループ別 稼働率</div>
+        <div class="bi-wrap"><table class="bi" id="bi-group-util"></table></div>
+        <div class="bi-note">※期間平均 (上の期間セレクタに連動)</div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">車両別 生涯ROI</div>
+        <div class="bi-note" style="margin:0 0 10px">生涯ROI は「稼働」タブに、PC版より詳しい形 (売却済み車の最終損益・クラス別もうけ・車検警告つき) で既にあります。同じ数字を二重に実装しないため導線のみ置いています。</div>
+        <button class="bi-jump" onclick="showTab('ops')">稼働タブの 生涯ROI を開く →</button>
+      </div>
+    </div>
+
+    <!-- 🔧 詳細 -->
+    <div class="bi-pane" id="bi-pane-detail" style="display:none">
+      <div class="card">
+        <div class="bi-sect">年度別 受付件数</div>
+        <div class="bi-wrap"><table class="bi" id="bi-yearly-count"></table></div>
+        <div class="bi-note">※年度=4月〜翌3月／受付日(キャンセル除く)。当年度は本日までを前年同期と比較。期間セレクタ非連動。</div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">曜日別 件数</div>
+        <svg class="bi-chart" id="bi-chart-dow" viewBox="0 0 320 130"></svg>
+        <div class="bi-lgd"><span><i style="background:var(--acc)"></i>配車日</span><span><i style="background:var(--gold)"></i>受付日</span></div>
+      </div>
+      <div class="card">
+        <div class="bi-sect">月別 調整額推移</div>
+        <svg class="bi-chart" id="bi-chart-adjust" viewBox="0 0 320 130"></svg>
+        <div class="bi-note" id="bi-adjust-cap">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全社レポート (従来) ========== -->
+  <div id="rpt-mode-rpt" style="display:none">
+    <div id="rpt-host"></div>
+    <div class="card" id="rpt-locked">
+      <div class="rpt-h">経営分析</div>
+      <p class="rpt-p">取引先名や債権の内訳を含むため、この内容は公開ファイルに入れていません。Dropbox に連携すると読み込まれます。</p>
+      <p class="rpt-note" id="rpt-lock-note">設定タブから Dropbox 連携してください。</p>
+    </div>
   </div>
 </section>
 
@@ -1382,7 +1574,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-08-06';
+const APP_VERSION = '2026-08-13';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -1523,17 +1715,39 @@ function rentalAmount(c){
   const total=Math.max(0,gross-disc);
   return {days,total};
 }
-// ★ rentalBillAmount = 売上計上額。日数 = 泊数+1 (終了日を含む) で 本体 LIMEOne calcAmounts /
-//   freeeFormatRow / freeeExportTargets と一致する (= freee月次CSVと金額が合う)。売上系の集計は全てこれ。
-//   daysBetween 自体は泊数(=ROI一致用)で据え置き、ここで +1 する。
-function rentalBillAmount(c){
+// ★★★ calcAmounts = 請求額の唯一の計算源。PC LIMEOne.html calcAmounts と完全同一に保つこと。
+//   請求額 = (請求単価||貸渡料金) × ((請求日数||利用日数) − 値引日数) − 値引額
+//   2026-08-12: それまでの rentalBillAmount は 2026-08-04 の統一式を取り込んでおらず
+//   invoiceUnitPrice/invoiceDays/discountDays/discountModel を読んでいなかった。
+//   実データ照合で 5件・計 ¥95,850 のズレを確認したため PC と同一実装に置換した。
+//   ★ここを PC と乖離させるな (CLAUDE.md 🚨「請求額の計算式は calcAmounts の外に書くな」)。
+// 日数規約: PC daysBetween = floor(差)+1 (終了日を含む) — admin の daysBetween(泊数) とは別物なので
+//   ここでは biDaysIncl を使う。同日返却は 1日 (旧実装は 0日だった)。
+function biDaysIncl(a,b){const da=parseD(a),db=parseD(b);if(!da||!db)return 0;return Math.max(0,Math.floor((db-da)/86400000)+1)}
+function calcAmounts(c){
   const effEnd=c.useEnd||(c.recoveryCalledAt?String(c.recoveryCalledAt).slice(0,10):'');
-  const nights=(c.useStart&&effEnd)?daysBetween(c.useStart,effEnd):0;
-  const days=nights>0?nights+1:0;
-  const unit=Number(c.unitPrice||0);
-  const total=Math.max(0,days*unit-(Number(c.discount||0)));
-  return {days,total};
+  const days=(c.useStart&&effEnd)?biDaysIncl(c.useStart,effEnd):0;
+  const unitPrice=Number(c.unitPrice||0);
+  const invUnit  = Number(c.invoiceUnitPrice||0) || unitPrice;   // 請求単価(空なら貸渡料金)
+  const billDays = Number(c.invoiceDays||0) || days;             // 請求日数(空なら利用日数)
+  const discountDays = Math.max(0, Number(c.discountDays||0));   // 値引日数(協定による日数調整)
+  const invDays = Math.max(0, billDays - discountDays);
+  const dayDiscount = discountDays * invUnit;
+  let lumpDiscount = Number(c.discount||0);
+  // 旧仕様互換 (消すと過去案件が二重値引きになる。PC 側と同一条件)
+  if(c.discountModel !== 'v2' && discountDays > 0 && lumpDiscount > 0
+     && (lumpDiscount === dayDiscount || lumpDiscount === discountDays * unitPrice)){
+    lumpDiscount = 0;
+  }
+  const discount = dayDiscount + lumpDiscount;
+  const grossUsage = days * unitPrice;
+  const gross = billDays * invUnit;
+  const total = Math.max(0, gross - discount);
+  return { days, billDays, invDays, invUnit, discountDays, dayDiscount, lumpDiscount,
+           grossUsage, gross, discount, sub: total, total };
 }
+// 売上計上額。既存呼び出し互換のため名前を残す (中身は calcAmounts と同一・別式を書かない)
+function rentalBillAmount(c){ return calcAmounts(c); }
 // DETALIA case amount (税込) — totalAmount = optExt+optInt+optOther - discount, tax 10%
 function detaliaAmount(c, taxRate){
   const sub=Math.max(0,(Number(c.optExt)||0)+(Number(c.optInt)||0)+(Number(c.optOther)||0)-(Number(c.discount)||0));
@@ -4152,6 +4366,710 @@ function renderStaleBar(){
   bar.textContent='⚠ 最新データを取得できていません：'+msgs.join(' ・ ')+' — ↻で再取得 / 設定から再連携';
 }
 
+/* =========================================================================
+   📈 レンタカー経営分析 (BI) — PC LIMEOne.html「経営分析」タブの移植 (2026-08-12)
+   ★集計式・母集団の定義は PC と1:1。金額は必ず calcAmounts() を通す (別式を書かない)。
+     PC 側を直したら必ずここも直す (CLAUDE.md §9「集計式は各本体システムと必ず一致させる」)。
+   ★グラフは Chart.js を使わず自前SVG。CDN依存を増やさずオフラインキャッシュを壊さないため。
+   ========================================================================= */
+let _biTab = 'top';
+let _biBound = false;
+const _biState = { period:'fiscal', from:null, to:null, matrixMetric:'count', monthMetric:'count', gran:'day' };
+const BI_PERIODS = [['today','今日'],['week','今週'],['month','今月'],['lastMonth','先月'],['fiscal','今年度'],['lastFiscal','前年度']];
+
+const biYen = n => '¥' + yen(n);
+function biNendo(d){ const dd = (d instanceof Date) ? d : (parseD(d)||new Date()); return dd.getMonth()+1 < 4 ? dd.getFullYear()-1 : dd.getFullYear(); }
+function biMD(s){ const m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${Number(m[2])}/${Number(m[3])}` : ''; }
+function biCases(){ return (DR&&DR.cases)||[] }
+let _biInsIdx = null, _biInsSrc = null;
+function biInsurer(id){
+  if(!_biInsIdx || _biInsSrc !== DR){ _biInsIdx = new Map(((DR&&DR.insurers)||[]).map(i=>[i.id,i])); _biInsSrc = DR; }
+  return _biInsIdx.get(id);
+}
+// 履歴データの重複除外用 (PC _biRealCaseNos と同一)
+function _biRealCaseNos(){ return new Set(biCases().filter(c=>!c.isHistorical).map(c=>c.caseNo)) }
+function biFilterCases(from,to){            // 売上系: 利用終了日ベース
+  const real=_biRealCaseNos();
+  return biCases().filter(c=>{
+    if(c.status==='キャンセル') return false;
+    if(!c.useEnd) return false;
+    if(c.useEnd<from||c.useEnd>to) return false;
+    if(c.isHistorical&&real.has(c.caseNo)) return false;
+    return true;
+  });
+}
+function biFilterCasesByReceived(from,to){  // 件数系: 受付日ベース
+  const real=_biRealCaseNos();
+  return biCases().filter(c=>{
+    if(c.status==='キャンセル') return false;
+    if(!c.receivedAt) return false;
+    const r=String(c.receivedAt).slice(0,10);
+    if(r<from||r>to) return false;
+    if(c.isHistorical&&real.has(c.caseNo)) return false;
+    return true;
+  });
+}
+function biFilterPaidCases(from,to){        // 入金系: 入金日ベース
+  const real=_biRealCaseNos();
+  return biCases().filter(c=>{
+    if(c.status!=='入金済') return false;
+    if(!c.paidAt) return false;
+    if(c.paidAt<from||c.paidAt>to) return false;
+    if(c.isHistorical&&real.has(c.caseNo)) return false;
+    return true;
+  });
+}
+// 期間範囲 (PC computeBiRange と同一)
+function computeBiRange(period){
+  const now=new Date();
+  const toISO=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  const nendo=biNendo(now);
+  let from,to,label,compare=null;
+  switch(period){
+    case 'today': from=to=toISO(now); label=`本日 (${from})`; break;
+    case 'week': { const s=new Date(now); s.setDate(now.getDate()-now.getDay()); const e=new Date(s); e.setDate(s.getDate()+6);
+      from=toISO(s); to=toISO(e); label=`今週 (${from} 〜 ${to})`; break; }
+    case 'month': { const s=new Date(now.getFullYear(),now.getMonth(),1), e=new Date(now.getFullYear(),now.getMonth()+1,0);
+      from=toISO(s); to=toISO(e); label=`今月 (${from.slice(0,7)})`; break; }
+    case 'lastMonth': { const s=new Date(now.getFullYear(),now.getMonth()-1,1), e=new Date(now.getFullYear(),now.getMonth(),0);
+      from=toISO(s); to=toISO(e); label=`先月 (${from.slice(0,7)})`; break; }
+    case 'fiscal': { const t=toISO(now); from=`${nendo}-04-01`; to=t;
+      const elapsed=Math.floor((parseD(to)-parseD(from))/86400000);
+      const pf=`${nendo-1}-04-01`; const pd=parseD(pf); pd.setDate(pd.getDate()+elapsed);
+      compare={from:pf,to:toISO(pd),label:`${nendo-1}年度同期間`};
+      label=`${nendo}年度 (4/1〜${now.getMonth()+1}/${now.getDate()} ${elapsed+1}日経過)`; break; }
+    case 'lastFiscal': from=`${nendo-1}-04-01`; to=`${nendo}-03-31`; label=`${nendo-1}年度 (${from} 〜 ${to})`; break;
+    default: from=`${nendo}-04-01`; to=`${nendo+1}-03-31`; label=`${nendo}年度`;
+  }
+  return {from,to,label,compare};
+}
+// KPI (PC biCalcKpis と同一)
+function biCalcKpis(cases,range){
+  const recv=(range&&range.from&&range.to)?biFilterCasesByReceived(range.from,range.to):cases;
+  const caseCount=recv.length;
+  let totalSales=0,totalDays=0,daysCount=0,paidCount=0,billedCount=0,totalGross=0,totalDiscount=0;
+  cases.forEach(c=>{
+    const a=calcAmounts(c);
+    totalSales+=a.total||0; totalGross+=a.grossUsage||a.gross||0; totalDiscount+=a.discount||0;
+    if(c.status==='入金済') paidCount++;
+    if(['仮請求','返却済','請求済','入金済'].includes(c.status)) billedCount++;
+    if(a.days>0){ totalDays+=a.days; daysCount++; }
+  });
+  let totalPaid=0;
+  const paidSrc=(range&&range.from&&range.to)?biFilterPaidCases(range.from,range.to):cases.filter(c=>c.status==='入金済');
+  paidSrc.forEach(c=>{ const a=calcAmounts(c); totalPaid+=Number(c.paidAmount||a.total||0); });
+  return { caseCount, totalSales, totalPaid,
+    avgDays: daysCount?totalDays/daysCount:0,
+    avgUnit: caseCount?totalSales/caseCount:0,
+    paidRate: billedCount?(paidCount/billedCount*100):0,
+    totalDays, totalGross, totalDiscount,
+    discountRate: totalGross>0?(totalDiscount/totalGross*100):0 };
+}
+// 車両稼働率 (PC biCalcUtilization と同一)
+function biCalcUtilization(from,to){
+  const fromD=parseD(from), toD=parseD(to);
+  const periodDays=(fromD&&toD)?Math.max(1,Math.floor((toD-fromD)/86400000)+1):30;
+  const vehicles=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='売却済'&&v.status!=='廃車'&&v.status!=='納車待ち'&&v.status!=='社用車');
+  const use={}; vehicles.forEach(v=>use[v.id]={days:0,sales:0});
+  biCases().forEach(c=>{
+    if(!c.vehicleId||c.status==='キャンセル'||!c.useStart) return;
+    if(!use[c.vehicleId]) return;
+    const start=c.useStart<from?from:c.useStart;
+    const useEnd=c.useEnd||((['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)&&!c.recoveryCompleted)?todayISO():addDays(c.useStart,30));
+    const end=useEnd>to?to:useEnd;
+    const d=biDaysIncl(start,end);
+    if(d>0){
+      use[c.vehicleId].days+=d;
+      const a=calcAmounts(c);
+      const total=biDaysIncl(c.useStart,useEnd)||1;
+      use[c.vehicleId].sales+=(a.total||0)*(d/total);
+    }
+  });
+  const usedDays=Object.values(use).reduce((s,v)=>s+v.days,0);
+  const possible=vehicles.length*periodDays;
+  const perVeh=vehicles.map(v=>({v,days:use[v.id].days,sales:Math.round(use[v.id].sales),
+    rate:periodDays?Math.min(100,use[v.id].days/periodDays*100):0})).sort((a,b)=>b.rate-a.rate);
+  return { overall: possible?(usedDays/possible*100):0, periodDays, perVeh };
+}
+// 表記ゆれ吸収 + 担当者キー (PC normalizeContactName / _staffKey と同一)
+function biNormContact(n){ return n ? String(n).replace(/[\s　]+/g,'').trim() : '' }
+function _biStaffKey(c){
+  const ins=biInsurer(c.insurerId)||{};
+  const insName=(ins.name||'').slice(0,20), branch=(ins.branch||'').slice(0,15);
+  const raw=(c.insurerContact||'').trim(), norm=biNormContact(raw);
+  if(!norm) return { key:'__UNKNOWN_CONTACT__', label:'(担当者名なし) / 全保険会社まとめ' };
+  return { key:`${ins.id||'_'}|${norm}`, label:`${raw} / ${insName}${branch?' '+branch:''}` };
+}
+function _biSalesYM(c){ if(c.salesYear&&c.salesMonth) return `${c.salesYear}-${pad2(c.salesMonth)}`; if(c.useEnd) return c.useEnd.slice(0,7); if(c.receivedAt) return String(c.receivedAt).slice(0,7); return '' }
+function _biRecvYM(c){ return String(c.receivedAt||'').slice(0,7) }
+
+/* ---------- SVG チャート (Chart.js の代替) ---------- */
+function biDrawBarLine(id, labels, bars, line, opt){
+  const svg=$(id); if(!svg) return;
+  const o=opt||{}, vb=svg.viewBox.baseVal, W=vb.width||320, H=vb.height||150;
+  const L=6,R=6,T=8,B=16, w=W-L-R, h=H-T-B;
+  if(!labels.length){ svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle">データなし</text>`; return; }
+  const n=labels.length, bMax=Math.max(1,...bars), lMax=line?Math.max(1,...line.filter(v=>v!=null)):1;
+  const bw=Math.max(0.8,(w/n)*0.66), cx=i=>L+(w/n)*(i+0.5);
+  let out='';
+  for(let g=1;g<=3;g++){ const y=(T+h-h*g/4).toFixed(1); out+=`<line class="gd" x1="${L}" y1="${y}" x2="${L+w}" y2="${y}"/>` }
+  bars.forEach((v,i)=>{ const bh=Math.max(0,(v/bMax)*h);
+    out+=`<rect class="${o.barCls||'bar'}" x="${(cx(i)-bw/2).toFixed(1)}" y="${(T+h-bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}"/>` });
+  if(line){ let d='',st=false;
+    line.forEach((v,i)=>{ if(v==null) return; const y=T+h-(v/lMax)*h; d+=(st?' L ':'M ')+cx(i).toFixed(1)+' '+y.toFixed(1); st=true; });
+    if(d) out+=`<path class="${o.lineCls||'ln'}" d="${d}"/>`; }
+  if(o.line2){ let d='',st=false;
+    const m2=Math.max(1,...o.line2.filter(v=>v!=null));
+    const scale=o.line2SameAsBars?bMax:m2;
+    o.line2.forEach((v,i)=>{ if(v==null) return; const y=T+h-(v/scale)*h; d+=(st?' L ':'M ')+cx(i).toFixed(1)+' '+y.toFixed(1); st=true; });
+    if(d) out+=`<path class="${o.line2Cls||'ln2'}" d="${d}"/>`; }
+  out+=`<line class="ax" x1="${L}" y1="${T+h}" x2="${L+w}" y2="${T+h}"/>`;
+  const step=Math.max(1,Math.ceil(n/9));
+  labels.forEach((lb,i)=>{ if(i%step && i!==n-1) return; out+=`<text x="${cx(i).toFixed(1)}" y="${H-4}" text-anchor="middle">${esc(lb)}</text>` });
+  svg.innerHTML=out;
+}
+function biDrawGrouped(id, labels, a, b){
+  const svg=$(id); if(!svg) return;
+  const vb=svg.viewBox.baseVal, W=vb.width||320, H=vb.height||130;
+  const L=6,R=6,T=8,B=16, w=W-L-R, h=H-T-B;
+  const n=labels.length; if(!n){ svg.innerHTML=''; return; }
+  const max=Math.max(1,...a,...b), bw=Math.max(1,(w/n)*0.32), cx=i=>L+(w/n)*(i+0.5);
+  let out='';
+  for(let g=1;g<=3;g++){ const y=(T+h-h*g/4).toFixed(1); out+=`<line class="gd" x1="${L}" y1="${y}" x2="${L+w}" y2="${y}"/>` }
+  for(let i=0;i<n;i++){
+    const ha=(a[i]/max)*h, hb=(b[i]/max)*h;
+    out+=`<rect class="bar" x="${(cx(i)-bw-1).toFixed(1)}" y="${(T+h-ha).toFixed(1)}" width="${bw.toFixed(1)}" height="${ha.toFixed(1)}"/>`;
+    out+=`<rect class="bar2" x="${(cx(i)+1).toFixed(1)}" y="${(T+h-hb).toFixed(1)}" width="${bw.toFixed(1)}" height="${hb.toFixed(1)}"/>`;
+    out+=`<text x="${cx(i).toFixed(1)}" y="${H-4}" text-anchor="middle">${esc(labels[i])}</text>`;
+  }
+  out+=`<line class="ax" x1="${L}" y1="${T+h}" x2="${L+w}" y2="${T+h}"/>`;
+  svg.innerHTML=out;
+}
+/* ---------- 🎯 TOP ---------- */
+function renderBiSummary(){
+  const host=$('bi-summary'); if(!host) return;
+  const today=todayISO();
+  const Y=Number(today.slice(0,4)), mm=today.slice(5,7), dd=today.slice(8,10), monthNum=Number(mm);
+  const curFy=biNendo(new Date());
+  const real=_biRealCaseNos();
+  const cntRange=(f,t)=>biFilterCasesByReceived(f,t).length;
+  // 売上と平均貸出日数は同一母集団 (PC statsRange と同一)
+  const statsRange=(f,t)=>{
+    let s=0,d=0,n=0;
+    biCases().forEach(c=>{
+      if(c.status==='キャンセル') return;
+      if(!c.useEnd) return;
+      const u=c.useEnd.slice(0,10);
+      if(u<f||u>t) return;
+      if(c.isHistorical&&real.has(c.caseNo)) return;
+      if(c.category==='一般'&&!['請求済','入金済'].includes(c.status)) return;
+      const a=calcAmounts(c);
+      s+=a.total||0;
+      if(a.days>0){ d+=a.days; n++; }
+    });
+    return {sales:s, avgDays:n?d/n:0};
+  };
+  const sR=(f,t)=>statsRange(f,t).sales;
+  const curMC=cntRange(`${Y}-${mm}-01`,`${Y}-${mm}-31`), pMC=cntRange(`${Y-1}-${mm}-01`,`${Y-1}-${mm}-${dd}`), p2MC=cntRange(`${Y-2}-${mm}-01`,`${Y-2}-${mm}-${dd}`);
+  const curMS=sR(`${Y}-${mm}-01`,`${Y}-${mm}-31`), pMS=sR(`${Y-1}-${mm}-01`,`${Y-1}-${mm}-${dd}`), p2MS=sR(`${Y-2}-${mm}-01`,`${Y-2}-${mm}-${dd}`);
+  const curMD=statsRange(`${Y}-${mm}-01`,`${Y}-${mm}-31`).avgDays, pMD=statsRange(`${Y-1}-${mm}-01`,`${Y-1}-${mm}-${dd}`).avgDays, p2MD=statsRange(`${Y-2}-${mm}-01`,`${Y-2}-${mm}-${dd}`).avgDays;
+  const curFC=cntRange(`${curFy}-04-01`,today), pFC=cntRange(`${curFy-1}-04-01`,`${Y-1}-${mm}-${dd}`), p2FC=cntRange(`${curFy-2}-04-01`,`${Y-2}-${mm}-${dd}`);
+  const curFS=sR(`${curFy}-04-01`,today), pFS=sR(`${curFy-1}-04-01`,`${Y-1}-${mm}-${dd}`), p2FS=sR(`${curFy-2}-04-01`,`${Y-2}-${mm}-${dd}`);
+  const curFD=statsRange(`${curFy}-04-01`,today).avgDays, pFD=statsRange(`${curFy-1}-04-01`,`${Y-1}-${mm}-${dd}`).avgDays, p2FD=statsRange(`${curFy-2}-04-01`,`${Y-2}-${mm}-${dd}`).avgDays;
+  const pct=(c,p)=>{
+    if(p>0){ const v=Math.round((c-p)/p*100); const cl=v>0?'up':v<0?'dn':'ink3'; const sg=v>0?'+':v<0?'−':''; return `<span class="${cl}" style="font-weight:600">${sg}${Math.abs(v)}%</span>`; }
+    return c>0?'<span class="up" style="font-weight:600">新規</span>':'<span class="ink3">—</span>';
+  };
+  const f=(v,k)=>k==='yen'?biYen(v):k==='days'?v.toFixed(1)+'日':v+'件';
+  const metric=(lbl,c,p,p2,peer,k)=>`
+    <div style="margin-bottom:13px">
+      <div class="sm ink3" style="font-size:10px;letter-spacing:.08em">${lbl}</div>
+      <div class="num" style="font-size:23px;line-height:1.2;margin-top:2px">${k==='yen'?biYen(c):k==='days'?c.toFixed(1)+'<span style="font-size:12px">日</span>':c+'<span style="font-size:12px">件</span>'}</div>
+      <div class="sm" style="margin-top:3px;font-size:11px">
+        <span class="ink3">${peer} ${f(p,k)}</span> ${pct(c,p)}
+        <span class="ink3" style="margin-left:6px">${peer.replace('去年','一昨年')} ${f(p2,k)}</span> ${pct(c,p2)}
+      </div>
+    </div>`;
+  const arrow=v=>v==null?'—':(v>0?`<span class="up" style="font-weight:600">↑ ${v}%</span>`:v<0?`<span class="dn" style="font-weight:600">↓ ${Math.abs(v)}%</span>`:'<span class="ink3">±0%</span>');
+  const vL=pMC>0?Math.round((curMC-pMC)/pMC*100):null, v2=p2MC>0?Math.round((curMC-p2MC)/p2MC*100):null;
+  host.innerHTML=`
+    <div style="border-left:2px solid var(--acc);padding:9px 0 9px 12px;margin-bottom:14px">
+      <div class="sm ink3" style="font-size:10.5px">ひと目の判定 — 今月(${monthNum}月)の受付 ※去年・一昨年も ${monthNum}/1〜${monthNum}/${Number(dd)} の同日まで</div>
+      <div style="font-size:14px;margin-top:4px">今月 <b class="num" style="font-size:17px">${curMC}件</b>　去年同日比 ${arrow(vL)}　／　一昨年同日比 ${arrow(v2)}</div>
+    </div>
+    <div class="lbl" style="margin-bottom:8px">今月 (${Y}年${monthNum}月・1〜${Number(dd)}日の同日比較)</div>
+    ${metric('受付件数',curMC,pMC,p2MC,'去年同日','count')}
+    ${metric('売上 (発生ベース・税込)',curMS,pMS,p2MS,'去年同日','yen')}
+    ${metric('平均貸出日数 (返却ベース)',curMD,pMD,p2MD,'去年同日','days')}
+    <div style="border-top:1px solid var(--line);margin:6px 0 14px"></div>
+    <div class="lbl" style="margin-bottom:8px">今年度 (4月〜${monthNum}月・同期比)</div>
+    ${metric('受付件数',curFC,pFC,p2FC,'去年同期','count')}
+    ${metric('売上 (発生ベース・税込)',curFS,pFS,p2FS,'去年同期','yen')}
+    ${metric('平均貸出日数 (返却ベース)',curFD,pFD,p2FD,'去年同期','days')}`;
+}
+function renderBiMonthYoY(){
+  const host=$('bi-month-yoy'); if(!host) return;
+  const today=todayISO(), thisYear=Number(today.slice(0,4)), thisMonth=Number(today.slice(5,7)), dd=today.slice(8,10);
+  const curFy=biNendo(new Date()), real=_biRealCaseNos();
+  const metric=_biState.monthMetric==='sales'?'sales':'count';
+  const cntMonth=(y,m,d)=>biFilterCasesByReceived(`${y}-${pad2(m)}-01`,`${y}-${pad2(m)}-${d||'31'}`).length;
+  const salesMonth=(y,m,d)=>{
+    const from=`${y}-${pad2(m)}-01`, to=`${y}-${pad2(m)}-${d||'31'}`;
+    let s=0;
+    biCases().forEach(c=>{
+      if(c.status==='キャンセル') return;
+      if(!c.useEnd) return;
+      const u=c.useEnd.slice(0,10);
+      if(u<from||u>to) return;
+      if(c.isHistorical&&real.has(c.caseNo)) return;
+      if(c.category==='一般'&&!['請求済','入金済'].includes(c.status)) return;
+      s+=calcAmounts(c).total||0;
+    });
+    return s;
+  };
+  const val=(y,m,d)=>metric==='sales'?salesMonth(y,m,d):cntMonth(y,m,d);
+  const disp=v=>metric==='sales'?biYen(v):`${v}件`;
+  const pctTag=(cur,prev,fut)=>{
+    if(fut) return '';
+    if(!prev&&!cur) return '<span class="ink3">—</span>';
+    if(!prev) return '<span class="up" style="font-weight:600">新規</span>';
+    const p=Math.round((cur-prev)/prev*100), cl=p>0?'up':p<0?'dn':'ink3', sg=p>0?'+':p<0?'−':'';
+    return `<span class="${cl}" style="font-weight:600">${sg}${Math.abs(p)}%</span>`;
+  };
+  const fmonths=[]; for(let i=0;i<12;i++){ const idx=3+i, m=(idx%12)+1, y=curFy+Math.floor(idx/12); fmonths.push({y,m}); }
+  let sumA=0,sumB=0,sumC=0,sumBytd=0;
+  const rows=fmonths.map(({y,m})=>{
+    const fut=(y>thisYear)||(y===thisYear&&m>thisMonth), cur_=(y===thisYear&&m===thisMonth);
+    const a=fut?null:val(y,m), b=val(y-1,m), c2=val(y-2,m);
+    const bCmp=cur_?val(y-1,m,dd):b;
+    if(!fut){ sumA+=a; sumBytd+=bCmp; }
+    sumB+=b; sumC+=c2;
+    return `<tr class="${cur_?'hl':''}">
+      <td>${m}月${cur_?' <span class="ink3" style="font-size:9px">今月</span>':''}</td>
+      <td class="n">${fut?'<span class="ink3">—</span>':disp(a)}</td>
+      <td class="n mut">${disp(b)}</td>
+      <td class="n mut dim">${disp(c2)}</td>
+      <td class="n">${pctTag(a===null?0:a,bCmp,fut)}</td>
+    </tr>`;
+  }).join('');
+  host.innerHTML=`<div class="bi-wrap"><table class="bi">
+    <thead><tr><th>月</th><th class="n">${curFy}年度</th><th class="n">${curFy-1}年度</th><th class="n">${curFy-2}年度</th><th class="n">前年比</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td>合計</td><td class="n">${disp(sumA)}</td><td class="n mut">${disp(sumB)}</td><td class="n mut dim">${disp(sumC)}</td><td class="n">${pctTag(sumA,sumBytd,false)}</td></tr></tfoot>
+  </table></div>
+  <div class="bi-note">※年度=4月〜翌3月。今月(${thisMonth}月)の前年比は去年の同日(1〜${Number(dd)}日)までと公平比較 (列の過去年度はフル月表示)。合計の前年比も同期間で比較。${metric==='sales'?'売上=利用終了日(キャンセル除く・一般は請求済以降・税込)':'受付件数=受付日(キャンセル除く)'}。</div>`;
+}
+/* ---------- 💹 売上・予測 ---------- */
+function renderBiKpiCards(kpi,prev,util){
+  const g=$('bi-kpi-grid'); if(!g) return;
+  const delta=(c,p)=>{ if(p==null||p===0) return ''; const d=(c-p)/p*100; if(!isFinite(d)) return '';
+    return `<span class="d ${d>=0?'up':'dn'}">${d>=0?'▲':'▼'}${Math.abs(d).toFixed(1)}%</span>` };
+  const cards=[
+    ['案件数', kpi.caseCount.toLocaleString()+'<small> 件</small>', `利用日数計 ${kpi.totalDays.toLocaleString()}日`, delta(kpi.caseCount,prev&&prev.caseCount)],
+    ['売上 (税込)', biYen(kpi.totalSales), `平均単価 ${biYen(kpi.avgUnit)}`, delta(kpi.totalSales,prev&&prev.totalSales)],
+    ['入金 (税込)', biYen(kpi.totalPaid), '入金日ベース', delta(kpi.totalPaid,prev&&prev.totalPaid)],
+    ['平均利用日数', kpi.avgDays.toFixed(1)+'<small> 日</small>', `対象 ${kpi.caseCount}件`, delta(kpi.avgDays,prev&&prev.avgDays)],
+    ['入金率', kpi.paidRate.toFixed(1)+'<small> %</small>', '入金済 ÷ 請求済以上', delta(kpi.paidRate,prev&&prev.paidRate)],
+    ['車両稼働率', util.overall.toFixed(1)+'<small> %</small>', `対象期間 ${util.periodDays}日`, ''],
+  ];
+  g.innerHTML=cards.map(c=>`<div class="bi-kpi">${c[3]}<div class="k">${c[0]}</div><div class="v num">${c[1]}</div><div class="s">${c[2]}</div></div>`).join('');
+}
+function renderBiForecast(){
+  const range=computeBiRange(_biState.period);
+  const fromD=parseD(range.from); let toD=parseD(range.to);
+  const todayD=parseD(todayISO());
+  const kpiBox=$('bi-forecast-kpi'), cap=$('bi-forecast-cap');
+  if(!fromD||!toD) return;
+  if(toD>todayD) toD=todayD;
+  if(fromD>toD){ if(kpiBox) kpiBox.innerHTML='<div class="sm ink3">対象期間がまだ開始されていません</div>'; biDrawBarLine('bi-chart-forecast',[],[],null); return; }
+  // PC renderBIForecast と同一のフォールバック順
+  const cand=biCases().filter(c=>c.status!=='キャンセル').map(c=>{
+    let start=parseD(c.useStart||c.dispatchAt);
+    if(!start&&c.receivedAt) start=parseD(c.receivedAt);
+    if(!start&&c.salesYear&&c.salesMonth) start=new Date(Number(c.salesYear),Number(c.salesMonth)-1,1);
+    let end=parseD(c.useEnd);
+    if(!end&&c.recoveryCalledAt) end=parseD(String(c.recoveryCalledAt).slice(0,10));
+    if(!end&&c.invoiceIssuedAt) end=parseD(c.invoiceIssuedAt);
+    if(!end&&c.paidAt) end=parseD(c.paidAt);
+    if(!end&&['利用中','回収連絡'].includes(c.status)) end=todayD;
+    if(!end&&c.salesYear&&c.salesMonth) end=new Date(Number(c.salesYear),Number(c.salesMonth),0);
+    if(!end&&start){ end=new Date(start); end.setDate(end.getDate()+30); }
+    const rate=Number(c.unitPrice||0)||Number(c.invoiceUnitPrice||0);
+    return {start,end,rate};
+  }).filter(x=>x.start&&x.end&&x.rate>0);
+  const days=[]; let cum=0;
+  const total=Math.floor((toD-fromD)/86400000)+1;
+  for(let i=0;i<total;i++){
+    const d=new Date(fromD); d.setDate(fromD.getDate()+i);
+    const act=cand.filter(x=>x.start<=d&&d<=x.end);
+    const sum=act.reduce((s,x)=>s+x.rate,0);
+    cum+=sum;
+    days.push({dIso:d.toISOString().slice(0,10), activeCount:act.length, sumToday:sum, cum});
+  }
+  const avg=total>0?cum/total:0;
+  const maxDay=days.reduce((m,d)=>d.sumToday>m.sumToday?d:m,{sumToday:0,dIso:''});
+  const nonZero=days.filter(d=>d.sumToday>0).length;
+  const last=days[days.length-1]||{sumToday:0,activeCount:0};
+  if(kpiBox) kpiBox.innerHTML=[
+    ['期間積上合計',biYen(cum),`${total}日間`],
+    ['日平均',biYen(Math.round(avg)),`稼働日 ${nonZero}日`],
+    ['最大日',biYen(maxDay.sumToday),biMD(maxDay.dIso)||'―'],
+    ['本日時点',biYen(last.sumToday),`稼働 ${last.activeCount}件`],
+  ].map(c=>`<div class="bi-kpi"><div class="k">${c[0]}</div><div class="v num">${c[1]}</div><div class="s">${c[2]}</div></div>`).join('');
+  // 集計単位で丸める (PC aggregateForecastDays と同一)
+  const gran=_biState.gran;
+  let items;
+  if(gran==='day'){ items=days.map(d=>({label:biMD(d.dIso),sum:d.sumToday,cum:d.cum})); }
+  else{
+    const g={},order=[];
+    days.forEach(d=>{ const k=gran==='month'?d.dIso.slice(0,7):d.dIso.slice(0,4); if(!g[k]){g[k]=0;order.push(k)} g[k]+=d.sumToday });
+    let cc=0; items=order.map(k=>{ cc+=g[k]; return {label:gran==='month'?k.slice(2):k, sum:g[k], cum:cc} });
+  }
+  biDrawBarLine('bi-chart-forecast', items.map(i=>i.label), items.map(i=>i.sum), items.map(i=>i.cum));
+  if(cap) cap.textContent=`${biMD(range.from)} 〜 ${biMD(toD.toISOString().slice(0,10))} ／ 棒=${gran==='month'?'月額合計':gran==='year'?'年額合計':'日額合計'}・線=累積 (軸は別スケール)`;
+}
+function renderBiSeasonality(){
+  const now=new Date();
+  const months=[];
+  for(let i=23;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push({ym:`${d.getFullYear()}-${pad2(d.getMonth()+1)}`,year:d.getFullYear(),month:d.getMonth()+1,sales:0}); }
+  const idx=Object.fromEntries(months.map((m,i)=>[m.ym,i]));
+  biCases().forEach(c=>{
+    if(c.status==='キャンセル'||c.isHistorical) return;
+    let ym=''; if(c.useEnd) ym=c.useEnd.slice(0,7); else if(c.salesYear&&c.salesMonth) ym=`${c.salesYear}-${pad2(c.salesMonth)}`;
+    const i=idx[ym]; if(i==null) return;
+    months[i].sales+=calcAmounts(c).total||0;
+  });
+  const ma=months.map((m,i)=>{ const sl=months.slice(Math.max(0,i-2),i+1); return sl.reduce((s,x)=>s+x.sales,0)/sl.length; });
+  const recent=months.slice(-12), n=recent.length;
+  const xs=recent.map((_,i)=>i), ys=recent.map(m=>m.sales);
+  const mX=xs.reduce((a,b)=>a+b,0)/n, mY=ys.reduce((a,b)=>a+b,0)/n;
+  const num=xs.reduce((a,x,i)=>a+(x-mX)*(ys[i]-mY),0), den=xs.reduce((a,x)=>a+(x-mX)*(x-mX),0)||1;
+  const slope=num/den, intercept=mY-slope*mX;
+  const fc=[n,n+1,n+2].map(x=>Math.max(0,intercept+slope*x));
+  const lastY=months[months.length-12], thisM=months[months.length-1];
+  const yoy=(lastY&&lastY.sales>0)?Math.round((thisM.sales-lastY.sales)/lastY.sales*100):null;
+  const kb=$('bi-seasonality-kpi');
+  if(kb){
+    const nl=o=>{ const d=new Date(now.getFullYear(),now.getMonth()+o,1); return `${d.getFullYear()}年${d.getMonth()+1}月` };
+    kb.innerHTML=[
+      ['今月実績',biYen(thisM.sales),`${thisM.year}年${thisM.month}月`,''],
+      ['前年同月比',(yoy==null?'―':(yoy>=0?'+':'')+yoy+'%'),lastY?lastY.ym:'',(yoy==null?'':yoy>=0?'up':'dn')],
+      ['12ヶ月トレンド',slope>0?'上昇':slope<0?'下降':'横ばい',`月あたり ${slope>0?'+':''}${biYen(slope)}`,slope>0?'up':slope<0?'dn':''],
+      ['来月予測',biYen(fc[0]),`${nl(1)} (回帰)`,''],
+    ].map(c=>`<div class="bi-kpi"><div class="k">${c[0]}</div><div class="v num ${c[3]}">${c[1]}</div><div class="s">${c[2]}</div></div>`).join('');
+  }
+  const labels=months.map(m=>m.ym.slice(2));
+  const future=[1,2,3].map(o=>{ const d=new Date(now.getFullYear(),now.getMonth()+o,1); return `${String(d.getFullYear()).slice(2)}-${pad2(d.getMonth()+1)}` });
+  const bars=months.map(m=>m.sales).concat([0,0,0]);
+  const maD=ma.concat([null,null,null]);
+  const fcLine=months.map(()=>null); fcLine[months.length-1]=thisM.sales;
+  biDrawBarLine('bi-chart-seasonality', labels.concat(future), bars, fcLine.concat(fc),
+    {lineCls:'lnf', line2:maD, line2Cls:'ln2', line2SameAsBars:true});
+  // 季節性テーブル (月別の年平均比)
+  const tbl=$('bi-seasonality-table');
+  if(tbl){
+    const avg=Array(12).fill(0), cnt=Array(12).fill(0);
+    months.forEach(m=>{ avg[m.month-1]+=m.sales; cnt[m.month-1]++ });
+    for(let i=0;i<12;i++) avg[i]=cnt[i]?avg[i]/cnt[i]:0;
+    const yearAvg=avg.reduce((a,b)=>a+b,0)/12||1;
+    const rows=avg.map((v,i)=>{ const r=v/yearAvg*100; return {m:i+1,v,r} }).sort((a,b)=>b.r-a.r);
+    tbl.innerHTML=`<div class="bi-wrap" style="margin-top:10px"><table class="bi">
+      <thead><tr><th>月</th><th class="n">平均売上</th><th class="n">年平均比</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td>${r.m}月</td><td class="n">${biYen(r.v)}</td><td class="n ${r.r>=100?'up':'dn'}">${r.r.toFixed(0)}%</td></tr>`).join('')}</tbody>
+    </table></div><div class="bi-note">※過去24ヶ月の月平均。100%超=稼ぎ時の月。予測は直近12ヶ月の線形回帰。</div>`;
+  }
+}
+/* ---------- 🏢 取引先 ---------- */
+function renderBiPartner(cases){
+  const range=computeBiRange(_biState.period);
+  const recv=biFilterCasesByReceived(range.from,range.to);
+  // 保険会社 TOP10
+  const byIns={};
+  const ensure=k=>byIns[k]||(byIns[k]={ins:biInsurer(k),count:0,endCount:0,daysSum:0,sales:0,paidCount:0,billedCount:0});
+  recv.forEach(c=>{ ensure(c.insurerId||'').count++ });
+  cases.forEach(c=>{
+    const r=ensure(c.insurerId||''), a=calcAmounts(c);
+    r.endCount++; r.daysSum+=a.days||0; r.sales+=a.total||0;
+    if(c.status==='入金済') r.paidCount++;
+    if(['請求済','入金済'].includes(c.status)) r.billedCount++;
+  });
+  const insRank=Object.values(byIns).sort((a,b)=>b.sales-a.sales).slice(0,10);
+  $('bi-rank-insurer').innerHTML=`<thead><tr><th>#</th><th>保険会社</th><th class="n">件数</th><th class="n">平均日数</th><th class="n">売上</th><th class="n">入金率</th></tr></thead><tbody>${
+    insRank.map((r,i)=>`<tr><td>${i+1}</td><td>${esc((r.ins&&r.ins.name)||'(未設定)')}</td><td class="n">${r.count}</td><td class="n">${r.endCount?(r.daysSum/r.endCount).toFixed(1):'0.0'}日</td><td class="n">${biYen(r.sales)}</td><td class="n">${r.billedCount?(r.paidCount/r.billedCount*100).toFixed(1):'0.0'}%</td></tr>`).join('')
+    ||'<tr><td colspan="6" class="mut">データなし</td></tr>'}</tbody>`;
+  // 担当者ランキング
+  const byC={};
+  const ct=c=>{
+    const raw=(c.insurerContact||'(未設定)').trim()||'(未設定)';
+    const norm=biNormContact(raw)||'(未設定)';
+    const k=`${norm}__${c.insurerId||''}`;
+    if(!byC[k]) byC[k]={contact:raw, insName:((biInsurer(c.insurerId)||{}).name||''), count:0, endCount:0, sales:0, paidCount:0, billedCount:0};
+    return byC[k];
+  };
+  recv.forEach(c=>{ if(c.status==='キャンセル'||c.isHistorical) return; ct(c).count++ });
+  cases.forEach(c=>{
+    if(c.status==='キャンセル'||c.isHistorical) return;
+    const r=ct(c), a=calcAmounts(c);
+    r.endCount++; r.sales+=a.total||0;
+    if(c.status==='入金済') r.paidCount++;
+    if(['請求済','入金済'].includes(c.status)) r.billedCount++;
+  });
+  const rank=Object.values(byC).sort((a,b)=>b.count-a.count||b.sales-a.sales).slice(0,30);
+  const sEl=$('bi-contact-rank-summary');
+  if(sEl) sEl.textContent=rank.length?`担当者 ${Object.keys(byC).length}名 / 受付計 ${rank.reduce((s,r)=>s+r.count,0)}件 / 売上計 ${biYen(rank.reduce((s,r)=>s+r.sales,0))}`:'';
+  $('bi-contact-rank').innerHTML=`<thead><tr><th>#</th><th>担当者</th><th>保険会社</th><th class="n">件数</th><th class="n">売上</th><th class="n">平均単価</th><th class="n">入金率</th></tr></thead><tbody>${
+    rank.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.contact)}</td><td class="mut">${esc(r.insName||'―')}</td><td class="n"><b>${r.count}</b></td><td class="n">${biYen(r.sales)}</td><td class="n mut">${biYen(r.endCount?r.sales/r.endCount:0)}</td><td class="n">${(r.billedCount?r.paidCount/r.billedCount*100:0).toFixed(1)}%</td></tr>`).join('')
+    ||'<tr><td colspan="7" class="mut">対象期間にデータがありません</td></tr>'}</tbody>`;
+  renderBiMatrix();
+  // コール種別
+  const byCall={'工場':0,'保険':0,'その他':0};
+  cases.forEach(c=>{
+    const t=c.callType||'';
+    if(t==='工場'||t==='工場経由') byCall['工場']++;
+    else if(t==='保険'||t==='保険会社') byCall['保険']++;
+    else byCall['その他']++;
+  });
+  const callTotal=byCall['工場']+byCall['保険']+byCall['その他'];
+  const cols={'工場':'var(--acc)','保険':'var(--gold)','その他':'var(--line3)'};
+  $('bi-calltype').innerHTML=['工場','保険','その他'].map(k=>{
+    const p=callTotal?byCall[k]/callTotal*100:0;
+    return `<div class="cls-row"><div class="cls-nm">${k} <span class="cls-cnt">${p.toFixed(0)}%</span></div><div class="cls-bar"><i style="width:${p.toFixed(1)}%;background:${cols[k]}"></i></div><div class="cls-rate">${byCall[k]}</div></div>`;
+  }).join('');
+  const cs=$('bi-call-summary');
+  if(cs) cs.textContent=callTotal?`工場 ${byCall['工場']}件 / 保険 ${byCall['保険']}件 / 他 ${byCall['その他']}件 (計 ${callTotal}件)`:'対象期間: 0件';
+  // 工場別
+  const fc=cases.filter(c=>c.callType==='工場'||c.callType==='工場経由');
+  const byF={};
+  fc.forEach(c=>{
+    const n=(c.dispatchToName||'').trim()||'(配車先未設定)';
+    if(!byF[n]) byF[n]={count:0,amount:0};
+    byF[n].count++; byF[n].amount+=calcAmounts(c).total||0;
+  });
+  const ent=Object.entries(byF).sort((a,b)=>b[1].count-a[1].count);
+  const fs=$('bi-factory-summary');
+  if(fs) fs.textContent=fc.length?`総件数 ${fc.length}件 / 工場数 ${ent.length}社 / 売上計 ${biYen(Object.values(byF).reduce((s,v)=>s+v.amount,0))}`:'対象期間: 0件';
+  $('bi-factory').innerHTML=`<thead><tr><th>#</th><th>配車先 工場</th><th class="n">件数</th><th class="n">%</th><th class="n">利用額</th></tr></thead><tbody>${
+    ent.map((e,i)=>{
+      const w=Math.round(e[1].count/ent[0][1].count*100);
+      return `<tr><td>${i+1}</td><td>${esc(e[0])}<br><span class="bi-tbar" style="width:${w}%"></span></td><td class="n">${e[1].count}</td><td class="n mut">${(e[1].count/fc.length*100).toFixed(1)}%</td><td class="n">${biYen(e[1].amount)}</td></tr>`;
+    }).join('')||'<tr><td colspan="5" class="mut">期間内に「コール=工場」の案件はありません</td></tr>'}</tbody>`;
+}
+function renderBiMatrix(){
+  const host=$('bi-matrix'); if(!host) return;
+  const today=new Date();
+  const fyStart=today.getMonth()>=3?today.getFullYear():today.getFullYear()-1;
+  const months=[]; for(let i=0;i<12;i++){ const d=new Date(fyStart,3+i,1); months.push(`${d.getFullYear()}-${pad2(d.getMonth()+1)}`) }
+  const prevMonths=months.map(ym=>{ const [y,m]=ym.split('-').map(Number); return `${y-1}-${pad2(m)}` });
+  const mx={};
+  const ensure=(k,sk)=>mx[k]||(mx[k]={label:sk.label,byMonth:{},byMonthPrev:{},total:{count:0,sales:0,discount:0},totalPrev:{count:0,sales:0,discount:0}});
+  biCases().filter(c=>c.status!=='キャンセル').forEach(c=>{
+    const sk=_biStaffKey(c), a=calcAmounts(c), disc=Number(a.discount||0);
+    const ymC=_biRecvYM(c), ymS=_biSalesYM(c);
+    const r=ensure(sk.key,sk);
+    if(months.includes(ymC)){ (r.byMonth[ymC]=r.byMonth[ymC]||{count:0,sales:0,discount:0}).count++; r.total.count++ }
+    if(prevMonths.includes(ymC)){ (r.byMonthPrev[ymC]=r.byMonthPrev[ymC]||{count:0,sales:0,discount:0}).count++; r.totalPrev.count++ }
+    if(months.includes(ymS)){ const b=r.byMonth[ymS]=r.byMonth[ymS]||{count:0,sales:0,discount:0}; b.sales+=a.total||0; b.discount+=disc; r.total.sales+=a.total||0; r.total.discount+=disc }
+    if(prevMonths.includes(ymS)){ const b=r.byMonthPrev[ymS]=r.byMonthPrev[ymS]||{count:0,sales:0,discount:0}; b.sales+=a.total||0; b.discount+=disc; r.totalPrev.sales+=a.total||0; r.totalPrev.discount+=disc }
+  });
+  const rows=Object.values(mx);
+  const metric=_biState.matrixMetric||'count';
+  const todayYM=`${today.getFullYear()}-${pad2(today.getMonth()+1)}`;
+  const fmt=v=>v?(metric==='count'?v:biYen(v)):'';
+  rows.sort((a,b)=>(b.total[metric]||0)-(a.total[metric]||0));
+  const sum=$('bi-matrix-summary');
+  if(!rows.length){
+    host.innerHTML='<tbody><tr><td class="mut">対象期間にデータがありません</td></tr></tbody>';
+    if(sum) sum.textContent=''; return;
+  }
+  const mCur=months.map(()=>0), mPrev=months.map(()=>0);
+  let gCur=0,gPrev=0;
+  rows.forEach(r=>{ gCur+=r.total[metric]||0; gPrev+=r.totalPrev[metric]||0 });
+  const body=rows.slice(0,30).map(r=>{
+    const cur=months.map((m,i)=>{ const v=(r.byMonth[m]||{})[metric]||0; mCur[i]+=v; return `<td class="n${m<=todayYM?'':' dim'}">${fmt(v)}</td>` }).join('');
+    const prev=months.map((m,i)=>{ const v=(r.byMonthPrev[prevMonths[i]]||{})[metric]||0; mPrev[i]+=v; return `<td class="n mut" style="font-size:9.5px">${fmt(v)}</td>` }).join('');
+    const ratio=gCur>0?((r.total[metric]||0)/gCur*100).toFixed(1)+'%':'―';
+    return `<tr><td rowspan="2" style="border-bottom:1px solid var(--line)">${esc(r.label)}</td>${cur}<td class="n"><b>${fmt(r.total[metric])}</b></td><td class="n" rowspan="2" style="border-bottom:1px solid var(--line)">${ratio}</td></tr>
+      <tr>${prev}<td class="n mut" style="font-size:9.5px">${fmt(r.totalPrev[metric])}</td></tr>`;
+  }).join('');
+  const tot=`<tr class="hl"><td rowspan="2">合計</td>${months.map((m,i)=>`<td class="n${m<=todayYM?'':' dim'}"><b>${fmt(mCur[i])}</b></td>`).join('')}<td class="n"><b>${fmt(gCur)}</b></td><td class="n" rowspan="2">100%</td></tr>
+    <tr class="hl">${months.map((_,i)=>`<td class="n mut" style="font-size:9.5px">${fmt(mPrev[i])}</td>`).join('')}<td class="n mut" style="font-size:9.5px">${fmt(gPrev)}</td></tr>`;
+  host.innerHTML=`<thead><tr><th>保険会社 / 担当者</th>${months.map(m=>`<th class="n${m<=todayYM?'':' dim'}">${Number(m.slice(5))}月</th>`).join('')}<th class="n">合計</th><th class="n">構成比</th></tr></thead><tbody>${body}${tot}</tbody>`;
+  const lbl=metric==='count'?'件数':metric==='sales'?'売上':'調整額';
+  if(sum) sum.textContent=`${rows.length}担当者 / ${fyStart}年度 (4月〜翌3月) — 上段=当年度${lbl} / 下段=前年度同月${lbl}(薄字) / 未来月は薄く。横スクロールできます。`;
+}
+/* ---------- 🚗 車両・稼働 ---------- */
+function renderBiFleet(cases,util){
+  // クラス別 件数
+  const byCls={};
+  cases.forEach(c=>{ const k=c.vehicleClass||'未設定'; byCls[k]=(byCls[k]||0)+1 });
+  const ent=Object.entries(byCls).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(1,...ent.map(e=>e[1]));
+  $('bi-class-count').innerHTML=ent.length?ent.map(e=>
+    `<div class="cls-row"><div class="cls-nm">${esc(e[0])}</div><div class="cls-bar"><i style="width:${(e[1]/max*100).toFixed(1)}%;background:var(--acc)"></i></div><div class="cls-rate">${e[1]}</div></div>`
+  ).join(''):'<div class="sm ink3">データなし</div>';
+  // 車両稼働率
+  const rc=r=>r>=90?'var(--danger)':r>=50?'var(--warn)':'var(--acc)';
+  $('bi-util').innerHTML=`<thead><tr><th>ナンバー</th><th>クラス</th><th>車種</th><th class="n">利用</th><th class="n">稼働率</th><th class="n">売上</th></tr></thead><tbody>${
+    util.perVeh.slice(0,30).map(r=>{
+      const p=r.v.plate||{};
+      const plate=(r.v.plateDisplay||'').trim()||[p.area,p.no,p.kana,p.tail].filter(Boolean).join(' ');
+      return `<tr><td><b>${esc(plate)}</b></td><td class="mut">${esc(r.v.vehicleClass||'')}</td><td>${esc(r.v.name||'')}</td><td class="n">${r.days}日</td><td class="n" style="color:${rc(r.rate)};font-weight:600">${r.rate.toFixed(1)}%</td><td class="n">${biYen(r.sales)}</td></tr>`;
+    }).join('')||'<tr><td colspan="6" class="mut">データなし</td></tr>'}</tbody>`;
+  const ul=$('bi-util-period-label');
+  // クラスグループ別 稼働率 (admin 既存 groupOfClass = PC BI_CLASS_GROUPS と同一定義)
+  const order=[...BI_CLASS_GROUPS.map(g=>g.key),'その他'];
+  const agg={}; order.forEach(k=>agg[k]={count:0,days:0,sales:0});
+  (util.perVeh||[]).forEach(r=>{ const k=groupOfClass(r.v&&r.v.vehicleClass); agg[k].count++; agg[k].days+=r.days; agg[k].sales+=r.sales });
+  const pd=util.periodDays||1;
+  let tC=0,tD=0,tS=0;
+  const rows=order.map(k=>{
+    const a=agg[k]; if(!a.count) return '';
+    tC+=a.count; tD+=a.days; tS+=a.sales;
+    const rate=Math.min(100,a.days/(pd*a.count)*100);
+    return `<tr><td><b>${esc(k)}</b></td><td class="n">${a.count}台</td><td class="n" style="color:${rc(rate)};font-weight:600">${rate.toFixed(1)}%</td><td class="n">${a.days}日</td><td class="n">${biYen(a.sales)}</td></tr>`;
+  }).join('');
+  $('bi-group-util').innerHTML=tC
+    ? `<thead><tr><th>グループ</th><th class="n">保有</th><th class="n">稼働率</th><th class="n">延べ稼働</th><th class="n">売上</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>合計</td><td class="n">${tC}台</td><td class="n">${Math.min(100,tD/(pd*tC)*100).toFixed(1)}%</td><td class="n">${tD}日</td><td class="n">${biYen(tS)}</td></tr></tfoot>`
+    : '<tbody><tr><td class="mut">データなし</td></tr></tbody>';
+  if(ul) ul.textContent=`対象 ${util.periodDays}日間 / 保有 ${util.perVeh.length}台 / 全体 ${util.overall.toFixed(1)}%`;
+}
+/* ---------- 🔧 詳細 ---------- */
+function renderBiYearlyCount(){
+  const host=$('bi-yearly-count'); if(!host) return;
+  const today=todayISO(), curFy=biNendo(new Date());
+  const set=new Set();
+  biCases().forEach(c=>{ if(c.receivedAt){ const d=parseD(c.receivedAt); if(d) set.add(biNendo(d)) } });
+  if(!set.size){ host.innerHTML='<tbody><tr><td class="mut">受付データがありません</td></tr></tbody>'; return; }
+  const fys=[...set].sort((a,b)=>b-a).slice(0,8);
+  const full=fy=>biFilterCasesByReceived(`${fy}-04-01`,`${fy+1}-03-31`).length;
+  const toDate=fy=>biFilterCasesByReceived(`${fy}-04-01`,today).length;
+  const prevSameEnd=`${Number(today.slice(0,4))-1}${today.slice(4)}`;
+  const prevSame=biFilterCasesByReceived(`${curFy-1}-04-01`,prevSameEnd).length;
+  const rows=fys.map(fy=>({fy,isCur:fy===curFy,count:fy===curFy?toDate(fy):full(fy)}));
+  const max=Math.max(1,...rows.map(r=>r.count));
+  const delta=(c,p)=>{
+    if(p==null) return '<span class="ink3">—</span>';
+    const d=c-p, pct=p>0?Math.round(d/p*100):null, cl=d>0?'up':d<0?'dn':'ink3';
+    return `<span class="${cl}" style="font-weight:600">${d>0?'+':''}${d}件</span>${pct!=null?` <span class="${cl}" style="font-size:10px">(${d>0?'+':''}${pct}%)</span>`:''}`;
+  };
+  host.innerHTML=`<thead><tr><th>年度</th><th class="n">受付件数</th><th style="width:16%"></th><th class="n" style="width:34%">前年比</th></tr></thead><tbody>${
+    rows.map(r=>{
+      const w=Math.round(r.count/max*100);
+      const cmp=r.isCur
+        ? `${delta(r.count,prevSame)}<br><span class="ink3" style="font-size:9.5px">昨年同期 ${prevSame}件</span>`
+        : delta(r.count, set.has(r.fy-1)?full(r.fy-1):null);
+      return `<tr><td>${r.fy}年度${r.isCur?' <span class="ink3" style="font-size:9px">進行中</span>':''}</td><td class="n"><b>${r.count}件</b></td><td><span class="bi-tbar" style="width:${w}%"></span></td><td class="n" style="white-space:normal">${cmp}</td></tr>`;
+    }).join('')}</tbody>`;
+}
+function renderBiDetailCharts(cases){
+  // 曜日別 (配車日 / 受付日)
+  const dow=['日','月','火','水','木','金','土'];
+  const a=[0,0,0,0,0,0,0], b=[0,0,0,0,0,0,0];
+  cases.forEach(c=>{
+    const d1=parseD(c.dispatchAt||c.useStart); if(d1) a[d1.getDay()]++;
+    const d2=parseD(c.receivedAt); if(d2) b[d2.getDay()]++;
+  });
+  biDrawGrouped('bi-chart-dow',dow,a,b);
+  // 月別 調整額推移 (PC _biMonthlyKeys と同一: 期間内の月・短すぎれば直近12ヶ月)
+  const range=computeBiRange(_biState.period);
+  const fromD=parseD(range.from), toD=parseD(range.to);
+  let keys=[];
+  if(fromD&&toD){
+    let cur=new Date(fromD.getFullYear(),fromD.getMonth(),1);
+    const end=new Date(toD.getFullYear(),toD.getMonth(),1);
+    while(cur<=end){ keys.push(`${cur.getFullYear()}-${pad2(cur.getMonth()+1)}`); cur=new Date(cur.getFullYear(),cur.getMonth()+1,1); if(keys.length>24) break }
+  }
+  if(keys.length<3){ keys=[]; const t=new Date(); for(let i=11;i>=0;i--){ const d=new Date(t.getFullYear(),t.getMonth()-i,1); keys.push(`${d.getFullYear()}-${pad2(d.getMonth()+1)}`) } }
+  const byM={}; keys.forEach(k=>byM[k]=0);
+  biCases().filter(c=>c.status!=='キャンセル').forEach(c=>{
+    const ym=_biSalesYM(c); if(!keys.includes(ym)) return;
+    const adj=Number(calcAmounts(c).discount||0);
+    if(adj>0) byM[ym]+=adj;
+  });
+  biDrawBarLine('bi-chart-adjust', keys.map(k=>Number(k.slice(5))+'月'), keys.map(k=>byM[k]||0), null, {barCls:'bar2'});
+  const cap=$('bi-adjust-cap');
+  if(cap) cap.textContent=`調整額合計 ${biYen(keys.reduce((s,k)=>s+byM[k],0))} (${keys.length}ヶ月)　※調整額 = 値引日数×請求単価 + 値引額 (calcAmounts の合計・二重計上しない)`;
+}
+/* ---------- 描画オーケストレーション ---------- */
+function renderBiAll(){
+  _biBind();   // データ未取得でもタブ/セグメント操作は効くようにする
+  if(!DR) return;
+  // 期間ボタン
+  const per=$('bi-per');
+  if(per) per.innerHTML=BI_PERIODS.map(p=>`<button data-per="${p[0]}"${_biState.period===p[0]?' class="on"':''}>${p[1]}</button>`).join('');
+  const range=computeBiRange(_biState.period);
+  const rl=$('bi-range'); if(rl) rl.textContent=range.label;
+  const cases=biFilterCases(range.from,range.to);
+  const kpi=biCalcKpis(cases,range);
+  const today=todayISO();
+  let utilTo=range.to; if(utilTo>today) utilTo=today;
+  const util=biCalcUtilization(range.from,utilTo);
+  let kpiPrev=null;
+  if(range.compare) kpiPrev=biCalcKpis(biFilterCases(range.compare.from,range.compare.to),range.compare);
+  window._biCtx={range,cases,kpi,kpiPrev,util};
+  try{ renderBiSummary(); renderBiMonthYoY(); }catch(e){ console.warn('bi top',e) }
+  _renderBiPane(_biTab);
+}
+function _renderBiPane(tab){
+  const c=window._biCtx; if(!c) return;
+  try{
+    if(tab==='kpi'){ renderBiKpiCards(c.kpi,c.kpiPrev,c.util); renderBiForecast(); renderBiSeasonality(); }
+    else if(tab==='partner'){ renderBiPartner(c.cases); }
+    else if(tab==='fleet'){ renderBiFleet(c.cases,c.util); }
+    else if(tab==='detail'){ renderBiYearlyCount(); renderBiDetailCharts(c.cases); }
+  }catch(e){ console.warn('bi pane '+tab,e) }
+}
+function showBiTab(t){
+  _biTab=t;
+  document.querySelectorAll('#bi-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.bitab===t));
+  ['top','kpi','partner','fleet','detail'].forEach(k=>{ const p=$('bi-pane-'+k); if(p) p.style.display=(k===t)?'':'none' });
+  const bar=$('bi-period-bar'); if(bar) bar.style.display=(t==='top')?'none':'';
+  _renderBiPane(t);
+  window.scrollTo({top:0,behavior:'instant'});
+}
+function showRptMode(m){
+  document.querySelectorAll('#rpt-mode-seg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  const bi=$('rpt-mode-bi'), rp=$('rpt-mode-rpt');
+  if(bi) bi.style.display=(m==='bi')?'':'none';
+  if(rp) rp.style.display=(m==='rpt')?'':'none';
+  if(m==='rpt') loadReportBody();
+  window.scrollTo({top:0,behavior:'instant'});
+}
+function _biBind(){
+  if(_biBound) return; _biBound=true;
+  const tabs=$('bi-tabs');
+  if(tabs) tabs.addEventListener('click',e=>{ const b=e.target.closest('button[data-bitab]'); if(b) showBiTab(b.dataset.bitab) });
+  const per=$('bi-per');
+  if(per) per.addEventListener('click',e=>{
+    const b=e.target.closest('button[data-per]'); if(!b) return;
+    _biState.period=b.dataset.per; renderBiAll();
+  });
+  const seg=$('rpt-mode-seg');
+  if(seg) seg.addEventListener('click',e=>{ const b=e.target.closest('button[data-mode]'); if(b) showRptMode(b.dataset.mode) });
+  const my=$('bi-myoy-seg');
+  if(my) my.addEventListener('click',e=>{
+    const b=e.target.closest('button[data-mm]'); if(!b) return;
+    _biState.monthMetric=b.dataset.mm;
+    my.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    renderBiMonthYoY();
+  });
+  const mx=$('bi-matrix-seg');
+  if(mx) mx.addEventListener('click',e=>{
+    const b=e.target.closest('button[data-mx]'); if(!b) return;
+    _biState.matrixMetric=b.dataset.mx;
+    mx.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    renderBiMatrix();
+  });
+  const gr=$('bi-gran-seg');
+  if(gr) gr.addEventListener('click',e=>{
+    const b=e.target.closest('button[data-gran]'); if(!b) return;
+    _biState.gran=b.dataset.gran;
+    gr.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    renderBiForecast();
+  });
+}
+
 function renderAll(){
   if(!DR&&!DD){
     toast('データなし — 連携してください','err');
@@ -4165,6 +5083,7 @@ function renderAll(){
   try{ renderSim(); }catch(e){ console.warn('sim',e); }                 // 第2波B(2026-07-15): 経営シミュレーター (② 資金ランウェイ連動を内包)
   try{ renderTrend(); renderFactor(); }catch(e){ console.warn('trend factor',e); } // 2026-07-15c: 分析クオリティUP(トレンド+要因分解)
   try{ renderCash(); }catch(e){ console.warn('cash',e); }               // 第4波: 資金繰りタブ
+  try{ renderBiAll(); }catch(e){ console.warn('bi',e); }                // 2026-08-12: レンタカー経営分析 (PC移植)
 }
 
 // ---------- TABS / CROWN FAB ----------
@@ -4208,7 +5127,12 @@ async function loadReportBody(){
 }
 
 function showTab(t){
-  if(t==='report') loadReportBody();
+  // 分析タブは「レンタカー(ライブ)」と「全社レポート」の2モード。レポートは選ばれた時だけ取りに行く
+  if(t==='report'){
+    const seg=$('rpt-mode-seg');
+    const on=seg?seg.querySelector('button.on'):null;
+    if(on && on.dataset.mode==='rpt') loadReportBody();
+  }
   _currentTab = t;
   ['now','rev','ops','kane','pipe','report','set'].forEach(s=>$('sec-'+s).classList.toggle('on',s===t));
   // Crown 中央表示と petal 現在地ハイライト
