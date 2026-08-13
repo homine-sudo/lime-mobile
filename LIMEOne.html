@@ -3078,7 +3078,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-09';
+const APP_VERSION = '2026-08-12c';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3606,7 +3606,7 @@ function getEditorName(){
   return localStorage.getItem('editorName') || '';
 }
 function setEditorName(v){ localStorage.setItem('editorName', v||''); updateSyncStatus(); }
-// 2026-08-09: 「誰が操作したか」の表示名。操作者名(未設定なら端末ID)を返す。
+// 2026-08-12: 「誰が操作したか」の表示名。操作者名(未設定なら端末ID)を返す。
 //   ★これが無いと updatedBy が空 or 'PC削除' 等の固定文字列になり、後から誰の操作か追えない。
 //     実際に競合コピー148個から復元した変更履歴1,227件のうち約120件(10%)が追跡不能だった。
 //   ★戻り値を「システム」で始めるな: モバイル _isSysUpd (/^システム/) が人間操作の表示から
@@ -3614,6 +3614,26 @@ function setEditorName(v){ localStorage.setItem('editorName', v||''); updateSync
 //   ★端末IDを含めるのは、同期事故で「古い端末が巻き戻した」のと「本人が編集した」を
 //     区別するため (2026-07-22 18:35 の巻き戻しがまさにこれで、人名だけでは判別不能だった)。
 function _whoPC(){ const n = getEditorName(); return n ? n : getPcId(); }
+
+/* 2026-08-12b: 返却済以降に進む時、請求に必要な項目が空でないか確認する。
+   ★なぜ必要か: 2026-08-12 の実データ調査で「貸渡料金や車両が空のまま返却済」が5件あり、
+     そのまま請求パイプラインから外れて長期間滞留していた (最長1年超・複数件)。
+     ※具体的な件数と金額は CHANGELOG.md 2026-08-12c 参照 (このファイルは公開されるので書かない)。
+     FAX送信が実質の請求トリガーなので、項目が欠けたまま進むと案件が静かに沈む。
+   ★ハードブロックにはしない: 現場が回収を記録できなくなる方が事故として重い (§0 誤操作防止)。
+     人間に見せて確認させるところまでが役割。
+   ★PC LIMEOne と モバイル index_mobile で完全同一に保つこと (calcAmounts と同じ扱い)。 */
+const BILLING_READY_LATE_STATUSES = ['返却済','仮請求','請求済','入金済'];
+function _billingReadyWarnings(c){
+  if(!c || BILLING_READY_LATE_STATUSES.indexOf(c.status) < 0) return [];
+  const w = [];
+  if(!Number(c.unitPrice))                       w.push('貸渡料金 ← これが空だと請求額が¥0になります');
+  if(!c.vehicleId)                               w.push('車両 ← これが空だと請求書に車両が出ません');
+  if(!c.useStart)                                w.push('利用開始日 ← これが空だと日数が計算できません');
+  if(!c.useEnd)                                  w.push('利用終了日 ← これが空だと日数が計算できません');
+  if(c.category === '損保' && !c.insurerId)      w.push('保険会社 ← これが空だと請求先が決まりません');
+  return w;
+}
 
 /* --- IndexedDB にディレクトリハンドルを保存 --- */
 const IDB_NAME = 'loanerCarSync', IDB_STORE = 'handles';
@@ -4775,12 +4795,12 @@ async function releaseLock(){
   if(!dirHandle) return;
   try { await dirHandle.removeEntry(getPcId()+'.lock'); } catch(e){}
 }
-/* ===== 📋 監査ログ (2026-08-09 新設・PC/モバイル共通仕様) =====
+/* ===== 📋 監査ログ (2026-08-12 新設・PC/モバイル共通仕様) =====
    目的: 「誰が・いつ・どの案件の・何を・いくらから いくらに変えたか」を残す。
-   なぜ必要か: 2026-08-09 の遡及検査で、競合コピー148個から復元した変更履歴1,227件のうち
+   なぜ必要か: 2026-08-12 の遡及検査で、競合コピー148個から復元した変更履歴1,227件のうち
      約120件(10%)が「誰の操作か不明」だった。さらに 2026-07-22 18:35 に古い端末が
-     data.json を巻き戻し、案件 2026-04-0017 の値引¥17,600 と 2026-06-0104 の利用終了日
-     (6/30→6/20・¥44,000相当) が壊れていたが、証跡が無いため事故と不正の区別ができなかった。
+     data.json を巻き戻し、ある案件の値引と別案件の利用終了日が壊れていたが、
+     証跡が無いため事故と不正の区別ができなかった (詳細は CHANGELOG.md 2026-08-12a)。
    ★鉄則1: data.json には一切書かない。別ファイル・1端末1ファイルの追記専用。
      マージ経路(§4.5)に触れると案件消失リスクに直結するため、絶対に混ぜるな。
    ★鉄則2: この機能は絶対に例外を投げない。監査ログの失敗で保存処理を巻き込んだら本末転倒。
@@ -9926,6 +9946,7 @@ function saveGeneralRental(closeAfter){
   if(!c.useEnd) warns.push('返却日');
   if(!c.vehicleId && !c.plateTail) warns.push('車両');
   if(!c.staff) warns.push('受付担当');
+  _billingReadyWarnings(c).forEach(w => { if(!warns.some(x => x.startsWith(w.split(' ')[0]))) warns.push(w); });
   if(warns.length){
     if(!confirm('以下の項目が未入力ですが、このまま保存しますか?\n\n' + warns.join('\n'))) return;
   }
@@ -9945,7 +9966,7 @@ function saveGeneralRental(closeAfter){
   if(typeof preserveExtraCaseFields === 'function') preserveExtraCaseFields(c);
   // v2026.05: 共有モードのマージ衝突解決で「最後に編集したPC」が勝てるよう updatedAt をセット
   c.updatedAt = Date.now();
-  c.updatedBy = _whoPC();   // 2026-08-09: 誰が保存したかを記録 (従来PCは未設定=(不明)だった)
+  c.updatedBy = _whoPC();   // 2026-08-12: 誰が保存したかを記録 (従来PCは未設定=(不明)だった)
   if(_grNotifyIsNew && !c.createdAt) c.createdAt = c.updatedAt;
   if(_grNotifyIsNew && !c.createdBy) c.createdBy = _whoPC();
   // DATA.cases に反映
@@ -10795,7 +10816,8 @@ function closeVehiclePicker(){ closeModal('veh-picker-modal'); }
 function renderVehiclePicker(){
   const q = ($('vp-search').value||'').trim().toLowerCase();
   const fc = $('vp-class-filter').value;
-  let vehicles = DATA.vehicles.filter(v=>v.status!=='廃車');
+  // 2026-08-12: 売却済も候補から外す。手元に無い車を新しい案件に割り当てられてしまう。
+  let vehicles = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='売却済');
   if(fc) vehicles = vehicles.filter(v=>v.vehicleClass===fc);
   if(q){
     vehicles = vehicles.filter(v=>{
@@ -10924,7 +10946,8 @@ function renderAssignedVehicleChip(){
 function onPlateTailChange(){
   const tail = ($('f-plateTail').value||'').trim();
   if(!/^\d{4}$/.test(tail)) return;
-  const matches = DATA.vehicles.filter(v=>v.status!=='廃車' && ((v.plate||{}).tail||'')===tail);
+  // 2026-08-12: 売却済も除外。4桁一致で売却済の車が自動割当されるのを防ぐ。
+  const matches = DATA.vehicles.filter(v=>v.status!=='廃車' && v.status!=='売却済' && ((v.plate||{}).tail||'')===tail);
   if(matches.length===1){
     assignVehicleToForm(matches[0]);
     toast('4桁番号からマスタ自動入力: '+matches[0].plateDisplay);
@@ -11284,6 +11307,7 @@ function saveCase(){
   const warns = [];
   if(!c.vehicleClass && !c.vehicleId) warns.push('車両クラス');
   if(!c.staff) warns.push('担当者');
+  _billingReadyWarnings(c).forEach(w => warns.push(w));
   if(errors.length){ toast('必須未入力: '+errors.join(' / '),'error'); return; }
   if(warns.length){
     if(!confirm('以下の項目が未入力ですが、このまま保存しますか?\n\n' + warns.join('\n'))) return;
@@ -11327,7 +11351,7 @@ function saveCase(){
   preserveExtraCaseFields(c);
   // v2026.05: 共有モードのマージ衝突解決で「最後に編集したPC」が勝てるよう updatedAt をセット
   c.updatedAt = Date.now();
-  c.updatedBy = _whoPC();   // 2026-08-09: 誰が保存したかを記録 (従来PCは未設定=(不明)だった)
+  c.updatedBy = _whoPC();   // 2026-08-12: 誰が保存したかを記録 (従来PCは未設定=(不明)だった)
   if(_notifyIsNew && !c.createdAt) c.createdAt = c.updatedAt;
   if(_notifyIsNew && !c.createdBy) c.createdBy = _whoPC();
   const idx = DATA.cases.findIndex(x=>x.id===c.id);
@@ -15659,7 +15683,10 @@ function vehicleAlerts(){
   const out = [];
   const now = new Date();
   DATA.vehicles.forEach(v=>{
-    if(v.status==='廃車') return;
+    // 2026-08-12: 売却済も除外する。売った車の車検/点検を知らせても対応しようがなく、
+    //   本当に手配が要る車がノイズに埋もれる (NX300 が売却後も車検アラートに出続けた)。
+    //   ★車両マスタの「引退」判定は 廃車 と 売却済 の2つ。片方だけ書くと今回の抜けが再発する。
+    if(v.status==='廃車' || v.status==='売却済') return;
     // 車検満了日: 60日前からアラート
     let _shakenDate = '';  // この車両で車検満了アラートを出した日付 (点検の重複表示抑止に使う)
     if(v.inspectionDate){
@@ -18124,7 +18151,7 @@ async function initApp(){
   // Always show banner if any major data is missing
   maybeShowImportBanner();
   applyAdminMode();
-  // 2026-08-09: 監査ログ — 前回書けなかった分をキューから復帰し、以後60秒ごとに掃き出す。
+  // 2026-08-12: 監査ログ — 前回書けなかった分をキューから復帰し、以後60秒ごとに掃き出す。
   //   共有フォルダ接続前は dirHandle が無く書けないので、接続後に自然に流れるよう定期実行にする。
   try{ _auditQueueLoad(); setTimeout(()=>{ _auditFlush(); }, 8000); setInterval(()=>{ _auditFlush(); }, 60000); }catch(_){}
   // v2026.04.29bq: 起動時の重大整合性チェック (重複ID等)

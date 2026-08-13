@@ -2091,7 +2091,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-09b';
+const APP_VERSION = '2026-08-12c';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2102,7 +2102,7 @@ const DBX_APP_KEY = 'fly154tcdbz09x9';
 const DBX_DATA_PATH = '/ライム共有DB/システムデータ（R）/data.json';
 // チェックシート写真の保存ベース (なければ自動作成される)
 const DBX_PHOTO_BASE = '/ライム共有DB/システムデータ（R）/checksheets';
-// 監査ログの保存ベース (2026-08-09・1端末1ファイルの追記専用。PC版 audit/ と同じ場所)
+// 監査ログの保存ベース (2026-08-12・1端末1ファイルの追記専用。PC版 audit/ と同じ場所)
 const DBX_AUDIT_BASE = '/ライム共有DB/システムデータ（R）/audit';
 
 const LS_KEYS = {
@@ -2113,7 +2113,7 @@ const LS_KEYS = {
   recTab: 'limeMob_recTab', histTab: 'limeMob_histTab',
   lastSyncAt: 'limeMob_lastSyncAt',
   journal: 'limeMob_journal',
-  devId: 'limeMob_devId', auditQueue: 'limeMob_auditQueue'   // 2026-08-09 監査ログ
+  devId: 'limeMob_devId', auditQueue: 'limeMob_auditQueue'   // 2026-08-12 監査ログ
 };
 
 // ============================================================
@@ -3220,7 +3220,7 @@ function findCaseById(id){ return (DATA?.cases||[]).find(c => c.id === id); }
 function findInsurer(id){ return (DATA?.insurers||[]).find(x => x.id === id); }
 function getSettings(){ return DATA?.settings || {}; }
 
-/* ===== 📋 監査ログ (2026-08-09 新設・PC LIMEOne.html と同一仕様) =====
+/* ===== 📋 監査ログ (2026-08-12 新設・PC LIMEOne.html と同一仕様) =====
    目的: 「誰が・いつ・どの案件の・何を・いくらから いくらに変えたか」を残す。
    ★AUDIT_FIELDS は PC版と完全同一に保つこと。片方だけ増減させると、同じ操作なのに
      端末によってログの粒度が変わり、突合できなくなる (calcAmounts と同じ扱い)。
@@ -3317,8 +3317,27 @@ async function _auditFlush(){
   }
 }
 
+/* 2026-08-12b: 返却済以降に進む時、請求に必要な項目が空でないか確認する。
+   ★PC LIMEOne の _billingReadyWarnings と完全同一に保つこと (calcAmounts と同じ扱い)。
+     片方だけ変えると端末によって止まったり止まらなかったりする。
+   ★なぜ必要か: 2026-08-12 の実データ調査で「貸渡料金や車両が空のまま返却済」が5件あり、
+     そのまま請求パイプラインから外れて長期間滞留していた (最長1年超・複数件)。
+     ※具体的な件数と金額は CHANGELOG.md 2026-08-12c 参照 (このファイルは公開されるので書かない)。
+   ★ハードブロックにはしない: 現場が回収を記録できなくなる方が事故として重い (§0 誤操作防止)。 */
+const BILLING_READY_LATE_STATUSES = ['返却済','仮請求','請求済','入金済'];
+function _billingReadyWarnings(c){
+  if(!c || BILLING_READY_LATE_STATUSES.indexOf(c.status) < 0) return [];
+  const w = [];
+  if(!Number(c.unitPrice))                       w.push('貸渡料金 ← これが空だと請求額が¥0になります');
+  if(!c.vehicleId)                               w.push('車両 ← これが空だと請求書に車両が出ません');
+  if(!c.useStart)                                w.push('利用開始日 ← これが空だと日数が計算できません');
+  if(!c.useEnd)                                  w.push('利用終了日 ← これが空だと日数が計算できません');
+  if(c.category === '損保' && !c.insurerId)      w.push('保険会社 ← これが空だと請求先が決まりません');
+  return w;
+}
+
 function _stampUpdated(c){
-  // 2026-08-09: 監査ログ — 最後に同期した状態(_lastSyncSnapshot)を「変更前」として差分を取る。
+  // 2026-08-12: 監査ログ — 最後に同期した状態(_lastSyncSnapshot)を「変更前」として差分を取る。
   //   saveToDropbox 成功のたびに captureSyncSnapshot で更新されるので、通常は1操作=1差分になる。
   //   オフラインで保存が失敗し続けた場合だけ差分が累積するが、記録が重複する方が
   //   取りこぼすより安全なのでこれで良い。
@@ -5154,6 +5173,22 @@ async function onConfirmDo(){
       }
       c.recoveryCompleted = true;
       c.status = '返却済';
+      // 2026-08-12b: 請求に必要な項目が空のまま返却済にすると、案件が請求パイプラインから
+      //   外れて静かに沈む (実データで5件・最長405日の滞留)。ここで人間に見せる。
+      //   ★止めはしない: 回収の記録ができなくなる方が事故として重い。
+      const _bw = _billingReadyWarnings(c);
+      if(_bw.length){
+        hideSpinner();
+        const okB = await confirmModal(
+          '⚠️ 請求に必要な項目が空です',
+          `このまま回収完了にすると、<b>あとで請求できません</b>。<br><br>` +
+          _bw.map(x => '・' + esc(x)).join('<br>') +
+          `<br><br>回収の記録は先に済ませて、<b>あとで事務所で埋める</b>こともできます。`,
+          'このまま記録する', 'm-btn-danger'
+        );
+        if(!okB){ return; }          // 中止 = まだ何も保存していない状態に戻る
+        showSpinner('回収完了を記録中...');
+      }
     }
     _stampUpdated(c);
     _syncVehicleMileage(c);  // 返却/貸出メーター → 車両マスタ mileage へ追従 (走行距離を定位置に最新化)
@@ -5349,7 +5384,7 @@ async function onFaxSkip(){
   _flow = null;
 }
 
-/* ===== 🚗 車両乗り換えの前区間 (枝番) を最終回収時に一緒に送る (2026-08-09b) =====
+/* ===== 🚗 車両乗り換えの前区間 (枝番) を最終回収時に一緒に送る (2026-08-12b) =====
    受付No は base `YYYY-MM-NNNN` + `-N` が乗り換え連番 (PC swapVehicleContinue と同じ規則)。
    最終回収時、それより前の枝番の「回収完了・利用金額入りの完成版」も続けてFAXし、
    取引先に全区間の請求根拠を揃える。
@@ -5588,7 +5623,7 @@ async function onFaxSend(){
 // ============================================================
 // スマートFAX送信: GAS自動送信を最優先 → 失敗時にWeb Share → .emlダウンロード
 // ============================================================
-// opts (2026-08-09b・省略時は従来どおり):
+// opts (2026-08-12b・省略時は従来どおり):
 //   prior:true       → 前区間(枝番)の送信。faxHistory 追記のみで status を触らない
 //   deferFinish:true → 送信後に画面遷移しない (複数通を連続送信する途中のため)
 const _faxMark   = (c, to, method, opts) => (opts && opts.prior)
@@ -8779,7 +8814,7 @@ async function init(){
 
   _startProactiveRefresh();
 
-  // 2026-08-09: 監査ログ — 前回書けなかった分をキューから復帰し、以後60秒ごとに掃き出す。
+  // 2026-08-12: 監査ログ — 前回書けなかった分をキューから復帰し、以後60秒ごとに掃き出す。
   //   現場は圏外になりやすいので、書けなければ溜めて後で流す (取りこぼしより重複の方が安全)。
   try{ _auditQueueLoad(); setTimeout(()=>{ _auditFlush(); }, 8000); setInterval(()=>{ _auditFlush(); }, 60000); }catch(_){}
 
