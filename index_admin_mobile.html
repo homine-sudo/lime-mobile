@@ -992,6 +992,14 @@
       <div class="now-mrow" id="cl-month">当月処理 —</div>
     </div>
 
+    <!-- ①a-2 今日の現場 · レンタカー (2026-08-13a: PC ダッシュボード上部の5枚KPI を移植)
+         上の「今日の現場 · 全社」は3事業合成の残ジョブ view。こちらはレンタカー単独の実数で別物。 -->
+    <div class="card">
+      <div class="lbl">今日の現場 · レンタカー</div>
+      <div class="bi-kpis" id="today-rental-kpi"></div>
+      <div class="bi-note">PC のダッシュボード上部と同じ数字です。「利用中(件数)」と「本日 稼働中(台数)」は同じ判定で数えているので必ず整合します（差が出るのは他社借りの車と、自社車なのに車両が未割当の案件）。</div>
+    </div>
+
     <!-- ①b 気づき 二層化 (上段=今日の要対応 max4 / 下段=観測ノート details既定閉・2026-07-04 第1波。旧「今月の気づき」を再設計) -->
     <div class="card">
       <div class="lbl">今日の要対応<span id="ins-count" class="ins-count"></span></div>
@@ -1574,7 +1582,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-08-13';
+const APP_VERSION = '2026-08-13a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4545,7 +4553,48 @@ function biDrawGrouped(id, labels, a, b){
   out+=`<line class="ax" x1="${L}" y1="${T+h}" x2="${L+w}" y2="${T+h}"/>`;
   svg.innerHTML=out;
 }
-/* ---------- 🎯 TOP ---------- */
+/* ---------- 📊 今日の現場 · レンタカー (TOPタブ) ---------- */
+// PC `renderDashboard` 上部の5枚KPI と同一集計 (2026-08-13a 移植)。
+//   ★「利用中」「本日 稼働中」は admin 既存の `isOutToday`/`currentlyDispatchedCases`/`vehicleStats`
+//     を再利用する。ここで述語を書き直すな (PC 2026-05-28b で両者を同一述語に統一した経緯があり、
+//     別実装にすると「利用中50件なのに稼働48台」の説明がつかなくなる)。
+function renderTodayRentalKpi(){
+  const host=$('today-rental-kpi'); if(!host) return;
+  const today=todayISO(), now=new Date();
+  const cs=rentalCases();
+  const st=v=>String(v||'').startsWith(today);
+  const dispatch=cs.filter(c=>st(c.dispatchAt)&&c.status!=='キャンセル').length;
+  const ret=cs.filter(c=>c.recoveryCompleted&&st(c.recoveryCalledAt)).length;
+  const inUse=currentlyDispatchedCases();
+  const dailySum=inUse.reduce((s,c)=>s+Number(c.unitPrice||0),0);
+  const ym=`${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
+  const ymPrev=`${now.getFullYear()-1}-${pad2(now.getMonth()+1)}`;
+  const monthCases=cs.filter(c=>String(c.receivedAt||'').startsWith(ym)&&c.status!=='キャンセル').length;
+  const monthPrev=cs.filter(c=>String(c.receivedAt||'').startsWith(ymPrev)&&c.status!=='キャンセル').length;
+  const vs=vehicleStats();
+  const vehAll=((DR&&DR.vehicles)||[]).filter(v=>v.status!=='廃車'&&v.status!=='売却済'&&v.status!=='納車待ち'&&v.status!=='社用車');
+  const vehIdSet=new Set(vehAll.map(v=>v.id));
+  const rate=vs.tot?Math.round(vs.inUse*100/vs.tot):0;
+  const lease=vehAll.filter(v=>Number(v.leaseFee)>0).length;   // リース判定=leaseFee>0 (生涯ROI と同規約)
+  const own=vehAll.length-lease;
+  const borrowed=inUse.filter(c=>c.isBorrowed).length;                                  // 他社借=自社マスタ外が正常
+  const unassigned=inUse.filter(c=>!c.isBorrowed&&!vehIdSet.has(c.vehicleId)).length;   // 自社車なのに未割当=要修正
+  const card=(k,v,s,col,full)=>`<div class="bi-kpi"${full?' style="grid-column:1/-1"':''}>
+    <div class="k" style="color:${col}">${k}</div><div class="v num">${v}</div><div class="s">${s}</div></div>`;
+  host.innerHTML=
+    card('本日の配車', dispatch+'<small> 件</small>', today, 'var(--acc)')
+    + card('本日の回収', ret+'<small> 件</small>', '車両回収日が本日', 'var(--gold)')
+    + card('利用中', `<span style="font-size:16px">${inUse.length}件 / ${biYen(dailySum)}</span>`, '日額合計 (税込)', 'var(--ok)', true)
+    + card('今月の案件数', monthCases+'<small> 件</small>',
+        `${now.getFullYear()}年${now.getMonth()+1}月 受付 ・ 前年同月 ${monthPrev}件`, 'var(--acc-hi)', true)
+    + card('本日 稼働中', `${vs.inUse}<small>/${vs.tot}台</small>`,
+        `瞬間稼働率 ${rate}% ・自社${own}／リース${lease}`
+        + (borrowed?` ・他社借 +${borrowed}`:'')
+        + (unassigned?` ・<span class="dn" style="font-weight:600">⚠車両未割当 ${unassigned}</span>`:''),
+        'var(--acc)', true);
+}
+
+/* ---------- 🎯 TOP (分析タブ) ---------- */
 function renderBiSummary(){
   const host=$('bi-summary'); if(!host) return;
   const today=todayISO();
@@ -5078,6 +5127,7 @@ function renderAll(){
   }
   renderStaleBar();
   renderNow();renderRev();renderOps();renderPipe();renderSet();
+  try{ renderTodayRentalKpi(); }catch(e){ console.warn('today rental kpi',e); }  // 2026-08-13a: TOP「今日の現場 · レンタカー」
   try{ renderReport(); }catch(e){ console.warn('report',e); }           // 第1波A(2026-07-15): 分析タブ ライブ化 (内部で renderReportLive も呼ぶ)
   try{ renderActions(); }catch(e){ console.warn('actions',e); }         // ① 打ち手トラッカー (2026-07-16)
   try{ renderSim(); }catch(e){ console.warn('sim',e); }                 // 第2波B(2026-07-15): 経営シミュレーター (② 資金ランウェイ連動を内包)
