@@ -3117,7 +3117,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-20a';
+const APP_VERSION = '2026-08-20b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -4746,7 +4746,8 @@ const SB_TABLES = { cases:'rental_cases', vehicles:'rental_vehicles', insurers:'
 function _sbLog(entry){
   try{
     const log=JSON.parse(localStorage.getItem(SB_LS.log)||'[]');
-    log.push(Object.assign({t:new Date().toISOString().slice(0,19)},entry));
+    // t はローカル時刻 (toISOString素のUTCだと9時間ズレて表示され観察時に混乱する)
+    log.push(Object.assign({t:new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,19)},entry));
     while(log.length>80) log.shift();
     localStorage.setItem(SB_LS.log,JSON.stringify(log));
   }catch(e){}

@@ -2157,7 +2157,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-20';
+const APP_VERSION = '2026-08-20a';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -2797,7 +2797,8 @@ const SB_TABLES = { cases:'rental_cases', vehicles:'rental_vehicles', insurers:'
 function _sbLog(entry){
   try{
     const log=JSON.parse(localStorage.getItem(SB_LS.log)||'[]');
-    log.push(Object.assign({t:new Date().toISOString().slice(0,19)},entry));
+    // t はローカル時刻 (toISOString素のUTCだと9時間ズレて表示され観察時に混乱する)
+    log.push(Object.assign({t:new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,19)},entry));
     while(log.length>80) log.shift();
     localStorage.setItem(SB_LS.log,JSON.stringify(log));
   }catch(e){}
