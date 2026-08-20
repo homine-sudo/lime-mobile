@@ -118,6 +118,32 @@ a{color:var(--info);text-decoration:none}
 }
 .m-update-banner .m-ub-btn:active{transform:scale(.94)}
 .m-update-banner .m-ub-btn.primary{background:#2D5034;color:#fff}
+/* 必須更新の全画面オーバーレイ (2026-08-18) */
+.m-force-update{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:#1B2A20;color:#fff;padding:32px 24px;
+  flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px;
+}
+.m-force-update.active{display:flex}
+.m-force-update .fu-ico{font-size:52px;line-height:1}
+.m-force-update .fu-ttl{font-size:20px;font-weight:800;letter-spacing:.02em}
+.m-force-update .fu-msg{font-size:14px;line-height:1.8;opacity:.92;max-width:340px}
+.m-force-update .fu-ver{font-size:12px;opacity:.7;font-variant-numeric:tabular-nums}
+.m-force-update .fu-btn{
+  width:100%;max-width:300px;padding:15px;border:none;border-radius:12px;
+  font-size:16px;font-weight:800;background:#5FBF7F;color:#0E1A12;
+}
+.m-force-update .fu-sub{
+  background:none;border:1px solid rgba(255,255,255,.35);color:#fff;
+  font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;max-width:300px;width:100%;
+}
+.m-force-update .fu-help{font-size:12px;line-height:1.7;opacity:.75;max-width:320px}
+/* 旧版のまま継続中の常設警告帯 */
+.m-stale-band{
+  display:none;align-items:center;gap:8px;flex-shrink:0;
+  background:#7F1D1D;color:#fff;padding:7px 12px;font-size:12px;font-weight:700;
+}
+.m-stale-band.active{display:flex}
 /* 接続/データ鮮度の常設バナー (異常時のみ表示) */
 .m-conn-banner{
   display:none;align-items:center;gap:8px;flex-shrink:0;
@@ -1291,6 +1317,27 @@ body.kb-open .m-confirm-card{display:none}
   <!-- 接続/データ鮮度バナー (オフライン・未連携・データが古い時のみ表示・JSで内容生成) -->
   <div class="m-conn-banner" id="m-conn-banner"></div>
   <!-- 新バージョン通知バナー (バックグラウンドチェックでヒットしたら表示) -->
+  <div class="m-stale-band" id="m-stale-band">
+    <span>⚠️</span>
+    <span style="flex:1">古いバージョンのまま使っています。落ち着いたら更新してください</span>
+    <button class="m-ub-btn" onclick="_showForceUpdate(_forceRemoteVer||'',true)">更新</button>
+  </div>
+
+  <div class="m-force-update" id="m-force-update">
+    <div class="fu-ico">🆕</div>
+    <div class="fu-ttl">更新が必要です</div>
+    <div class="fu-msg" id="fu-msg">この端末は古いバージョンで動いています。<br>そのまま使うと、記録が正しく残らないことがあります。</div>
+    <div class="fu-ver" id="fu-ver"></div>
+    <button class="fu-btn" onclick="forceUpdateNow()">今すぐ更新する</button>
+    <div id="fu-escape" style="display:none;width:100%;display:none;flex-direction:column;align-items:center;gap:10px">
+      <div class="fu-help">
+        何度か試しても更新できないようです。<br>
+        端末の電波状況を確認するか、ホーム画面のアイコンを削除して<br>もう一度追加すると直ることがあります。
+      </div>
+      <button class="fu-sub" onclick="forceUpdateBypass()">更新せずにこのまま使う</button>
+    </div>
+  </div>
+
   <div class="m-update-banner" id="m-update-banner">
     <span class="m-ub-ico">🆕</span>
     <span class="m-ub-msg">新しいバージョンがあります</span>
@@ -1613,11 +1660,30 @@ body.kb-open .m-confirm-card{display:none}
       </div>
 
       <div class="m-settings-row">
+        <div class="lbl">☁️ SaaS移行 (Supabase 影書き)</div>
+        <div class="val" id="m-set-sb">—</div>
+        <input id="m-sb-email" placeholder="共有アカウントのメール" autocomplete="off" style="margin-bottom:6px">
+        <input id="m-sb-pw" type="password" placeholder="パスワード" autocomplete="new-password" style="margin-bottom:8px">
+        <div class="actions">
+          <button class="m-btn m-btn-outline" onclick="sbLoginFromUI()">🔐 ログイン</button>
+          <button class="m-btn m-btn-outline" onclick="sbLogout()">ログアウト</button>
+        </div>
+      </div>
+
+      <div class="m-settings-row">
         <div class="lbl">データ</div>
         <div class="val" id="m-set-data-stats">未読込</div>
         <div class="actions">
           <button class="m-btn m-btn-outline" onclick="syncNow()">🔄 強制リロード</button>
           <button class="m-btn m-btn-outline" onclick="dbxDiagnose()">🛠️ Dropbox診断</button>
+        </div>
+      </div>
+
+      <div class="m-settings-row">
+        <div class="lbl">操作の記録</div>
+        <div class="val" id="m-set-audit">—</div>
+        <div class="actions">
+          <button class="m-btn m-btn-outline" onclick="auditFlushNow()">📤 記録を送信</button>
         </div>
       </div>
 
@@ -2091,7 +2157,11 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-12c';
+const APP_VERSION = '2026-08-20';
+// ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
+//   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
+//   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
+const FORCE_UPDATE_FROM = '2026-08-18';
 
 // Dropbox App Console で取得した App key (PKCE使用のため公開OK)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2708,6 +2778,184 @@ function _pcShadowAfterSave(mergedDoc, diskDoc){
   }catch(e){ console.warn('[percase-shadow]',e); }
 }
 
+// ============================================================
+// ☁️ Supabase 影書きミラー (SaaS移行 Phase 2 / 2026-08-20)
+//   settings.sbShadowMode === 'on' かつ この端末が Supabase ログイン済みの時だけ、
+//   本保存(data.json全体)の成功後に「今回の保存で変わったレコード」を
+//   Supabase rental_* テーブルへ UPSERT する (一方向ミラー・正本は data.json)。
+//   ・ベストエフォート: 失敗しても本保存/FAX/通知には一切影響しない
+//   ・失敗分は localStorage キューに退避し、次回保存/オンライン復帰/起動8秒後に再送
+//   ・フラグ未設定(既定)では何もしない = 休眠。ログは localStorage limeMob_sbShadow
+//   ・🚨 ロジックは LIMEOne.html の同名関数と完全同一に保つ (calcAmounts と同じ規律)
+//   ・vehicleClasses は id を持たないため影書き対象外 (カットオーバー時に別途設計)
+// ============================================================
+const SB_URL = 'https://acqudghpxlghmoyplrif.supabase.co';
+const SB_KEY = 'sb_publishable_a-wFPHs_RJBwg0RrLbTRng_Vesu6K4p'; // publishable key (公開前提で安全・RLSでログイン必須)
+const SB_LS = { session:'limeMob_sbSession', queue:'limeMob_sbQueue', log:'limeMob_sbShadow', warn:'limeMob_sbWarnAt' };
+const SB_TABLES = { cases:'rental_cases', vehicles:'rental_vehicles', insurers:'rental_insurers',
+  factories:'rental_factories', staff:'rental_staff', internalMessages:'rental_internal_messages', holidays:'rental_holidays' };
+function _sbLog(entry){
+  try{
+    const log=JSON.parse(localStorage.getItem(SB_LS.log)||'[]');
+    log.push(Object.assign({t:new Date().toISOString().slice(0,19)},entry));
+    while(log.length>80) log.shift();
+    localStorage.setItem(SB_LS.log,JSON.stringify(log));
+  }catch(e){}
+}
+function _sbSession(){ try{ return JSON.parse(localStorage.getItem(SB_LS.session)||'null'); }catch(e){ return null; } }
+function _sbSetSession(s){ try{ if(s) localStorage.setItem(SB_LS.session,JSON.stringify(s)); else localStorage.removeItem(SB_LS.session); }catch(e){} }
+async function sbLogin(email, pw){
+  const res = await fetch(SB_URL+'/auth/v1/token?grant_type=password',{
+    method:'POST', headers:{apikey:SB_KEY,'Content-Type':'application/json'},
+    body: JSON.stringify({email:email, password:pw})
+  });
+  const j = await res.json().catch(()=>({}));
+  if(!res.ok || !j.access_token) throw new Error(j.error_description||j.msg||('login '+res.status));
+  _sbSetSession({ access_token:j.access_token, refresh_token:j.refresh_token,
+    expires_at: Math.floor(Date.now()/1000)+(Number(j.expires_in)||3600), email:(j.user&&j.user.email)||email });
+  _sbLog({login:1});
+  return true;
+}
+function sbLogout(){ _sbSetSession(null); _sbLog({logout:1}); try{ _sbRenderStatus(); }catch(e){} }
+async function _sbEnsureToken(){
+  const s = _sbSession(); if(!s) return null;
+  if((s.expires_at||0) - Math.floor(Date.now()/1000) > 120) return s.access_token;
+  try{
+    const res = await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST', headers:{apikey:SB_KEY,'Content-Type':'application/json'},
+      body: JSON.stringify({refresh_token:s.refresh_token})
+    });
+    const j = await res.json().catch(()=>({}));
+    if(res.ok && j.access_token){
+      _sbSetSession({ access_token:j.access_token, refresh_token:j.refresh_token||s.refresh_token,
+        expires_at: Math.floor(Date.now()/1000)+(Number(j.expires_in)||3600), email:s.email });
+      return j.access_token;
+    }
+    if(res.status===400 || res.status===401){ _sbLog({ng:1,note:'refresh_'+res.status+' 再ログインが必要'}); _sbSetSession(null); }
+    return null;
+  }catch(e){ return null; }  // ネットワーク一時失敗はセッション温存
+}
+function _sbQueue(){ try{ return JSON.parse(localStorage.getItem(SB_LS.queue)||'{}'); }catch(e){ return {}; } }
+function _sbSetQueue(q){ try{ localStorage.setItem(SB_LS.queue,JSON.stringify(q)); }catch(e){} }
+function _sbEnqueue(rows){
+  const q = _sbQueue();
+  rows.forEach(r=>{ q[r.table+'|'+r.id] = { table:r.table, id:r.id, data:r.data, at:Date.now() }; });
+  // localStorage 保護: 300件超は古いものから捨てる (全量の同期し直しは gen-seed 再実行で回復可能)
+  const keys = Object.keys(q);
+  if(keys.length>300){
+    keys.sort((a,b)=> (q[a].at||0)-(q[b].at||0));
+    const drop = keys.slice(0, keys.length-300);
+    drop.forEach(k=> delete q[k]);
+    _sbLog({skip:drop.length, note:'queue_cap300'});
+  }
+  _sbSetQueue(q);
+}
+// 今回の保存で変わったレコード (id 単位の JSON 差分・_pcChangedCases と同じ思想の汎用版)
+function _sbCollectChanged(mergedDoc, diskDoc){
+  const out = [];
+  Object.keys(SB_TABLES).forEach(key=>{
+    const table = SB_TABLES[key];
+    const dBy = {};
+    (((diskDoc||{})[key])||[]).forEach(r=>{ if(r&&r.id!=null) dBy[r.id]=JSON.stringify(r); });
+    (((mergedDoc||{})[key])||[]).forEach(r=>{
+      if(!r || r.id==null) return;
+      if(dBy[r.id]!==JSON.stringify(r)) out.push({table:table, id:String(r.id), data:r});
+    });
+  });
+  const ms=(mergedDoc||{}).settings, ds=(diskDoc||{}).settings;
+  if(ms && JSON.stringify(ms)!==JSON.stringify(ds)) out.push({table:'rental_settings', id:'main', data:ms});
+  return out;
+}
+let _sbFlushing = false;
+async function _sbFlush(){
+  if(_sbFlushing) return; _sbFlushing = true;
+  try{
+    const q = _sbQueue();
+    const keys = Object.keys(q);
+    if(!keys.length) return;
+    if(typeof navigator!=='undefined' && navigator.onLine===false) return;
+    const token = await _sbEnsureToken();
+    if(!token) return;
+    const byTable = {};
+    keys.forEach(k=>{ const e=q[k]; (byTable[e.table]=byTable[e.table]||[]).push(k); });
+    for(const table of Object.keys(byTable)){
+      const ks = byTable[table];
+      const rows = ks.map(k=> ({ id:q[k].id, data:q[k].data }));
+      try{
+        const res = await fetch(SB_URL+'/rest/v1/'+table+'?on_conflict=id',{
+          method:'POST',
+          headers:{ apikey:SB_KEY, Authorization:'Bearer '+token, 'Content-Type':'application/json',
+                    Prefer:'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify(rows)
+        });
+        if(res.ok){
+          const q2 = _sbQueue();  // flush中の新規enqueueを消さないため取り直し、同一タイムスタンプの分だけ消す
+          ks.forEach(k=>{ const cur=q2[k]; if(cur && cur.at===q[k].at) delete q2[k]; });
+          _sbSetQueue(q2);
+          _sbLog({ok:rows.length, t:table});
+        } else {
+          const txt = await res.text().catch(()=> '');
+          _sbLog({ng:rows.length, t:table, err:(res.status+' '+txt).slice(0,80)});
+        }
+      }catch(e){ _sbLog({ng:rows.length, t:table, err:String(e.message||e).slice(0,80)}); }
+    }
+  } finally { _sbFlushing = false; try{ _sbRenderStatus(); }catch(e){} }
+}
+function _sbShadowAfterSave(mergedDoc, diskDoc){
+  try{
+    if(typeof isDemoMode === 'function' && isDemoMode()) return;   // デモは外部通信しない
+    const mode=(mergedDoc && mergedDoc.settings && mergedDoc.settings.sbShadowMode)||'';
+    if(mode!=='on') return;
+    if(!_sbSession()){
+      // フラグONなのに未ログイン: 1時間に1回だけ記録 (毎保存でログを埋め尽くさない)
+      try{
+        const last=Number(localStorage.getItem(SB_LS.warn)||0);
+        if(Date.now()-last>3600000){ localStorage.setItem(SB_LS.warn,String(Date.now())); _sbLog({skip:1,note:'no_login'}); }
+      }catch(e){}
+      return;
+    }
+    let changed = _sbCollectChanged(mergedDoc, diskDoc);
+    if(!changed.length) return;
+    if(changed.length>100){ _sbLog({skip:changed.length-100, note:'cap100(全量同期はgen-seedで)'}); changed=changed.slice(0,100); }
+    _sbEnqueue(changed);
+    // fire-and-forget: 本保存・FAX・通知を一切ブロックしない
+    _sbFlush().catch(function(e){ console.warn('[sb-shadow]', e); });
+  }catch(e){ console.warn('[sb-shadow]', e); }
+}
+// 起動8秒後とオンライン復帰時に残キューを再送 (どちらも失敗無害)
+try{
+  setTimeout(function(){ try{ _sbFlush().catch(function(){}); }catch(e){} }, 8000);
+  window.addEventListener('online', function(){ try{ _sbFlush().catch(function(){}); }catch(e){} });
+}catch(e){}
+// ---- 画面まわり (この2関数だけ PC/モバイルで DOM が異なる) ----
+async function sbLoginFromUI(){
+  const email=(($('m-sb-email')||{}).value||'').trim();
+  const pw=(($('m-sb-pw')||{}).value||'');
+  if(!email || !pw){ toast('メールアドレスとパスワードを入力してください','error'); return; }
+  try{
+    await sbLogin(email, pw);
+    if($('m-sb-pw')) $('m-sb-pw').value='';
+    toast('☁️ Supabase にログインしました');
+    _sbFlush().catch(function(){});
+  }catch(e){ toast('ログイン失敗: '+String(e.message||e), 'error'); }
+  try{ _sbRenderStatus(); }catch(e){}
+}
+function _sbRenderStatus(){
+  const el=$('m-set-sb'); if(!el) return;
+  const s=_sbSession();
+  const mode=(typeof DATA!=='undefined' && DATA && DATA.settings && DATA.settings.sbShadowMode)==='on';
+  const qn=Object.keys(_sbQueue()).length;
+  let last='';
+  try{
+    const log=JSON.parse(localStorage.getItem(SB_LS.log)||'[]'); const e=log[log.length-1];
+    if(e) last=' / 最終: '+String(e.t||'').slice(5,16).replace('T',' ')+(e.ok?(' ✅'+e.ok+'件'):'')+(e.ng?(' ❌'+String(e.err||'').slice(0,40)):'')+(e.note?(' ('+e.note+')'):'');
+  }catch(e){}
+  el.textContent = (mode?'影書き ON':'影書き OFF (休眠)')+
+    ' / '+(s?('ログイン中: '+(s.email||'')):'未ログイン')+
+    (qn?(' / 未送信 '+qn+'件'):'')+last;
+  el.classList.toggle('muted', !mode);
+}
+
 async function dbxUploadImage(path, blob){
   const args = {
     path, mode: { '.tag': 'add' }, autorename: true, mute: true
@@ -3093,6 +3341,8 @@ async function _doSaveCycle(){
       try { _renderConnBanner(); } catch(_){}
       // 🗂 per-case 影書き (dual モード時のみ・fire-and-forget・本保存に影響ゼロ)
       try { _pcShadowAfterSave(merged, disk); } catch(_){}
+      // ☁️ Supabase 影書き (sbShadowMode='on' 時のみ・fire-and-forget・本保存に影響ゼロ)
+      try { _sbShadowAfterSave(merged, disk); } catch(_){}
       lastErr = null; break;
     } catch(e){
       lastErr = e;
@@ -3251,13 +3501,39 @@ function _mDevId(){
 }
 let _auditQueue = [];
 let _auditWriting = false;
+let _auditWritingSince = 0;   // 送信開始時刻。ハングで _auditWriting が立ちっぱなしになると以後永久に送れなくなるための保険
+let _auditLastOk = 0;         // 最後に送信できた時刻 (設定画面に出す)
+let _auditLastErr = '';       // 直近の失敗理由 (設定画面に出す)
 function _auditQueueSave(){
   try{ if(_auditQueue.length > 500) _auditQueue = _auditQueue.slice(-500);
        localStorage.setItem(LS_KEYS.auditQueue, JSON.stringify(_auditQueue)); }catch(_){}
 }
 function _auditQueueLoad(){
-  try{ const v = JSON.parse(localStorage.getItem(LS_KEYS.auditQueue)||'[]'); _auditQueue = Array.isArray(v)?v:[]; }
-  catch(_){ _auditQueue = []; }
+  // ★replace ではなく merge。init より前に記録された分を捨てないため。
+  try{
+    const v = JSON.parse(localStorage.getItem(LS_KEYS.auditQueue)||'[]');
+    if(!Array.isArray(v) || !v.length) return;
+    const seen = new Set(_auditQueue.map(x=>x.t+'|'+x.id));
+    _auditQueue = v.filter(x=>!seen.has(x.t+'|'+x.id)).concat(_auditQueue);
+  }catch(_){ }
+}
+// 設定画面に「記録が届いているか」を出す。これが無いと、ログが無い端末の原因
+// (記録されていない / 記録はされたが送れていない) を後から切り分けられない。
+function _renderAuditStatus(){
+  const el = $('m-set-audit'); if(!el) return;
+  const n = _auditQueue.length;
+  const ok = _auditLastOk ? new Date(_auditLastOk).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) : '—';
+  el.textContent = '端末 ' + _mDevId() + ' / 未送信 ' + n + '件 / 最終送信 ' + ok + (_auditLastErr ? ' / エラー: ' + _auditLastErr : '');
+  el.style.color = (n > 0 || _auditLastErr) ? '#b91c1c' : '';
+}
+async function auditFlushNow(){
+  showSpinner('記録を送信中...');
+  _auditWriting = false;              // 手動実行はロックを無視する
+  try { await _auditFlush(); } catch(_){}
+  hideSpinner(); _renderAuditStatus();
+  if(_auditLastErr) toast('送信できませんでした: ' + _auditLastErr, 'error');
+  else if(_auditQueue.length) toast('一部だけ送信しました (残り ' + _auditQueue.length + '件)', 'error');
+  else toast('✅ 記録を送信しました', 'success');
 }
 function _auditDiff(before, after){
   const ch = [];
@@ -3287,10 +3563,23 @@ function _auditRecord(action, after, before){
   }catch(e){ try{ console.warn('[audit] 記録失敗(業務は継続):', e); }catch(_){} }
 }
 // Dropbox には追記APIが無いため read→append→overwrite。1端末1ファイルなので競合しない。
+// 案件に紐づかない注記を監査ログに残す (旧版継続など、後から効いてくる事実)
+function _auditNote(msg){
+  try{
+    if(typeof isDemoMode === 'function' && isDemoMode()) return;
+    _auditQueue.push({ t: Date.now(), who: (localStorage.getItem(LS_KEYS.editor)||'').trim(),
+      dev: _mDevId(), src: 'mobile', act: '⚠ ' + msg, no: '', id: '', ch: [] });
+    _auditQueueSave();
+    setTimeout(()=>{ _auditFlush(); }, 0);
+  }catch(_){}
+}
 async function _auditFlush(){
-  if(_auditWriting || !_auditQueue.length) return;
-  if(!DBX_TOKEN) return;                       // 未認証 → キューに溜めて次回
-  _auditWriting = true;
+  if(!_auditQueue.length) return;
+  // ★60秒で強制解除: 送信が途中でハングすると _auditWriting が true のまま残り、
+  //   以後この端末は一切ログを送れなくなる (原因不明の「記録が無い端末」を生む)。
+  if(_auditWriting && (Date.now() - _auditWritingSince) < 60000) return;
+  if(!DBX_TOKEN){ _auditLastErr = 'Dropbox未連携'; return; }
+  _auditWriting = true; _auditWritingSince = Date.now();
   try{
     const batch = _auditQueue.slice();
     const add = batch.map(x=>JSON.stringify(x)).join('\n') + '\n';
@@ -3309,7 +3598,9 @@ async function _auditFlush(){
     if(!up.ok) throw new Error('upload '+up.status);
     _auditQueue = _auditQueue.slice(batch.length);
     _auditQueueSave();
+    _auditLastOk = Date.now(); _auditLastErr = '';
   }catch(e){
+    _auditLastErr = String((e && e.message) || e).slice(0,60);
     try{ console.warn('[audit] 書込失敗(業務は継続):', e); }catch(_){}
   }finally{
     _auditWriting = false;
@@ -5830,7 +6121,7 @@ const fmtDateJP = s => { const d=parseDate(s); return d? `${d.getFullYear()}年$
 const fmtDateJPDaySep = s => { const d=parseDate(s); return d? `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日`:''; };
 const fmtNumeric = n => (n!=null)? Number(n).toLocaleString():'';
 const addDays = (iso, n) => { const d=parseDate(iso); if(!d) return ''; d.setDate(d.getDate()+Number(n||0)); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
-function insurerLabel(ins){ return ins? (ins.name + (ins.branch?` ${ins.branch}`:'')) : ''; }
+function insurerLabel(ins){ return ins? ((ins.name||'') + (ins.branch?` ${ins.branch}`:'')) : ''; }
 function findClass(code){ return (DATA?.classes||[]).find(x => x && x.code === code); }
 function caseVehicleDisplayName(c){
   if(!c) return '';
@@ -6065,7 +6356,11 @@ function buildInvoiceHTMLForCase(c){
   const invDays = a.invDays || 0;
   const dayDiscountAmt = a.dayDiscount || 0;
   const residualDiscount = a.lumpDiscount || 0;
-  const _billTo = (c.billingToName||'').trim();
+  //   2026-08-18: 一般貸渡は保険会社が無いため insurerLabel が空になる
+  //     (旧 insurerLabel は ins.name が undefined でも連結し「undefined 御中」と印字していた)。
+  //     請求先が未入力なら 借受人(契約者)→運転者 の順でフォールバックし、宛名なしの請求書を出さない。
+  let _billTo = (c.billingToName||'').trim();
+  if(!_billTo && !insurerLabel(ins)) _billTo = (c.contractorName||c.driverName||'').trim();
   const _billOverride = !!_billTo;
   return renderFaxInvoiceSingle({
     insurerName: _billOverride ? _billTo : insurerLabel(ins),
@@ -8528,9 +8823,12 @@ function refreshSettings(){
   const gas = (DATA?.settings?.gasWebAppUrl||'').trim();
   $('m-set-gas-url').textContent = gas || 'data.json で未設定';
   $('m-set-gas-url').classList.toggle('muted', !gas);
+  // ☁️ Supabase 影書きの状態表示
+  try{ _sbRenderStatus(); }catch(e){}
   if(DATA){
     const n = (DATA.cases||[]).length;
     $('m-set-data-stats').textContent = `案件 ${n} 件 / rev: ${(_lastDbxRev||'').slice(0,12)}...`;
+    try{ _renderAuditStatus(); }catch(_){}
   } else {
     $('m-set-data-stats').textContent = '未読込';
   }
@@ -8557,9 +8855,44 @@ async function forceAppUpdate(){
 // アップデートチェック (GitHub Pages から最新HTMLを取得 → APP_VERSION 比較)
 // ============================================================
 let _updateCheckInFlight = false;
+let _forceRemoteVer = '';
+// 版数比較。'2026-08-12c' < '2026-08-18' のような YYYY-MM-DD[接尾] を辞書順で比較できる。
+function _verLt(a, b){ return String(a||'') < String(b||''); }
+const _todayKey = () => { const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+// 全画面の更新要求。★必ず脱出口を残すこと (iOSのキャッシュで更新できない端末が実在する。
+//   更新できないまま閉じ込めると、現場が業務そのものをできなくなり旧版より重い事故になる)。
+function _showForceUpdate(remoteVer, manual){
+  const el = $('m-force-update'); if(!el) return;
+  _forceRemoteVer = remoteVer || _forceRemoteVer;
+  let rec = {}; try{ rec = JSON.parse(localStorage.getItem('limeMob_updAttempt')||'{}'); }catch(_){}
+  const tries = (rec.ver === _forceRemoteVer) ? Number(rec.n||0) : 0;
+  const v = $('fu-ver'); if(v) v.textContent = 'いま v' + APP_VERSION + ' / 最新 v' + _forceRemoteVer;
+  const esc = $('fu-escape');
+  // 3回試しても版が上がらないなら「このまま使う」を出す
+  if(esc) esc.style.display = (tries >= 3 || manual) ? 'flex' : 'none';
+  el.classList.add('active');
+}
+function forceUpdateNow(){
+  let rec = {}; try{ rec = JSON.parse(localStorage.getItem('limeMob_updAttempt')||'{}'); }catch(_){}
+  const n = (rec.ver === _forceRemoteVer) ? Number(rec.n||0) : 0;
+  try{ localStorage.setItem('limeMob_updAttempt', JSON.stringify({ ver:_forceRemoteVer, n:n+1 })); }catch(_){}
+  location.replace(location.pathname + '?v=' + encodeURIComponent(_forceRemoteVer) + '.' + Date.now());
+}
+// 更新できない端末の脱出口。業務は続けられるが、赤帯と監査ログに「旧版で動いている」と残す。
+function forceUpdateBypass(){
+  try{ localStorage.setItem('limeMob_forceBypass', _forceRemoteVer); }catch(_){}
+  const el = $('m-force-update'); if(el) el.classList.remove('active');
+  _renderStaleBand();
+  try{ _auditNote('旧版のまま継続 (v' + APP_VERSION + ' / 最新 v' + _forceRemoteVer + ')'); }catch(_){}
+  toast('旧バージョンのまま続けます。落ち着いたら更新してください', 'error');
+}
+function _renderStaleBand(){ const b = $('m-stale-band'); if(b) b.classList.add('active'); }
+function _clearStaleBand(){
+  const b = $('m-stale-band'); if(b) b.classList.remove('active');
+  try{ localStorage.removeItem('limeMob_forceBypass'); localStorage.removeItem('limeMob_updAttempt'); }catch(_){}
+}
 async function checkForUpdate(silent){
-  // ユーザーが「後で」を押して同じバージョンを無視中の場合はスキップ
-  const dismissed = localStorage.getItem('limeMob_updateDismissed') || '';
   if(_updateCheckInFlight) return;
   _updateCheckInFlight = true;
   try {
@@ -8572,7 +8905,20 @@ async function checkForUpdate(silent){
     const m = html.match(/const\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
     if(!m) return;
     const remoteVer = m[1];
-    if(remoteVer && remoteVer !== APP_VERSION && remoteVer !== dismissed){
+    if(!remoteVer || remoteVer === APP_VERSION){ _clearStaleBand(); return; }
+    _forceRemoteVer = remoteVer;
+    // 配信側が「この版より古いなら必須」と指定していれば全画面。無指定なら従来どおりバナー。
+    const fm = html.match(/const\s+FORCE_UPDATE_FROM\s*=\s*['"]([^'"]+)['"]/);
+    const mustFrom = fm ? fm[1] : '';
+    const isForced = mustFrom && _verLt(APP_VERSION, mustFrom);
+    // 本人が「更新できない」と判断して継続中の版は再ブロックしない (無限ロック防止)
+    const bypassed = localStorage.getItem('limeMob_forceBypass') === remoteVer;
+    if(isForced && !bypassed){ _showForceUpdate(remoteVer); return; }
+    if(isForced && bypassed) _renderStaleBand();
+    // 通常更新: 「後で」は当日限り (旧実装は永久に無視され端末が取り残される原因だった)
+    const dis = (localStorage.getItem('limeMob_updateDismissed') || '').split('|');
+    if(dis[0] === remoteVer && dis[1] === _todayKey()) return;
+    {
       const banner = $('m-update-banner');
       if(banner){
         banner.classList.add('active');
@@ -8592,7 +8938,9 @@ function dismissUpdateBanner(){
   const banner = $('m-update-banner');
   if(!banner) return;
   const m = (banner.querySelector('.m-ub-msg')?.textContent || '').match(/\(([^)]+)\)/);
-  if(m) localStorage.setItem('limeMob_updateDismissed', m[1]);
+  // ★当日限り。旧実装は版数だけを保存していたため、一度閉じるとその版は二度と通知されず、
+  //   端末が取り残される最大の経路になっていた (2026-08-18 是正)。
+  if(m) localStorage.setItem('limeMob_updateDismissed', m[1] + '|' + _todayKey());
   banner.classList.remove('active');
 }
 

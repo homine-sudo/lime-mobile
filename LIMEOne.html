@@ -2249,6 +2249,29 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <span style="color:#888">入金照合(取込)の自動化は Phase2 で追加予定。CSV出力も従来通り併用できます。</span>
       </div>
     </div>
+    <!-- ☁️ SaaS移行: Supabase 影書きミラー (Phase 2 / 2026-08-20・既定OFFの休眠機能) -->
+    <div class="settings-section">☁️ SaaS移行 (Supabase 影書き)</div>
+    <div style="background:#fff;border:1px solid var(--border);border-left:4px solid #3ECF8E;padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.7">
+      保存のたびに変更分をクラウドDB (Supabase) へも複製する移行準備機能。<b>正本は今までどおり data.json</b>。<br>
+      settings.sbShadowMode = 'on' かつ この端末でログイン済みの時だけ動作 (既定OFF・現行運用に影響なし)。<br>
+      状態: <span id="s-sb-status" style="color:#333">—</span>
+    </div>
+    <div class="settings-grid">
+      <div class="form-group">
+        <label class="form-label">Supabase メールアドレス</label>
+        <input class="form-control" id="s-sb-email" autocomplete="off" placeholder="共有アカウントのメール">
+      </div>
+      <div class="form-group">
+        <label class="form-label">パスワード</label>
+        <input class="form-control" id="s-sb-pw" type="password" autocomplete="new-password" placeholder="ログイン後は端末に保持されます">
+      </div>
+      <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end">
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn btn-outline" onclick="sbLoginFromUI()">🔐 ログイン</button>
+          <button type="button" class="btn btn-outline" onclick="sbLogout()">ログアウト</button>
+        </div>
+      </div>
+    </div>
     <!-- 外部連携: Google カレンダー + LINE 通知 -->
     <div class="settings-section">🔔 外部連携 (Google カレンダー / LINE 通知)</div>
     <div style="background:#fff;border:1px solid var(--border);border-left:4px solid #1976D2;padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.7">
@@ -2782,8 +2805,8 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       </div>
       <!-- 右ゾーン: 主要アクション (保存) — 削除から最も遠い位置に固定 -->
       <div class="ftz-right">
-        <button class="btn btn-primary" onclick="saveCase()" title="保存します(モーダルは閉じません)">💾 保存</button>
-        <button class="btn btn-secondary btn-sm" onclick="saveCase();setTimeout(()=>{ if(typeof closeCaseModal==='function') closeCaseModal(); }, 100)" title="保存してモーダルを閉じる">💾 保存 + 閉じる</button>
+        <button class="btn btn-primary" onclick="saveCaseChecked(false)" title="保存します(モーダルは閉じません)">💾 保存</button>
+        <button class="btn btn-secondary btn-sm" onclick="saveCaseChecked(true)" title="保存してモーダルを閉じる">💾 保存 + 閉じる</button>
       </div>
     </div>
   </div>
@@ -2919,6 +2942,19 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <div class="gr-step-micro">1日の料金を入れると、②の期間から合計を自動で計算します。値引がある時だけ右の2欄を使います。</div>
         <!-- 2026-08-04: 「料金と値引」は必ず全部ここに並べる。値引の入力を折りたたみへ分散させない
              (値引額=上/無料サービス日数=折りたたみ内 に分かれていて分かりにくい、という指摘への対応) -->
+        <!-- 2026-08-18: 請求書の宛名。一般貸渡は保険会社が無いため ここが唯一の宛名指定。
+             空欄なら請求書側で 借受人(契約者)→運転者 にフォールバックする (宛名なしを出さない)。 -->
+        <div class="form-grid cols3">
+          <div class="form-group" style="grid-column:span 2"><label class="form-label">請求先 <span class="text-muted text-sm">請求書の宛名</span></label>
+            <input class="form-control" id="gr-billingToName" placeholder="空欄なら借受人のお名前で発行">
+            <div style="font-size:11px;color:#999;margin-top:3px">会社宛・別の方宛にする時だけ入力します
+              <button type="button" class="btn btn-outline btn-sm" style="padding:1px 8px;font-size:11px;margin-left:6px" onclick="grBillingUseBorrower()" title="借受人 氏名をそのまま請求先に入れます">借受人と同じ</button>
+            </div>
+          </div>
+          <div class="form-group"><label class="form-label">敬称</label>
+            <select class="form-control" id="gr-billingToHonorific"><option value="様">様（個人）</option><option value="御中">御中（会社・団体）</option></select>
+          </div>
+        </div>
         <div class="form-grid cols3">
           <div class="form-group"><label class="form-label">1日の料金 (税込)</label><input class="form-control" id="gr-unitPrice" type="number" min="0" placeholder="8,800" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px" id="gr-unitPrice-hint">車を選ぶと自動で入ります</div></div>
           <div class="form-group"><label class="form-label">無料サービス日数</label><input class="form-control" id="gr-discountDays" type="number" min="0" value="0" oninput="updateGRPeriod()"><div style="font-size:11px;color:#999;margin-top:3px">1日サービスなら 1（1日分の料金を引く）</div></div>
@@ -3027,8 +3063,8 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <button class="btn btn-outline btn-sm" id="gr-btn-invoice" style="display:none" onclick="grPrintInvoice()" title="請求書を印刷">🧾 請求書</button>
       </div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-primary" onclick="saveGeneralRental(false)" title="保存します(モーダルは閉じません)">💾 保存</button>
-        <button class="btn btn-secondary btn-sm" onclick="saveGeneralRental(true)" title="保存してモーダルを閉じる">💾 保存 + 閉じる</button>
+        <button class="btn btn-primary" onclick="saveGeneralRentalChecked(false)" title="保存します(モーダルは閉じません)">💾 保存</button>
+        <button class="btn btn-secondary btn-sm" onclick="saveGeneralRentalChecked(true)" title="保存してモーダルを閉じる">💾 保存 + 閉じる</button>
       </div>
     </div>
   </div>
@@ -3078,7 +3114,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-12c';
+const APP_VERSION = '2026-08-20';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3623,6 +3659,76 @@ function _whoPC(){ const n = getEditorName(); return n ? n : getPcId(); }
    ★ハードブロックにはしない: 現場が回収を記録できなくなる方が事故として重い (§0 誤操作防止)。
      人間に見せて確認させるところまでが役割。
    ★PC LIMEOne と モバイル index_mobile で完全同一に保つこと (calcAmounts と同じ扱い)。 */
+/* ===== 保存前の突合警告 (2026-08-18 新設) =====
+   2026-08-18 の事故: 同じPCで LIME One を2つ開いており、古いタブが後から保存して
+   モバイルで先に入力された出庫メーターと配車完了時刻を消した (詳細は CHANGELOG.md 2026-08-18a)。
+   案件ロック(§4.6)は60秒で失効するので、開きっぱなしのタブは防げない。
+   ★ここは「読んで比べて止める」だけ。§4.5 のマージ処理には一切触らない
+     (触ると案件消失リスクに直結する)。止めなければ従来と完全に同じ挙動になる。
+   ★読めない/未接続なら止めない。保存できないより、保存できる方を優先する。 */
+async function _diskCaseSnapshot(caseId){
+  if(!dirHandle) return null;
+  try{
+    const f = await (await dirHandle.getFileHandle('data.json')).getFile();
+    const d = JSON.parse(await f.text());
+    return (d.cases||[]).find(x => x.id === caseId) || null;
+  }catch(e){ console.warn('[突合] ディスク読込に失敗(保存は続行):', e); return null; }
+}
+// 他端末が変えた項目を、この画面の内容で潰そうとしていないか調べる
+function _overwriteConflicts(formCase, knownCase, diskCase){
+  if(!formCase || !diskCase) return [];
+  const j = x => JSON.stringify(x === undefined ? null : x);
+  const out = [];
+  for(const f of Object.keys(AUDIT_FIELDS)){
+    const dv = diskCase[f], kv = (knownCase||{})[f], fv = formCase[f];
+    if(j(dv) === j(kv)) continue;   // 他端末は触っていない → マージで解決できる
+    if(j(fv) === j(dv)) continue;   // 自分も同じ値 → 衝突ではない
+    out.push({ f, label: AUDIT_FIELDS[f] || f, disk: dv, mine: fv });
+  }
+  return out;
+}
+async function _confirmOverwrite(caseId, formCase){
+  const disk = await _diskCaseSnapshot(caseId);
+  if(!disk) return true;
+  const known = findCaseById(caseId);
+  const conf = _overwriteConflicts(formCase, known, disk);
+  if(!conf.length) return true;
+  const sv = v => (v === '' || v == null) ? '(空)' : String(v);
+  const who = disk.updatedBy ? `${disk.updatedBy}` : '別の端末';
+  const when = disk.updatedAt ? new Date(disk.updatedAt).toLocaleString('ja-JP') : '';
+  const lines = conf.slice(0, 12).map(x =>
+    `・${x.label}\n    他の端末: ${sv(x.disk)}\n    この画面: ${sv(x.mine)}`).join('\n');
+  return confirm(
+    `⚠️ 他の端末がこの案件を更新しています\n\n` +
+    `最終更新: ${who} ${when}\n\n` +
+    lines + (conf.length > 12 ? `\n… 他 ${conf.length-12} 項目` : '') +
+    `\n\n［OK］ この画面の内容で保存する (上の「他の端末」の値は失われます)\n` +
+    `［キャンセル］ 保存しない (🔄 で最新を読み込んでから編集し直す)`
+  );
+}
+// ボタンから呼ぶ確認つき保存。既存の saveCase / saveGeneralRental は一切変更していない。
+async function saveCaseChecked(closeAfter){
+  try{
+    const c = (typeof collectForm === 'function') ? collectForm() : null;
+    if(c && c.id && !(await _confirmOverwrite(c.id, c))){
+      toast('保存を中止しました。🔄 で最新を読み込んでから編集し直してください','error');
+      return;
+    }
+  }catch(e){ console.warn('[突合] 事前確認に失敗(保存は続行):', e); }
+  saveCase();
+  if(closeAfter) setTimeout(()=>{ if(typeof closeCaseModal === 'function') closeCaseModal(); }, 100);
+}
+async function saveGeneralRentalChecked(closeAfter){
+  try{
+    const c = (typeof collectGRForm === 'function') ? collectGRForm() : null;
+    if(c && c.id && !(await _confirmOverwrite(c.id, c))){
+      toast('保存を中止しました。🔄 で最新を読み込んでから編集し直してください','error');
+      return;
+    }
+  }catch(e){ console.warn('[突合] 事前確認に失敗(保存は続行):', e); }
+  saveGeneralRental(closeAfter);
+}
+
 const BILLING_READY_LATE_STATUSES = ['返却済','仮請求','請求済','入金済'];
 function _billingReadyWarnings(c){
   if(!c || BILLING_READY_LATE_STATUSES.indexOf(c.status) < 0) return [];
@@ -4618,6 +4724,183 @@ function _pcShadowAfterSave(mergedDoc, diskDoc){
   }catch(e){ console.warn('[percase-shadow]',e); }
 }
 
+// ============================================================
+// ☁️ Supabase 影書きミラー (SaaS移行 Phase 2 / 2026-08-20)
+//   settings.sbShadowMode === 'on' かつ この端末が Supabase ログイン済みの時だけ、
+//   本保存(data.json全体)の成功後に「今回の保存で変わったレコード」を
+//   Supabase rental_* テーブルへ UPSERT する (一方向ミラー・正本は data.json)。
+//   ・ベストエフォート: 失敗しても本保存/FAX/通知には一切影響しない
+//   ・失敗分は localStorage キューに退避し、次回保存/オンライン復帰/起動8秒後に再送
+//   ・フラグ未設定(既定)では何もしない = 休眠。ログは localStorage limeOne_sbShadow
+//   ・🚨 ロジックは index_mobile.html の同名関数と完全同一に保つ (calcAmounts と同じ規律)
+//   ・vehicleClasses は id を持たないため影書き対象外 (カットオーバー時に別途設計)
+// ============================================================
+const SB_URL = 'https://acqudghpxlghmoyplrif.supabase.co';
+const SB_KEY = 'sb_publishable_a-wFPHs_RJBwg0RrLbTRng_Vesu6K4p'; // publishable key (公開前提で安全・RLSでログイン必須)
+const SB_LS = { session:'limeOne_sbSession', queue:'limeOne_sbQueue', log:'limeOne_sbShadow', warn:'limeOne_sbWarnAt' };
+const SB_TABLES = { cases:'rental_cases', vehicles:'rental_vehicles', insurers:'rental_insurers',
+  factories:'rental_factories', staff:'rental_staff', internalMessages:'rental_internal_messages', holidays:'rental_holidays' };
+function _sbLog(entry){
+  try{
+    const log=JSON.parse(localStorage.getItem(SB_LS.log)||'[]');
+    log.push(Object.assign({t:new Date().toISOString().slice(0,19)},entry));
+    while(log.length>80) log.shift();
+    localStorage.setItem(SB_LS.log,JSON.stringify(log));
+  }catch(e){}
+}
+function _sbSession(){ try{ return JSON.parse(localStorage.getItem(SB_LS.session)||'null'); }catch(e){ return null; } }
+function _sbSetSession(s){ try{ if(s) localStorage.setItem(SB_LS.session,JSON.stringify(s)); else localStorage.removeItem(SB_LS.session); }catch(e){} }
+async function sbLogin(email, pw){
+  const res = await fetch(SB_URL+'/auth/v1/token?grant_type=password',{
+    method:'POST', headers:{apikey:SB_KEY,'Content-Type':'application/json'},
+    body: JSON.stringify({email:email, password:pw})
+  });
+  const j = await res.json().catch(()=>({}));
+  if(!res.ok || !j.access_token) throw new Error(j.error_description||j.msg||('login '+res.status));
+  _sbSetSession({ access_token:j.access_token, refresh_token:j.refresh_token,
+    expires_at: Math.floor(Date.now()/1000)+(Number(j.expires_in)||3600), email:(j.user&&j.user.email)||email });
+  _sbLog({login:1});
+  return true;
+}
+function sbLogout(){ _sbSetSession(null); _sbLog({logout:1}); try{ _sbRenderStatus(); }catch(e){} }
+async function _sbEnsureToken(){
+  const s = _sbSession(); if(!s) return null;
+  if((s.expires_at||0) - Math.floor(Date.now()/1000) > 120) return s.access_token;
+  try{
+    const res = await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST', headers:{apikey:SB_KEY,'Content-Type':'application/json'},
+      body: JSON.stringify({refresh_token:s.refresh_token})
+    });
+    const j = await res.json().catch(()=>({}));
+    if(res.ok && j.access_token){
+      _sbSetSession({ access_token:j.access_token, refresh_token:j.refresh_token||s.refresh_token,
+        expires_at: Math.floor(Date.now()/1000)+(Number(j.expires_in)||3600), email:s.email });
+      return j.access_token;
+    }
+    if(res.status===400 || res.status===401){ _sbLog({ng:1,note:'refresh_'+res.status+' 再ログインが必要'}); _sbSetSession(null); }
+    return null;
+  }catch(e){ return null; }  // ネットワーク一時失敗はセッション温存
+}
+function _sbQueue(){ try{ return JSON.parse(localStorage.getItem(SB_LS.queue)||'{}'); }catch(e){ return {}; } }
+function _sbSetQueue(q){ try{ localStorage.setItem(SB_LS.queue,JSON.stringify(q)); }catch(e){} }
+function _sbEnqueue(rows){
+  const q = _sbQueue();
+  rows.forEach(r=>{ q[r.table+'|'+r.id] = { table:r.table, id:r.id, data:r.data, at:Date.now() }; });
+  // localStorage 保護: 300件超は古いものから捨てる (全量の同期し直しは gen-seed 再実行で回復可能)
+  const keys = Object.keys(q);
+  if(keys.length>300){
+    keys.sort((a,b)=> (q[a].at||0)-(q[b].at||0));
+    const drop = keys.slice(0, keys.length-300);
+    drop.forEach(k=> delete q[k]);
+    _sbLog({skip:drop.length, note:'queue_cap300'});
+  }
+  _sbSetQueue(q);
+}
+// 今回の保存で変わったレコード (id 単位の JSON 差分・_pcChangedCases と同じ思想の汎用版)
+function _sbCollectChanged(mergedDoc, diskDoc){
+  const out = [];
+  Object.keys(SB_TABLES).forEach(key=>{
+    const table = SB_TABLES[key];
+    const dBy = {};
+    (((diskDoc||{})[key])||[]).forEach(r=>{ if(r&&r.id!=null) dBy[r.id]=JSON.stringify(r); });
+    (((mergedDoc||{})[key])||[]).forEach(r=>{
+      if(!r || r.id==null) return;
+      if(dBy[r.id]!==JSON.stringify(r)) out.push({table:table, id:String(r.id), data:r});
+    });
+  });
+  const ms=(mergedDoc||{}).settings, ds=(diskDoc||{}).settings;
+  if(ms && JSON.stringify(ms)!==JSON.stringify(ds)) out.push({table:'rental_settings', id:'main', data:ms});
+  return out;
+}
+let _sbFlushing = false;
+async function _sbFlush(){
+  if(_sbFlushing) return; _sbFlushing = true;
+  try{
+    const q = _sbQueue();
+    const keys = Object.keys(q);
+    if(!keys.length) return;
+    if(typeof navigator!=='undefined' && navigator.onLine===false) return;
+    const token = await _sbEnsureToken();
+    if(!token) return;
+    const byTable = {};
+    keys.forEach(k=>{ const e=q[k]; (byTable[e.table]=byTable[e.table]||[]).push(k); });
+    for(const table of Object.keys(byTable)){
+      const ks = byTable[table];
+      const rows = ks.map(k=> ({ id:q[k].id, data:q[k].data }));
+      try{
+        const res = await fetch(SB_URL+'/rest/v1/'+table+'?on_conflict=id',{
+          method:'POST',
+          headers:{ apikey:SB_KEY, Authorization:'Bearer '+token, 'Content-Type':'application/json',
+                    Prefer:'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify(rows)
+        });
+        if(res.ok){
+          const q2 = _sbQueue();  // flush中の新規enqueueを消さないため取り直し、同一タイムスタンプの分だけ消す
+          ks.forEach(k=>{ const cur=q2[k]; if(cur && cur.at===q[k].at) delete q2[k]; });
+          _sbSetQueue(q2);
+          _sbLog({ok:rows.length, t:table});
+        } else {
+          const txt = await res.text().catch(()=> '');
+          _sbLog({ng:rows.length, t:table, err:(res.status+' '+txt).slice(0,80)});
+        }
+      }catch(e){ _sbLog({ng:rows.length, t:table, err:String(e.message||e).slice(0,80)}); }
+    }
+  } finally { _sbFlushing = false; try{ _sbRenderStatus(); }catch(e){} }
+}
+function _sbShadowAfterSave(mergedDoc, diskDoc){
+  try{
+    if(typeof isDemoMode === 'function' && isDemoMode()) return;   // デモは外部通信しない
+    const mode=(mergedDoc && mergedDoc.settings && mergedDoc.settings.sbShadowMode)||'';
+    if(mode!=='on') return;
+    if(!_sbSession()){
+      // フラグONなのに未ログイン: 1時間に1回だけ記録 (毎保存でログを埋め尽くさない)
+      try{
+        const last=Number(localStorage.getItem(SB_LS.warn)||0);
+        if(Date.now()-last>3600000){ localStorage.setItem(SB_LS.warn,String(Date.now())); _sbLog({skip:1,note:'no_login'}); }
+      }catch(e){}
+      return;
+    }
+    let changed = _sbCollectChanged(mergedDoc, diskDoc);
+    if(!changed.length) return;
+    if(changed.length>100){ _sbLog({skip:changed.length-100, note:'cap100(全量同期はgen-seedで)'}); changed=changed.slice(0,100); }
+    _sbEnqueue(changed);
+    // fire-and-forget: 本保存・FAX・通知を一切ブロックしない
+    _sbFlush().catch(function(e){ console.warn('[sb-shadow]', e); });
+  }catch(e){ console.warn('[sb-shadow]', e); }
+}
+// 起動8秒後とオンライン復帰時に残キューを再送 (どちらも失敗無害)
+try{
+  setTimeout(function(){ try{ _sbFlush().catch(function(){}); }catch(e){} }, 8000);
+  window.addEventListener('online', function(){ try{ _sbFlush().catch(function(){}); }catch(e){} });
+}catch(e){}
+// ---- 画面まわり (この2関数だけ PC/モバイルで DOM が異なる) ----
+async function sbLoginFromUI(){
+  const email=(($('s-sb-email')||{}).value||'').trim();
+  const pw=(($('s-sb-pw')||{}).value||'');
+  if(!email || !pw){ toast('メールアドレスとパスワードを入力してください','error'); return; }
+  try{
+    await sbLogin(email, pw);
+    if($('s-sb-pw')) $('s-sb-pw').value='';
+    toast('☁️ Supabase にログインしました');
+    _sbFlush().catch(function(){});
+  }catch(e){ toast('ログイン失敗: '+String(e.message||e), 'error'); }
+  try{ _sbRenderStatus(); }catch(e){}
+}
+function _sbRenderStatus(){
+  const el=$('s-sb-status'); if(!el) return;
+  const s=_sbSession();
+  const mode=(typeof DATA!=='undefined' && DATA && DATA.settings && DATA.settings.sbShadowMode)==='on';
+  const qn=Object.keys(_sbQueue()).length;
+  let last='';
+  try{
+    const log=JSON.parse(localStorage.getItem(SB_LS.log)||'[]'); const e=log[log.length-1];
+    if(e) last=' / 最終: '+String(e.t||'').slice(5,16).replace('T',' ')+(e.ok?(' ✅'+e.ok+'件'):'')+(e.ng?(' ❌'+String(e.err||'').slice(0,40)):'')+(e.note?(' ('+e.note+')'):'');
+  }catch(e){}
+  el.innerHTML = (mode?'<b style="color:#2e7d32">影書き ON</b>':'影書き OFF (settings.sbShadowMode 未設定=休眠)')+
+    ' / '+(s?('ログイン中: '+(s.email||'')):'<span style="color:#c62828">未ログイン</span>')+
+    (qn?(' / 未送信 '+qn+'件'):'')+last;
+}
+
 async function saveToDirImmediate(){
   if(!dirHandle) return;
   try{
@@ -4746,6 +5029,8 @@ async function saveToDirImmediate(){
     updateSyncStatus('✔ 共有フォルダに同期: '+new Date().toLocaleTimeString('ja-JP'));
     // 🗂 per-case 影書き (dual モード時のみ・fire-and-forget・本保存に影響ゼロ)
     try { _pcShadowAfterSave(toWrite, diskData); } catch(_){}
+    // ☁️ Supabase 影書き (sbShadowMode='on' 時のみ・fire-and-forget・本保存に影響ゼロ)
+    try { _sbShadowAfterSave(toWrite, diskData); } catch(_){}
     // ★復元/修復の明示経路 (_forceWriteOnce) は1回で解除しジャーナルも破棄 (2026-07-03)
     if(_isForceWriteOnce()){
       _clearForceWriteOnce();
@@ -5863,7 +6148,7 @@ function clearSearchBlobCache(){
   (DATA.cases||[]).forEach(c=>{ if(c._sb) delete c._sb; });
   (DATA.vehicles||[]).forEach(v=>{ if(v._sb) delete v._sb; });
 }
-function insurerLabel(ins){ return ins? (ins.name + (ins.branch?` ${ins.branch}`:'')) : ''; }
+function insurerLabel(ins){ return ins? ((ins.name||'') + (ins.branch?` ${ins.branch}`:'')) : ''; }
 // 年度(4月始まり): 1-3月は前年度
 function getNendo(d){ const dd = parseDate(d) || new Date(); return dd.getMonth()+1 < 4 ? dd.getFullYear()-1 : dd.getFullYear(); }
 function nextCaseNo(forDate){
@@ -9555,6 +9840,7 @@ const GR_FIELDS = [
   'vehicleId','vehicleClass','vehicleName','plateArea','plateNo','plateKana','plateTail','unitPrice',
   'hasCDW','hasWide','preferSmoke','preferAT','rentalNote',
   'invoiceNo','invoiceDays','invoiceUnitPrice','discount','discountDays',
+  'billingToName','billingToHonorific',
   'paymentMethod','invoiceIssuedAt','paidAt','paidAmount','internalMemo'
 ];
 
@@ -9821,6 +10107,16 @@ function grCopyContractorToDriver(){
   if($('gr-driverName')) $('gr-driverName').value = cn;
   if($('gr-driverAddress')) $('gr-driverAddress').value = ba;
   if(typeof toast==='function') toast('借受人情報を運転者にコピーしました');
+}
+
+// 請求先の宛名に 借受人(なければ運転者)の氏名を入れる (一般貸渡のワンタップ補助)。敬称は「様」。
+function grBillingUseBorrower(){
+  const nm = (($('gr-contractorName')||{}).value||'').trim() || (($('gr-driverName')||{}).value||'').trim();
+  if(!nm){ toast('借受人 氏名が未入力です','error'); return; }
+  if($('gr-billingToName')) $('gr-billingToName').value = nm;
+  if($('gr-billingToHonorific')) $('gr-billingToHonorific').value = '様';
+  _grDirty = true;
+  toast('請求先を「'+nm+' 様」に設定しました');
 }
 
 // GR モーダル開く
@@ -14611,7 +14907,11 @@ function renderInvoiceSingle(id){
   const residualDiscount = a.lumpDiscount || 0;
   // 請求先(宛名)の上書き: billingToName があれば その宛名+敬称で発行 (保険会社ではなく個人・別会社へ請求する時)。
   //   空なら従来どおり保険会社名+御中+支店+担当。FAX送信先・freee取引先は変えない (宛名の見た目のみ)。
-  const _billTo = (c.billingToName||'').trim();
+  //   2026-08-18: 一般貸渡は保険会社が無いため insurerLabel が空になる
+  //     (旧 insurerLabel は ins.name が undefined でも連結し「undefined 御中」と印字していた)。
+  //     請求先が未入力なら 借受人(契約者)→運転者 の順でフォールバックし、宛名なしの請求書を出さない。
+  let _billTo = (c.billingToName||'').trim();
+  if(!_billTo && !insurerLabel(ins)) _billTo = (c.contractorName||c.driverName||'').trim();
   const _billOverride = !!_billTo;
   $('invoice-body').innerHTML = renderFaxInvoiceSingle({
     insurerName: _billOverride ? _billTo : insurerLabel(ins),
@@ -16821,6 +17121,8 @@ function fillSettings(){
   if($('s-seal-enabled')) $('s-seal-enabled').checked = (s.sealEnabled !== false);  // 既定ON
   if($('s-seal-text')) $('s-seal-text').value = s.sealText || '';
   _updateSealPreview();
+  // ☁️ Supabase 影書きの状態表示
+  try{ _sbRenderStatus(); }catch(e){}
 }
 // 設定画面: 電子印プレビューを現在の入力から再描画
 function _updateSealPreview(){
