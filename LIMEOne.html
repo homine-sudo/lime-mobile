@@ -246,6 +246,9 @@ tr.row-cancel td{opacity:.55}
 .wk-cls{font-size:9px;font-weight:bold;background:#EEF0EC;color:#555;border-radius:3px;padding:0 4px;flex:0 0 auto}
 .wk-plate{font-family:Consolas,Menlo,monospace;font-size:10px;font-weight:bold;background:#fff;color:#0C447C;border:1px solid #B5D3F0;border-radius:3px;padding:0 5px;flex:0 0 auto}
 .wk-dest{display:flex;align-items:center;gap:3px;font-size:10.5px;color:#777;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 回収先が配車先と別のとき: 見落とすと違う場所へ行ってしまうので目立たせる (2026-08-20) */
+.wk-dest.alt{color:#6B3F8C;font-weight:bold;white-space:normal;flex-wrap:wrap;overflow:visible}
+.wk-dest .wk-dest-tag{flex:none;font-size:9px;font-weight:bold;color:#6B3F8C;background:#F3EAFA;border:1px solid #C9A9E0;border-radius:3px;padding:0 3px;margin-left:2px}
 .wk-memo{display:flex;align-items:center;gap:3px;font-size:10px;color:#9C5800;background:#FFF6E5;border:1px solid #F0D49A;border-radius:4px;padding:2px 6px;margin-top:4px;white-space:nowrap;overflow:hidden}
 .wk-card.done{background:#FBFBF9}
 .wk-card.done .wk-bd{opacity:.72}
@@ -3118,7 +3121,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-20d';
+const APP_VERSION = '2026-08-20e';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -8634,11 +8637,12 @@ function showAvailDayDetail(cls, i){
   const vlabel = c => { const v=c.vehicleId&&DATA.vehicles.find(x=>x.id===c.vehicleId); const pl=v?(v.plate||{}):{}; const plate=[pl.area,pl.no,pl.kana,pl.tail].filter(Boolean).join(''); return ((v&&v.name)?v.name:(c.vehicleName||''))+(plate?` ${plate}`:''); };
   const retBasis = c => c? (c.useEnd?'返却予定':(c.useDeadline?'使用期限':'利用開始+30日見込み')) : '';
   const targetTag = c => { if(!c.target) return ''; const m={'対物':['#E6F1FB','#0C447C'],'車両':['#E1F5EE','#0F6E56'],'人身':['#FCEBEB','#A32D2D'],'その他':['#F1EFE8','#444441']}; const col=m[c.target]||m['その他']; return ` <span style="background:${col[0]};color:${col[1]};font-size:10px;padding:1px 6px;border-radius:6px;font-weight:normal">${esc(c.target)}</span>`; };
-  const link = (id, extra) => { const c=byId(id); if(!c) return ''; const who=c.driverName||c.contractorName||''; const dst=c.dispatchToName||''; return `<a href="#" onclick="event.preventDefault();openCaseModal('${id}')" style="display:block;margin:3px 0;color:#185FA5;text-decoration:none"><b>${esc(c.caseNo||'')}</b>${targetTag(c)} ${esc(vlabel(c))}${who?` ・ ${esc(who.slice(0,12))}`:''}${dst?` → ${esc(dst)}`:''}${extra?` <span style="color:#999">${extra}</span>`:''}</a>`; };
+  // 「＋ 帰る」側は回収先を出す (isRet=true)。配車先を出すと違う場所へ行かせる (2026-08-20)
+  const link = (id, extra, isRet) => { const c=byId(id); if(!c) return ''; const who=c.driverName||c.contractorName||''; const _d = (isRet && typeof _recoveryDest==='function') ? _recoveryDest(c) : {name:c.dispatchToName||'',isDifferent:false}; const dst=_d.name||''; return `<a href="#" onclick="event.preventDefault();openCaseModal('${id}')" style="display:block;margin:3px 0;color:#185FA5;text-decoration:none"><b>${esc(c.caseNo||'')}</b>${targetTag(c)} ${esc(vlabel(c))}${who?` ・ ${esc(who.slice(0,12))}`:''}${dst?` → ${esc(dst)}${_d.isDifferent?'<span style="color:#6B3F8C;font-weight:bold"> (配車先と別)</span>':''}`:''}${extra?` <span style="color:#999">${extra}</span>`:''}</a>`; };
   let h = `<div style="border:1px solid #E0E0DC;border-radius:6px;padding:8px 10px;background:#FBFBF9;margin-top:6px">
     <div style="font-weight:bold;font-size:12px;margin-bottom:4px">${esc(cls)} ・ ${md}(${wd}) の動き <span style="color:#999;font-weight:normal">（空き${f.free}台）</span><a href="#" onclick="event.preventDefault();var d=document.getElementById('availability-board-detail');if(d)d.innerHTML='';" style="float:right;color:#999;font-size:11px">✕</a></div>`;
   if(f.dep.length){ h += `<div style="margin:4px 0"><span style="color:#185FA5;font-weight:bold;font-size:12px">－ 出る ${f.dep.length}件</span>${f.dep.map(id=>link(id)).join('')}</div>`; }
-  if(f.ret.length){ h += `<div style="margin:4px 0"><span style="color:#C53030;font-weight:bold;font-size:12px">＋ 帰る ${f.ret.length}件</span>${f.ret.map(id=>link(id,'('+retBasis(byId(id))+')')).join('')}</div>`; }
+  if(f.ret.length){ h += `<div style="margin:4px 0"><span style="color:#C53030;font-weight:bold;font-size:12px">＋ 帰る ${f.ret.length}件</span>${f.ret.map(id=>link(id,'('+retBasis(byId(id))+')',true)).join('')}</div>`; }
   if(!f.dep.length && !f.ret.length){
     if(f.occ){ h += `<div style="margin:4px 0;font-size:11px;color:#666">出入りなし。この日 稼働中 ${f.occ}台:</div>${f.occIds.slice(0,10).map(id=>link(id)).join('')}${f.occIds.length>10?`<div style="color:#999;font-size:11px">…他 ${f.occIds.length-10}件</div>`:''}`; }
     else { h += `<div style="font-size:11px;color:#3B6D11">この日は全台空き</div>`; }
@@ -8966,8 +8970,14 @@ function renderDashboard(){
       const vehHtml = (classCode||vehName||plateTail)
         ? `<div class="wk-veh">${classChip}<span class="wk-vn">${esc(vehName.slice(0,18))}</span>${platePill}</div>`
         : '';
-      const destHtml = c.dispatchToName
-        ? `<div class="wk-dest">📍 ${esc((c.dispatchToName||'').slice(0,16))}</div>`
+      // 📍行き先: 回収の行は「回収先」を出す。配車先を出すと別の場所へ行かせてしまう。
+      //   判定は _recoveryDest() に一本化 (回収先の指定が無ければ配車先にフォールバックする)。
+      //   モバイルは 2026-08-04b に同じ修正済み。PC/モバイルで行き先の表示を食い違わせない。
+      const _dest = isReturn
+        ? ((typeof _recoveryDest === 'function') ? _recoveryDest(c) : { name: c.dispatchToName||'', isDifferent:false })
+        : { name: c.dispatchToName||'', isDifferent:false };
+      const destHtml = _dest.name
+        ? `<div class="wk-dest${_dest.isDifferent?' alt':''}" title="${_dest.isDifferent?'⚠ 回収先が配車先と違います → ':''}${esc(_dest.name)}">${_dest.isDifferent?'🏁':'📍'} ${esc((_dest.name||'').slice(0,16))}${_dest.isDifferent?'<span class="wk-dest-tag">配車先と別</span>':''}</div>`
         : '';
       return `<div class="wk-card${isReturn?' ret':''}${done?' done':''}" onclick="openCaseModal('${c.id}')" oncontextmenu="event.preventDefault();showCaseContextMenu(event,'${c.id}')" title="${esc(driver)}${done?' (完了)':''} ・ 右クリックでクイックメニュー">
         <div class="wk-bar"></div>
@@ -17487,6 +17497,11 @@ function _buildCalendarOp(c, eventType){
     return op;
   }
   if(eventType === 'recoveryDateSet'){
+    // 🚨2026-08-20: 回収イベントの行き先は「回収先」。旧実装は配車先(dispatchTo*)を使っており、
+    //   回収先を別指定した案件でカレンダーが違う場所を指していた(location はナビの目的地になる)。
+    //   LINE文面(_buildLineMessage)は既に _recoveryDest を使っていたので、通知とカレンダーで
+    //   行き先が食い違っていた。判定は _recoveryDest() に一本化する。
+    const _rd = _recoveryDest(c);
     // 削除対象: 🟥付き新形式 + 旧形式 (回収) どちらもヒット
     const op = { caseNoTag, delete: { kindPrefixes: ['🟥','回収'] } };
     if(c.recoveryCalledAt){
@@ -17496,18 +17511,19 @@ function _buildCalendarOp(c, eventType){
         const end = new Date(ymd + 'T10:00:00');
         const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
         op.create = {
-          title: '🟥 ' + ['回収', c.vehicleClass||'', c.dispatchToName||''].filter(Boolean).join(' '),
+          title: '🟥 ' + ['回収', c.vehicleClass||'', _rd.name||''].filter(Boolean).join(' '),
           start: start.toISOString(),
           end: end.toISOString(),
-          location: c.dispatchToAddress || '',
+          location: _rd.address || '',
           description: [
             '案件No: ' + (c.caseNo||''),
             '契約者: ' + (c.contractorName||''),
             '運転者: ' + (c.driverName||''),
             '連絡先: ' + (c.driverTel||''),
             '車両: ' + plate,
-            '配車先: ' + (c.dispatchToName||''),
-            '配車先住所: ' + (c.dispatchToAddress||''),
+            (_rd.isDifferent ? '🏁 回収先(配車先と別!): ' : '回収先: ') + (_rd.name||''),
+            '回収先住所: ' + (_rd.address||''),
+            ...(_rd.isDifferent ? ['(参考) 配車先: ' + (c.dispatchToName||'')] : []),
             '担当: ' + (c.staff||'')
           ].join('\n'),
           color: 'RED'
