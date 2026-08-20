@@ -2270,6 +2270,9 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
           <button type="button" class="btn btn-outline" onclick="sbLoginFromUI()">🔐 ログイン</button>
           <button type="button" class="btn btn-outline" onclick="sbLogout()">ログアウト</button>
         </div>
+        <label style="display:flex;align-items:center;gap:6px;padding:8px 0 0;font-size:13px;cursor:pointer" title="全端末共通のフラグ (data.json settings.sbShadowMode)。保存で反映">
+          <input type="checkbox" id="s-sb-mode" style="width:16px;height:16px"> ☁️ 影書きを有効にする (全端末共通)
+        </label>
       </div>
     </div>
     <!-- 外部連携: Google カレンダー + LINE 通知 -->
@@ -3114,7 +3117,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-20';
+const APP_VERSION = '2026-08-20a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -17121,7 +17124,8 @@ function fillSettings(){
   if($('s-seal-enabled')) $('s-seal-enabled').checked = (s.sealEnabled !== false);  // 既定ON
   if($('s-seal-text')) $('s-seal-text').value = s.sealText || '';
   _updateSealPreview();
-  // ☁️ Supabase 影書きの状態表示
+  // ☁️ Supabase 影書きの状態表示 + フラグ
+  if($('s-sb-mode')) $('s-sb-mode').checked = (s.sbShadowMode==='on');
   try{ _sbRenderStatus(); }catch(e){}
 }
 // 設定画面: 電子印プレビューを現在の入力から再描画
@@ -17142,6 +17146,8 @@ function saveSettings(){
   // 電子印(角印)
   if($('s-seal-enabled')) DATA.settings.sealEnabled = $('s-seal-enabled').checked;
   if($('s-seal-text')) DATA.settings.sealText = $('s-seal-text').value;
+  // ☁️ Supabase 影書きフラグ (全端末共通・アプリの通常保存経路=マージ付きで書く)
+  if($('s-sb-mode')) DATA.settings.sbShadowMode = $('s-sb-mode').checked ? 'on' : '';
   _sealCache = {};  // 文字/ON状態が変わった可能性→キャッシュ破棄して次回再生成
   // v2026.05: 共有モードのマージで「最新の設定保存が勝つ」よう _updatedAt をセット
   DATA.settings._updatedAt = Date.now();
