@@ -2269,6 +2269,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
         <div style="display:flex;gap:8px">
           <button type="button" class="btn btn-outline" onclick="sbLoginFromUI()">🔐 ログイン</button>
           <button type="button" class="btn btn-outline" onclick="sbLogout()">ログアウト</button>
+          <button type="button" class="btn btn-outline" id="s-sb-audit" onclick="sbAuditFromUI()" title="data.json と Supabase を全件突合し、差分があればローカル正でDBを修復できます">🩺 照合</button>
         </div>
         <label style="display:flex;align-items:center;gap:6px;padding:8px 0 0;font-size:13px;cursor:pointer" title="全端末共通のフラグ (data.json settings.sbShadowMode)。保存で反映">
           <input type="checkbox" id="s-sb-mode" style="width:16px;height:16px"> ☁️ 影書きを有効にする (全端末共通)
@@ -3117,7 +3118,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-20b';
+const APP_VERSION = '2026-08-20c';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -4903,6 +4904,71 @@ function _sbRenderStatus(){
   el.innerHTML = (mode?'<b style="color:#2e7d32">影書き ON</b>':'影書き OFF (settings.sbShadowMode 未設定=休眠)')+
     ' / '+(s?('ログイン中: '+(s.email||'')):'<span style="color:#c62828">未ログイン</span>')+
     (qn?(' / 未送信 '+qn+'件'):'')+last;
+}
+// ---- 🩺 照合 (PC専用・事務作業=§0) : DATA(メモリ=data.json由来) と Supabase を全件突合 ----
+// jsonbはキー順を正規化するため、両側を「キー再帰ソートのstable stringify」で比較する
+function _sbStableStr(v){
+  if(v===null || typeof v!=='object') return JSON.stringify(v);
+  if(Array.isArray(v)) return '['+v.map(_sbStableStr).join(',')+']';
+  return '{'+Object.keys(v).sort().map(k=> v[k]===undefined?null:(JSON.stringify(k)+':'+_sbStableStr(v[k]))).filter(Boolean).join(',')+'}';
+}
+async function _sbFetchAll(table, token){
+  // PostgREST は既定 max 1000行 → Rangeヘッダでページング
+  const out=[]; const PAGE=1000;
+  for(let off=0; off<100000; off+=PAGE){
+    const res = await fetch(SB_URL+'/rest/v1/'+table+'?select=id,data&order=id.asc',{
+      headers:{ apikey:SB_KEY, Authorization:'Bearer '+token, Range: off+'-'+(off+PAGE-1) }
+    });
+    if(!res.ok) throw new Error(table+' 読取 '+res.status);
+    const rows = await res.json();
+    out.push(...rows);
+    if(rows.length<PAGE) break;
+  }
+  return out;
+}
+async function sbAuditFromUI(){
+  if(!_sbSession()){ toast('先に Supabase にログインしてください','error'); return; }
+  const btn=$('s-sb-audit'); if(btn){ btn.disabled=true; btn.textContent='🩺 照合中…'; }
+  try{
+    const token = await _sbEnsureToken();
+    if(!token) throw new Error('トークン更新失敗 (再ログインしてください)');
+    const report=[]; let totalMismatch=0; const repairRows=[];
+    const targets = Object.assign({}, SB_TABLES);   // + settings は下で個別
+    for(const key of Object.keys(targets)){
+      const table = targets[key];
+      const db = await _sbFetchAll(table, token);
+      const dbBy = {}; db.forEach(r=> dbBy[r.id]=r.data);
+      const localArr = (DATA[key]||[]).filter(r=> r && r.id!=null);
+      let missing=0, mismatch=0;
+      for(const r of localArr){
+        const id=String(r.id);
+        if(!(id in dbBy)){ missing++; repairRows.push({table:table,id:id,data:r}); }
+        else if(_sbStableStr(r)!==_sbStableStr(dbBy[id])){ mismatch++; repairRows.push({table:table,id:id,data:r}); }
+      }
+      const localIds = new Set(localArr.map(r=>String(r.id)));
+      const extra = db.filter(r=> !localIds.has(String(r.id))).length;
+      totalMismatch += missing+mismatch;
+      report.push(`${key}: ローカル${localArr.length} / DB${db.length}`+
+        ((missing||mismatch||extra)?` → DB欠落${missing}・不一致${mismatch}・DB余分${extra}`:' ✅一致'));
+    }
+    // settings (1行)
+    const sdb = await _sbFetchAll('rental_settings', token);
+    const sRow = (sdb.find(r=>r.id==='main')||{}).data;
+    if(!sRow || _sbStableStr(DATA.settings||{})!==_sbStableStr(sRow)){
+      totalMismatch++; repairRows.push({table:'rental_settings',id:'main',data:DATA.settings||{}});
+      report.push('settings: ❌不一致');
+    } else report.push('settings: ✅一致');
+    _sbLog({audit:1, diff:totalMismatch});
+    const msg = '🩺 照合結果 (正=ローカル data.json)\n\n'+report.join('\n');
+    if(totalMismatch===0){
+      alert(msg+'\n\n✅ 全一致です');
+    } else if(confirm(msg+'\n\n❌ 差分 '+totalMismatch+'件。\nローカルの内容でDB側を修復 (UPSERT) しますか？\n(DB余分はレポートのみ・削除はしません)')){
+      _sbEnqueue(repairRows.slice(0,300));
+      await _sbFlush();
+      toast('🩺 修復送信: '+Math.min(repairRows.length,300)+'件 (結果は状態行の 最終 を確認)');
+    }
+  }catch(e){ toast('照合失敗: '+String(e.message||e),'error'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='🩺 照合'; } try{ _sbRenderStatus(); }catch(e){} }
 }
 
 async function saveToDirImmediate(){
