@@ -3118,7 +3118,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-20c';
+const APP_VERSION = '2026-08-20d';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -3218,9 +3218,12 @@ function statusPill(st, c){
 }
 function statusRowClass(st){ const s=STATUS_STYLE[st]; return s? `row-status ${s.row}` : ''; }
 // 表示用の実効ステータス: 「配車完了(配車済)」でも利用開始日を過ぎ未回収なら「利用中」とみなす。
-//   ★データ(c.status)は一切書き換えない＝日付からの導出のみ(同期マージ・通知に影響なし)。
-//   ダッシュボードの利用中KPI(_isOutToday)が既に同方針で日付ベース判定しているのに合わせ、
-//   一覧バッジ/絞り込みだけが生status由来で「配車完了」のまま残るズレを解消する。
+//   ★この関数が「配車完了 → 利用中」の唯一の判定源。同じ条件を別の場所に書き直すな
+//     (2026-08-04 の請求額 計算式2本化と同型の事故になる)。
+//   本関数は純粋関数で c.status を書き換えない(表示専用)。ダッシュボードの利用中KPI(_isOutToday)も同方針。
+//   2026-08-20 追加: autoAdvanceToInUse() がこの判定を使って実データ(c.status)も更新する。
+//     表示だけの導出だと モバイル(この関数を持たない)や freee/BI が生statusを見るため、
+//     端末によって「配車完了」「利用中」が食い違っていた。
 function effectiveStatus(c){
   if(!c) return '';
   // 一般貸渡(GR)は「🚗 貸渡完了」ボタンで手動進行＝配車済の自動「利用中」表示はしない (2026-06-23m)
@@ -3229,6 +3232,45 @@ function effectiveStatus(c){
     if(us && us <= todayISO()) return '利用中';
   }
   return c.status;
+}
+// 配車完了 → 利用中 の自動進行 (2026-08-20 ユーザー要望「配車完了して利用日になったら利用中に」)。
+//   判定は effectiveStatus() に一本化する。ここで条件を書き直すな。
+//   ★LINE通知は飛ばない: _fireCaseNotifications は status ではなく dispatchDoneAt /
+//     recoveryCompleted / recoveryCalledAt / dispatchAt の遷移で発火する設計。ここを通さず
+//     status だけ変えるので通知経路には一切触れない。意図的にそうしている。
+//   ★updatedBy を「システム」で始めるのは意図的: モバイルの _isSysUpd (/^システム/) が
+//     「最終操作: 誰々」の表示から除外する。人の操作ではないので出さないのが正しい
+//     (CLAUDE.md §11 鉄則6 が禁じているのは _whoPC() の戻り値であって、ここではない)。
+//   同期との関係: 変えるのは status の1フィールドだけなので、他PCが同じ案件の別項目を
+//     編集していてもフィールド単位マージ(§4.5)で両方生き残る。
+function autoAdvanceToInUse(){
+  try{
+    if(typeof isDemoMode === 'function' && isDemoMode()) return 0;
+    if(!DATA || !Array.isArray(DATA.cases)) return 0;
+    // ★共有運用しているなら、ディスクと突き合わせが済むまで走らせない。
+    //   古いローカル版で判定すると、他PCが既に「返却済」等に進めた案件を
+    //   「利用中」に巻き戻してしまう(衝突時は updatedAt の新しい方が勝つため §4.5)。
+    const _shared = (typeof _sharedFolderReady === 'function') && _sharedFolderReady();
+    if(_shared && !_diskInSync) return 0;   // 次の同期後に自然に再挑戦される
+    const hits = DATA.cases.filter(c => c && c.status === '配車済' && effectiveStatus(c) === '利用中');
+    if(!hits.length) return 0;
+    const now = Date.now();
+    hits.forEach(c => {
+      const before = Object.assign({}, c);
+      c.status    = '利用中';
+      c.updatedAt = now;
+      c.updatedBy = 'システム(利用開始日)';
+      try { _auditRecord('autoInUse', c, before); } catch(_){}
+    });
+    save();
+    try{
+      const _pg = (typeof _navCurrent !== 'undefined' && _navCurrent) || 'dashboard';
+      if(typeof showPage === 'function') showPage(_pg, true);
+    }catch(_){}
+    try{ toast('▶️ 利用開始日を過ぎた ' + hits.length + ' 件を「利用中」に更新しました'); }catch(_){}
+    console.log('[autoInUse] ' + hits.length + '件: ' + hits.map(c=>c.caseNo).join(', '));
+    return hits.length;
+  }catch(e){ console.warn('autoAdvanceToInUse 失敗', e); return 0; }
 }
 // クラスコード別バッジ色: まずマスタの color フィールド、無ければホワイトボード配色ヒューリスティック
 // マスタに ['yellow','red','blue','green','purple','orange','pink','navy','black','gray'] を入れることで柔軟設定
@@ -4129,6 +4171,10 @@ async function saveToDir(){
 //     - 両方変更 (衝突) → updatedAt で最新優先 (なければローカル優先)
 //     - 新規追加・削除も検出
 let _lastSyncSnapshot = null;
+// 2026-08-20: このセッションで共有フォルダの data.json と突き合わせが済んだか。
+//   autoAdvanceToInUse() が古いローカル版で status を書き換え、他PCが先に進めた案件
+//   (返却済など)を updatedAt の新しさで巻き戻すのを防ぐためのガード。
+let _diskInSync = false;
 function captureSyncSnapshot(data){
   if(!data) { _lastSyncSnapshot = null; return; }
   // v2026.04.29cv: 全コレクションのスナップショットを取る (案件・車両・保険会社・工場・スタッフ・メッセージ)
@@ -5346,6 +5392,8 @@ async function checkExternalChange(){
   try{
     const fh = await dirHandle.getFileHandle('data.json', {create:false});
     const f = await fh.getFile();
+    // ディスクが変わっていない = ローカルはディスクと一致している(同期済み)
+    if(!(f.lastModified > dirDataMtime + 2000)) _diskInSync = true;
     if(f.lastModified > dirDataMtime + 2000){
       // v2026.05: モーダル編集中(未保存変更あり) は自動同期をスキップ — ローカル変更の上書きを防止
       //   モーダルが閉じる時に最新化される。
@@ -5390,6 +5438,7 @@ async function checkExternalChange(){
         if(typeof captureSyncSnapshot === 'function') captureSyncSnapshot(DATA);  // スナップショット更新
         try { _journalRecord(DATA); } catch(e){}
         save();
+        _diskInSync = true;   // マージ完了 = ディスクと一致
         const page = _navCurrent || 'dashboard';
         showPage(page, true);
         if(mergedConflicts.length){
@@ -18531,6 +18580,12 @@ async function initApp(){
   try{ _auditQueueLoad(); setTimeout(()=>{ _auditFlush(); }, 8000); setInterval(()=>{ _auditFlush(); }, 60000); }catch(_){}
   // v2026.04.29bq: 起動時の重大整合性チェック (重複ID等)
   setTimeout(()=> { try { runStartupIntegrityCheck(); } catch(e){ console.warn('integrity check error', e); } }, 1500);
+  // 2026-08-20: 配車完了 → 利用中 の自動進行。
+  //   起動直後ではなく6秒後に回すのは、共有フォルダからの初回取り込みが済んでから
+  //   判定させるため(古いローカル版で書いて他PCの新しい編集と競合させない)。
+  //   30分間隔でも回す: アプリを開きっぱなしで日付が変わった時に取りこぼさないため。
+  setTimeout(()=> { try { autoAdvanceToInUse(); } catch(e){ console.warn('autoInUse error', e); } }, 45000);
+  setInterval(()=> { try { autoAdvanceToInUse(); } catch(e){} }, 30*60*1000);
   // v2026.04.29cf: 起動時通知センター (今日対応すべき項目) — 2026-06-15 ユーザー要望で廃止 (呼び出し停止・関数本体は残置)
   // setTimeout(()=> { try { showDailyBriefing(); } catch(e){ console.warn('briefing error', e); } }, 2200);
   // v2026.04.29cf: 月初(1〜3日)で前月レポートが未出力なら通知
