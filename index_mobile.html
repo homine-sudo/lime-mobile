@@ -2157,7 +2157,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-20a';
+const APP_VERSION = '2026-08-23';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -3587,11 +3587,24 @@ async function _auditFlush(){
     const d = new Date();
     const ym = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
     const path = DBX_AUDIT_BASE + '/' + ym + '_' + _mDevId() + '.jsonl';
-    let cur = '';
+    // ★既存ログを読めた時だけ上書きしてよい。
+    //   Dropbox には追記APIが無く read→append→overwrite しかできないため、
+    //   読めなかったのに書くと既存の履歴を丸ごと消す。
+    //   2026-08-23: 実際に1端末分(8/18の記録)が消えた。「初回でファイルが無い」場合だけ
+    //   空から始め、それ以外の失敗は書かずに次回へ持ち越す。
+    let cur = '', canWrite = true;
     try{
       const r = await dbxApi('https://content.dropboxapi.com/2/files/download', {path}, null, null, {timeoutMs:20000});
-      if(r.ok) cur = await r.text();            // 404(初回) は空のまま進む
-    }catch(_){}
+      if(r.ok){ cur = await r.text(); }
+      else {
+        let t = ''; try{ t = await r.text(); }catch(_){}
+        if(!/not_found/.test(t)) canWrite = false;   // 初回(未作成)以外の失敗 → 書かない
+      }
+    }catch(_){ canWrite = false; }
+    if(!canWrite){
+      _auditLastErr = '既存ログを読めないため送信を延期 (履歴を消さないため)';
+      return;   // キューは残す。finally で _auditWriting は解除される
+    }
     const body = cur + add;
     const args = { path, mode:{'.tag':'overwrite'}, autorename:false, mute:true };
     const up = await dbxApi('https://content.dropboxapi.com/2/files/upload', args,
