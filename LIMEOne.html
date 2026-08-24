@@ -1808,6 +1808,18 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
     <div style="height:260px"><canvas id="bi-chart-seasonality"></canvas></div>
     <div id="bi-seasonality-table" style="margin-top:10px"></div>
   </div>
+
+  <!-- 🚗 稼働ベース売上予測 (2026-08-24 新設) -->
+  <div class="bi-section-header" style="margin-top:14px">🚗 稼働ベース売上予測</div>
+  <div class="card" style="padding:10px">
+    <div class="card-title" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+      🔭 <span>延べ稼働日数 × 実効単価 → 当月着地</span>
+      <span class="text-muted text-sm" style="font-weight:normal">棒=計上売上実績 / 点線=稼働日数×実効単価 (モデル)</span>
+    </div>
+    <div id="bi-occfc-kpi" class="kpi-grid" style="margin-bottom:8px"></div>
+    <div style="height:240px"><canvas id="bi-chart-occfc"></canvas></div>
+    <div id="bi-occfc-note" class="text-muted" style="font-size:10.5px;margin-top:6px"></div>
+  </div>
   </div><!-- /bi-tab-kpi -->
 
   <!-- ==== 🏢 取引先タブ (保険会社担当者・保険会社・コール/配車先) ==== -->
@@ -3121,7 +3133,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-20e';
+const APP_VERSION = '2026-08-24';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5981,6 +5993,97 @@ function renderBISeasonality(){
   }
 }
 
+// 🚗 稼働ベース売上予測 (2026-08-24 新設)
+// 「月の延べ稼働日数 × 実効単価」で当月売上の着地を予測する。
+// 検証 (2025-01〜2026-07 の19ヶ月): 稼働日数と計上売上の相関 r=0.74。残差は長期案件が
+// 「返却月にまとめて計上」される計上月ずれが主因のため、発生ベース(日割り)と計上ベース目安の両方を示す。
+// ★金額は calcAmounts のみを使う (再実装禁止の鉄則)。
+// ★このカードだけは isHistorical (移行データ) も母集団に含める: 2026-03以前は移行データが本体で、
+//   除外すると実効単価の学習期間が5ヶ月しか取れないため。季節変動カード(移行除外)とは母集団が異なる。
+// ★モバイル admin `renderBiOccupancyForecast` と完全同一ロジックに保つこと (§9 鉄則2)。
+function renderBIOccupancyForecast(){
+  const host = document.getElementById('bi-occfc-kpi');
+  const canvas = document.getElementById('bi-chart-occfc');
+  if(!host || !canvas) return;
+  const todayIso = todayISO();
+  const t = parseDate(todayIso);
+  // 直近13ヶ月 (先頭=前年同月・末尾=当月)
+  const list = [];
+  for(let i=12;i>=0;i--){
+    const d = new Date(t.getFullYear(), t.getMonth()-i, 1);
+    list.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  const agg = {}; list.forEach(ym => agg[ym] = { rentDays:0, revEnd:0 });
+  const mEnd = ym => { const [y,m] = ym.split('-').map(Number); return `${ym}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}`; };
+  const dcount = (a,b) => Math.max(0, Math.floor((parseDate(b)-parseDate(a))/86400000)+1);
+  const ov = (s1,e1,s2,e2) => { const s = s1>s2?s1:s2, e = e1<e2?e1:e2; return s>e ? 0 : dcount(s,e); };
+  const ACTIVE = ['配車済','利用中','回収連絡','手配書FAX済'];
+  const cur = list[12], curStart = cur+'-01', curEnd = mEnd(cur);
+  let projDays = 0, projAccr = 0, curActualDays = 0, activeN = 0;
+  for(const c of DATA.cases){
+    if(c.status === 'キャンセル') continue;
+    const start = c.useStart ? String(c.useStart).slice(0,10) : '';
+    let end = c.useEnd ? String(c.useEnd).slice(0,10) : (c.recoveryCalledAt ? String(c.recoveryCalledAt).slice(0,10) : '');
+    const ongoing = !end && ACTIVE.includes(c.status) && start && start <= todayIso;
+    if(ongoing){ end = todayIso; activeN++; }
+    if(!start || !end || end < start) continue;
+    const a = calcAmounts(c);
+    if(c.useEnd){ const ym = String(c.useEnd).slice(0,7); if(agg[ym]) agg[ym].revEnd += a.total || 0; }
+    for(const ym of list){ const od = ov(start, end, ym+'-01', mEnd(ym)); if(od) agg[ym].rentDays += od; }
+    // 当月実績 (今日まで): 未来の確定予約日程は含めない
+    const endCap = end < todayIso ? end : todayIso;
+    curActualDays += ov(start, endCap, curStart, todayIso);
+    // 当月着地見込み: 利用中は月末まで継続と仮定・確定予約(未来のuseStart/useEnd)は日程どおり
+    const dur = dcount(start, end);
+    const perDay = (c.useEnd && dur > 0) ? (a.total || 0) / dur : (Number(c.invoiceUnitPrice||0) || Number(c.unitPrice||0));
+    const odc = ov(start, ongoing ? curEnd : end, curStart, curEnd);
+    if(odc){ projDays += odc; projAccr += odc * perDay; }
+  }
+  // 実効単価 k = 直近12完了月の Σ計上売上 ÷ Σ稼働日数 (原点回帰)
+  const done = list.slice(0,12);
+  let sd = 0, sr = 0;
+  done.forEach(ym => { sd += agg[ym].rentDays; sr += agg[ym].revEnd; });
+  const k = sd ? sr/sd : 0;
+  // 相関係数 (表示用・12完了月)
+  const xs = done.map(ym => agg[ym].rentDays), ys = done.map(ym => agg[ym].revEnd);
+  const mx = xs.reduce((a,b)=>a+b,0)/12, my = ys.reduce((a,b)=>a+b,0)/12;
+  let sxy = 0, sxx = 0, syy = 0;
+  for(let i=0;i<12;i++){ sxy += (xs[i]-mx)*(ys[i]-my); sxx += (xs[i]-mx)**2; syy += (ys[i]-my)**2; }
+  const r = (sxx && syy) ? sxy/Math.sqrt(sxx*syy) : 0;
+  const yoDays = agg[list[0]].rentDays;  // 前年同月 (完了済み)
+  const daysYoY = yoDays ? Math.round((projDays/yoDays - 1) * 100) : null;
+  const yen = n => '¥' + Math.round(n).toLocaleString();
+  const [cy, cm] = cur.split('-').map(Number);
+  host.innerHTML = `
+    <div class="kpi-card" style="padding:8px"><div class="kpi-label">💴 実効単価</div><div class="kpi-value" style="font-size:18px">${yen(k)}<span style="font-size:11px">/日</span></div><div class="kpi-sub">直近12ヶ月 Σ売上÷Σ稼働日</div></div>
+    <div class="kpi-card" style="padding:8px"><div class="kpi-label">📅 ${cm}月 稼働見込み</div><div class="kpi-value" style="font-size:18px">${projDays.toLocaleString()}<span style="font-size:11px">日</span></div><div class="kpi-sub">実績${curActualDays.toLocaleString()}日+確定分 / 前年同月${daysYoY==null?'―':(daysYoY>=0?'+':'')+daysYoY+'%'}</div></div>
+    <div class="kpi-card orange" style="padding:8px"><div class="kpi-label">🔭 着地予測 (発生ベース)</div><div class="kpi-value" style="font-size:18px">${yen(projAccr)}</div><div class="kpi-sub">日割り積算・新規受付で上振れ余地</div></div>
+    <div class="kpi-card" style="padding:8px"><div class="kpi-label">🧾 計上ベース目安</div><div class="kpi-value" style="font-size:18px">${yen(projDays*k)}</div><div class="kpi-sub">稼働×実効単価・返却月ずれ±1ヶ月</div></div>
+  `;
+  const note = document.getElementById('bi-occfc-note');
+  if(note) note.textContent = `※稼働日数と計上売上の相関 r=${r.toFixed(2)} (直近12ヶ月)。予測は「利用中案件が月末まで継続+確定予約」の確定分で、新規受付は含まない。発生ベースと計上ベースの差は長期案件の返却月ずれ (返却の翌月に計上が寄る)。このカードのみ移行データ(2026-03以前)も含めて集計。`;
+  // チャート: 棒=計上売上実績 / 点線=稼働日数×実効単価 (モデル・当月は着地見込み)
+  if(window._c_occfc) window._c_occfc.destroy();
+  const labels = list.map(ym => ym.slice(2));
+  const bars = list.map(ym => agg[ym].revEnd);
+  const model = list.map((ym,i) => (i === 12 ? projDays : agg[ym].rentDays) * k);
+  window._c_occfc = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets: [
+      { type:'bar', label:'計上売上実績', data: bars, backgroundColor:'#6EB5F5', order:2 },
+      { type:'line', label:'稼働日数×実効単価', data: model, borderColor:'#E69E50', backgroundColor:'transparent', borderWidth:2, borderDash:[6,4], tension:0.2, pointRadius:3, pointBackgroundColor:'#E69E50', order:1 }
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{ position:'bottom' },
+        tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y!=null? '¥'+Math.round(ctx.parsed.y).toLocaleString() : '―'}` } }
+      },
+      scales: { y:{ beginAtZero:true, ticks:{ callback: v => '¥'+Number(v).toLocaleString() } } }
+    }
+  });
+}
+
 function showShortcutHelp(){
   if(document.getElementById('shortcut-help-dialog')) return;
   const d = document.createElement('div');
@@ -7005,6 +7108,7 @@ function _renderBiTab(tab){
     renderBIKpis(kpi, kpiPrev, util);          // 💹 主要指標 (hero+補助を統合表示)
     renderBIForecast();                        // 🌡 日額積み上げ推移
     if(typeof renderBISeasonality === 'function') renderBISeasonality();  // 🔮 季節変動&予測
+    if(typeof renderBIOccupancyForecast === 'function') renderBIOccupancyForecast();  // 🚗 稼働ベース売上予測
   } else if(tab === 'partner'){
     renderBIRankings(cases);                   // 👤 担当者ランキング + 🏢 保険会社TOP10
     renderBIMatrix();                          // 📋 担当者×月次マトリックス

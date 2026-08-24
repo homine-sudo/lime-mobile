@@ -1379,6 +1379,14 @@
         <div class="bi-lgd"><span><i style="background:var(--acc)"></i>月次売上</span><span><i style="background:var(--acc-hi)"></i>3ヶ月移動平均</span><span><i style="background:var(--gold)"></i>予測</span></div>
         <div id="bi-seasonality-table"></div>
       </div>
+      <!-- 🚗 稼働ベース売上予測 (2026-08-24 新設・PC renderBIOccupancyForecast と同一ロジック) -->
+      <div class="card">
+        <div class="bi-sect">稼働ベース売上予測</div>
+        <div class="bi-kpis" id="bi-occfc-kpi"></div>
+        <svg class="bi-chart" id="bi-chart-occfc" viewBox="0 0 320 150"></svg>
+        <div class="bi-lgd"><span><i style="background:var(--acc)"></i>計上売上実績</span><span><i style="background:var(--gold)"></i>稼働日数×実効単価 (モデル)</span></div>
+        <div class="bi-note" id="bi-occfc-note">—</div>
+      </div>
     </div>
 
     <!-- 🏢 取引先 -->
@@ -1582,7 +1590,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-08-13a';
+const APP_VERSION = '2026-08-24';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4829,6 +4837,64 @@ function renderBiSeasonality(){
     </table></div><div class="bi-note">※過去24ヶ月の月平均。100%超=稼ぎ時の月。予測は直近12ヶ月の線形回帰。</div>`;
   }
 }
+// 🚗 稼働ベース売上予測 (2026-08-24 新設)
+// 「月の延べ稼働日数 × 実効単価」で当月売上の着地を予測する。PC `renderBIOccupancyForecast` と
+// 完全同一ロジックに保つこと (§9 鉄則2)。金額は calcAmounts のみ (再実装禁止)。
+// ★このカードだけは isHistorical (移行データ) も母集団に含める (2026-03以前は移行データが本体のため)。
+function renderBiOccupancyForecast(){
+  const host=$('bi-occfc-kpi'); if(!host) return;
+  const todayIso=todayISO();
+  const t=parseD(todayIso);
+  const list=[];
+  for(let i=12;i>=0;i--){ const d=new Date(t.getFullYear(),t.getMonth()-i,1); list.push(`${d.getFullYear()}-${pad2(d.getMonth()+1)}`); }
+  const agg={}; list.forEach(ym=>agg[ym]={rentDays:0,revEnd:0});
+  const mEnd=ym=>{ const [y,m]=ym.split('-').map(Number); return `${ym}-${pad2(new Date(y,m,0).getDate())}`; };
+  const dcount=(a,b)=>Math.max(0,Math.floor((parseD(b)-parseD(a))/86400000)+1);
+  const ov=(s1,e1,s2,e2)=>{ const s=s1>s2?s1:s2, e=e1<e2?e1:e2; return s>e?0:dcount(s,e); };
+  const ACTIVE=['配車済','利用中','回収連絡','手配書FAX済'];
+  const cur=list[12], curStart=cur+'-01', curEnd=mEnd(cur);
+  let projDays=0, projAccr=0, curActualDays=0, activeN=0;
+  for(const c of biCases()){
+    if(c.status==='キャンセル') continue;
+    const start=c.useStart?String(c.useStart).slice(0,10):'';
+    let end=c.useEnd?String(c.useEnd).slice(0,10):(c.recoveryCalledAt?String(c.recoveryCalledAt).slice(0,10):'');
+    const ongoing=!end&&ACTIVE.includes(c.status)&&start&&start<=todayIso;
+    if(ongoing){ end=todayIso; activeN++; }
+    if(!start||!end||end<start) continue;
+    const a=calcAmounts(c);
+    if(c.useEnd){ const ym=String(c.useEnd).slice(0,7); if(agg[ym]) agg[ym].revEnd+=a.total||0; }
+    for(const ym of list){ const od=ov(start,end,ym+'-01',mEnd(ym)); if(od) agg[ym].rentDays+=od; }
+    const endCap=end<todayIso?end:todayIso;
+    curActualDays+=ov(start,endCap,curStart,todayIso);
+    const dur=dcount(start,end);
+    const perDay=(c.useEnd&&dur>0)?(a.total||0)/dur:(Number(c.invoiceUnitPrice||0)||Number(c.unitPrice||0));
+    const odc=ov(start,ongoing?curEnd:end,curStart,curEnd);
+    if(odc){ projDays+=odc; projAccr+=odc*perDay; }
+  }
+  const done=list.slice(0,12);
+  let sd=0,sr=0; done.forEach(ym=>{ sd+=agg[ym].rentDays; sr+=agg[ym].revEnd; });
+  const k=sd?sr/sd:0;
+  const xs=done.map(ym=>agg[ym].rentDays), ys=done.map(ym=>agg[ym].revEnd);
+  const mx=xs.reduce((a,b)=>a+b,0)/12, my=ys.reduce((a,b)=>a+b,0)/12;
+  let sxy=0,sxx=0,syy=0;
+  for(let i=0;i<12;i++){ sxy+=(xs[i]-mx)*(ys[i]-my); sxx+=(xs[i]-mx)**2; syy+=(ys[i]-my)**2; }
+  const r=(sxx&&syy)?sxy/Math.sqrt(sxx*syy):0;
+  const yoDays=agg[list[0]].rentDays;
+  const daysYoY=yoDays?Math.round((projDays/yoDays-1)*100):null;
+  const cm=Number(cur.split('-')[1]);
+  host.innerHTML=[
+    ['実効単価',biYen(Math.round(k))+'<small>/日</small>','直近12ヶ月 Σ売上÷Σ稼働日',''],
+    [cm+'月 稼働見込み',projDays.toLocaleString()+'<small> 日</small>',`実績${curActualDays.toLocaleString()}日+確定分 / 前年同月${daysYoY==null?'―':(daysYoY>=0?'+':'')+daysYoY+'%'}`,daysYoY==null?'':(daysYoY>=0?'up':'dn')],
+    ['着地予測 (発生ベース)',biYen(Math.round(projAccr)),'日割り積算・新規受付で上振れ余地',''],
+    ['計上ベース目安',biYen(Math.round(projDays*k)),'稼働×実効単価・返却月ずれ±1ヶ月',''],
+  ].map(c=>`<div class="bi-kpi"><div class="k">${c[0]}</div><div class="v num ${c[3]}">${c[1]}</div><div class="s">${c[2]}</div></div>`).join('');
+  const note=$('bi-occfc-note');
+  if(note) note.textContent=`※稼働日数と計上売上の相関 r=${r.toFixed(2)} (直近12ヶ月)。予測は「利用中案件が月末まで継続+確定予約」の確定分で、新規受付は含まない。発生ベースと計上ベースの差は長期案件の返却月ずれ。このカードのみ移行データ(2026-03以前)も含めて集計。`;
+  const labels=list.map(ym=>ym.slice(2));
+  const bars=list.map(ym=>agg[ym].revEnd);
+  const model=list.map((ym,i)=>(i===12?projDays:agg[ym].rentDays)*k);
+  biDrawBarLine('bi-chart-occfc', labels, bars, null, {line2:model, line2Cls:'lnf', line2SameAsBars:true});
+}
 /* ---------- 🏢 取引先 ---------- */
 function renderBiPartner(cases){
   const range=computeBiRange(_biState.period);
@@ -5063,7 +5129,7 @@ function renderBiAll(){
 function _renderBiPane(tab){
   const c=window._biCtx; if(!c) return;
   try{
-    if(tab==='kpi'){ renderBiKpiCards(c.kpi,c.kpiPrev,c.util); renderBiForecast(); renderBiSeasonality(); }
+    if(tab==='kpi'){ renderBiKpiCards(c.kpi,c.kpiPrev,c.util); renderBiForecast(); renderBiSeasonality(); renderBiOccupancyForecast(); }
     else if(tab==='partner'){ renderBiPartner(c.cases); }
     else if(tab==='fleet'){ renderBiFleet(c.cases,c.util); }
     else if(tab==='detail'){ renderBiYearlyCount(); renderBiDetailCharts(c.cases); }
