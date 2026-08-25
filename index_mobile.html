@@ -2157,7 +2157,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-23';
+const APP_VERSION = '2026-08-24';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -5068,6 +5068,8 @@ async function selectVehicle(vehicleId){
     if(!_okDup){ return; }
   }
   const _prevVehicleId = c.vehicleId || '';
+  // ★2026-08-24: 変更点つきLINE通知のため、書き換え前のスナップショットを取る
+  const _prevSnap = JSON.parse(JSON.stringify(c));
   // 案件に車両情報を反映
   c.vehicleId = v.id;
   c.vehicleName = v.name || c.vehicleName || '';
@@ -5091,8 +5093,12 @@ async function selectVehicle(vehicleId){
     // 画面再描画
     if(fromDetail){
       // 案件詳細から車両変更 = 意味のある変更 → PC同等の updateCase 通知 (実保存成功後のみ)
+      // ★2026-08-24: 見出しが「🔄 配車日時変更」で飛んでいたのを「🚙 車両の変更」+ 旧→新 に是正
       if(_prevVehicleId !== v.id){
-        try { await sendExternalNotify('updateCase', _buildNotifyPayload(c, 'updateCase')); } catch(e){}
+        const _diffV = _caseChangeSummary(_prevSnap, c);
+        if(_diffV.notify){
+          try { await sendExternalNotify('updateCase', _buildNotifyPayload(c, 'updateCase', _diffV)); } catch(e){}
+        }
       }
       renderCaseDetail(c);
     } else if(_currentScreen === 'flow-prep'){
@@ -7202,11 +7208,12 @@ async function _saveNewCaseBody(enterFlow){
     const _v = id => ($(id)?.value || '').trim();
     // updateCase 通知の発火判定用に旧値を退避。
     // 2026-07-02h: 通知対象を「グループに知らせる価値がある変更」だけに絞る (ユーザー要望・事故日等の
-    //   事務修正で「🔄配車日時変更」が飛ぶ誤爆を解消)。= 配車予定日時・配車先(名前/住所)・利用開始/終了 のみ。
+    //   事務修正で「🔄配車日時変更」が飛ぶ誤爆を解消)。
     //   事故日/事故No/保険会社担当/TEL/FAX/契約者/単価/クラス/メモ等は静かに保存 (通知・カレンダー再作成なし)。
-    //   PC側 (_fireCaseNotifications) は元々 dispatchAt 変更のみ発火=これでほぼ対称。
-    const _keys = ['dispatchAt','dispatchToName','dispatchToAddress','useStart','useEnd'];
-    const _before = {}; _keys.forEach(k => _before[k] = ec[k]);
+    // ★2026-08-24: 判定と見出しを _caseChangeSummary() に一本化 (PC と完全同一)。
+    //   旧実装は「5項目のどれかが変わったら発火」+ 見出しは '🔄 配車日時変更' 固定だったため、
+    //   配車先住所を直しただけでも「配車日時変更」と流れていた (ユーザー報告)。
+    //   下の _fullBefore(フルスナップショット) を旧値として渡す。
     // ★保存失敗時の巻き戻し用フルスナップショット (2026-07-03: 失敗した編集がメモリに残留し
     //   別操作の保存に同乗して永続化される穴を塞ぐ)
     const _fullBefore = JSON.parse(JSON.stringify(ec));
@@ -7230,7 +7237,8 @@ async function _saveNewCaseBody(enterFlow){
     ec.dispatchToContact = _v('m-nc-dispatchContact');
     ec.dispatchToContactTel = _v('m-nc-dispatchContactTel');
     // 🏁 回収先 (配車先と違う時だけ入力・空欄=配車先と同じ)。
-    //   _keys(通知対象)には入れない=静かに保存。回収先は recoveryDateSet/recoveryDone のLINEに載る。
+    //   2026-08-24〜 回収先の変更は「🏁 回収先の変更」として通知する (_caseChangeSummary)。
+    //   回収先は recoveryDateSet/recoveryDone のLINEにも載る。
     ec.recoveryToName = _v('m-nc-recoveryToName');
     ec.recoveryToAddress = _v('m-nc-recoveryToAddr');
     ec.recoveryToTel = _v('m-nc-recoveryToTel');
@@ -7248,7 +7256,7 @@ async function _saveNewCaseBody(enterFlow){
     // ★status / dispatchDoneAt / departedAt / vehicleId / plate* / faxHistory / recoveryCompleted は触らない
     _stampUpdated(ec);
 
-    const _changed = _keys.some(k => String(ec[k]==null?'':ec[k]) !== String(_before[k]==null?'':_before[k]));
+    const _diff = _caseChangeSummary(_fullBefore, ec);   // 変更点と見出しを一度に得る (PC と同一ロジック)
 
     showSpinner('案件を更新中...');
     try {
@@ -7264,8 +7272,8 @@ async function _saveNewCaseBody(enterFlow){
       // 意味のある変更があれば PC同等の updateCase 通知 (LINE＋カレンダー再作成)・実保存成功後のみ
       // ★確定番号で通知: 保存サイクル内の自己修復で改番されうるので DATA から引き直す (2026-07-03)
       const _ecNow = findCaseById(editId) || ec;
-      if(_changed){
-        try { await sendExternalNotify('updateCase', _buildNotifyPayload(_ecNow, 'updateCase')); } catch(e){}
+      if(_diff.notify){
+        try { await sendExternalNotify('updateCase', _buildNotifyPayload(_ecNow, 'updateCase', _diff)); } catch(e){}
       }
       hideSpinner();
       closeNewCaseModal();
@@ -7734,9 +7742,9 @@ async function sendExternalNotify(eventType, payload){
 //   GASは実行だけを担当 → 文章変更で GAS 再デプロイ不要に
 // payload 形式: { line: { text }, calendar: { caseNoTag, delete, create } }
 // ============================================================
-function _buildNotifyPayload(c, eventType){
+function _buildNotifyPayload(c, eventType, diff){
   return {
-    line: { text: _buildLineMessage(c, eventType) },
+    line: { text: _buildLineMessage(c, eventType, diff) },
     calendar: _buildCalendarOp(c, eventType)
   };
 }
@@ -7751,19 +7759,96 @@ function _recoveryDest(c){
     isDifferent: useR
   };
 }
-function _buildLineMessage(c, eventType){
+// ============================================================
+// 案件の「変更点サマリ」(2026-08-24 新設)
+// 🚨 PC LIMEOne.html と モバイル index_mobile.html で完全同一に保つこと
+//    (calcAmounts / _billingReadyWarnings と同じ扱い。pc-mobile-drift-check.bat で照合)
+//
+// 【なぜ作ったか】
+//   updateCase の LINE 見出しが「🔄 配車日時変更」固定で、配車先住所を直しても
+//   車両を差し替えても同じ文言が飛んでいた (ユーザー報告 2026-08-24)。
+//   さらに見出しは status で上書きされ、配車済の案件を事務修正するだけで
+//   「🚗 配車完了」が再送されていた = 完了通知の二度出し。
+//   → ①何が変わったかを差分で持つ ②現場の段取りに効く変更だけ通知する。
+//
+// 【通知する / しない の考え方】
+//   ・回収完了済み / キャンセル … 一切通知しない (終わった案件の事務修正で現場を呼ばない)
+//   ・配車完了前 … 配車日時・配車先・車両・利用期間・回収先
+//   ・配車完了後 … 車両・利用期間・回収先 のみ (配車日時/配車先はもう済んだ話)
+//   ★回収先(recoveryTo*)は従来どこからも通知されていなかった。回収の行き先が
+//     変わるのは現場の段取りそのものなので、ここで拾うようにした。
+// ============================================================
+const NOTIFY_DIFF_FIELDS = [
+  { key:'dispatchAt',        label:'配車予定日時', head:'🔄 配車日時の変更', beforeDispatchOnly:true  },
+  { key:'dispatchToName',    label:'配車先',       head:'📍 配車先の変更',   beforeDispatchOnly:true  },
+  { key:'dispatchToAddress', label:'配車先住所',   head:'📍 配車先の変更',   beforeDispatchOnly:true  },
+  { key:'_vehicle',          label:'車両',         head:'🚙 車両の変更',     beforeDispatchOnly:false },
+  { key:'useStart',          label:'利用開始',     head:'📆 利用期間の変更', beforeDispatchOnly:false },
+  { key:'useEnd',            label:'利用終了',     head:'📆 利用期間の変更', beforeDispatchOnly:false },
+  { key:'recoveryToName',    label:'回収先',       head:'🏁 回収先の変更',   beforeDispatchOnly:false },
+  { key:'recoveryToAddress', label:'回収先住所',   head:'🏁 回収先の変更',   beforeDispatchOnly:false }
+];
+// dispatchAt(YYYY-MM-DDTHH:MM) を「M/D(曜) HH:MM」に整形 (LINE可読性)
+function _fmtDispatchAtForNotify(s){
+  if(!s) return s;
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if(!m) return s;
+  const d = (typeof parseDate === 'function') ? parseDate(s.slice(0,10)) : new Date(s.slice(0,10) + 'T00:00:00');
+  const wd = (d && !isNaN(d)) ? '日月火水木金土'[d.getDay()] : '';
+  return `${Number(m[2])}/${Number(m[3])}${wd?`(${wd})`:''} ${m[4]}:${m[5]}`;
+}
+// 車両表示: 割当済(vehicleId あり)なら車両マスタの実車種名を優先。
+//   c.vehicleName は受付時のクラス表記(例「N-BOX 同等」)のまま更新されないことがある。
+function _vehicleLabelForNotify(c){
+  if(!c) return '';
+  const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
+  let vehName = c.vehicleName || '';
+  if(c.vehicleId){
+    const vm = ((typeof DATA !== 'undefined' && DATA && DATA.vehicles) || []).find(v => v && v.id === c.vehicleId);
+    if(vm && vm.name) vehName = vm.name;
+  }
+  return [vehName, plate].filter(Boolean).join(' ') || c.vehicleClass || '';
+}
+function _caseDiffValue(c, key){
+  if(!c) return '';
+  if(key === '_vehicle'){
+    return [c.vehicleId||'', c.plateArea||'', c.plateNo||'', c.plateKana||'', c.plateTail||''].join('|');
+  }
+  return String(c[key] == null ? '' : c[key]);
+}
+function _caseDiffDisplay(c, key){
+  if(!c) return '(未設定)';
+  if(key === '_vehicle') return _vehicleLabelForNotify(c) || '(未割当)';
+  const v = c[key];
+  if(v == null || String(v) === '') return '(未設定)';
+  if(key === 'dispatchAt') return _fmtDispatchAtForNotify(String(v));
+  return String(v);
+}
+// 戻り値: { changes:[{key,label,old,new}], notify:bool, head:'📍 配車先の変更' }
+function _caseChangeSummary(oldC, newC){
+  const none = { changes: [], notify: false, head: '' };
+  if(!oldC || !newC) return none;
+  if(newC.status === 'キャンセル' || newC.isDeleted) return none;
+  if(newC.recoveryCompleted) return none;
+  const dispatched = !!newC.dispatchDoneAt;
+  const changes = [];
+  NOTIFY_DIFF_FIELDS.forEach(f => {
+    if(dispatched && f.beforeDispatchOnly) return;
+    if(_caseDiffValue(oldC, f.key) === _caseDiffValue(newC, f.key)) return;
+    changes.push({ key:f.key, label:f.label, head:f.head,
+                   old:_caseDiffDisplay(oldC, f.key), new:_caseDiffDisplay(newC, f.key) });
+  });
+  if(!changes.length) return none;
+  const heads = [];
+  changes.forEach(x => { if(heads.indexOf(x.head) < 0) heads.push(x.head); });
+  return { changes, notify:true, head: (heads.length === 1 ? heads[0] : '📝 案件の変更') };
+}
+function _buildLineMessage(c, eventType, diff){
   const ins = c.insurerId ? (findInsurer(c.insurerId) || {}) : {};
   const driver = c.driverName || c.contractorName || '';
   const plate = [c.plateArea, c.plateNo, c.plateKana, c.plateTail].filter(Boolean).join(' ');
-  // ★2026-05-22: 車両割当済(vehicleId あり)なら車両マスタの実車種名を優先。
-  //   c.vehicleName は受付時のクラス表記(例「コンパクト 同等」)のまま更新されない
-  //   ことがあり、配車/回収段階では実際に割り当てた車の名前(マスタ.name)を出したい。
-  let _vehName = c.vehicleName || '';
-  if(c.vehicleId){
-    const _vm = ((DATA && DATA.vehicles) || []).find(v => v && v.id === c.vehicleId);
-    if(_vm && _vm.name) _vehName = _vm.name;
-  }
-  const vehicleStr = [_vehName, plate].filter(Boolean).join(' ') || c.vehicleClass || '';
+  // ★2026-08-24: 車両表示は _vehicleLabelForNotify() に一本化 (差分表示と同じ文字列を使う)
+  const vehicleStr = _vehicleLabelForNotify(c);
 
   // 配車予定の修飾: 「📞工場/運転者と時間調整中」「・予約備考」を付加
   const pendingParts = [];
@@ -7771,15 +7856,8 @@ function _buildLineMessage(c, eventType){
   if(c.dispatchTimePendingDriver) pendingParts.push('運転者');
   const pendingSuffix = pendingParts.length ? ` (📞${pendingParts.join('・')}と時間調整中)` : '';
   const noteSuffix = c.dispatchNote ? ' ・' + c.dispatchNote : '';
-  // ★2026-05-21: dispatchAt(YYYY-MM-DDTHH:MM) を「M/D(曜) HH:MM」に整形 (LINE可読性向上)
-  const _fmtDispatchAt = (s) => {
-    if(!s) return s;
-    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-    if(!m) return s;
-    const d = (typeof parseDate === 'function') ? parseDate(s.slice(0,10)) : new Date(s.slice(0,10) + 'T00:00:00');
-    const wd = (d && !isNaN(d)) ? '日月火水木金土'[d.getDay()] : '';
-    return `${Number(m[2])}/${Number(m[3])}${wd?`(${wd})`:''} ${m[4]}:${m[5]}`;
-  };
+  // ★2026-08-24: 日時整形は _fmtDispatchAtForNotify() に一本化 (差分表示と同じ表記にする)
+  const _fmtDispatchAt = _fmtDispatchAtForNotify;
   const dispatchLine = c.dispatchAt
     ? '配車予定: ' + _fmtDispatchAt(c.dispatchAt) + pendingSuffix + noteSuffix
     : (pendingParts.length ? '配車予定: ' + pendingParts.join('・') + 'と時間調整中' + noteSuffix : '');
@@ -7807,14 +7885,23 @@ function _buildLineMessage(c, eventType){
     // ★PC LIMEOne.html の updateCase と文面一致 (担当のみ mobile は staffLine=updatedBy優先)。
     //   pc-mobile-drift-check.bat で照合すること。
     const st = c.status || '';
-    let head = '🔄 配車日時変更';
-    if(st === '配車済') head = '🚗 配車完了';
-    else if(st === '返却済') head = '✅ 回収完了';
-    else if(st === '手配書FAX済') head = '📠 手配書FAX送付済';
-    else if(st === 'キャンセル') head = '❌ 案件キャンセル';
+    // ★2026-08-24: 見出しは「実際に何が変わったか」から作る。
+    //   旧実装は '🔄 配車日時変更' 固定 + status による上書き(配車済→'🚗 配車完了')で、
+    //   ①住所や車両を直しても「配車日時変更」と出る ②事務修正で完了通知が再送される
+    //   という2つの誤報を出していた。status での上書きは廃止 (状態は本文末尾の「状態:」で分かる)。
+    const head = (diff && diff.head) ? diff.head : '📝 案件の変更';
+    const changeLines = [];
+    if(diff && diff.changes && diff.changes.length){
+      diff.changes.forEach(ch => {
+        changeLines.push('【変更】' + ch.label);
+        changeLines.push('　旧: ' + ch.old);
+        changeLines.push('　新: ' + ch.new);
+      });
+    }
     return [
       head,
       '受付No: ' + (c.caseNo||''),
+      ...changeLines,
       dispatchLine || '配車予定: (未設定)',
       driver ? '運転者: ' + driver : '',
       ins.name ? '保険会社: ' + ins.name : '',
