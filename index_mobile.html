@@ -2157,7 +2157,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-24';
+const APP_VERSION = '2026-08-26';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -7831,9 +7831,17 @@ function _caseChangeSummary(oldC, newC){
   if(newC.status === 'キャンセル' || newC.isDeleted) return none;
   if(newC.recoveryCompleted) return none;
   const dispatched = !!newC.dispatchDoneAt;
+  // 2026-08-26: 回収予定日が新たに設定/変更された保存では、別途「📅 回収予定日 登録」が飛ぶ。
+  //   回収予定日を登録すると useEnd が空の場合に同じ日付が自動セットされるため、そのままだと
+  //   「📆 利用期間の変更」と中身がかぶった2通が同時刻に届く (2026-08-26 ユーザー指摘)。
+  //   ★落とすのは利用期間だけ。車両・配車先などを同時に変えた場合は従来どおり通知する。
+  //   ★§4.12 鉄則3: 発火判定は呼び出し側に書かず、ここ1箇所に集約する。
+  const recoverySet = (String(oldC.recoveryCalledAt || '') !== String(newC.recoveryCalledAt || ''))
+                      && !!newC.recoveryCalledAt;
   const changes = [];
   NOTIFY_DIFF_FIELDS.forEach(f => {
     if(dispatched && f.beforeDispatchOnly) return;
+    if(recoverySet && (f.key === 'useStart' || f.key === 'useEnd')) return;
     if(_caseDiffValue(oldC, f.key) === _caseDiffValue(newC, f.key)) return;
     changes.push({ key:f.key, label:f.label, head:f.head,
                    old:_caseDiffDisplay(oldC, f.key), new:_caseDiffDisplay(newC, f.key) });
