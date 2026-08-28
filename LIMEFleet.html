@@ -208,14 +208,15 @@ table.t td.r,table.t th.r{text-align:right;white-space:nowrap}
 
 <script>
 'use strict';
-const APP_VERSION='2026-06-11g';
+const APP_VERSION='2026-08-28a';
 const DBX_APP_KEY='fly154tcdbz09x9';
 const PATH_RENTAL='/ライム共有DB/システムデータ（R）/data.json';
 const PATH_FLEET ='/ライム共有DB/システムデータ車両/data.json';
 const PATH_MARKET='/ライム共有DB/システムデータ車両/market.json';
+const PATH_ASSETS='/ライム共有DB/システムデータ車両/fixed_assets.json';
 const FREEE_API_TOKEN='lime-freee-2026-k9Xz7Qp3Rm';
 const LS={token:'limeFleet_dbxToken',refresh:'limeFleet_dbxRefresh',verifier:'limeFleet_dbxVerifier',
-  cachedR:'limeFleet_cachedR',cachedF:'limeFleet_cachedF',cachedM:'limeFleet_cachedM',loadedAt:'limeFleet_loadedAt'};
+  cachedR:'limeFleet_cachedR',cachedF:'limeFleet_cachedF',cachedM:'limeFleet_cachedM',cachedA:'limeFleet_cachedA',loadedAt:'limeFleet_loadedAt'};
 const DEMO=new URLSearchParams(location.search).get('demo')==='1';
 
 // ---------- helpers ----------
@@ -294,26 +295,29 @@ let DR=null;        // レンタカー data.json (読み取りのみ・車両マ
 let FD=null;        // Fleet data.json (このアプリの正本・読み書き)
 let FD_REV=null;    // Fleet data.json の Dropbox rev (競合検出用)
 let MK=null;        // market.json (Claude相場ウォッチ・読み取りのみ)
+let FA=null;        // fixed_assets.json (GAS freee_assets が毎朝生成・freee簿価・読み取りのみ)
 
 async function loadAll(){
-  if(DEMO){ DR=demoR(); FD=demoF(); MK=demoM(); setSync('デモ'); return; }
+  if(DEMO){ DR=demoR(); FD=demoF(); MK=demoM(); FA=demoA(); setSync('デモ'); return; }
   if(!DBX_TOKEN){
-    const cR=localStorage.getItem(LS.cachedR),cF=localStorage.getItem(LS.cachedF),cM=localStorage.getItem(LS.cachedM);
-    if(cR&&cF){DR=JSON.parse(cR);FD=JSON.parse(cF);if(cM)MK=JSON.parse(cM);setSync('キャッシュ');toast('キャッシュから表示');return}
+    const cR=localStorage.getItem(LS.cachedR),cF=localStorage.getItem(LS.cachedF),cM=localStorage.getItem(LS.cachedM),cA=localStorage.getItem(LS.cachedA);
+    if(cR&&cF){DR=JSON.parse(cR);FD=JSON.parse(cF);if(cM)MK=JSON.parse(cM);if(cA)FA=JSON.parse(cA);setSync('キャッシュ');toast('キャッシュから表示');return}
     setSync('未連携');
     throw new Error('Dropbox 未連携');
   }
   showSpinner();
   try{
-    const [r,f,m]=await Promise.allSettled([dbxDownload(PATH_RENTAL),dbxDownload(PATH_FLEET),dbxDownload(PATH_MARKET)]);
+    const [r,f,m,a]=await Promise.allSettled([dbxDownload(PATH_RENTAL),dbxDownload(PATH_FLEET),dbxDownload(PATH_MARKET),dbxDownload(PATH_ASSETS)]);
     if(r.status==='fulfilled') DR=r.value.json;
     else { const cR=localStorage.getItem(LS.cachedR); if(cR) DR=JSON.parse(cR); toast('レンタカー: '+r.reason.message,'err'); }
     if(f.status==='fulfilled'){ FD=f.value.json; FD_REV=f.value.rev; }
     else { const cF=localStorage.getItem(LS.cachedF); if(cF){FD=JSON.parse(cF);FD_REV=null;} toast('Fleet正本: '+f.reason.message,'err'); }
     if(m.status==='fulfilled') MK=m.value.json; // market.json は無くても黙認
+    if(a.status==='fulfilled') FA=a.value.json; // fixed_assets.json も無くても黙認 (GAS freee_assets 未設定)
     if(DR) localStorage.setItem(LS.cachedR,JSON.stringify(DR));
     if(FD) localStorage.setItem(LS.cachedF,JSON.stringify(FD));
     if(MK) localStorage.setItem(LS.cachedM,JSON.stringify(MK));
+    if(FA) localStorage.setItem(LS.cachedA,JSON.stringify(FA));
     localStorage.setItem(LS.loadedAt,new Date().toISOString());
     setSync('同期済 '+new Date().toTimeString().slice(0,5));
   } finally { hideSpinner(); }
@@ -443,8 +447,63 @@ function marketOf(plate,v){
   return null;
 }
 
+// ---------- freee固定資産 簿価 (GAS freee_assets 生成の fixed_assets.json・表示のみでROI計算には入れない) ----------
+// APIのレスポンス項目名は取得元 (hub=freee固定資産 / kaikei=会計台帳) で異なるため、
+// よくあるキー名を深さ3まで探すベストエフォート方式。ハズレたら候補にキー名を足す。
+const _FFA_KEYS={
+  name:['name','asset_name','fixed_asset_name','title'],
+  book:['book_value','ending_book_value','closing_book_value','current_book_value','net_book_value','undepreciated_amount','undepreciated_balance','remaining_book_value'],
+  acq:['acquisition_cost','acquisition_amount','acquisition_price','acquisition_value'],
+  depr:['depreciation_amount','current_depreciation','term_depreciation','current_term_depreciation','annual_depreciation'],
+  date:['acquired_at','acquisition_date','acquired_date','acquired_on']
+};
+function _ffaPick(o,names,depth){
+  if(o==null||typeof o!=='object'||(depth||0)>3) return null;
+  for(const k of Object.keys(o)){
+    if(names.includes(k.toLowerCase())){ const v=o[k]; if(v!=null&&v!=='') return v; }
+  }
+  for(const k of Object.keys(o)){
+    const v=o[k];
+    if(v&&typeof v==='object'){ const r=_ffaPick(v,names,(depth||0)+1); if(r!=null) return r; }
+  }
+  return null;
+}
+const _ffaNum=v=>{const n=Number(v);return isFinite(n)?n:null};
+function ffaInfo(a){
+  return {
+    name:String(_ffaPick(a,_FFA_KEYS.name)||''),
+    book:_ffaNum(_ffaPick(a,_FFA_KEYS.book)),
+    acq:_ffaNum(_ffaPick(a,_FFA_KEYS.acq)),
+    depr:_ffaNum(_ffaPick(a,_FFA_KEYS.depr)),
+    date:String(_ffaPick(a,_FFA_KEYS.date)||'').slice(0,10)
+  };
+}
+function ffaAssets(){return (FA&&Array.isArray(FA.assets))?FA.assets:[]}
+// 車両→資産マッチ: 資産名にナンバー下4桁が入っていれば確定、なければ車名の部分一致。
+// 同名車対策で1資産は1台にしか割り当てない (_faUsed・_lifeRows 冒頭でリセット)。
+let _faUsed=null;
+function ffaMatch(v,vp){
+  const assets=ffaAssets(); if(!assets.length) return null;
+  const tail=String((v.plate&&v.plate.tail)||'').trim()||((String(vp||'').match(/(\d{4})$/)||[])[1]||'');
+  const nName=_mkNorm(v.name);
+  let best=null,bestScore=0;
+  assets.forEach((a,i)=>{
+    if(_faUsed&&_faUsed.has(i)) return;
+    const an=_mkNorm(_ffaPick(a,_FFA_KEYS.name)||'');
+    if(!an) return;
+    let score=0;
+    if(tail&&an.indexOf(tail)>=0) score=2;
+    else if(nName&&an.indexOf(nName)>=0) score=1;
+    if(score>bestScore){best=i;bestScore=score}
+  });
+  if(best==null) return null;
+  if(_faUsed) _faUsed.add(best);
+  return ffaInfo(assets[best]);
+}
+
 // ---------- 生涯ROI (index_admin_mobile.html _lifeRows 完全踏襲・定数はFD正本から) ----------
 function _lifeRows(){
+  _faUsed=new Set();  // freee資産マッチの重複防止 (renderAll毎に取り直す)
   const today=todayISO();
   const sinceStr=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
   const HIST=(FD&&FD.histRev)||{};
@@ -493,9 +552,10 @@ function _lifeRows(){
       if(base)leaseLeft=Math.round((base.getTime()+Number(v.leasePeriod)*2629800000-Date.now())/2629800000);
     }
     const mkt=marketOf(vp,v);
+    const ffa=ffaMatch(v,vp);  // freee簿価 (表示のみ・ROI計算には入れない)
     return {v,vp,name:(v.name||'').trim()||vp,plate:(v.plateDisplay||vp||''),grade:v.grade||'',cls:v.vehicleClass||'',
       total,hist,r26,extra,extraList,price,sold,recov,gross,runCost,kinjoLife,apportion,usedD,inspDays,leaseLeft,
-      isLease,leasePaid,leaseMonths,leaseFeeTotal,leaseTotalCost,leaseFee:Number(v.leaseFee)||0,invest,mkt,yearsHeld,
+      isLease,leasePaid,leaseMonths,leaseFeeTotal,leaseTotalCost,leaseFee:Number(v.leaseFee)||0,invest,mkt,ffa,yearsHeld,
       residual:Number(v.residualValue)||0,sold_st:v.status==='売却済'};
   }).filter(x=>x.total>0||x.price>0);
 }
@@ -609,6 +669,15 @@ function openDetail(vp){
       <div class="note">自社保有＝売却額がほぼ手取り（名義変更・整備費は別途）。</div>`;
     }
   }
+  // 会計上の売却損益 = 相場 − freee簿価 (簿価が取れている車のみ。手取り試算とは別物)
+  let bookHtml='';
+  if(mkt&&x.ffa&&x.ffa.book!=null){
+    const diff=mkt.price-x.ffa.book;
+    bookHtml=`<dl class="kv">
+      <dt>freee簿価 (帳簿価額)</dt><dd class="num">¥${yen(x.ffa.book)}</dd>
+      <dt>売却損益 目安</dt><dd class="num ${diff>=0?'pos':'neg'}" style="font-weight:700">${diff>=0?'+':''}¥${yen(diff)}</dd>
+    </dl><div class="note">相場で売れた場合に会計上 ${diff>=0?'売却益':'売却損'}が出る目安。実際は諸費用・消費税・売却時期の償却で変わる。簿価は毎朝freeeから自動取得。</div>`;
+  }
   const reasons=sellReasons(x);
   const roiPct=x.invest>0?Math.round(x.gross/x.invest*100):null;
   $('dpanel').innerHTML=`
@@ -640,6 +709,9 @@ function openDetail(vp){
         <dt>リース残</dt><dd class="num">${x.leaseLeft!=null?(x.leaseLeft<0?'満了済':x.leaseLeft+'ヶ月'):'—'}</dd>`:''}
         <dt>車検満了</dt><dd>${esc(v.inspectionDate||'—')}${x.inspDays!=null?` <span class="xs ${x.inspDays<=60?'neg':'ink3'}">(${x.inspDays<0?'切れ':'残'+x.inspDays+'日'})</span>`:''}</dd>
         <dt>走行距離</dt><dd class="num">${v.mileage?yen(v.mileage)+' km':'—'}</dd>
+        <dt>freee簿価 (帳簿価額)</dt><dd class="num">${x.ffa&&x.ffa.book!=null?'¥'+yen(x.ffa.book):`<span class="xs ink3">${!FA?'freee未接続 (GAS freee_assets)':!x.ffa?'freee固定資産に未マッチ':'項目不明 (fixed_assets.jsonのキー確認)'}</span>`}</dd>
+        ${x.ffa&&x.ffa.depr!=null?`<dt>当期償却額</dt><dd class="num">−¥${yen(x.ffa.depr)}</dd>`:''}
+        ${x.ffa&&x.ffa.name?`<dt class="ink3">freee資産名</dt><dd class="xs ink3">${esc(x.ffa.name)}${x.ffa.date?' ・ '+esc(x.ffa.date)+'取得':''}</dd>`:''}
       </dl>
     </div>
 
@@ -672,6 +744,7 @@ function openDetail(vp){
         ${mkt&&mkt.manual?'<button class="btn btn-o" onclick="clearMarket()">クリア</button>':''}
       </div>
       ${payoutHtml?`<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)"><div class="sm" style="font-weight:700;margin-bottom:4px">💰 売却時の手取り 簡易試算</div>${payoutHtml}</div>`:''}
+      ${bookHtml?`<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)"><div class="sm" style="font-weight:700;margin-bottom:4px">📒 会計上の売却損益 (相場−freee簿価)</div>${bookHtml}</div>`:''}
     </div>
 
     <div class="card">
@@ -846,6 +919,7 @@ function renderSettings(){
     <dt>Fleet 正本 data.json</dt><dd>${FD?'✅ schemaV'+((FD.meta&&FD.meta.schemaVersion)||'?')+' / 相場'+Object.keys(FD.market||{}).length+'件':'—'}</dd>
     <dt>market.json (相場ウォッチ)</dt><dd>${MK?(MK.groups?'✅ '+Object.keys(MK.groups).length+'グループ'+(MK.updatedAt?' / '+esc(MK.updatedAt):' / 相場未取得'):(MK.updatedAt?'✅ '+esc(MK.updatedAt):'空')):'—'}</dd>
     <dt>freee 按分/金城ライブ</dt><dd>${MAINT?'✅ 接続':'未接続'} / ${KINJO_LIVE?'✅':'—'}</dd>
+    <dt>freee固定資産 (簿価)</dt><dd>${FA?(FA.assetSource?'✅ '+(FA.assetSource==='hub'?'freee固定資産':'会計台帳')+' / 資産'+(FA.assetCount||ffaAssets().length)+'件 / '+esc(String(FA.generatedAt||'').slice(0,10)):'⚠ 取得元なし — freeeの契約/アプリ権限を確認 (gas/SETUP_freee_assets.md)'):'未接続 — GAS freee_assets 未設定 (gas/SETUP_freee_assets.md)'}</dd>
     <dt>最終読込</dt><dd>${esc(fmt(localStorage.getItem(LS.loadedAt)))}</dd>`;
   $('set-ver').textContent='v'+APP_VERSION;
 }
@@ -900,6 +974,17 @@ function demoM(){
       'カムリ':{label:'トヨタ カムリ',maker:'トヨタ',names:['カムリ'],cond:{yearFrom:2019,yearTo:2019,kmMax:100000,color:''},watch:'保有',vehicles:['沖縄 506 わ 1005'],
         history:[{date:'2026-06-11',count:12,lowMan:120,highMan:210,avgMan:168,topYear:'2019年',note:'demo・手動優先の確認用'}]}
     }
+  };
+}
+
+function demoA(){
+  // 自社保有車のみ簿価あり (リース車は資産計上外) — freee固定資産(hub)想定のキー名
+  return {
+    generatedAt:new Date().toISOString(), assetSource:'hub', assetCount:2,
+    assets:[
+      {name:'車両運搬具 フィット 1002', acquisition_cost:1800000, book_value:1150000, depreciation_amount:210000, acquired_at:'2023-06-01'},
+      {name:'車両運搬具 カムリ 1005', acquisition_cost:2500000, book_value:900000, depreciation_amount:350000, acquired_at:'2022-08-01'}
+    ]
   };
 }
 
