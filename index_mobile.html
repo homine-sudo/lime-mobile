@@ -2157,7 +2157,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-26';
+const APP_VERSION = '2026-08-28';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -7773,20 +7773,27 @@ function _recoveryDest(c){
 //
 // 【通知する / しない の考え方】
 //   ・回収完了済み / キャンセル … 一切通知しない (終わった案件の事務修正で現場を呼ばない)
-//   ・配車完了前 … 配車日時・配車先・車両・利用期間・回収先
-//   ・配車完了後 … 車両・利用期間・回収先 のみ (配車日時/配車先はもう済んだ話)
+//   ・配車完了前 … 配車日時・配車先・回収先
+//   ・配車完了後 … 回収先 のみ (配車日時/配車先はもう済んだ話)
 //   ★回収先(recoveryTo*)は従来どこからも通知されていなかった。回収の行き先が
 //     変わるのは現場の段取りそのものなので、ここで拾うようにした。
-// ============================================================
+//
+// 【2026-08-28: 車両 と 利用期間 を「発火しないが本文には出す」に変更】
+//   ユーザー指示「車両変更はLINE通知なし！」+「利用開始・利用終了とも通知対象から外す」。
+//   実例 2026-08-0337: 配車予定の案件に車両を割り当て(K→N-BOXカスタム)、利用開始を
+//   (未設定)→8/28 と入れただけの配車準備の事務入力で LINE が飛んでいた。
+//   ★notify:false は「単独では通知を発火させない」という意味で、差分行は従来どおり出す。
+//     配車先や回収先の変更で通知が飛ぶ時に、車両や期間も一緒に変わっていれば本文で分かる。
+//   ★見出しは「発火した理由」から作る (notify:false のフィールドは見出しに使わない)。
 const NOTIFY_DIFF_FIELDS = [
-  { key:'dispatchAt',        label:'配車予定日時', head:'🔄 配車日時の変更', beforeDispatchOnly:true  },
-  { key:'dispatchToName',    label:'配車先',       head:'📍 配車先の変更',   beforeDispatchOnly:true  },
-  { key:'dispatchToAddress', label:'配車先住所',   head:'📍 配車先の変更',   beforeDispatchOnly:true  },
-  { key:'_vehicle',          label:'車両',         head:'🚙 車両の変更',     beforeDispatchOnly:false },
-  { key:'useStart',          label:'利用開始',     head:'📆 利用期間の変更', beforeDispatchOnly:false },
-  { key:'useEnd',            label:'利用終了',     head:'📆 利用期間の変更', beforeDispatchOnly:false },
-  { key:'recoveryToName',    label:'回収先',       head:'🏁 回収先の変更',   beforeDispatchOnly:false },
-  { key:'recoveryToAddress', label:'回収先住所',   head:'🏁 回収先の変更',   beforeDispatchOnly:false }
+  { key:'dispatchAt',        label:'配車予定日時', head:'🔄 配車日時の変更', beforeDispatchOnly:true,  notify:true  },
+  { key:'dispatchToName',    label:'配車先',       head:'📍 配車先の変更',   beforeDispatchOnly:true,  notify:true  },
+  { key:'dispatchToAddress', label:'配車先住所',   head:'📍 配車先の変更',   beforeDispatchOnly:true,  notify:true  },
+  { key:'_vehicle',          label:'車両',         head:'🚙 車両の変更',     beforeDispatchOnly:false, notify:false },
+  { key:'useStart',          label:'利用開始',     head:'📆 利用期間の変更', beforeDispatchOnly:false, notify:false },
+  { key:'useEnd',            label:'利用終了',     head:'📆 利用期間の変更', beforeDispatchOnly:false, notify:false },
+  { key:'recoveryToName',    label:'回収先',       head:'🏁 回収先の変更',   beforeDispatchOnly:false, notify:true  },
+  { key:'recoveryToAddress', label:'回収先住所',   head:'🏁 回収先の変更',   beforeDispatchOnly:false, notify:true  }
 ];
 // dispatchAt(YYYY-MM-DDTHH:MM) を「M/D(曜) HH:MM」に整形 (LINE可読性)
 function _fmtDispatchAtForNotify(s){
@@ -7843,12 +7850,16 @@ function _caseChangeSummary(oldC, newC){
     if(dispatched && f.beforeDispatchOnly) return;
     if(recoverySet && (f.key === 'useStart' || f.key === 'useEnd')) return;
     if(_caseDiffValue(oldC, f.key) === _caseDiffValue(newC, f.key)) return;
-    changes.push({ key:f.key, label:f.label, head:f.head,
+    changes.push({ key:f.key, label:f.label, head:f.head, notify:(f.notify !== false),
                    old:_caseDiffDisplay(oldC, f.key), new:_caseDiffDisplay(newC, f.key) });
   });
   if(!changes.length) return none;
+  // ★発火するのは notify:true のフィールドが変わった時だけ。
+  //   車両や利用期間だけが変わった保存は、差分は持つが LINE は飛ばさない (2026-08-28)。
+  const triggers = changes.filter(x => x.notify);
+  if(!triggers.length) return { changes, notify:false, head:'' };
   const heads = [];
-  changes.forEach(x => { if(heads.indexOf(x.head) < 0) heads.push(x.head); });
+  triggers.forEach(x => { if(heads.indexOf(x.head) < 0) heads.push(x.head); });
   return { changes, notify:true, head: (heads.length === 1 ? heads[0] : '📝 案件の変更') };
 }
 function _buildLineMessage(c, eventType, diff){

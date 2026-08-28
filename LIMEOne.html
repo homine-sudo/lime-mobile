@@ -3133,7 +3133,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-26';
+const APP_VERSION = '2026-08-28';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -17446,20 +17446,27 @@ function _recoveryDest(c){
 //
 // 【通知する / しない の考え方】
 //   ・回収完了済み / キャンセル … 一切通知しない (終わった案件の事務修正で現場を呼ばない)
-//   ・配車完了前 … 配車日時・配車先・車両・利用期間・回収先
-//   ・配車完了後 … 車両・利用期間・回収先 のみ (配車日時/配車先はもう済んだ話)
+//   ・配車完了前 … 配車日時・配車先・回収先
+//   ・配車完了後 … 回収先 のみ (配車日時/配車先はもう済んだ話)
 //   ★回収先(recoveryTo*)は従来どこからも通知されていなかった。回収の行き先が
 //     変わるのは現場の段取りそのものなので、ここで拾うようにした。
-// ============================================================
+//
+// 【2026-08-28: 車両 と 利用期間 を「発火しないが本文には出す」に変更】
+//   ユーザー指示「車両変更はLINE通知なし！」+「利用開始・利用終了とも通知対象から外す」。
+//   実例 2026-08-0337: 配車予定の案件に車両を割り当て(K→N-BOXカスタム)、利用開始を
+//   (未設定)→8/28 と入れただけの配車準備の事務入力で LINE が飛んでいた。
+//   ★notify:false は「単独では通知を発火させない」という意味で、差分行は従来どおり出す。
+//     配車先や回収先の変更で通知が飛ぶ時に、車両や期間も一緒に変わっていれば本文で分かる。
+//   ★見出しは「発火した理由」から作る (notify:false のフィールドは見出しに使わない)。
 const NOTIFY_DIFF_FIELDS = [
-  { key:'dispatchAt',        label:'配車予定日時', head:'🔄 配車日時の変更', beforeDispatchOnly:true  },
-  { key:'dispatchToName',    label:'配車先',       head:'📍 配車先の変更',   beforeDispatchOnly:true  },
-  { key:'dispatchToAddress', label:'配車先住所',   head:'📍 配車先の変更',   beforeDispatchOnly:true  },
-  { key:'_vehicle',          label:'車両',         head:'🚙 車両の変更',     beforeDispatchOnly:false },
-  { key:'useStart',          label:'利用開始',     head:'📆 利用期間の変更', beforeDispatchOnly:false },
-  { key:'useEnd',            label:'利用終了',     head:'📆 利用期間の変更', beforeDispatchOnly:false },
-  { key:'recoveryToName',    label:'回収先',       head:'🏁 回収先の変更',   beforeDispatchOnly:false },
-  { key:'recoveryToAddress', label:'回収先住所',   head:'🏁 回収先の変更',   beforeDispatchOnly:false }
+  { key:'dispatchAt',        label:'配車予定日時', head:'🔄 配車日時の変更', beforeDispatchOnly:true,  notify:true  },
+  { key:'dispatchToName',    label:'配車先',       head:'📍 配車先の変更',   beforeDispatchOnly:true,  notify:true  },
+  { key:'dispatchToAddress', label:'配車先住所',   head:'📍 配車先の変更',   beforeDispatchOnly:true,  notify:true  },
+  { key:'_vehicle',          label:'車両',         head:'🚙 車両の変更',     beforeDispatchOnly:false, notify:false },
+  { key:'useStart',          label:'利用開始',     head:'📆 利用期間の変更', beforeDispatchOnly:false, notify:false },
+  { key:'useEnd',            label:'利用終了',     head:'📆 利用期間の変更', beforeDispatchOnly:false, notify:false },
+  { key:'recoveryToName',    label:'回収先',       head:'🏁 回収先の変更',   beforeDispatchOnly:false, notify:true  },
+  { key:'recoveryToAddress', label:'回収先住所',   head:'🏁 回収先の変更',   beforeDispatchOnly:false, notify:true  }
 ];
 // dispatchAt(YYYY-MM-DDTHH:MM) を「M/D(曜) HH:MM」に整形 (LINE可読性)
 function _fmtDispatchAtForNotify(s){
@@ -17516,12 +17523,16 @@ function _caseChangeSummary(oldC, newC){
     if(dispatched && f.beforeDispatchOnly) return;
     if(recoverySet && (f.key === 'useStart' || f.key === 'useEnd')) return;
     if(_caseDiffValue(oldC, f.key) === _caseDiffValue(newC, f.key)) return;
-    changes.push({ key:f.key, label:f.label, head:f.head,
+    changes.push({ key:f.key, label:f.label, head:f.head, notify:(f.notify !== false),
                    old:_caseDiffDisplay(oldC, f.key), new:_caseDiffDisplay(newC, f.key) });
   });
   if(!changes.length) return none;
+  // ★発火するのは notify:true のフィールドが変わった時だけ。
+  //   車両や利用期間だけが変わった保存は、差分は持つが LINE は飛ばさない (2026-08-28)。
+  const triggers = changes.filter(x => x.notify);
+  if(!triggers.length) return { changes, notify:false, head:'' };
   const heads = [];
-  changes.forEach(x => { if(heads.indexOf(x.head) < 0) heads.push(x.head); });
+  triggers.forEach(x => { if(heads.indexOf(x.head) < 0) heads.push(x.head); });
   return { changes, notify:true, head: (heads.length === 1 ? heads[0] : '📝 案件の変更') };
 }
 function _buildLineMessage(c, eventType, diff){
@@ -18979,10 +18990,39 @@ initApp();
  *   - エクスポート済み (freeeExportedAt あり) で 現在金額が freeeExportedAmount と異なる
  *     → ユーザーに freee側で修正してもらう
  * ============================================================ */
+/* ★一般貸渡でfreeeに「送ってよい」決済方法のホワイトリスト (2026-08-26制定)
+ *   店頭決済(現金/カード/QR)は Airレジ→freee連携が「決済手段×日の合計1取引」で
+ *   既にfreeeへ自動計上している。ここから送ると同じ売上が2本立ち二重計上になる。
+ *   実害は 2026-08-26 に freee 実取引を照会して確認済 (店頭決済の案件が Airレジ側と
+ *   システム側の2本立ちで、どちらも決済済になっていた)。該当案件と金額は
+ *   CHANGELOG.md 2026-08-26 と 是正リスト(共有DB内・非公開) を参照。
+ *   ★このファイルは GitHub Pages で公開されるので、個別取引の金額をここに書かないこと。
+ *   ★paymentMethod は「除外方向にだけ」使う。空欄が常態的にあるので
+ *     「振込と書いてあるものだけ送る」= 既定は送らない、が唯一安全な向き。
+ *     このホワイトリストを反転させるな (漏れは後から足せるが二重計上は気づけない)。
+ *   ※損保/Mon/工場/その他カテゴリは店頭決済しないため対象外 (従来通り全件送る)。
+ */
+const FREEE_POSTABLE_PAYMENTS = ['振込','口座'];
+
+/* freee取引の「取引先」名 (2026-08-26)。CSV(freeeFormatRow)とAPI(freeeApiRow)で必ず同じ値を使う。
+ *   損保等は従来通り保険会社名。一般貸渡は insurerId が空で従来 取引先が空欄のまま登録されていたため、
+ *   §4.11 の請求書宛名と同じ順で 請求先 → 借受人 にフォールバックする。
+ *   ★運転者(driverName)は入れない。運転者=請求相手とは限らない。
+ *   ★GAS `_freeeResolvePartnerId` は完全一致で無ければ取引先を新規作成する。
+ *     表記ゆれがそのまま freee の取引先重複になるので、請求先/借受人の表記は揃えて入力すること。
+ */
+function _freeePartnerName(c, ins){
+  const i = ins || ((typeof findInsurer === 'function' ? findInsurer(c.insurerId) : null) || {});
+  return (i.name || '').trim()
+      || String(c.billingToName || '').trim()
+      || String(c.contractorName || '').trim();
+}
+
 function freeeExportTargets(){
   const startDate = (DATA.settings.freeeImportStartDate || '2026-04-27').slice(0,10);
   const targets = [];
   const adjustWarnings = [];
+  const skipped = [];   // 一般貸渡の店頭決済/決済方法未入力 (黙って消さず画面に出す)
   for(const c of DATA.cases){
     if(c.status === 'キャンセル') continue;
     if(c.isHistorical) continue;
@@ -19004,6 +19044,18 @@ function freeeExportTargets(){
       continue;
     }
     if(currentAmount <= 0) continue; // 金額0は出さない
+    // ★一般貸渡の店頭決済ガード (FREEE_POSTABLE_PAYMENTS のコメント参照)。
+    //   Airレジが既にfreeeへ計上しているものを重ねて送らない。除外理由は画面に必ず出す。
+    if(c.category === '一般'){
+      const pm = String(c.paymentMethod || '').trim();
+      if(!FREEE_POSTABLE_PAYMENTS.includes(pm)){
+        skipped.push({
+          c, amount: currentAmount,
+          reason: pm ? `店頭決済(${pm}) — Airレジがfreeeに計上済` : '決済方法が未入力 — 判定できないため送りません'
+        });
+        continue;
+      }
+    }
     targets.push({ c, amount: currentAmount });
   }
   // ★ NOC休業補償料 (雑収入) を別取引として追加
@@ -19018,7 +19070,7 @@ function freeeExportTargets(){
     if(noc.freeeExportedAt) continue;  // NOC出力済はスキップ
     targets.push({ c, amount: Math.round(Number(noc.total)), isNoc: true });
   }
-  return { startDate, targets, adjustWarnings };
+  return { startDate, targets, adjustWarnings, skipped };
 }
 
 /* ============================================================
@@ -19137,7 +19189,7 @@ function freeeFormatRow(t){
   const c = t.c;
   const amount = t.amount;
   const ins = (typeof findInsurer === 'function' ? findInsurer(c.insurerId) : null) || {};
-  const partnerName = ins.name || '';
+  const partnerName = _freeePartnerName(c, ins);
   const insContact = c.insurerContact || '';
   const fmtJp = d => d ? d.replace(/-/g,'/') : '';
   // v25w/x: 部門は freee設定値を使用 (デフォルト「代車レンタカー」)
@@ -19215,7 +19267,7 @@ function freeeApiRow(t){
   const c = t.c;
   const amount = t.amount;
   const ins = (typeof findInsurer === 'function' ? findInsurer(c.insurerId) : null) || {};
-  const partnerName = ins.name || '';
+  const partnerName = _freeePartnerName(c, ins);
   const insContact = c.insurerContact || '';
   const dept = (c.category === '一般')
     ? '一般レンタカー'
@@ -19263,10 +19315,14 @@ async function freeePostDealsToApi(opts){
   opts = opts || {};
   const url = ((DATA.settings && DATA.settings.freeeApiUrl) || '').trim();
   if(!url){ if(!opts.silent) toast('freee API URLが未設定です（設定 → freee連携 で登録）','error'); return; }
-  const { targets } = freeeExportTargets();
+  const { targets, skipped } = freeeExportTargets();
   if(!targets.length){ if(!opts.silent) toast('登録対象の未エクスポート案件はありません ✅'); return; }
   const totalAmount = targets.reduce((s,t)=>s+t.amount, 0);
-  if(!opts.auto && !confirm(`📤 freeeへ売上を直接登録します (API)。\n\n件数: ${targets.length}件\n合計(税込): ${yen(totalAmount)}\n\nGAS経由でfreeeに取引を作成し、各案件を「freee登録済」にします。\n\n※送信後はfreee側で着信をご確認ください (GASの仕様上、画面では成否を読めません)。`)) return;
+  // 除外(店頭決済ガード)の件数も確認文に出す。黙って落とすと計上漏れと区別がつかない
+  const skipNote = (skipped && skipped.length)
+    ? `\n\n🏪 除外: 一般貸渡の店頭決済/決済方法未入力 ${skipped.length}件 (${yen(skipped.reduce((s,x)=>s+x.amount,0))})\n   → Airレジ経由でfreeeに計上済みのため送りません。`
+    : '';
+  if(!opts.auto && !confirm(`📤 freeeへ売上を直接登録します (API)。\n\n件数: ${targets.length}件\n合計(税込): ${yen(totalAmount)}${skipNote}\n\nGAS経由でfreeeに取引を作成し、各案件を「freee登録済」にします。\n\n※送信後はfreee側で着信をご確認ください (GASの仕様上、画面では成否を読めません)。`)) return;
 
   const rows = targets.map(freeeApiRow);
   try {
@@ -19473,7 +19529,7 @@ function csvEscape(v){
 }
 
 function openFreeeExportDialog(){
-  const { startDate, targets, adjustWarnings } = freeeExportTargets();
+  const { startDate, targets, adjustWarnings, skipped } = freeeExportTargets();
   const totalAmount = targets.reduce((s,t)=>s+t.amount, 0);
   const existing = document.getElementById('freee-export-dialog');
   if(existing) existing.remove();
@@ -19489,6 +19545,21 @@ function openFreeeExportDialog(){
       <div style="font-size:12px;color:#5C3300;margin-bottom:8px">これらの案件は freee側で取引を手動修正してください。CSVには含まれません(差額仕訳は出しません)。</div>
       <div style="max-height:140px;overflow-y:auto;background:#fff;border-radius:3px;padding:6px;font-size:11px">
         ${adjustWarnings.map(w => `<div style="padding:3px 0;border-bottom:1px dashed #eee">${esc(w.c.caseNo||'')} | ${esc(w.c.driverName||w.c.contractorName||'')} | 出力時: ${yen(w.prevAmount)} → 現在: ${yen(w.currentAmount)} <span style="color:${w.currentAmount>w.prevAmount?'var(--green)':'var(--red)'};font-weight:bold">${w.currentAmount>w.prevAmount?'+':''}${yen(w.currentAmount-w.prevAmount)}</span></div>`).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  // 2026-08-26: 一般貸渡の店頭決済ガードで除外した案件を明示 (黙って消すと計上漏れと区別がつかない)
+  const skipList = skipped || [];
+  const skipHtml = skipList.length ? `
+    <div style="background:#EDF4FF;border-left:4px solid var(--navy);padding:12px;border-radius:4px;margin-bottom:12px">
+      <div style="font-weight:bold;color:#1B3A66;margin-bottom:6px">🏪 一般貸渡のうち freeeに送らない案件: ${skipList.length}件 (合計 ${yen(skipList.reduce((s,x)=>s+x.amount,0))})</div>
+      <div style="font-size:12px;color:#274B78;margin-bottom:8px">
+        店頭決済(現金/カード/QR)は <b>Airレジ→freee連携が既に売上計上済み</b>です。ここから送ると同じ売上が2重に載ります。<br>
+        振込・口座で受ける案件は「決済方法」を<b>振込</b>にすると、この一覧から出力対象に移ります。
+      </div>
+      <div style="max-height:140px;overflow-y:auto;background:#fff;border-radius:3px;padding:6px;font-size:11px">
+        ${skipList.map(x => `<div style="padding:3px 0;border-bottom:1px dashed #eee"><a href="#" onclick="event.preventDefault();document.getElementById('freee-export-dialog').remove();openCaseModal('${esc(x.c.id)}')" style="color:var(--navy);font-weight:bold;text-decoration:underline">${esc(x.c.caseNo||'')}</a> | ${esc(x.c.contractorName||x.c.driverName||'')} | ${yen(x.amount)} <span style="color:#666">— ${esc(x.reason)}</span></div>`).join('')}
       </div>
     </div>
   ` : '';
@@ -19514,7 +19585,7 @@ function openFreeeExportDialog(){
             <th style="padding:6px 4px;text-align:center;width:30px"></th>
             <th style="padding:6px 8px;text-align:left">受付No</th>
             <th style="padding:6px 8px;text-align:left">利用終了日</th>
-            <th style="padding:6px 8px;text-align:left">取引先(保険会社)</th>
+            <th style="padding:6px 8px;text-align:left">取引先</th>
             <th style="padding:6px 8px;text-align:left">担当者</th>
             <th style="padding:6px 8px;text-align:right">金額</th>
             <th style="padding:6px 8px;text-align:center">操作</th>
@@ -19526,11 +19597,19 @@ function openFreeeExportDialog(){
             const isNoc = !!t.isNoc;
             const dateStr = isNoc ? fmtDate((t.c.nocCharge||{}).issuedAt) : fmtDate(t.c.useEnd);
             const nocBadge = isNoc ? ` <span style="background:#7C3AED;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;font-weight:bold">NOC雑収入</span>` : '';
+            // 2026-08-26: 実際にfreeeへ送る取引先名を表示する。保険会社マスタ由来でない名前(請求先/借受人から
+            //   フォールバックしたもの)は ⚠ を出す。GAS側は完全一致しない名前を新規作成するため、
+            //   表記ゆれのまま送ると freee の取引先が重複する (実データに TSS沖縄 / 株式会社TSS沖縄 の両方あり)。
+            const pName = isNoc ? '休業補償' : _freeePartnerName(t.c, ins);
+            const derived = !isNoc && !(ins.name||'').trim() && !!pName;
+            const pCell = pName
+              ? `${esc(pName)}${derived ? ` <span title="保険会社マスタ以外(請求先/借受人)から補完した名前です。freeeに同名の取引先が無ければ新規作成されます。既存の表記と違わないか確認してください" style="background:#FFF4E0;color:#7A4500;font-size:9px;padding:1px 5px;border-radius:8px;font-weight:bold;cursor:help">⚠新規作成の可能性</span>` : ''}`
+              : `<span style="color:#C53030">(空欄)</span>`;
             return `<tr style="border-top:1px solid #eee${isNoc?';background:#F5F3FF':''}">
               <td style="padding:5px 4px;text-align:center"><input type="checkbox" class="freee-row-check" data-id="${esc(t.c.id)}" data-amount="${t.amount}" data-kind="${isNoc?'noc':'sales'}" onchange="updateFreeeCheckSummary()"></td>
               <td style="padding:5px 8px"><b>${esc(t.c.caseNo||'')}</b>${nocBadge}</td>
               <td style="padding:5px 8px">${dateStr}</td>
-              <td style="padding:5px 8px">${esc(ins.name||'')}</td>
+              <td style="padding:5px 8px">${pCell}</td>
               <td style="padding:5px 8px">${esc(t.c.insurerContact||'')}</td>
               <td style="padding:5px 8px;text-align:right;font-weight:bold">${yen(t.amount)}</td>
               <td style="padding:5px 8px;text-align:center;white-space:nowrap">
@@ -19561,11 +19640,14 @@ function openFreeeExportDialog(){
           </div>
         </div>
         ${warnHtml}
+        ${skipHtml}
         <div style="font-size:13px;font-weight:bold;margin:12px 0 6px">📋 出力対象案件 (${targets.length}件)</div>
         ${targetsListHtml}
         <div style="margin-top:12px;font-size:11px;color:#666;line-height:1.6">
-          <b>仕訳内容:</b> 借方=売掛金 / 貸方=売上高 / 税区分=課税売上10%(内税)<br>
+          <b>仕訳内容:</b> 借方=売掛金 / 貸方=売上高 / 税区分=課税売上10%(内税) ＝ <b>すべて掛売(未決済)</b>で登録されます<br>
           <b>取引日:</b> 利用終了日 / <b>備考:</b> 受付No / 保険会社名 / 担当者名<br>
+          <b>取引先:</b> 保険会社 → 請求先 → 借受人 の順。⚠ が付いた名前は freee に無ければ新規作成されます<br>
+          <b>入金の消込:</b> freee側でこの取引が「決済済」になると、翌日の自動照合で案件が「入金済」に進みます<br>
           <b>freee取り込み手順:</b> 取引 → 取引一覧 → インポート → 「取引(収入)CSV」を選択 → このCSVをアップロード
         </div>
       </div>
