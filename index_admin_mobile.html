@@ -1590,7 +1590,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-08-24';
+const APP_VERSION = '2026-08-30';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2483,7 +2483,11 @@ const CASH_LOAN_DRAWS  = {};
 // 設備投資・一時支出のうち「まだ現金が出ていない」ものを月キーで置く (支払期日の月に置く)。
 // 2026-08-05: プレハブ180万は購入なしになったため削除。代わりに納車済み車両3台の未払分を支払期日の月に計上。
 // 🚨公開ページのため取引先名は書かない (2026-07-29 方針)。請求書原本・支払先は freee と共有DBに。
-const CASH_EXTRA_CAPEX = { '2026-08': { amount: 4760000, label: '車両の未払分' } };
+const CASH_EXTRA_CAPEX = {};
+// 支払済みになった一時支出 = 資金繰りの投資には計上しない (freee 現預金から出済み=期首現金に反映済)。
+// 🚨鉄則 (2026-08-05 制定・§9): 除外したら必ず前提注記に明示する。黙って消すと「計上漏れ」と区別がつかない。
+// 2026-08-30: 車両の未払分476万 (支払期日 8/30) は 2026-08-24 に決済済みを freee で確認 → ここへ移動。
+const CASH_EXTRA_CAPEX_SETTLED = [ { ym: '2026-08', amount: 4760000, label: '車両の未払分', paidAt: '2026-08-24' } ];
 // 支払済みの「納車待ち」車両ID = 資金繰りの投資には計上しない。
 // 🚨鉄則 (2026-08-05 制定): 納車待ち≠未払い。支払と納車のタイミングは別物。
 //   実例: N-WGN v-077/078 は納車前だが支払済み(freee固定資産計上済・現預金から出済み) /
@@ -2733,8 +2737,8 @@ function vehiclesUnpaid(){ return vehiclesPending().filter(v=>CASH_CAPEX_SETTLED
 function vehiclesSettledPending(){ return vehiclesPending().filter(v=>CASH_CAPEX_SETTLED.indexOf(v.id)>=0); }
 function cashFlowPlan(opAdj){
   // 期首現金 = freee 現預金 (ライブ) / fallback は既知値
-  const openCash = (FREEE_BS && FREEE_BS.cash!=null) ? FREEE_BS.cash : 36087108;
-  const loan = (FREEE_BS && FREEE_BS.loan) ? FREEE_BS.loan : 53839000;
+  const openCash = (FREEE_BS && FREEE_BS.cash!=null) ? FREEE_BS.cash : 39889915;
+  const loan = (FREEE_BS && FREEE_BS.loan) ? FREEE_BS.loan : 60149000;
   // 月次営業CF = freee 営業利益 ÷ 経過月 (4月起点)。減価償却は期中ほぼ未計上=営業利益≒営業キャッシュ。fallback 定数。
   let opCF = CASH_CFG.opCFfallback, opCFlive=false;
   if(FREEE_PL && FREEE_PL.op!=null && FREEE_PL.em){ const mo=Math.max(1,FREEE_PL.em-3); opCF=Math.round(FREEE_PL.op/mo); opCFlive=true; }
@@ -2772,6 +2776,7 @@ function cashFlowPlan(opAdj){
   }
   return {openCash, loan, loanAfter:loan+loanDrawTotal, opCF, opCFlive, baseRepay, newLoanMo, capex, extraCapexTotal, loanDrawTotal,
     pendCount:pend.length, settledCount:settled.length, settledTotal, rows, trough, floor:CASH_CFG.floor,
+    exSettled:CASH_EXTRA_CAPEX_SETTLED, exSettledTotal:CASH_EXTRA_CAPEX_SETTLED.reduce((s,e)=>s+Number(e.amount||0),0),
     hasSpecial:Object.keys(CASH_SPECIAL).length>0, newLoanAssumed:!!CASH_NEW_LOAN.assumed};
 }
 // ===== 売上ゼロ ランウェイ (2026-07-31) =====
@@ -2779,7 +2784,7 @@ function cashFlowPlan(opAdj){
 // バーン = 現金固定費(BREAK_EVEN.fixedCash) + 借入元金返済(既存 + 新規借入)。売上ゼロなら変動費は出ないので含めない。
 // 設備投資・税金・賞与は「止められる/時期をずらせる」ので含めない = 最も素直な耐久月数。
 function zeroRevenueRunway(){
-  const cash=(FREEE_BS && FREEE_BS.cash!=null) ? FREEE_BS.cash : 36087108;
+  const cash=(FREEE_BS && FREEE_BS.cash!=null) ? FREEE_BS.cash : 39889915;
   const ar  =(FREEE_BS && FREEE_BS.ar!=null)   ? FREEE_BS.ar   : 0;
   const newLoanMo=(CASH_NEW_LOAN.amount>0&&CASH_NEW_LOAN.months>0)?Math.round(CASH_NEW_LOAN.amount/CASH_NEW_LOAN.months):0;
   const repay=CASH_CFG.loanRepay+newLoanMo;
@@ -2902,6 +2907,7 @@ function renderCash(){
     '。 月次営業CF ＝ '+yen(p.opCF)+'円'+(p.opCFlive?'（freee営業利益 4〜当月 ÷ 経過月）':'（概算）')+
     '。 既存の借入元金返済 ＝ '+yen(p.baseRepay)+'円/月。 投資 ＝ '+invLabel+'（'+yen(investTotal)+'円）を支払月に全額現金計上。';
   if(p.settledTotal>0) assump+='<br><span class="ink3">※ 納車待ち'+p.settledCount+'台（'+man(p.settledTotal)+'万）は支払済み＝すでに期首現金から出ているため、投資には計上していません（二重計上の防止）。</span>';
+  if(p.exSettledTotal>0) assump+='<br><span class="ink3">※ '+p.exSettled.map(e=>e.label+'（'+man(e.amount)+'万・'+e.paidAt+'）').join('、')+'は支払済み＝すでに期首現金から出ているため、投資には計上していません（二重計上の防止）。</span>';
   if(p.loanDrawTotal>0) assump+=' 借入 ＝ '+man(p.loanDrawTotal)+'万を今月実行。';
   if(p.newLoanMo>0) assump+= p.newLoanAssumed
     ? '<br><span style="color:var(--warn)">※ 新規借入'+man(p.loanDrawTotal)+'万の返済は仮条件（7年・元金均等 ＝ 月約'+man(p.newLoanMo)+'万・翌月開始）で計上中。実際の返済期間・金利・据置を教えてもらえれば正確に反映します。</span>'
