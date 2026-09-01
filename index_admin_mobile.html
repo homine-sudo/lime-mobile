@@ -1590,7 +1590,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-08-24';
+const APP_VERSION = '2026-09-01';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -4586,7 +4586,8 @@ function renderTodayRentalKpi(){
   const lease=vehAll.filter(v=>Number(v.leaseFee)>0).length;   // リース判定=leaseFee>0 (生涯ROI と同規約)
   const own=vehAll.length-lease;
   const borrowed=inUse.filter(c=>c.isBorrowed).length;                                  // 他社借=自社マスタ外が正常
-  const unassigned=inUse.filter(c=>!c.isBorrowed&&!vehIdSet.has(c.vehicleId)).length;   // 自社車なのに未割当=要修正
+  const unassignedCases=inUse.filter(c=>!c.isBorrowed&&!vehIdSet.has(c.vehicleId));     // 自社車なのに未割当=要修正
+  const unassigned=unassignedCases.length;
   const card=(k,v,s,col,full)=>`<div class="bi-kpi"${full?' style="grid-column:1/-1"':''}>
     <div class="k" style="color:${col}">${k}</div><div class="v num">${v}</div><div class="s">${s}</div></div>`;
   host.innerHTML=
@@ -4598,7 +4599,7 @@ function renderTodayRentalKpi(){
     + card('本日 稼働中', `${vs.inUse}<small>/${vs.tot}台</small>`,
         `瞬間稼働率 ${rate}% ・自社${own}／リース${lease}`
         + (borrowed?` ・他社借 +${borrowed}`:'')
-        + (unassigned?` ・<span class="dn" style="font-weight:600">⚠車両未割当 ${unassigned}</span>`:''),
+        + (unassigned?` ・<span class="dn" style="font-weight:600">⚠車両未割当 ${unassignedCases.map(c=>esc(c.caseNo||'(No.未)')+(c.contractorName||c.driverName?' '+esc(String(c.contractorName||c.driverName).slice(0,6)):'')).join(' / ')}</span> <span style="font-size:10px">(割当はPC版/現場版から)</span>`:''),
         'var(--acc)', true);
 }
 
