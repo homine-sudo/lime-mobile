@@ -3143,7 +3143,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-09-05';
+const APP_VERSION = '2026-09-05a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5054,6 +5054,42 @@ async function sbAuditFromUI(){
   finally{ if(btn){ btn.disabled=false; btn.textContent='🩺 照合'; } try{ _sbRenderStatus(); }catch(e){} }
 }
 
+// 共有フォルダ保存エラーを「現場が読める日本語」に翻訳する (2026-09-05 新設)。
+//   なぜ必要か: ブラウザ(File System Access API)の例外は生の英語で出る。特に Dropbox が
+//   data.json を差し替えた直後は
+//     "An operation that depends on state cached in an interface object was made
+//      but the state had changed since it was read from disk."
+//   が出るが、これは**握っていたファイルの状態が古くなっただけ**で、保存は fail-closed で
+//   中止され15秒後に自動再試行される = データは壊れていない。生メッセージのままだと
+//   現場が「システムが壊れた」と誤解して手が止まるため、意味と次の行動を日本語で出す。
+//   transient=true は「放っておけば自動で直る種類」。呼び出し側でトーストを抑制する判断に使う。
+function _syncErrInfo(e){
+  const name = (e && e.name) || '';
+  const msg  = String((e && e.message) || '');
+  const M = (text, transient) => ({ text, transient });
+  // Dropbox等が書き込み中/差し替え直後 → 最も多い。放置で直る
+  if(name === 'InvalidStateError' || /state had changed|cached in an interface object/i.test(msg)){
+    return M('Dropboxがファイルを更新中でした。15秒後に自動で保存し直します（操作は不要です）', true);
+  }
+  // 他のプログラムがファイルを掴んでいる
+  if(name === 'NoModificationAllowedError'){
+    return M('他のプログラムがファイルを使用中でした。15秒後に自動で再試行します（操作は不要です）', true);
+  }
+  // 読み取り途中/一時的に読めない
+  if(name === 'NotReadableError' || name === 'AbortError'){
+    return M('ファイルを一時的に読めませんでした。15秒後に自動で再試行します（操作は不要です）', true);
+  }
+  // 共有フォルダごと見えない = Dropboxが停止/フォルダ移動の可能性。人の対処が要る
+  if(name === 'NotFoundError'){
+    return M('共有フォルダのファイルが見つかりません。Dropboxが動いているか確認してください', false);
+  }
+  // 権限切れ(ブラウザ再起動後など) → 人の対処が要る
+  if(name === 'NotAllowedError' || name === 'SecurityError'){
+    return M('共有フォルダへのアクセス許可が切れました。設定で共有フォルダを選び直してください', false);
+  }
+  // 自前の throw (fail-closed の中止メッセージ) は既に日本語なのでそのまま
+  return M(msg || '原因不明のエラー', false);
+}
 async function saveToDirImmediate(){
   if(!dirHandle) return;
   try{
@@ -5202,13 +5238,19 @@ async function saveToDirImmediate(){
     if(conflictsToShow.length) showConflictDialog(conflictsToShow);
   }catch(e){
     console.error('Save to dir failed:', e);
-    updateSyncStatus('⚠️ 同期失敗: '+e.message);
+    const _se = _syncErrInfo(e);
+    updateSyncStatus('⚠️ 同期失敗: ' + _se.text);
     // ★トースト連発防止 (2026-07-03): 600msデバウンス保存が連続失敗してもトーストは30秒に1回
     window._dirSaveFailCount = (window._dirSaveFailCount || 0) + 1;
     const now = Date.now();
-    if(!window._dirSaveFailToastAt || now - window._dirSaveFailToastAt > 30000){
+    // ★2026-09-05: 一過性(Dropboxがファイルを差し替えた等)は1〜2回目のトーストを出さない。
+    //   15秒後に自動再試行して大半はそれで通るため、赤いトーストを出すと「壊れた」と誤解される。
+    //   状態行(updateSyncStatus)には即座に出るので見えなくなるわけではない。
+    //   3回連続(=約30秒以上 保存できていない)なら一過性ではないので通常どおり出す。
+    const _quiet = _se.transient && window._dirSaveFailCount < 3;
+    if(!_quiet && (!window._dirSaveFailToastAt || now - window._dirSaveFailToastAt > 30000)){
       window._dirSaveFailToastAt = now;
-      toast('⚠️ 共有フォルダ同期失敗: ' + (e.message||''), 'error');
+      toast('⚠️ 共有フォルダ同期失敗: ' + _se.text, 'error');
     }
     // ★自動再試行 (2026-07-03 fail-closed化に伴う再送機構): 15秒後に1本だけ再実行。
     //   これが無いと静かな時間帯に読取失敗した変更が localStorage 止まりのまま他端末に届かない。
