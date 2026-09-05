@@ -223,6 +223,10 @@ tr.row-cancel td{opacity:.55}
 #dashboard-weekly tbody tr:nth-child(even){background:transparent}
 #dashboard-weekly tbody td{vertical-align:top;padding:5px 4px}
 .wk-empty{padding:12px 4px;text-align:center;color:var(--muted);font-size:11px;vertical-align:top}
+/* 「他N件」= 11件目以降。旧実装はただの文字で開けず、隠れた案件に触れなかった (2026-09-05 修正) */
+.wk-more-toggle{text-align:center;font-size:11px;font-weight:bold;color:#1C5A93;background:#EAF2FA;border:1px dashed #9CC4E8;border-radius:5px;padding:4px 2px;margin:4px 0;cursor:pointer}
+.wk-more-toggle:hover{background:#DCEAF7}
+.wk-more-toggle .wk-more-todo{color:#B23030}
 .wk-card{display:flex;background:#fff;border:1px solid var(--border);border-radius:7px;margin:4px 0;overflow:hidden;cursor:pointer;transition:box-shadow .12s,transform .12s;text-align:left}
 .wk-card:hover{box-shadow:0 2px 7px rgba(30,58,43,.13);transform:translateY(-1px);border-color:#B7C6AB}
 .wk-bar{flex:0 0 4px;background:#3D7DC5}
@@ -3143,7 +3147,7 @@ const LS_KEY = 'loanerCarMgmt_sb1';  // ★SB版: 本番(loanerCarMgmt_v1)と同
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = 'SB-2026-09-05';  // ★SB版 (Supabase直結テスト・Phase 3・元=2026-09-05a に追従)
+const APP_VERSION = 'SB-2026-09-05a';  // ★SB版 (Supabase直結テスト・Phase 3・元=2026-09-05b に追従)
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -8686,6 +8690,14 @@ function vehShowMore(el){
   if(tbl) tbl.querySelectorAll('.veh-more-row').forEach(r=>{ r.style.display='table-row'; });
   if(row) row.remove();
 }
+// 週間スケジュールの「▼ 他N件を表示」(2026-09-05 新設)。
+//   その日のセル内に隠してある11件目以降を開く。.wk-card は display:flex なので flex で戻す
+//   (block だと横並びのバー+本文が崩れる)。開いたらボタン自体は消す。
+function wkShowMore(el){
+  const td = el.closest('td');
+  if(td) td.querySelectorAll('.wk-more-item').forEach(d=>{ d.style.display='flex'; });
+  el.remove();
+}
 /* ---------------- dashboard ---------------- */
 // 🅿️ 在庫（空き）ボード (2026-07-02): クラス別に「今の空き台数」を1枚で表示し、満杯クラスは30日先まで「いつ空くか」を先読み。
 //   読み取り専用 (保存/PDF/データモデルに非干渉)。車両保険(損保代車)の使用期限が実質30日である実データを踏まえ、
@@ -9113,7 +9125,14 @@ function renderDashboard(){
   }).join('')}</tr></thead><tbody><tr>${weekDays.map(d=>{
     const list = byDay[d];
     if(!list.length) return '<td class="wk-empty">―</td>';
-    return `<td>${list.slice(0,10).map(it=>{
+    // ★2026-09-05: 11件目以降は「他N件」の文字を出すだけで、案件に一切たどり着けなかった。
+    //   実データで 9/5 は14件中4件が隠れ、その中に未完了の配車予定が含まれていた
+    //   (時刻未設定は `(a.t||'99')` のソートで末尾に回るため、予定が埋もれやすい)。
+    //   列が縦に伸びすぎないよう既定は10件のままにし、**クリックで残りを開ける**ようにする。
+    //   ヘッダの件数(_dl.length)は元々 全件を数えているのでここと矛盾しない。
+    const WK_LIMIT = 10;
+    const _hiddenTodo = list.slice(WK_LIMIT).filter(it=>!_wkDone(it)).length;
+    return `<td>${list.map((it,_i)=>{
       const c = it.c;
       const isReturn = it.kind==='return';
       const isGen = c.category==='一般';
@@ -9161,7 +9180,7 @@ function renderDashboard(){
       const destHtml = _dest.name
         ? `<div class="wk-dest${_dest.isDifferent?' alt':''}" title="${_dest.isDifferent?'⚠ 回収先が配車先と違います → ':''}${esc(_dest.name)}">${_dest.isDifferent?'🏁':'📍'} ${esc((_dest.name||'').slice(0,16))}${_dest.isDifferent?'<span class="wk-dest-tag">配車先と別</span>':''}</div>`
         : '';
-      return `<div class="wk-card${isReturn?' ret':''}${done?' done':''}" onclick="openCaseModal('${c.id}')" oncontextmenu="event.preventDefault();showCaseContextMenu(event,'${c.id}')" title="${esc(driver)}${done?' (完了)':''} ・ 右クリックでクイックメニュー">
+      return `<div class="wk-card${isReturn?' ret':''}${done?' done':''}${_i>=WK_LIMIT?' wk-more-item':''}"${_i>=WK_LIMIT?' style="display:none"':''} onclick="openCaseModal('${c.id}')" oncontextmenu="event.preventDefault();showCaseContextMenu(event,'${c.id}')" title="${esc(driver)}${done?' (完了)':''} ・ 右クリックでクイックメニュー">
         <div class="wk-bar"></div>
         <div class="wk-bd">
           <div class="wk-tr"><span class="wk-kind">${kindTxt}</span><span class="wk-chip ${chipCls}">${esc(chipTxt)}</span></div>
@@ -9171,7 +9190,7 @@ function renderDashboard(){
           ${memoHtml}
         </div>
       </div>`;
-    }).join('')}${list.length>10?`<div class="text-sm" style="text-align:center;color:var(--muted);padding:2px">他${list.length-10}件</div>`:''}</td>`;
+    }).join('')}${list.length>WK_LIMIT?`<div class="wk-more-toggle" onclick="event.stopPropagation();wkShowMore(this)" title="この日の残り${list.length-WK_LIMIT}件を表示します">▼ 他${list.length-WK_LIMIT}件を表示${_hiddenTodo?` <span class="wk-more-todo">(未${_hiddenTodo})</span>`:''}</div>`:''}</td>`;
   }).join('')}</tr></tbody></table>`;
 
   // collection alerts (未収 + 期日経過) - コンパクト
