@@ -2157,7 +2157,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-08-28';
+const APP_VERSION = '2026-09-05';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -7083,18 +7083,31 @@ function _nextFreeCaseNoFor(casesArr, forDate, taken){
   if(taken) taken.forEach(no=> consider(no, null));
   return `${nendo}-${mm}-${String(max+1).padStart(4,'0')}`;
 }
+// ★PC LIMEOne.html の同名関数と完全同一に保つこと (片方だけ直すと端末で収束結果が食い違う)。
+//   keeper(番号据え置き) = 外部書類(請求書発行/FAX送信)を持つ方 → 同点なら生きている方 → それも同じなら古い方。
+//   ★2026-09-05: 書類の判定を invoiceNo から invoiceIssuedAt に変更した。
+//     PC の fillForm が隠しフィールド f-invoiceNo に受付Noを自動で入れる (`invoiceNo || caseNo`) ため、
+//     PCで一度開いて保存した案件は請求書未発行でも invoiceNo が埋まる = ほぼ全件が「書類あり」と
+//     誤判定され、この自己修復が warned を出すだけで永久に発動しない状態だった
+//     (2026-09-05 に実データで発覚。経緯は CHANGELOG.md 2026-09-05 を参照)。
+//     実際に取引先へ出た証拠になるのは invoiceIssuedAt(請求書発行日) と faxHistory(FAX送信)だけ。
+//     **invoiceNo を書類判定に戻すな。** 戻した瞬間にこの防壁がまた死ぬ。
+//   ★同じく 2026-09-05: 削除済み(isDeleted / status キャンセル)も書類が無ければ自動振替の対象にする。
+//     判定順は「書類 → 生死 → createdAt」。書類を持つ削除済みは動かさない (送付済み書類が正)。
 function _resolveCaseNoCollisions(casesArr){
   if(!Array.isArray(casesArr)) return {fixed:[], warned:[]};
   const byNo = {};
   casesArr.forEach(c=>{ if(c && c.caseNo) (byNo[c.caseNo]=byNo[c.caseNo]||[]).push(c); });
   const fixed=[], warned=[];
   const taken = new Set();
-  const extScore = c => (c.invoiceNo?1:0) + ((Array.isArray(c.faxHistory)&&c.faxHistory.length)?1:0);
+  const extScore = c => (c.invoiceIssuedAt?1:0) + ((Array.isArray(c.faxHistory)&&c.faxHistory.length)?1:0);
+  const isDead   = c => !!(c && (c.isDeleted || c.status === 'キャンセル'));
   Object.keys(byNo).forEach(no=>{
     const grp = byNo[no];
     if(grp.length < 2) return;
     const sorted = grp.slice().sort((a,b)=>{
       const e = extScore(b)-extScore(a); if(e) return e;
+      const d = (isDead(a)?1:0)-(isDead(b)?1:0); if(d) return d;
       return Number(a.createdAt||0)-Number(b.createdAt||0);
     });
     const keeper = sorted[0];
@@ -7103,6 +7116,8 @@ function _resolveCaseNoCollisions(casesArr){
       const newNo = _nextFreeCaseNoFor(casesArr, c.receivedAt || no, taken);
       const old = c.caseNo;
       c.caseNo = newNo; taken.add(newNo);
+      // 請求No は受付Noの写し。振替えたら一緒に直す (ここに来るのは請求書未発行のものだけ)。
+      if(c.invoiceNo === old) c.invoiceNo = newNo;
       c.updatedAt = Date.now();
       c.updatedBy = 'システム自動修正(受付No重複)';
       fixed.push({ id:c.id, oldNo:old, newNo, name:(c.contractorName||c.driverName||'') });

@@ -3143,7 +3143,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-08-28a';
+const APP_VERSION = '2026-09-05';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -6446,21 +6446,32 @@ function _nextFreeCaseNoFor(casesArr, forDate, taken){
   return `${nendo}-${mm}-${String(max+1).padStart(4,'0')}`;
 }
 // 重複caseNoを検出して安全側を新番号に振替。{fixed:[...], warned:[...]} を返す。
-//   keeper(番号据え置き) = 外部書類(invoiceNo/faxHistory)を持つ方 → それも無ければ createdAt が古い方。
+//   keeper(番号据え置き) = 外部書類(請求書発行/FAX送信)を持つ方 → 同点なら生きている方 → それも同じなら createdAt が古い方。
 //   非keeperが外部書類を持つ場合は自動で動かさず warned に積む(送付済み書類との不整合回避)。
+//   ★2026-09-05: 書類の判定を invoiceNo から invoiceIssuedAt に変更した。
+//     fillForm が隠しフィールド f-invoiceNo に受付Noを自動で入れる (`c.invoiceNo || c.caseNo`) ため、
+//     PCで一度開いて保存した案件は請求書未発行でも invoiceNo が埋まる = ほぼ全件が「書類あり」と
+//     誤判定され、この自己修復が warned を出すだけで永久に発動しない状態だった
+//     (2026-09-05 に実データで発覚。経緯は CHANGELOG.md 2026-09-05 を参照)。
+//     実際に取引先へ出た証拠になるのは invoiceIssuedAt(請求書発行日) と faxHistory(FAX送信)だけ。
+//     **invoiceNo を書類判定に戻すな。** 戻した瞬間にこの防壁がまた死ぬ。
+//   ★同じく 2026-09-05: 削除済み(isDeleted / status キャンセル)も書類が無ければ安全側として自動振替する。
+//     ただし判定順は「書類 → 生死 → createdAt」。書類を持つ削除済みは動かさない (送付済み書類が正)。
 function _resolveCaseNoCollisions(casesArr){
   if(!Array.isArray(casesArr)) return {fixed:[], warned:[]};
   const byNo = {};
   casesArr.forEach(c=>{ if(c && c.caseNo) (byNo[c.caseNo]=byNo[c.caseNo]||[]).push(c); });
   const fixed=[], warned=[];
   const taken = new Set();
-  const extScore = c => (c.invoiceNo?1:0) + ((Array.isArray(c.faxHistory)&&c.faxHistory.length)?1:0);
+  const extScore = c => (c.invoiceIssuedAt?1:0) + ((Array.isArray(c.faxHistory)&&c.faxHistory.length)?1:0);
+  const isDead   = c => !!(c && (c.isDeleted || c.status === 'キャンセル'));
   Object.keys(byNo).forEach(no=>{
     const grp = byNo[no];
     if(grp.length < 2) return;  // 重複なし
     const sorted = grp.slice().sort((a,b)=>{
       const e = extScore(b)-extScore(a); if(e) return e;            // 外部書類を持つ方を残す
-      return Number(a.createdAt||0)-Number(b.createdAt||0);          // 同点は古い方を残す
+      const d = (isDead(a)?1:0)-(isDead(b)?1:0); if(d) return d;     // 同点なら生きている方を残す
+      return Number(a.createdAt||0)-Number(b.createdAt||0);          // それも同じなら古い方を残す
     });
     const keeper = sorted[0];
     sorted.slice(1).forEach(c=>{
@@ -6468,6 +6479,9 @@ function _resolveCaseNoCollisions(casesArr){
       const newNo = _nextFreeCaseNoFor(casesArr, c.receivedAt || no, taken);
       const old = c.caseNo;
       c.caseNo = newNo; taken.add(newNo);
+      // 請求No は受付Noの写し (fillForm が `invoiceNo || caseNo` で埋める)。振替えたら一緒に直す。
+      //   ここに来るのは請求書未発行(invoiceIssuedAt 空)のものだけなので、書面との不整合は起きない。
+      if(c.invoiceNo === old) c.invoiceNo = newNo;
       c.updatedAt = Date.now();
       c.updatedBy = 'システム自動修正(受付No重複)';
       fixed.push({ id:c.id, oldNo:old, newNo, name:(c.contractorName||c.driverName||'') });
@@ -11893,6 +11907,21 @@ function saveCase(){
     const existing = findCaseById(c.id);
     c.caseNo = (existing && existing.caseNo) ? existing.caseNo : nextCaseNo(c.receivedAt);
     if($('f-caseNo')) $('f-caseNo').value = c.caseNo;
+  }
+  // ★2026-09-05: 新規レコードなのに受付Noが既存案件と衝突していたら採番し直す (重複の発生源を塞ぐ)。
+  //   `editingCaseId` が null のままフォームには前の案件の値(受付No含む)が残っている状態で保存が走ると、
+  //   collectForm が新しいidを振る一方で上の採番は「caseNo が空でない」ので素通りし、
+  //   **新しいidに他案件の受付Noが付いたコピー**が生まれる (2026-09-05 に実データで発覚。
+  //   監査ログ上は本物の保存の約1秒後に同じPCが同番号で「新規(損保)」を作成していた)。
+  //   editingCaseId は closeCaseModal だけでなく closeGeneralRentalModal でも null にされるが、
+  //   どちらもフォームの値は消さない。
+  //   保存マージ時の自己修復(_resolveCaseNoCollisions)は最後の防壁で、ここは発生そのものを止める。
+  if(!findCaseById(c.id) && c.caseNo && DATA.cases.some(x => x && x.id !== c.id && x.caseNo === c.caseNo)){
+    const dupNo = c.caseNo;
+    c.caseNo = nextCaseNo(c.receivedAt);
+    if($('f-caseNo')) $('f-caseNo').value = c.caseNo;
+    if(c.invoiceNo === dupNo) c.invoiceNo = '';   // 請求Noは受付Noの写し。古い番号を持ち越さない
+    toast(`⚠️ 受付No ${dupNo} は既存案件と重複するため ${c.caseNo} で登録しました`, 'error');
   }
   // 外部通知用: 旧状態をキャプチャ (preserveExtraCaseFields の前)
   // 旧オブジェクトのコピー保持 → 配車日時変更検知などに使う
