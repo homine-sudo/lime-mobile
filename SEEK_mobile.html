@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SEEK 現場">
+<meta name="format-detection" content="telephone=yes">
+<meta name="theme-color" content="#141b24">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>SEEK 現場</title>
+<link rel="apple-touch-icon" href="seek_logo.png">
+<link rel="icon" type="image/png" href="seek_logo.png">
+<style>
+/* ============================================================
+   SEEK 現場（モバイル）
+   ------------------------------------------------------------
+   ⛔ この画面には 金額・単価・原価・粗利 を一切出さない。
+      要件定義 §0 役割分担ポリシー「モバイル＝現場専用／原価・粗利はPCのみ」。
+      現場でお客さんに画面を見られることがあるため。
+      seek_job_items を読むときも unit_price / amount は select に入れない。
+
+   色は PC版（SEEK.html）と同じトークン。ただし
+   --muted は屋外でも読める濃さにしている（薄いグレーは日向で消える）。
+   ============================================================ */
+:root{
+  --brand:#b31b26; --brand-2:#d8323e;
+  --pri:#1c5fa8; --pri-2:#2f7fd0; --pri-soft:#eef4fb; --pri-line:#c6dcf2;
+  --bg:#f2f4f7; --panel:#fff; --panel-2:#f8fafc; --line:#dfe4ea;
+  --ink:#141a21; --ink-2:#3b4550;
+  --muted:#5a6673;                 /* 屋外で読める濃さ。#8b949e は日向で見えない */
+  --nav-bg:#141b24; --nav-ink:#9fb0c2;
+  --warn:#8a5a00; --warn-soft:#fdf6e7; --warn-line:#ecdcb2;
+  --danger:#b3261e; --danger-soft:#fdeeed;
+  --ok:#0f6b4a; --ok-soft:#eaf5f0; --ok-line:#c2e0d3;
+  --r:12px; --r-sm:8px; --r-pill:999px;
+  --sh:0 1px 2px rgba(20,28,40,.06), 0 4px 14px -6px rgba(20,28,40,.14);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;
+  font-size:16px;color:var(--ink);background:var(--bg);
+  -webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer;user-select:none;-webkit-user-select:none}
+/* 現場ではスマホだが、事務所のPCで開かれることもある。
+   横に伸びきると写真が巨大になり読みにくいので、スマホ幅で止める。 */
+#app{display:flex;flex-direction:column;height:100%;max-width:540px;margin:0 auto;
+  background:var(--bg);box-shadow:0 0 0 1px var(--line)}
+body{background:#e7ebf0}
+
+/* ---------- ヘッダー ---------- */
+#hd{
+  flex-shrink:0;background:var(--nav-bg);color:#fff;
+  padding:calc(var(--safe-top) + 10px) 12px 10px;
+  display:flex;align-items:center;gap:10px;min-height:52px;
+}
+/* ロゴは白地の正方形。濃紺のヘッダーではタイルとして置く */
+#hd .mk-img{width:28px;height:28px;border-radius:6px;background:#fff;padding:2px;
+  object-fit:contain;flex-shrink:0}
+#hd .back{width:34px;height:34px;border-radius:var(--r-sm);color:#fff;font-size:20px;flex-shrink:0}
+#hd .back:active{background:rgba(255,255,255,.12)}
+#hd .ttl{flex:1;font-weight:800;font-size:16px;letter-spacing:.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hd .ttl .mk{color:var(--brand-2)}
+#hd .sync{font-size:12px;font-weight:700;color:var(--nav-ink);
+  padding:7px 11px;border-radius:var(--r-pill);border:1px solid rgba(255,255,255,.16)}
+#hd .sync:active{background:rgba(255,255,255,.12)}
+#band{flex-shrink:0;display:none;padding:8px 12px;font-size:13px;font-weight:700;
+  background:var(--warn-soft);color:var(--warn);border-bottom:1px solid var(--warn-line)}
+#band.on{display:block}
+
+/* ---------- 本体 ---------- */
+#scr{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 20px}
+.sec{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.06em;
+  margin:16px 2px 8px;text-transform:none}
+.sec:first-child{margin-top:2px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--sh);margin-bottom:10px;overflow:hidden}
+.card .in{padding:13px 14px}
+button.card{display:block;width:100%;text-align:left}
+button.card:active{background:var(--panel-2);transform:scale(.995)}
+
+.jt{font-weight:800;font-size:15px;line-height:1.35;margin-bottom:3px}
+.jc{font-size:13px;color:var(--muted);font-weight:600}
+.row{display:flex;align-items:center;gap:8px}
+.sp{flex:1}
+.meta{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.meta b{color:var(--ink-2)}
+
+.tag{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;
+  border-radius:var(--r-pill);border:1px solid transparent;white-space:nowrap}
+.t-受注{background:var(--pri-soft);color:var(--pri);border-color:var(--pri-line)}
+.t-手配{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}
+.t-施工中{background:#fff3e6;color:#a35200;border-color:#f0d4b0}
+.t-施工完了{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
+.t-見積提出,.t-請求済,.t-入金済,.t-失注{background:#eef1f5;color:var(--muted);border-color:var(--line)}
+.t-今日{background:var(--brand);color:#fff}
+.t-急ぎ{background:var(--danger-soft);color:var(--danger);border-color:#f0c9c6}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-height:48px;padding:0 16px;border-radius:var(--r-sm);font-weight:800;font-size:15px;
+  background:var(--panel);border:1px solid var(--line);color:var(--ink)}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.gh{background:var(--panel-2)}
+.btn.wide{width:100%}
+.btn[disabled]{opacity:.45}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns .btn{flex:1;min-width:130px}
+
+.fld{display:block;margin-bottom:12px}
+.fld .lb{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:5px}
+.fld input,.fld select,.fld textarea{
+  width:100%;min-height:48px;padding:11px 12px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:var(--panel);font-size:16px}
+.fld textarea{min-height:80px;resize:vertical}
+.fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-color:var(--pri-2)}
+
+.empty{text-align:center;color:var(--muted);font-size:14px;font-weight:600;padding:36px 16px;line-height:1.7}
+.note{font-size:13px;line-height:1.65;color:var(--ink-2);background:var(--panel-2);
+  border:1px solid var(--line);border-left:3px solid var(--pri);
+  border-radius:var(--r-sm);padding:11px 13px;margin-bottom:10px}
+.note.w{border-left-color:var(--warn);background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+
+/* 数量の刻み（人工の入力） */
+.step{display:flex;align-items:center;gap:0;border:1px solid var(--line);
+  border-radius:var(--r-sm);overflow:hidden;background:var(--panel)}
+.step button{width:56px;height:56px;font-size:24px;font-weight:800;color:var(--pri);
+  background:var(--panel-2)}
+.step button:active{background:var(--pri-soft)}
+.step .v{flex:1;text-align:center;font-size:22px;font-weight:800;letter-spacing:.02em}
+.step .v small{font-size:13px;color:var(--muted);font-weight:700;margin-left:3px}
+
+/* 明細（品名・数量だけ。金額は出さない） */
+.item{display:flex;align-items:baseline;gap:10px;padding:11px 14px;border-top:1px solid var(--line)}
+.item:first-child{border-top:none}
+.item .nm{flex:1;font-size:14.5px;font-weight:600;line-height:1.4}
+.item .qt{font-weight:800;font-size:15px;white-space:nowrap}
+.item .qt small{font-size:12px;color:var(--muted);margin-left:2px}
+
+/* 写真 */
+.pics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 14px 14px}
+.pic{position:relative;aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden;
+  background:var(--panel-2);border:1px solid var(--line)}
+.pic img{width:100%;height:100%;object-fit:cover;display:block}
+.pic .lb{position:absolute;left:0;bottom:0;right:0;font-size:10px;font-weight:800;
+  color:#fff;background:rgba(0,0,0,.55);padding:2px 4px;text-align:center}
+
+/* ---------- 下タブ ---------- */
+#nav{flex-shrink:0;display:none;background:var(--nav-bg);
+  padding-bottom:var(--safe-bottom);border-top:1px solid rgba(255,255,255,.08)}
+#nav.on{display:flex}
+#nav button{flex:1;height:58px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;color:rgba(255,255,255,.55);font-size:10.5px;font-weight:800}
+#nav button.act{color:#fff}
+#nav button.act::before{content:'';position:absolute;margin-top:-58px;width:30px;height:3px;
+  border-radius:0 0 3px 3px;background:var(--brand-2)}
+#nav .ic{font-size:21px;line-height:1}
+
+/* ---------- トースト / シート ---------- */
+#toast{position:fixed;left:12px;right:12px;bottom:calc(70px + var(--safe-bottom));z-index:60;
+  display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#toast div{background:#141b24;color:#fff;font-size:14px;font-weight:700;
+  padding:12px 14px;border-radius:var(--r);box-shadow:var(--sh);animation:up .18s}
+#toast div.ng{background:var(--danger)}
+@keyframes up{from{opacity:0;transform:translateY(8px)}}
+#veil{position:fixed;inset:0;background:rgba(10,15,22,.5);z-index:70;display:none;
+  align-items:flex-end}
+#veil.on{display:flex}
+#sheet{background:var(--panel);width:100%;border-radius:16px 16px 0 0;
+  padding:18px 16px calc(18px + var(--safe-bottom));max-height:88vh;overflow-y:auto}
+#sheet h3{font-size:17px;font-weight:800;margin-bottom:4px}
+#sheet .sub{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:14px;line-height:1.6}
+#busy{position:fixed;inset:0;background:rgba(255,255,255,.72);z-index:90;display:none;
+  align-items:center;justify-content:center;flex-direction:column;gap:12px;font-weight:800;color:var(--ink-2)}
+#busy.on{display:flex}
+.spin{width:34px;height:34px;border:3px solid var(--pri-line);border-top-color:var(--pri);
+  border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ---------- ログイン ---------- */
+#gate{padding:32px 20px}
+#gate .lg{font-size:26px;font-weight:900;letter-spacing:.06em;text-align:center;margin-bottom:4px}
+#gate .lg span{color:var(--brand)}
+#gate .cap{text-align:center;color:var(--muted);font-size:13px;font-weight:700;margin-bottom:26px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hd">
+    <button class="back" id="hd-back" style="display:none">←</button>
+    <img class="mk-img" id="hd-logo" src="seek_logo.png" alt="" onerror="this.remove()">
+    <div class="ttl" id="hd-ttl"><span class="mk">SEEK</span> 現場</div>
+    <button class="sync" id="hd-sync">読み直す</button>
+  </header>
+  <div id="band"></div>
+  <main id="scr"></main>
+  <nav id="nav">
+    <button data-nav="today"><span class="ic">📋</span>今日</button>
+    <button data-nav="jobs"><span class="ic">🏗</span>現場</button>
+    <button data-nav="menu"><span class="ic">⚙</span>設定</button>
+  </nav>
+</div>
+<div id="toast"></div>
+<div id="veil"><div id="sheet"></div></div>
+<div id="busy"><div class="spin"></div><div id="busy-msg">通信中…</div></div>
+
+<script>
+'use strict';
+const VER = 'SEEK-mobile-2026-09-07';
+
+/* ============================================================
+   接続設定・認証・通信
+   PC版（SEEK.html）と同じ作り。localStorage のキーも共用しているので、
+   同じ端末のブラウザで一度PC版にログインしていれば入り直さなくてよい。
+   publishable key は公開前提で安全（RLSでログイン必須にしている）。
+   ============================================================ */
+/* 接続先の初期値。
+   publishable key は「ブラウザに置いてよい鍵」として作られたもの（RLSでログイン必須にしている）。
+   ここに書いておかないと、村山さんのPCやスマホで開くたびに URL と鍵を手で入れることになる。
+   ★ Secret key（sb_secret_…）は絶対にここに書かない。あれは Edge Function の中だけ。 */
+let SB_URL='https://qoblozsjcbtviviucubr.supabase.co', SB_KEY='sb_publishable_HAb_HlThhc4M8Vx2U9zwNQ_xhs6R1ta';
+const LS={cfg:'seek_sbCfg', session:'seek_sbSession', log:'seek_sbLog'};
+try{ const c=JSON.parse(localStorage.getItem(LS.cfg)||'null');
+     if(c&&c.url&&c.key){SB_URL=c.url;SB_KEY=c.key;} }catch(e){}
+
+function sbLog(entry){
+  try{
+    const log=JSON.parse(localStorage.getItem(LS.log)||'[]');
+    log.push(Object.assign({t:new Date(Date.now()-new Date().getTimezoneOffset()*60000)
+      .toISOString().slice(0,19), m:1}, entry));
+    while(log.length>80) log.shift();
+    localStorage.setItem(LS.log, JSON.stringify(log));
+  }catch(e){}
+}
+function sbSession(){ try{ return JSON.parse(localStorage.getItem(LS.session)||'null'); }catch(e){ return null; } }
+function sbSetSession(s){ try{ s? localStorage.setItem(LS.session,JSON.stringify(s))
+                              : localStorage.removeItem(LS.session); }catch(e){} }
+
+async function sbLogin(email,pw){
+  const res=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{
+    method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email,password:pw})});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok||!j.access_token){
+    // 401＝キーが届いていない／400＝メールかパスワードが違う（実物で確認済み）
+    if(res.status===401) throw new Error('接続先のキーが正しくありません。設定から入れ直してください。');
+    if(j.error_code==='invalid_credentials'||/Invalid login credentials/i.test(j.msg||''))
+      throw new Error('メールアドレスかパスワードが違います。');
+    throw new Error(j.error_description||j.msg||j.message||('ログインできませんでした（'+res.status+'）'));
+  }
+  sbSetSession({access_token:j.access_token, refresh_token:j.refresh_token,
+    expires_at:Math.floor(Date.now()/1000)+(Number(j.expires_in)||3600),
+    email:(j.user&&j.user.email)||email});
+  sbLog({login:1});
+}
+async function sbToken(){
+  const s=sbSession(); if(!s) return null;
+  if((s.expires_at||0)-Math.floor(Date.now()/1000)>120) return s.access_token;
+  try{
+    const res=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:s.refresh_token})});
+    const j=await res.json().catch(()=>({}));
+    if(res.ok&&j.access_token){
+      sbSetSession({access_token:j.access_token, refresh_token:j.refresh_token||s.refresh_token,
+        expires_at:Math.floor(Date.now()/1000)+(Number(j.expires_in)||3600), email:s.email});
+      return j.access_token;
+    }
+    if(res.status===400||res.status===401){ sbSetSession(null); }
+    return null;
+  }catch(e){ return null; }   // 一時的な電波切れでセッションは捨てない（現場は圏外になる）
+}
+async function H(extra){
+  const t=await sbToken();
+  if(!t){ const e=new Error('ログインし直してください'); e.reauth=1; throw e; }
+  return Object.assign({apikey:SB_KEY, Authorization:'Bearer '+t}, extra||{});
+}
+function expired(){ sbSetSession(null); const e=new Error('ログインし直してください'); e.reauth=1; return e; }
+
+async function sbGet(table, qs){
+  const PAGE=1000; let off=0; const out=[];
+  for(;;){
+    const res=await fetch(SB_URL+'/rest/v1/'+table+(qs?('?'+qs):''),
+      {headers: await H({Range: off+'-'+(off+PAGE-1)})});
+    if(res.status===401||res.status===403) throw expired();
+    if(!res.ok) throw new Error(table+' 読込失敗 '+res.status);
+    const rows=await res.json();
+    out.push(...rows);
+    if(rows.length<PAGE) break;
+    off+=PAGE;
+  }
+  return out;
+}
+async function sbPost(table, rows, prefer){
+  const res=await fetch(SB_URL+'/rest/v1/'+table,{
+    method:'POST',
+    headers: await H({'Content-Type':'application/json',
+      Prefer:(prefer||'return=representation')}),
+    body: JSON.stringify(rows)});
+  if(res.status===401||res.status===403) throw expired();
+  if(!res.ok) throw new Error('保存できませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+  return await res.json().catch(()=>[]);
+}
+async function sbPatch(table, qs, patch){
+  const res=await fetch(SB_URL+'/rest/v1/'+table+'?'+qs,{
+    method:'PATCH',
+    headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}),
+    body: JSON.stringify(patch)});
+  if(res.status===401||res.status===403) throw expired();
+  if(!res.ok) throw new Error('更新できませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+  return await res.json().catch(()=>[]);
+}
+
+/* ---------- 添付（図面を見る／写真を出す） ---------- */
+const BUCKET='seek-files';
+async function fileUrl(f){
+  const res=await fetch(SB_URL+'/storage/v1/object/sign/'+BUCKET+'/'+f.storage_path,{
+    method:'POST', headers: await H({'Content-Type':'application/json'}),
+    body: JSON.stringify({expiresIn:3600})});
+  if(!res.ok) throw new Error('リンクの発行に失敗（'+res.status+'）');
+  const j=await res.json();
+  return SB_URL+'/storage/v1'+j.signedURL;
+}
+async function uploadPhoto(jobId, blob, name, kind){
+  const fid='f-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+  const key='jobs/'+jobId+'/'+fid+'.jpg';
+  const up=await fetch(SB_URL+'/storage/v1/object/'+BUCKET+'/'+key,{
+    method:'POST',
+    headers: await H({'Content-Type':'image/jpeg','x-upsert':'true','Cache-Control':'3600'}),
+    body: blob});
+  if(!up.ok) throw new Error('写真を送れませんでした（'+up.status+'）');
+  const row={id:fid, org_id:'seek', job_id:jobId, kind:kind,
+    file_name:name, mime_type:'image/jpeg', byte_size:blob.size,
+    storage_path:key, uploaded_by:(sbSession()||{}).email||null};
+  try{
+    await sbPost('seek_files?on_conflict=id',[row],'resolution=merge-duplicates,return=representation');
+  }catch(e){
+    // Storage には入ったが行が作れなかった。置いたファイルを消して元に戻す
+    try{ await fetch(SB_URL+'/storage/v1/object/'+BUCKET+'/'+key,{method:'DELETE',headers:await H()}); }catch(_){}
+    throw e;
+  }
+  return row;
+}
+/* 現場は電波が悪い。撮ったままの3〜5MBを送ると失敗するので、長辺1600pxのJPEGに落とす。
+   引き渡し書に貼るには十分な大きさ。 */
+function shrink(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const MAX=1600;
+      let w=img.naturalWidth, h=img.naturalHeight;
+      if(Math.max(w,h)>MAX){ const r=MAX/Math.max(w,h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(b=> b? resolve(b) : reject(new Error('写真を変換できませんでした')), 'image/jpeg', .82);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('写真を読めませんでした')); };
+    img.src=url;
+  });
+}
+
+/* ============================================================
+   画面の共通部品
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg, ng){
+  const d=document.createElement('div'); d.textContent=msg; if(ng) d.className='ng';
+  $('toast').appendChild(d);
+  setTimeout(()=>d.remove(), ng?4200:2400);
+}
+function busy(on,msg){ $('busy-msg').textContent=msg||'通信中…'; $('busy').classList.toggle('on',!!on); }
+function sheet(html){ $('sheet').innerHTML=html; $('veil').classList.add('on'); }
+function closeSheet(){ $('veil').classList.remove('on'); $('sheet').innerHTML=''; }
+$('veil').addEventListener('click',e=>{ if(e.target===$('veil')) closeSheet(); });
+
+const today = ()=> new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+function days(d){ if(!d) return null;
+  return Math.round((new Date(d+'T00:00:00') - new Date(today()+'T00:00:00'))/86400000); }
+function whenLabel(d){
+  const n=days(d); if(n===null) return '';
+  if(n===0) return '今日';
+  if(n===1) return 'あした';
+  if(n===-1) return 'きのう';
+  return n>0 ? ('あと'+n+'日') : (Math.abs(n)+'日すぎ');
+}
+function fmtDate(d){ return d? d.replace(/-/g,'/').slice(5) : '—'; }
+
+/* 現場が受け持つ段。見積提出・請求済・入金済・失注は事務所の仕事なので出さない。 */
+const FIELD = ['受注','手配','施工中','施工完了'];
+const NEXT  = {'受注':'手配','手配':'施工中','施工中':'施工完了'};
+const NEXT_LABEL = {'受注':'手配に進める','手配':'着手する','施工中':'完了にする'};
+
+/* ============================================================
+   状態
+   ============================================================ */
+const M = { jobs:[], logs:[], loadedAt:null };
+let screen='today', jobId=null, stack=[];
+
+async function loadAll(){
+  // ⛔ 金額の列は取らない。unit_price / amount / total_* は現場に出さない。
+  const [jobs, logs] = await Promise.all([
+    sbGet('seek_jobs',
+      'select=id,job_no,status,client_name,title,site_postal_code,site_address,site_building,'
+      + 'open_date,car_count,quoted_at,version'
+      + '&status=in.(' + FIELD.map(encodeURIComponent).join(',') + ')'
+      + '&order=open_date.asc.nullslast'),
+    sbGet('seek_worklogs','select=*&order=work_date.desc&limit=400')
+  ]);
+  M.jobs=jobs; M.logs=logs; M.loadedAt=new Date();
+}
+
+/* ============================================================
+   画面
+   ============================================================ */
+function render(){
+  const gated = !SB_URL || !SB_KEY || !sbSession();
+  $('nav').classList.toggle('on', !gated);
+  $('hd-sync').style.display = gated? 'none':'';
+  $('hd-back').style.display = (!gated && screen==='job')? '':'none';
+  document.querySelectorAll('#nav button').forEach(b=>
+    b.classList.toggle('act', b.dataset.nav===screen));
+
+  if(gated){ $('hd-ttl').innerHTML='<span class="mk">SEEK</span> 現場'; return drawGate(); }
+  if(screen==='today') return drawToday();
+  if(screen==='jobs')  return drawJobs();
+  if(screen==='job')   return drawJob();
+  if(screen==='menu')  return drawMenu();
+}
+function go(s){ if(s!=='job') jobId=null; screen=s; $('scr').scrollTop=0; render(); }
+function openJob(id){ jobId=id; screen='job'; $('scr').scrollTop=0; render(); }
+
+/* ---------- ログイン ---------- */
+function drawGate(){
+  const needCfg = !SB_URL || !SB_KEY;
+  $('scr').innerHTML = `
+  <div id="gate">
+    <img src="seek_logo.png" alt="" onerror="this.remove()"
+      style="width:66px;height:66px;display:block;margin:0 auto 10px;border-radius:14px;object-fit:contain">
+    <div class="lg"><span>SEEK</span> 現場</div>
+    <div class="cap">${needCfg?'まず接続先を入れてください':'現場用の画面です'}</div>
+    ${needCfg? `
+      <label class="fld"><div class="lb">Supabase の URL</div>
+        <input id="g-url" inputmode="url" placeholder="https://xxxx.supabase.co" value="${esc(SB_URL)}"></label>
+      <label class="fld"><div class="lb">publishable key</div>
+        <input id="g-key" placeholder="sb_publishable_..." value="${esc(SB_KEY)}"></label>
+      <button class="btn pri wide" id="g-save">これで設定する</button>
+      <div class="note" style="margin-top:14px">
+        事務所のPC版と同じものを入れてください。分からなければ大嶺さんに聞いてください。</div>
+    ` : `
+      <label class="fld"><div class="lb">メールアドレス</div>
+        <input id="g-mail" type="email" inputmode="email" autocomplete="username"
+               autocapitalize="off" placeholder="you@example.com"></label>
+      <label class="fld"><div class="lb">パスワード</div>
+        <input id="g-pw" type="password" autocomplete="current-password" placeholder="••••••••"></label>
+      <button class="btn pri wide" id="g-in">ログイン</button>
+      <button class="btn gh wide" id="g-cfg" style="margin-top:10px">接続先を変える</button>
+    `}
+  </div>`;
+
+  if(needCfg){
+    $('g-save').onclick=()=>{
+      const u=$('g-url').value.trim().replace(/\/+$/,''), k=$('g-key').value.trim();
+      if(!/^https:\/\/.+\.supabase\.co$/.test(u)) return toast('URLの形が違います', 1);
+      if(!k) return toast('key を入れてください', 1);
+      SB_URL=u; SB_KEY=k;
+      try{ localStorage.setItem(LS.cfg, JSON.stringify({url:u,key:k})); }catch(e){}
+      render();
+    };
+  }else{
+    $('g-cfg').onclick=()=>{ SB_URL=''; SB_KEY='';
+      try{ localStorage.removeItem(LS.cfg); }catch(e){} render(); };
+    const doLogin=async()=>{
+      const m=$('g-mail').value.trim(), p=$('g-pw').value;
+      if(!m||!p) return toast('メールとパスワードを入れてください',1);
+      busy(true,'ログイン中…');
+      try{ await sbLogin(m,p); await loadAll(); go('today'); toast('ログインしました'); }
+      catch(e){ toast(e.message,1); }
+      finally{ busy(false); }
+    };
+    $('g-in').onclick=doLogin;
+    $('g-pw').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+  }
+}
+
+/* ---------- 今日 ---------- */
+function drawToday(){
+  $('hd-ttl').innerHTML='今日の現場';
+  const t=today();
+  const mine=(sbSession()||{}).email||'';
+  const doneToday=new Set(M.logs.filter(l=>l.work_date===t && l.created_by===mine).map(l=>l.job_id));
+
+  const running = M.jobs.filter(j=>j.status==='施工中');
+  const soon    = M.jobs.filter(j=>j.status!=='施工中' && j.open_date && days(j.open_date)!==null
+                                   && days(j.open_date)<=14);
+  const noDate  = M.jobs.filter(j=>!j.open_date && j.status!=='施工完了');
+
+  const card=(j,extra)=>`
+    <button class="card" data-job="${esc(j.id)}"><div class="in">
+      <div class="row" style="margin-bottom:5px">
+        <span class="tag t-${esc(j.status)}">${esc(j.status)}</span>
+        ${j.open_date? `<span class="tag ${days(j.open_date)<=0?'t-急ぎ':'t-今日'}">${esc(whenLabel(j.open_date))}</span>`:''}
+        <span class="sp"></span>
+        ${doneToday.has(j.id)? '<span class="tag t-施工完了">今日入力済</span>':''}
+      </div>
+      <div class="jt">${esc(j.title||'（案件名なし）')}</div>
+      <div class="jc">${esc(j.client_name||'')}</div>
+      <div class="meta">${j.site_address? '📍 '+esc(j.site_address) : '<span style="color:var(--warn)">📍 住所が入っていません</span>'}
+        ${j.open_date? ' ／ オープン <b>'+esc(fmtDate(j.open_date))+'</b>':''}
+        ${extra||''}</div>
+    </div></button>`;
+
+  let h='';
+  if(!M.jobs.length){
+    h = `<div class="empty">受注した現場がまだありません。<br>
+      事務所で受注に進めると、ここに出てきます。</div>`;
+  }else{
+    if(running.length){ h+='<div class="sec">いま施工中（'+running.length+'）</div>'+running.map(j=>card(j)).join(''); }
+    if(soon.length){ h+='<div class="sec">まもなく（2週間以内・'+soon.length+'）</div>'+soon.map(j=>card(j)).join(''); }
+    if(!running.length && !soon.length){
+      h+=`<div class="empty">今日いそぐ現場はありません。<br>「現場」から全部を見られます。</div>`;
+    }
+    if(noDate.length){
+      h+='<div class="sec">オープン日が未定（'+noDate.length+'）</div>'
+       + `<div class="note w">オープン予定日が入っていないと、電力申請や部品の手配がいつまでか分かりません。
+            事務所で入れてもらってください。</div>`
+       + noDate.slice(0,20).map(j=>card(j)).join('');
+    }
+  }
+  $('scr').innerHTML=h;
+  bindJobCards();
+}
+
+/* ---------- 現場一覧 ---------- */
+let jobQ='';
+function drawJobs(){
+  $('hd-ttl').innerHTML='現場';
+  const q=jobQ.trim().toLowerCase();
+  const hit=M.jobs.filter(j=>!q ||
+    ((j.title||'')+' '+(j.client_name||'')+' '+(j.site_address||'')+' '+(j.job_no||'')).toLowerCase().includes(q));
+  const byStatus=s=>hit.filter(j=>j.status===s);
+
+  let h=`<label class="fld"><input id="q" placeholder="現場名・お客さん・住所でさがす"
+      value="${esc(jobQ)}" autocapitalize="off"></label>`;
+  let any=false;
+  FIELD.forEach(s=>{
+    const g=byStatus(s); if(!g.length) return; any=true;
+    h+='<div class="sec">'+esc(s)+'（'+g.length+'）</div>';
+    h+=g.map(j=>`
+      <button class="card" data-job="${esc(j.id)}"><div class="in">
+        <div class="jt">${esc(j.title||'（案件名なし）')}</div>
+        <div class="jc">${esc(j.client_name||'')}</div>
+        <div class="meta">${j.site_address? esc(j.site_address):'住所なし'}
+          ${j.open_date? ' ／ オープン <b>'+esc(fmtDate(j.open_date))+'</b>（'+esc(whenLabel(j.open_date))+'）':''}</div>
+      </div></button>`).join('');
+  });
+  if(!any) h+='<div class="empty">見つかりませんでした。</div>';
+  $('scr').innerHTML=h;
+
+  const qi=$('q');
+  qi.addEventListener('input',()=>{ jobQ=qi.value;
+    const p=qi.selectionStart; drawJobs();
+    const n=$('q'); n.focus(); try{ n.setSelectionRange(p,p); }catch(e){} });
+  bindJobCards();
+}
+function bindJobCards(){
+  document.querySelectorAll('[data-job]').forEach(b=>
+    b.onclick=()=>openJob(b.dataset.job));
+}
+
+/* ---------- 現場の詳細 ---------- */
+let jobItems=null, jobFiles=null;
+function drawJob(){
+  const j=M.jobs.find(x=>x.id===jobId);
+  if(!j){ return go('jobs'); }
+  $('hd-ttl').textContent=j.title||'現場';
+  const mine=(sbSession()||{}).email||'';
+  const logs=M.logs.filter(l=>l.job_id===j.id).sort((a,b)=>b.work_date.localeCompare(a.work_date));
+  const nin=logs.reduce((a,l)=>a+Number(l.workers||0),0);
+  const doneToday=logs.some(l=>l.work_date===today() && l.created_by===mine);
+  const addr=[j.site_postal_code?('〒'+j.site_postal_code):'', j.site_address||'', j.site_building||'']
+    .filter(Boolean).join(' ');
+
+  let h=`
+  <div class="card"><div class="in">
+    <div class="row" style="margin-bottom:6px">
+      <span class="tag t-${esc(j.status)}">${esc(j.status)}</span>
+      ${j.open_date? `<span class="tag ${days(j.open_date)<=0?'t-急ぎ':'t-今日'}">オープン ${esc(whenLabel(j.open_date))}</span>`:''}
+    </div>
+    <div class="jt" style="font-size:17px">${esc(j.title||'（案件名なし）')}</div>
+    <div class="jc">${esc(j.client_name||'')}</div>
+    <div class="meta">
+      ${addr? '📍 '+esc(addr) : '<span style="color:var(--warn)">📍 住所が入っていません（事務所で入れてもらってください）</span>'}
+      ${j.car_count? '<br>台数 <b>'+esc(j.car_count)+'台</b>':''}
+      ${j.open_date? '<br>オープン予定 <b>'+esc(j.open_date)+'</b>':''}
+      ${nin? '<br>これまでの人工 <b>'+nin+'人日</b>':''}
+    </div>
+  </div></div>
+
+  <div class="btns" style="margin-bottom:12px">
+    ${addr? `<a class="btn" target="_blank" rel="noopener"
+        href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}">🗺 地図で開く</a>`:''}
+    <button class="btn" id="b-files">📄 図面を見る</button>
+  </div>
+
+  ${NEXT[j.status]? `<button class="btn ${j.status==='施工中'?'ok':'pri'} wide" id="b-next"
+      style="margin-bottom:12px">${esc(NEXT_LABEL[j.status])}</button>`:''}
+
+  <div class="sec">今日の作業を記録する</div>
+  ${doneToday? '<div class="note">今日の分はもう入っています。押すと上書きします。</div>':''}
+  <button class="btn pri wide" id="b-log" style="margin-bottom:12px">👷 人工と進み具合を入れる</button>
+
+  <div class="sec">写真</div>
+  <div class="btns" style="margin-bottom:12px">
+    <button class="btn" data-pic="着工前写真">📷 着工前</button>
+    <button class="btn" data-pic="完了後写真">📷 完了後</button>
+  </div>
+  <div id="pics"></div>
+
+  <div class="sec">やること</div>
+  <div class="card" id="items"><div class="in" style="color:var(--muted);font-weight:600">読み込み中…</div></div>
+
+  ${logs.length? '<div class="sec">これまでの記録</div>'+logs.map(l=>`
+    <div class="card"><div class="in">
+      <div class="row">
+        <b>${esc(fmtDate(l.work_date))}</b>
+        <span class="tag t-${esc(l.progress||'受注')}">${esc(l.progress||'—')}</span>
+        <span class="sp"></span>
+        <b>${esc(l.workers)}人日</b>
+      </div>
+      ${l.note? '<div class="meta">'+esc(l.note)+'</div>':''}
+      <div class="meta" style="font-size:11.5px">${esc(l.created_by||'')}</div>
+    </div></div>`).join('') : ''}
+  <div style="height:8px"></div>`;
+
+  $('scr').innerHTML=h;
+
+  if(NEXT[j.status]) $('b-next').onclick=()=>advance(j);
+  $('b-log').onclick=()=>logSheet(j);
+  $('b-files').onclick=()=>filesSheet(j);
+  document.querySelectorAll('[data-pic]').forEach(b=> b.onclick=()=>pickPhoto(j, b.dataset.pic));
+
+  loadJobDetail(j);
+}
+
+async function loadJobDetail(j){
+  try{
+    // ⛔ 単価・金額は取らない
+    const [items, files] = await Promise.all([
+      sbGet('seek_job_items','select=id,name,qty,unit,section&job_id=eq.'
+        + encodeURIComponent(j.id) + '&order=section.asc,line_no.asc'),
+      sbGet('seek_files','select=*&job_id=eq.'+encodeURIComponent(j.id)+'&order=created_at.desc')
+    ]);
+    if(jobId!==j.id) return;               // その間に別の画面へ移っていたら捨てる
+    jobItems=items; jobFiles=files;
+    const box=$('items');
+    if(box){
+      box.innerHTML = items.length
+        ? items.map(it=>`<div class="item">
+            <div class="nm">${esc(it.name||'')}</div>
+            <div class="qt">${it.qty!=null&&it.qty!==''? esc(it.qty):'—'}<small>${esc(it.unit||'')}</small></div>
+          </div>`).join('')
+        : '<div class="in" style="color:var(--muted);font-weight:600">明細が入っていません</div>';
+    }
+    drawPics();
+  }catch(e){
+    if(e.reauth) return render();
+    const box=$('items'); if(box) box.innerHTML='<div class="in" style="color:var(--danger);font-weight:700">'+esc(e.message)+'</div>';
+  }
+}
+async function drawPics(){
+  const box=$('pics'); if(!box||!jobFiles) return;
+  const pics=jobFiles.filter(f=>/写真/.test(f.kind)||/^image\//.test(f.mime_type||''));
+  if(!pics.length){ box.innerHTML='<div class="note">まだ写真がありません。上のボタンで撮ってください。<br>引き渡し書のビフォー・アフターに使います。</div>'; return; }
+  box.innerHTML='<div class="card"><div class="pics">'+pics.map(f=>
+    `<div class="pic" data-pf="${esc(f.id)}"><div class="lb">${esc((f.kind||'').replace('写真',''))||'写真'}</div></div>`
+  ).join('')+'</div></div>';
+  // 署名付きURLは1枚ずつ発行する（まとめて発行するAPIが無いため）
+  for(const f of pics){
+    try{
+      const u=await fileUrl(f);
+      const el=document.querySelector('[data-pf="'+f.id+'"]');
+      if(!el) continue;
+      const img=new Image(); img.src=u; img.alt='';
+      el.insertBefore(img, el.firstChild);
+      el.onclick=()=>window.open(u,'_blank','noopener');
+    }catch(e){}
+  }
+}
+
+/* ---------- 状態を進める ---------- */
+async function advance(j){
+  const to=NEXT[j.status]; if(!to) return;
+  sheet(`<h3>${esc(to)}にしますか？</h3>
+    <div class="sub">${esc(j.title||'')}<br>
+      「${esc(j.status)}」から「${esc(to)}」に進めます。事務所の画面にもすぐ反映されます。</div>
+    <button class="btn pri wide" id="s-ok">${esc(to)}にする</button>
+    <button class="btn gh wide" id="s-no" style="margin-top:8px">やめる</button>`);
+  $('s-no').onclick=closeSheet;
+  $('s-ok').onclick=async()=>{
+    closeSheet(); busy(true,'更新中…');
+    try{
+      // version を条件に入れて、事務所側が同時に直したときは上書きしない
+      const r=await sbPatch('seek_jobs',
+        'id=eq.'+encodeURIComponent(j.id)+'&version=eq.'+Number(j.version||0),
+        {status:to, updated_by:(sbSession()||{}).email||null});
+      if(!r.length){
+        toast('事務所で先に更新されています。読み直してください。',1);
+      }else{
+        j.status=r[0].status; j.version=r[0].version;
+        toast(to+'にしました');
+      }
+      render();
+    }catch(e){ toast(e.message,1); if(e.reauth) render(); }
+    finally{ busy(false); }
+  };
+}
+
+/* ---------- 人工と進み具合 ---------- */
+function logSheet(j){
+  const mine=(sbSession()||{}).email||'';
+  const cur=M.logs.find(l=>l.job_id===j.id && l.work_date===today() && l.created_by===mine);
+  let n = cur? Number(cur.workers)||0 : 1;
+  const prog = cur? (cur.progress||j.status) : j.status;
+
+  sheet(`<h3>今日の作業</h3>
+    <div class="sub">${esc(j.title||'')}<br>${esc(today().replace(/-/g,'/'))}</div>
+    <div class="fld"><div class="lb">人工（何人が1日入ったか）</div>
+      <div class="step">
+        <button id="l-m">−</button>
+        <div class="v" id="l-v">0<small>人日</small></div>
+        <button id="l-p">＋</button>
+      </div>
+    </div>
+    <label class="fld"><div class="lb">進み具合</div>
+      <select id="l-prog">
+        ${['着手','施工中','完了'].map(p=>`<option ${p===({'受注':'着手','手配':'着手','施工中':'施工中','施工完了':'完了'}[prog]||'施工中')?'selected':''}>${p}</option>`).join('')}
+      </select></label>
+    <label class="fld"><div class="lb">メモ（あれば）</div>
+      <textarea id="l-note" placeholder="雨で午後中断 など">${esc(cur?cur.note||'':'')}</textarea></label>
+    <button class="btn pri wide" id="l-ok">記録する</button>
+    <button class="btn gh wide" id="l-no" style="margin-top:8px">やめる</button>`);
+
+  const show=()=>{ $('l-v').innerHTML=n.toFixed(1).replace(/\.0$/,'')+'<small>人日</small>'; };
+  show();
+  $('l-m').onclick=()=>{ n=Math.max(0, Math.round((n-0.5)*10)/10); show(); };
+  $('l-p').onclick=()=>{ n=Math.min(99, Math.round((n+0.5)*10)/10); show(); };
+  $('l-no').onclick=closeSheet;
+  $('l-ok').onclick=async()=>{
+    const note=$('l-note').value.trim(), progress=$('l-prog').value;
+    closeSheet(); busy(true,'記録中…');
+    try{
+      const row={ id: cur? cur.id : ('w-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)),
+        org_id:'seek', job_id:j.id, work_date:today(), workers:n,
+        progress, note:note||null, created_by:mine||null };
+      // 同じ人・同じ日・同じ現場は1行（ux_seek_worklogs_one）。二度押しでも増えない
+      const saved=await sbPost('seek_worklogs?on_conflict=job_id,work_date,created_by',
+        [row], 'resolution=merge-duplicates,return=representation');
+      const got=(saved&&saved[0])||row;
+      const i=M.logs.findIndex(l=>l.id===got.id
+        || (l.job_id===got.job_id && l.work_date===got.work_date && l.created_by===got.created_by));
+      i>=0? M.logs[i]=got : M.logs.unshift(got);
+      toast('記録しました');
+
+      // 「着手」で受注/手配のままなら施工中へ、「完了」なら施工完了へ、まとめて進める
+      const want = progress==='完了' ? '施工完了' : (progress==='着手'||progress==='施工中') ? '施工中' : null;
+      if(want && j.status!==want && FIELD.indexOf(want)>FIELD.indexOf(j.status)){
+        const r=await sbPatch('seek_jobs',
+          'id=eq.'+encodeURIComponent(j.id)+'&version=eq.'+Number(j.version||0),
+          {status:want, updated_by:mine||null});
+        if(r.length){ j.status=r[0].status; j.version=r[0].version; toast(want+'にしました'); }
+      }
+      render();
+    }catch(e){ toast(e.message,1); if(e.reauth) render(); }
+    finally{ busy(false); }
+  };
+}
+
+/* ---------- 図面 ---------- */
+async function filesSheet(j){
+  sheet('<h3>図面・書類</h3><div class="sub">読み込み中…</div>');
+  try{
+    const files = jobFiles || await sbGet('seek_files',
+      'select=*&job_id=eq.'+encodeURIComponent(j.id)+'&order=created_at.desc');
+    jobFiles=files;
+    const docs=files.filter(f=>!/写真/.test(f.kind));
+    sheet(`<h3>図面・書類</h3>
+      <div class="sub">${esc(j.title||'')}</div>
+      ${docs.length? docs.map(f=>`
+        <button class="btn gh wide" data-f="${esc(f.id)}" style="margin-bottom:8px;justify-content:flex-start">
+          📄 ${esc(f.file_name)}
+        </button>`).join('')
+        : '<div class="note">図面がまだ入っていません。事務所で添付してもらってください。</div>'}
+      <button class="btn gh wide" id="f-no" style="margin-top:6px">閉じる</button>`);
+    $('f-no').onclick=closeSheet;
+    document.querySelectorAll('[data-f]').forEach(b=> b.onclick=async()=>{
+      busy(true,'開いています…');
+      try{ const f=docs.find(x=>x.id===b.dataset.f); window.open(await fileUrl(f),'_blank','noopener'); }
+      catch(e){ toast(e.message,1); }
+      finally{ busy(false); }
+    });
+  }catch(e){
+    sheet('<h3>図面・書類</h3><div class="note w">'+esc(e.message)+'</div>'
+      + '<button class="btn gh wide" onclick="closeSheet()">閉じる</button>');
+  }
+}
+
+/* ---------- 写真を撮る ---------- */
+function pickPhoto(j, kind){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.capture='environment'; inp.multiple=true;
+  inp.style.display='none'; document.body.appendChild(inp);
+  inp.onchange=async()=>{
+    const files=[...inp.files]; inp.remove();
+    if(!files.length) return;
+    busy(true,'写真を送っています…');
+    let ok=0;
+    for(const f of files){
+      try{
+        const blob=await shrink(f);
+        const row=await uploadPhoto(j.id, blob, f.name||(kind+'.jpg'), kind);
+        (jobFiles=jobFiles||[]).unshift(row); ok++;
+      }catch(e){ toast(e.message,1); }
+    }
+    busy(false);
+    if(ok) toast(ok+'枚を保存しました');
+    drawPics();
+  };
+  inp.click();
+}
+
+/* ---------- 設定 ---------- */
+function drawMenu(){
+  $('hd-ttl').textContent='設定';
+  const s=sbSession()||{};
+  $('scr').innerHTML=`
+  <div class="card"><div class="in">
+    <div class="jt">ログイン中</div>
+    <div class="meta">${esc(s.email||'—')}</div>
+  </div></div>
+  <div class="card"><div class="in">
+    <div class="jt">読み込んだ時刻</div>
+    <div class="meta">${M.loadedAt? esc(M.loadedAt.toLocaleString('ja-JP')) : '—'}
+      ／ 現場 ${M.jobs.length}件</div>
+  </div></div>
+  <button class="btn wide" id="m-sync" style="margin-bottom:10px">サーバーから読み直す</button>
+  <div class="note">
+    この画面には<b>金額・単価・原価は出しません</b>。現場でお客さんに見られても困らないようにしています。
+    見積・請求は事務所のPC版で行います。</div>
+  <button class="btn gh wide" id="m-cfg" style="margin-bottom:10px">接続先を変える</button>
+  <button class="btn gh wide" id="m-out">ログアウト</button>
+  <div class="meta" style="text-align:center;margin-top:18px">${esc(VER)}</div>`;
+  $('m-sync').onclick=sync;
+  $('m-cfg').onclick=()=>{ if(!confirm('接続先を消して入れ直しますか？')) return;
+    try{ localStorage.removeItem(LS.cfg); }catch(e){} SB_URL=''; SB_KEY=''; render(); };
+  $('m-out').onclick=()=>{ sbSetSession(null); sbLog({logout:1}); location.reload(); };
+}
+
+/* ============================================================
+   起動・同期
+   ============================================================ */
+async function sync(){
+  if(!SB_URL||!SB_KEY||!sbSession()) return render();
+  busy(true,'読み直しています…');
+  try{ await loadAll(); band(''); toast('読み直しました'); render(); }
+  catch(e){
+    if(e.reauth){ render(); }
+    else{ band('つながりませんでした。電波が戻ったら「読み直す」を押してください。'); }
+  }
+  finally{ busy(false); }
+}
+function band(msg){ const b=$('band'); b.textContent=msg||''; b.classList.toggle('on', !!msg); }
+
+$('hd-sync').onclick=sync;
+$('hd-back').onclick=()=>go('jobs');
+document.querySelectorAll('#nav button').forEach(b=> b.onclick=()=>go(b.dataset.nav));
+window.addEventListener('online', ()=>{ band(''); sync(); });
+window.addEventListener('offline',()=> band('いま電波がありません。記録はつながってから押してください。'));
+
+(async function boot(){
+  if(!navigator.onLine) band('いま電波がありません。');
+  if(SB_URL && SB_KEY && sbSession()){
+    busy(true,'読み込み中…');
+    try{ await loadAll(); }
+    catch(e){ if(!e.reauth) band('読み込めませんでした。「読み直す」を押してください。'); }
+    finally{ busy(false); }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
