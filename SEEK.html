@@ -255,6 +255,17 @@ tr.clickable{cursor:pointer}
 tr.clickable:hover{background:var(--pri-soft)}
 .scroll{overflow-x:auto;border-radius:var(--r-sm)}
 .tall{max-height:58vh;overflow:auto}
+/* 単価表・原価のレビュー用。村山さんは343行を1行ずつ見るので、
+   1画面に入る行数がそのまま作業時間になる。
+   2026-09-09 実測: 1行73px・枠415px＝6行しか見えず、343行で57回スクロールだった。 */
+.taller{max-height:74vh;overflow:auto}
+.tight th,.tight td{padding:4px 8px;line-height:1.35}
+.tight input{padding:3px 6px}
+/* 行の高さを決めていたのは「確定」ボタン（44px）だった。
+   ここは事務所のPCでマウスで押すので、指で押す大きさは要らない。 */
+/* 行の高さを決めていたのは line-height だった（44px → 実測で判明）。
+   ここは事務所のPCでマウスで押すので、指で押す大きさは要らない。 */
+.tight .btn{padding:5px 12px;font-size:12.5px;line-height:1.15}
 /* タブに出す「残り何件」。数が多いほど目に入るように、色は控えめだが太字にする */
 .seg button .tabn{display:inline-block;margin-left:5px;padding:0 5px;border-radius:8px;
   background:var(--pri);color:#fff;font-size:10px;font-weight:700;line-height:15px;
@@ -3033,7 +3044,13 @@ async function editJob(id){
    ・案件名はそのまま持ってくる。現場が違うなら書き換えてもらう。
      同じままだと「重複見積の警告」が出るので、取り違えにも気づける */
 let copiedFrom = null;
-let mkFolded = false;   // ①のカードをたたんでいるか（読み取りが済んだら用済み）
+/* ①のメール取り込みカード（貼り付け欄）をたたんでいるか。
+   既定は「たたむ」。電話で来た依頼のほうが多く、毎回この長い説明を飛ばして
+   下の②までスクロールすることになるため。
+   ★受信箱の一覧は畳んでも出したままにしてある。隠すと「メールが来たこと」に
+     気づけなくなり、自動取込の意味が無くなる。
+   2026-09-09 村山さんの立場で通しで触って気づいた。 */
+let mkFolded = true;
 let docPasteHandler = null;   // 画面の再描画で paste ハンドラを二重登録しないように覚えておく
 async function copyJob(id){
   const src = M.jobs.find(x=>x.id===id); if(!src) return;
@@ -3081,7 +3098,8 @@ function vMake(){
     <div class="row"><h2 style="margin:0">① 見積依頼のメールを取り込む</h2>
       <span class="spacer"></span>
       <button class="btn ghost sm" id="mkfold">${mkFolded?'開く':'たたむ'}</button></div>
-    <div id="inboxBox" ${mkFolded?'hidden':''}></div>
+    <!-- 受信箱は畳んでも出す。隠すと「メールが来たこと」に気づけないため（2026-09-09） -->
+    <div id="inboxBox"></div>
     <div id="mkpasteWrap" ${mkFolded?'hidden':''}>
     <div class="small muted" style="margin-bottom:8px">
       件名と本文をそのまま貼り付けてください（<b>この画面のどこで Ctrl+V しても取り込みます</b>）。
@@ -3528,6 +3546,8 @@ function aMake(){
 
   const fold=document.getElementById('mkfold');
   if(fold) fold.onclick=()=>{ mkFolded=!mkFolded; render(); };
+  // 顧客がまだなら、そこに枠を当てておく（開いてすぐ打ち始められる）
+  if(!mk.job && !mk.client_id && sel && document.activeElement === document.body) sel.focus();
   const pa=document.getElementById('mkpaste');
   if(!pa){ drawMake(); drawDup(); return; }   // 編集中はメール貼付カードを畳んでいる
   pa.oninput=e=>{ mk.paste=e.target.value; };
@@ -4144,7 +4164,7 @@ function drawPrices(el, q){
     ほかに <b>${later}行</b> ありますが、<b>直近1年で1度も使っていない単価</b>なので後回しで構いません。
     次に使うときに画面が「未確定」と出します。「古いものも」で見られます。</div>`:''}
   <div id="pMsg"></div>
-  <div class="scroll tall"><table>
+  <div class="scroll taller"><table class="tight">
     <thead><tr><th>顧客</th><th>工種</th><th>支給区分</th><th>GL</th><th>柱</th><th>単位</th>
       <th class="n">単価</th><th>過去の実績</th><th></th></tr></thead>
     <tbody>${rows.slice(0,400).map((r,i)=>`<tr data-row="${esc(r.p.id)}">
@@ -4166,7 +4186,7 @@ function drawPrices(el, q){
         const v = rec(r);
         if(v){
           const same = Number(v.value) === Number(r.p.unit_price);
-          h += `<br><span style="color:${same?'var(--muted)':'var(--danger)'}">`
+          h += ` <span style="color:${same?'var(--muted)':'var(--danger)'}">`
              + `直近3件はずっと <b>${yen(v.value)}</b>${same?'（一致）':''}</span>`;
           if(!same) h += ` <button class="btn sm" data-fitrecent="${esc(r.p.id)}"
               data-v="${Number(v.value)}">直近に合わせる</button>`;
@@ -4345,7 +4365,7 @@ function drawClients(el, q){
     </div>
   </div>
   <div id="cMsg"></div>
-  <div class="scroll tall"><table>
+  <div class="scroll taller"><table class="tight">
     <thead><tr><th>顧客</th><th>Excelでの書き方</th><th class="n">案件</th>
       <th class="n">単価表</th><th></th></tr></thead>
     <tbody>${list.slice(0,300).map(({c,n})=>{
@@ -4799,7 +4819,7 @@ function drawCostPrices(el, all0){
   ${costFilter==='check'?`<div class="note">
     <b>案件ごとに金額がばらついている工種です。</b>いちばん多かった金額を出していますが、
     そのまま使ってよいか分かりません。<b>直すか、確定にしてください。</b></div>`:''}
-  <div class="scroll tall"><table>
+  <div class="scroll taller"><table class="tight">
     <thead><tr><th>工種</th><th>単位</th><th class="n">直接原価（単価）</th>
       <th>過去の実績</th><th></th></tr></thead>
     <tbody>${pick.slice(0,400).map(c=>`<tr>
