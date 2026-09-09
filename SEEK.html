@@ -3983,6 +3983,7 @@ const MTABS = [
     ['bank','振込先',     ()=>null],
     ['gas', 'メール取込', ()=>null],
     ['user','利用者',     ()=>null],
+    ['backup','バックアップ', ()=>null],
   ]],
 ];
 const MTAB_ALL = MTABS.flatMap(([,ts])=>ts);
@@ -4580,6 +4581,179 @@ function drawSuppliers(el, q){
    ★ Supabase のキーは GAS のスクリプトプロパティにだけ置く。
      このHTMLにも .gs にも書かない。
    ============================================================ */
+/* ============================================================
+   バックアップ（完全・JSON）
+   ------------------------------------------------------------
+   2026-09-09 大嶺さん「バックアップを取る仕組みは持っていたい。
+                        仮にシステムが壊れてもできるように。レンタカーと同じ感じ」
+   レンタカー LIME One と同じ二本立てにする。
+     ・人が読んで仕事ができる形 … Googleスプレッドシート（GASが毎朝つくる）
+     ・忠実に戻せる形          … ここのJSON
+   ライブラリは使わない。ブラウザだけで作って、ブラウザだけで戻せる。
+   ============================================================ */
+const BACKUP_TABLES = [
+  ['seek_jobs','案件','id'], ['seek_job_items','明細','id'],
+  ['seek_job_item_costs','明細の原価','item_id'],
+  ['seek_clients','顧客','id'], ['seek_work_types','工種','id'],
+  ['seek_price_lists','顧客別単価表','id'], ['seek_cost_prices','原価マスタ','id'],
+  ['seek_equipment','機器','id'], ['seek_suppliers','仕入先','id'],
+  ['seek_supplier_prices','仕入価格','id'], ['seek_bank_accounts','振込先','id'],
+  ['seek_worklogs','人工','id'], ['seek_settings','設定','id'],
+];
+const LS_BACKUP_AT = 'seek_lastBackupAt';
+
+async function makeBackup(onProgress){
+  const out = { _meta:{ version:APP_VERSION, at:new Date().toISOString(),
+                        by:(sbSession()||{}).email||'', org:'seek' } };
+  for(const [t,label,ord] of BACKUP_TABLES){
+    if(onProgress) onProgress(label);
+    out[t] = await sbFetchAll(t, 'select=*&order='+ord+'.asc');
+  }
+  return out;
+}
+function downloadFile(name, text, type){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type: type||'application/json'}));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+function drawBackup(el){
+  const last = (()=>{ try{ return localStorage.getItem(LS_BACKUP_AT)||''; }catch(e){ return ''; } })();
+  const days = last ? Math.floor((Date.now()-new Date(last))/86400000) : null;
+  el.innerHTML = `
+  <div class="hint">
+    <b>システムが壊れても仕事が続けられるように、控えを持っておきます。</b>
+    <span class="small">レンタカーのシステムと同じ考え方です。<br>
+      ① <b>毎朝5時</b>にGoogleドライブへスプレッドシートが1冊できます（自動・人が読める形）<br>
+      ② ここの <b>完全バックアップ</b> は、そっくり元に戻すためのものです（JSON）</span>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h2>いまここで控えを取る</h2>
+    <div class="small muted" style="margin:6px 0 10px">
+      案件・明細・原価・顧客・工種・単価表・仕入先・振込先・人工・設定を1つのファイルにします。
+      添付した図面と写真は入りません（Storageに残っています）。</div>
+    <div class="row">
+      <button class="btn" id="bkGo">💾 完全バックアップを取る</button>
+      <span class="muted small" id="bkMsg">${
+        last ? `最後に取ったのは <b>${esc(last.slice(0,16).replace('T',' '))}</b>${
+          days>=7 ? `<span style="color:var(--danger)">（${days}日前）</span>` : `（${days}日前）`}`
+             : '<span style="color:var(--warn)">この端末ではまだ一度も取っていません</span>'}</span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h2>戻す</h2>
+    <div class="note w" style="margin:6px 0 10px">
+      <b>これは中身を入れ替える操作です。</b>
+      いまのデータに、控えの内容を上書きします（同じIDの行は控えの内容で置き換わります）。<br>
+      <span class="small">DBを作り直したあとに使うものです。ふだんは触らないでください。</span>
+    </div>
+    <div class="row">
+      <label class="btn ghost" style="cursor:pointer">📂 控えのファイルを選ぶ
+        <input type="file" id="bkFile" accept=".json" style="display:none"></label>
+      <span class="muted small" id="bkRestoreMsg"></span>
+    </div>
+    <div id="bkPreview"></div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h2>毎朝の自動バックアップ（設置のしかた）</h2>
+    <ol class="small" style="line-height:2;padding-left:20px">
+      <li>Googleドライブに<b>バックアップ用のフォルダ</b>を作り、URL末尾のIDを控える</li>
+      <li>メール取込と<b>同じGASプロジェクト</b>に <code>_GAS_seek-backup.gs</code> を貼る</li>
+      <li>スクリプト プロパティに <code>BACKUP_FOLDER_ID</code> を足す</li>
+      <li><code>backup_dryrun</code> を1回実行（<b>書き込みません</b>。何行取れるか出るだけ）</li>
+      <li>よければ <code>backup_setupTrigger</code> を実行（毎朝5時）</li>
+    </ol>
+    <div class="small muted">
+      直近14日ぶんは毎日、それより古いものは毎月1日ぶんだけ残します。
+      SB_URL / SB_KEY はメール取込のものをそのまま使うので、新しく鍵は要りません。</div>
+  </div>`;
+
+  const msg = document.getElementById('bkMsg');
+  document.getElementById('bkGo').onclick = async ()=>{
+    const b = document.getElementById('bkGo');
+    b.disabled = true;
+    try{
+      const data = await makeBackup(label=>{ msg.textContent = label + ' を読んでいます…'; });
+      const n = BACKUP_TABLES.reduce((a,[t])=>a+(data[t]||[]).length, 0);
+      const stamp = today();
+      downloadFile('SEEK完全バックアップ_'+stamp+'.json', JSON.stringify(data));
+      try{ localStorage.setItem(LS_BACKUP_AT, new Date().toISOString()); }catch(e){}
+      msg.innerHTML = `<span style="color:var(--ok)">✅ ${n.toLocaleString()}行を保存しました</span>`;
+    }catch(e){ msg.innerHTML = `<span style="color:var(--danger)">${esc(e.message)}</span>`; }
+    b.disabled = false;
+  };
+
+  document.getElementById('bkFile').onchange = async (ev)=>{
+    const f = ev.target.files[0]; if(!f) return;
+    const rmsg = document.getElementById('bkRestoreMsg');
+    const box  = document.getElementById('bkPreview');
+    let data;
+    try{ data = JSON.parse(await f.text()); }
+    catch(e){ rmsg.innerHTML = '<span style="color:var(--danger)">読めませんでした</span>'; return; }
+    if(!data._meta){ rmsg.innerHTML = '<span style="color:var(--danger)">SEEKの控えではありません</span>'; return; }
+    // 先に「何が起きるか」を見せる。押す前に分かるようにする（STOP2の考え方）
+    const rows = BACKUP_TABLES.map(([t,label])=>({label, t, n:(data[t]||[]).length,
+      now:(t==='seek_jobs'?(M.jobs||[]).length: t==='seek_clients'?(M.clients||[]).length:
+           t==='seek_price_lists'?(M.prices||[]).length:null)}));
+    rmsg.innerHTML = `控え: <b>${esc((data._meta.at||'').slice(0,16).replace('T',' '))}</b>
+      （${esc(data._meta.by||'')}）`;
+    box.innerHTML = `<div class="scroll" style="margin-top:10px"><table><thead><tr>
+      <th>中身</th><th class="n">控えの行数</th><th class="n">いまの行数</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td>${esc(r.label)}</td><td class="n">${r.n.toLocaleString()}</td>
+        <td class="n">${r.now==null?'—':r.now.toLocaleString()}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="bkRestore" style="background:var(--danger)">この内容で上書きする</button>
+        <span class="muted small">押すと戻せません。先にいまの控えを取っておいてください。</span>
+      </div>
+      <div id="bkRestoreLog"></div>`;
+    document.getElementById('bkRestore').onclick = ()=>restoreBackup(data);
+  };
+}
+
+async function restoreBackup(data){
+  const n = BACKUP_TABLES.reduce((a,[t])=>a+(data[t]||[]).length, 0);
+  if(!confirm(`控えの ${n.toLocaleString()}行 で、いまのデータを上書きします。\n`
+    + `同じIDの行は控えの内容に置き換わります。\n\n`
+    + `控えの日時: ${(data._meta.at||'').slice(0,16).replace('T',' ')}\n\n`
+    + `よろしいですか。`)) return;
+  const log = document.getElementById('bkRestoreLog');
+  const b = document.getElementById('bkRestore'); b.disabled = true;
+  let ok = 0; const ng = [];
+  // 親から順に入れる（顧客→工種→…→案件→明細→原価）。外部キーの順番を守るため
+  const order = ['seek_clients','seek_work_types','seek_bank_accounts','seek_settings',
+                 'seek_suppliers','seek_supplier_prices','seek_equipment','seek_cost_prices',
+                 'seek_price_lists','seek_jobs','seek_job_items','seek_job_item_costs','seek_worklogs'];
+  for(const t of order){
+    const rows = data[t]; if(!rows || !rows.length) continue;
+    const label = (BACKUP_TABLES.find(x=>x[0]===t)||[])[1] || t;
+    log.innerHTML = `<div class="small muted" style="margin-top:8px">${esc(label)} を戻しています…</div>`;
+    // 1,000行ずつ送る。まとめて送るとタイムアウトする
+    for(let i=0; i<rows.length; i+=500){
+      const part = rows.slice(i, i+500);
+      try{
+        const res = await fetch(SB_URL+'/rest/v1/'+t+'?on_conflict='+
+            ((BACKUP_TABLES.find(x=>x[0]===t)||[])[2]||'id'), {
+          method:'POST',
+          headers: await H({'Content-Type':'application/json',
+                            Prefer:'resolution=merge-duplicates,return=minimal'}),
+          body: JSON.stringify(part) });
+        if(!res.ok) throw new Error(res.status+' '+(await res.text()).slice(0,120));
+        ok += part.length;
+      }catch(e){ ng.push(label+'：'+e.message); }
+    }
+  }
+  log.innerHTML = `<div class="${ng.length?'err':'ok'}" style="margin-top:10px">
+    ${ok.toLocaleString()}行を戻しました。
+    ${ng.length?`<br><b>${ng.length}か所で失敗しました。</b><br>${ng.slice(0,5).map(esc).join('<br>')}`:''}
+    <br><span class="small">画面を読み直してください。</span></div>`;
+  b.disabled = false;
+}
+
 function drawGasSetup(el){
   const tpl = (document.getElementById('gasTpl')||{}).textContent || '';
   const connected = inbox.length > 0;
@@ -4875,6 +5049,8 @@ function drawMaster(){
     drawGasSetup(el);
   } else if(mTab==='user'){
     drawUsers(el);
+  } else if(mTab==='backup'){
+    drawBackup(el);
   } else if(mTab==='sup'){
     drawSuppliers(el, q);
   } else if(mTab==='client'){
