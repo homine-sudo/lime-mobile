@@ -772,6 +772,11 @@ function expired(){
 }
 
 /* PostgREST は既定で最大1000行しか返さない。Range ヘッダでページングする */
+/* 1000件ずつに分けて全部取る（Supabaseは1回1,000行が上限）。
+   ⚠ 2026-09-09 一度「残りのページを一斉に取る」並列版にしたが、取り消した。
+     ・実測 8.2秒 → 13.7秒に悪化（無料プランで9本同時だと1本8〜10秒に落ちる）
+     ・さらに 500 canceling statement due to statement timeout が出た＝取りこぼす
+   直列が正しい。速くしたいのは「運ぶ行を減らすこと」で解決する（seek_dash_agg）。 */
 async function sbFetchAll(table, qs){
   const PAGE = 1000; let off = 0; const out = [];
   for(;;){
@@ -912,7 +917,14 @@ async function loadAll(){
   M.suppliers=sups; M.supplierPrices=supPrices;
   M.equipment=equip; M.costPrices=costPrices;
   M.settings = (settings[0] && settings[0].data) || {};
+  /* 集計（seek_dash_agg）は案件データを待つ必要がない ― DB側で結合しているため。
+     案件と同時に走らせて、待ち時間を重ねる。
+     待たない（await しない）ので、ここで落ちても起動は止まらない。
+     ダッシュボードが loadCosts() を呼んだとき、costsLoading に相乗りして待つ。
+     2026-09-09: 直列だと 案件0.9秒 → 集計2.4秒 で待ちが積み上がっていた。 */
+  const aggAhead = loadCosts().catch(()=>{});
   M.jobs = await sbFetchAll('seek_jobs','select=*&order=quoted_at.desc.nullslast');
+  await aggAhead;
   reindex();
   setBar('読み込み完了');
   setMeta();
@@ -1063,62 +1075,32 @@ async function loadCosts(){
   if(!costsLoading) costsLoading = loadCostsNow().finally(()=>{ costsLoading = null; });
   return costsLoading;
 }
+/* 集計はDB側（seek_dash_agg）でやる。返ってくるのはJSON1個。
+   ⚠ 2026-09-09 まではここで 明細9,162件＋原価4,842件 を運んでブラウザで集計していた。
+     SupabaseのRESTは1回1,000行が上限なので15往復。朝いちの待ちが 9.1秒（実測）。
+     並列化も試したが 13.7秒に悪化し、さらに statement timeout で取りこぼした。
+     → 運ぶ行を減らすのが正解。1往復・2.5秒になった。
+   ★切り替えるとき、旧版との突き合わせを5項目すべてで行い、差分0件を確認している
+     （原価・顧客×工種・品名・直近単価・工種集計）。
+     旧版は _保留_旧loadCostsNow.js に残してある。 */
 async function loadCostsNow(){
   if(costByJob) return costByJob;
-  const [items, costs] = await Promise.all([
-    sbFetchAll('seek_job_items','select=id,job_id,work_type_id,name,amount,qty,unit,unit_price'),
-    sbFetchAll('seek_job_item_costs','select=item_id,job_id,cost_amount')
-  ]);
-  costByJob = new Map();
-  costs.forEach(r=>costByJob.set(r.job_id, (costByJob.get(r.job_id)||0) + Number(r.cost_amount||0)));
+  const res = await fetch(SB_URL+'/rest/v1/rpc/seek_dash_agg', {
+    method:'POST', headers: await H({'Content-Type':'application/json'}), body:'{}' });
+  if(res.status===401 || res.status===403) throw expired();
+  if(!res.ok) throw new Error('集計の取得に失敗 '+res.status+' '+(await res.text()).slice(0,160));
+  const g = await res.json();
 
-  /* 単価表・原価が「最後に使われたのはいつか」。
-     村山さんのレビュー847件を、10/1から実際に使うものだけに絞るために要る。
-     ・単価表は 顧客×工種 でぶら下がっている
-     ・原価は工種の名前でぶら下がっている（work_type_id が入っていない行があるため） */
-  const jobMap = new Map((M.jobs||[]).map(j=>[j.id,j]));
-  lastUse = { byPair:new Map(), byName:new Map() };
-  const bump = (map,k,d)=>{ if(!k) return; if((d||'') > (map.get(k)||'')) map.set(k,d||''); };
-  const series = new Map();      // 顧客|工種 -> [{d, p}] 単価の履歴
-  items.forEach(it=>{
-    const j = jobMap.get(it.job_id); if(!j) return;
-    const d = j.quoted_at || '';
-    if(j.client_id && it.work_type_id) bump(lastUse.byPair, j.client_id+'|'+it.work_type_id, d);
-    bump(lastUse.byName, (it.name||'').trim(), d);
-    const p = Number(it.unit_price);
-    if(j.client_id && it.work_type_id && d && p){
-      const k = j.client_id+'|'+it.work_type_id;
-      (series.get(k) || series.set(k,[]).get(k)).push({d, p});
-    }
-  });
-
-  /* 「直近はいくらで出しているか」。
-     最頻値（いちばん多かった金額）は、昔の金額に引きずられることがある。
-     実データで、最頻値125,000／直近はずっと10,000 という行が見つかった（12.5倍のずれ）。
-     まとめて確定でこれを通すと、新しい見積が桁違いの単価で出てしまう。
-     → 直近3件が同じ金額なら「いまの単価」とみなして、最頻値と食い違うときに警告する。 */
-  recentPrice = new Map();
-  series.forEach((arr,k)=>{
-    if(arr.length < 3) return;
-    arr.sort((a,b)=>a.d.localeCompare(b.d));
-    const last = arr.slice(-3);
-    if(last.every(x=>x.p === last[0].p))
-      recentPrice.set(k, {value:last[0].p, from:last[0].d, n:arr.length});
-  });
-
-  // 工種ごと。マスタに載っている工種だけを対象にする
-  // （一過性の大型案件名が明細にそのまま入っていることがあり、混ぜると「稼ぎ頭」が歪む）
-  // 失注・キャンセルの明細は入れない。稼いでいない工事を「稼ぎ頭」に混ぜないため。
-  const lostIds = new Set((M.jobs||[]).filter(j=>['失注','キャンセル'].includes(j.status)).map(j=>j.id));
-  const m = new Map();
-  items.forEach(it=>{
-    if(!it.work_type_id) return;
-    if(lostIds.has(it.job_id)) return;
-    const b = m.get(it.work_type_id) || {n:0, s:0, q:0, jobs:new Set()};
-    b.n++; b.s += Number(it.amount||0); b.q += Number(it.qty||0); b.jobs.add(it.job_id);
-    m.set(it.work_type_id, b);
-  });
-  wtStats = m;
+  costByJob = new Map(Object.entries(g.cost || {}).map(([k,v]) => [k, Number(v)]));
+  lastUse = {
+    byPair: new Map(Object.entries(g.pair || {})),
+    byName: new Map(Object.entries(g.name || {}))
+  };
+  recentPrice = new Map(Object.entries(g.recent || {}).map(([k,v]) =>
+    [k, { value: Number(v.value), from: v.from, n: Number(v.n) }]));
+  // 旧版は jobs を Set で持っていた。画面側が .size を見るので形を合わせる
+  wtStats = new Map(Object.entries(g.wt || {}).map(([k,v]) =>
+    [k, { n: Number(v.n), s: Number(v.s), q: Number(v.q), jobs: { size: Number(v.jobs) } }]));
   return costByJob;
 }
 /* 年度。SEEKは9月末決算なので期首は10月。設定で変えられる。
