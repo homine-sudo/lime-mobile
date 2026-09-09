@@ -176,6 +176,26 @@ nav button.on svg{opacity:1;color:var(--pri-2)}
 
 /* 全体工程表 */
 /* 予定表（ダッシュボード先頭） */
+/* 予定表の横棒（Googleカレンダーと同じ見た目）。
+   2026-09-09 村山さん「カレンダーを棒の表示にしたい」。
+   現場は何日かにまたがるので、1日1マスに文字を置く形では読めない。 */
+.calw{margin-bottom:8px}
+.calw+.calw{border-top:1px dashed var(--line);padding-top:6px}
+.cgrid7{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cnum{display:flex;flex-direction:column;align-items:center;padding:2px 0;border-radius:var(--r-sm);
+  font-size:12px;font-weight:700;color:var(--ink-2);cursor:pointer;border:1px solid transparent;background:none}
+.cnum:disabled{cursor:default}
+.cnum.sun{color:var(--danger)} .cnum.sat{color:var(--pri)}
+.cnum.today{border-color:var(--brand);color:var(--brand);font-weight:900}
+.cnum.pick{background:var(--pri-soft);border-color:var(--pri)}
+.cnum .mk{font-size:10px;line-height:1.3;font-style:normal}
+.cbars{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:2px}
+.cbar{border:none;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700;color:#fff;
+  text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+  min-height:18px;line-height:14px}
+.cbar:hover{filter:brightness(1.12)}
+.cbar.l{border-top-left-radius:0;border-bottom-left-radius:0}      /* 前の週から続いている */
+.cbar.r{border-top-right-radius:0;border-bottom-right-radius:0}    /* 次の週へ続く */
 .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .calgrid .cw{text-align:center;font-size:11px;font-weight:800;color:var(--muted);padding:2px 0}
 .calgrid .cw.sun{color:var(--danger)} .calgrid .cw.sat{color:var(--pri)}
@@ -536,8 +556,13 @@ function pushOne_(sbUrl, sbKey, thread, msg) {
   if (chk.getResponseCode() === 200 && JSON.parse(chk.getContentText()).length) return true;
 
   // ---- 本文。プレーンが無ければHTMLを改行を残して落とす ----
+  /* ⚠ 表で書かれた依頼は、Gmailが作る平文版だと列がただの空白に潰れて読めなくなる。
+     　 「精算機設置工事 1 台」となり、品名と数量の境目が分からない。
+     　 HTML側に <table> があるときは HTML から起こす（</td> をタブにするため）。
+     2026-09-08 実機のリハーサルで発覚（本文にタブが1つも入っていなかった）。 */
+  var html = msg.getBody();
   var body = msg.getPlainBody();
-  if (!body || !body.replace(/\s/g, '')) body = htmlToText_(msg.getBody());
+  if (!body || !body.replace(/\s/g, '') || /<table[\s>]/i.test(html)) body = htmlToText_(html);
 
   // ---- 差出人 "山城 將平 <yamashiro@dh-parking.co.jp>" を分ける ----
   var from = msg.getFrom(), fname = from, fmail = '';
@@ -558,7 +583,11 @@ function pushOne_(sbUrl, sbKey, thread, msg) {
       method: 'post',
       contentType: f.getContentType() || 'application/octet-stream',
       payload: f.getBytes(),
-      headers: { Authorization: 'Bearer ' + sbKey, 'x-upsert': 'true' },
+      // ⚠ hdr_() を通すこと（apikey ヘッダが要る）。
+      //   Authorization だけだと Storage は鍵をJWTとして読もうとして
+      //   403 Invalid Compact JWS で落ちる。新方式の Secret key（sb_secret_…）はJWTではない。
+      //   2026-09-08 実機のリハーサルで発覚。ここだけ hdr_() を使わず手書きしていた。
+      headers: (function(){ var h = hdr_(sbKey); h['x-upsert'] = 'true'; return h; })(),
       muteHttpExceptions: true
     });
     if (up.getResponseCode() >= 300) throw new Error('添付の保存に失敗 ' + up.getResponseCode() + ' ' + up.getContentText().slice(0, 200));
@@ -587,7 +616,7 @@ function pushOne_(sbUrl, sbKey, thread, msg) {
     for (var k = 0; k < atts.length; k++) {
       try {
         UrlFetchApp.fetch(sbUrl + '/storage/v1/object/seek-files/' + atts[k].storage_path,
-          { method: 'delete', headers: { Authorization: 'Bearer ' + sbKey }, muteHttpExceptions: true });
+          { method: 'delete', headers: hdr_(sbKey), muteHttpExceptions: true });   // ここも apikey が要る
       } catch (e) {}
     }
     throw new Error('行の登録に失敗 ' + ins.getResponseCode() + ' ' + ins.getContentText().slice(0, 200));
@@ -623,6 +652,7 @@ function htmlToText_(html) {
     .replace(/[ \t]+\n/g, '\n')
     .trim();
 }
+
 </script>
 
 <script>
@@ -1168,6 +1198,27 @@ function calEvents(){
   });
   return map;
 }
+/* 施工期間の横棒。data.build_start 〜 data.build_end を1本の帯にする。
+   村山さんはいま Googleカレンダーで現場ごとの帯を引いて管理しているので、同じ見た目にする。 */
+function calBars(){
+  const out = [];
+  (M.jobs||[]).forEach(j=>{
+    if(['失注','キャンセル'].includes(j.status)) return;
+    const d = j.data || {};
+    const s = d.build_start, e = d.build_end || d.build_start;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(s||'')) return;
+    out.push({ job:j, s, e:(/^\d{4}-\d{2}-\d{2}$/.test(e||'') && e >= s) ? e : s });
+  });
+  return out.sort((a,b)=> a.s.localeCompare(b.s) || b.e.localeCompare(a.e));
+}
+/* 顧客ごとに色を決める。同じ顧客はいつも同じ色になる（名前から作るので設定は要らない）。
+   白文字を乗せるので、明度は下げて固定する。 */
+function clientColor(id){
+  const s = String(id||'');
+  let h = 5381;
+  for(let i=0;i<s.length;i++) h = ((h*33) ^ s.charCodeAt(i)) >>> 0;
+  return `hsl(${h % 360} 48% 40%)`;
+}
 function drawCalendar(){
   const box = document.getElementById('calBox'); if(!box) return;
   const t = today();
@@ -1181,21 +1232,58 @@ function drawCalendar(){
   const total = inMonth.reduce((a,d)=>a+ev.get(d).length,0);
   const shift = n => { const d=new Date(Y, Mo-1+n, 1); calYM = dateStr(d).slice(0,7); calPick=null; drawCalendar(); };
 
-  const cell = (n) => {
-    const d = `${Y}-${String(Mo).padStart(2,'0')}-${String(n).padStart(2,'0')}`;
+  /* ---- 週ごとに「日付の行」と「帯の行」を積む。月曜始まり（村山さんのカレンダーと同じ）---- */
+  const bars  = calBars();
+  const inBar = bars.filter(b=> b.s.slice(0,7)<=ym && b.e.slice(0,7)>=ym).length;
+  const mStart = `${Y}-${String(Mo).padStart(2,'0')}-01`;
+  const mEnd   = `${Y}-${String(Mo).padStart(2,'0')}-${String(days).padStart(2,'0')}`;
+  // 月の1日が含まれる週の月曜から始める
+  const wk0 = new Date(Y, Mo-1, 1 - ((first.getDay()+6)%7));
+
+  const dayCell = (dt) => {
+    const d = dateStr(dt), n = dt.getDate();
     const list = ev.get(d) || [];
-    const dow = new Date(Y, Mo-1, n).getDay();
-    const cls = [d===t?'today':'', d===calPick?'pick':'', dow===0?'sun':'', dow===6?'sat':'']
-                  .filter(Boolean).join(' ');
-    // 種類ごとに丸めて出す（1日に同じ種類が何件もあることがある）
+    const dow = dt.getDay();
+    const other = d < mStart || d > mEnd;                 // 前後の月の日
     const by = {};
     list.forEach(x=>{ by[x.kind]=(by[x.kind]||0)+1; });
-    return `<button class="cday ${cls}" data-cd="${d}"${list.length?'':' disabled'}>
-      <span class="dn">${n}</span>
-      <span class="ds">${Object.entries(by).map(([k,c])=>
+    const cls = [d===t?'today':'', d===calPick?'pick':'', dow===0?'sun':'', dow===6?'sat':'']
+                  .filter(Boolean).join(' ');
+    return `<button class="cnum ${cls}" data-cd="${d}"${list.length?'':' disabled'}
+      style="${other?'opacity:.35':''}">${n}<span class="mk">${
+      Object.entries(by).map(([k,c])=>
         `<i title="${CAL_KINDS[k].label} ${c}件" style="color:${CAL_KINDS[k].color}">${CAL_KINDS[k].icon}${c>1?c:''}</i>`
       ).join('')}</span></button>`;
   };
+
+  const weekBlock = (mon) => {
+    const wS = dateStr(mon), wE = dateStr(new Date(mon.getTime()+6*86400000));
+    const hit = bars.filter(b=> b.s <= wE && b.e >= wS);
+    // 重なる帯は段を変える。空いている一番上の段に入れる
+    const lanes = [];                                     // lanes[i] = その段の右端の列
+    const placed = hit.map(b=>{
+      const c1 = Math.floor((new Date(Math.max(new Date(b.s), mon)) - mon)/86400000) + 1;
+      const c2 = Math.floor((new Date(Math.min(new Date(b.e), new Date(wE))) - mon)/86400000) + 2;
+      let lane = lanes.findIndex(end => end <= c1);
+      if(lane < 0){ lane = lanes.length; lanes.push(0); }
+      lanes[lane] = c2;
+      return {b, c1, c2, lane};
+    });
+    const days7 = Array.from({length:7},(_,i)=> dayCell(new Date(mon.getTime()+i*86400000)));
+    return `<div class="calw">
+      <div class="cgrid7">${days7.join('')}</div>
+      ${placed.length ? `<div class="cbars">${placed.map(p=>{
+        const ttl = (p.b.job.title||'(案件名なし)').replace(/^仮）/,'');
+        return `<button class="cbar${p.b.s < wS?' l':''}${p.b.e > wE?' r':''}"
+          style="grid-column:${p.c1} / ${p.c2};grid-row:${p.lane+1};background:${clientColor(p.b.job.client_id)}"
+          data-openjob="${esc(p.b.job.id)}"
+          title="${esc(p.b.job.client_name||'')}　${esc(ttl)}　${esc(p.b.s)}〜${esc(p.b.e)}">${esc(ttl)}</button>`;
+      }).join('')}</div>` : ''}
+    </div>`;
+  };
+
+  const weeks = [];
+  for(let w = new Date(wk0); dateStr(w) <= mEnd; w = new Date(w.getTime()+7*86400000)) weeks.push(weekBlock(w));
 
   box.innerHTML = `
   <div class="row" style="margin-bottom:10px">
@@ -1204,22 +1292,24 @@ function drawCalendar(){
     <button class="btn ghost sm" id="calNext">→</button>
     <button class="btn ghost sm" id="calToday">今月</button>
     <span class="spacer"></span>
-    <span class="muted small">${total ? `この月の予定 ${total}件` : 'この月の予定はありません'}</span>
+    <span class="muted small">${inBar ? `施工 ${inBar}件` : ''}${
+      inBar&&total ? '　/　' : ''}${total ? `印 ${total}件` : ''}${
+      !inBar&&!total ? 'この月の予定はありません' : ''}</span>
   </div>
-  <div class="calgrid">
-    ${['日','月','火','水','木','金','土'].map((w,i)=>
-      `<div class="cw${i===0?' sun':''}${i===6?' sat':''}">${w}</div>`).join('')}
-    ${'<div class="cday off"></div>'.repeat(lead)}
-    ${Array.from({length:days},(_,i)=>cell(i+1)).join('')}
+  <div class="cgrid7" style="margin-bottom:4px">
+    ${['月','火','水','木','金','土','日'].map((w,i)=>
+      `<div class="cw${i===6?' sun':''}${i===5?' sat':''}">${w}</div>`).join('')}
   </div>
+  ${weeks.join('')}
   <div class="callegend">${Object.values(CAL_KINDS).map(k=>
     `<span><i style="color:${k.color}">${k.icon}</i>${k.label}</span>`).join('')}</div>
   <div id="calDay"></div>
-  ${!total ? `<div class="note" style="margin-top:10px">
-    <b>いまは予定がほとんど出ません。</b>移行した986件には<b>オープン予定日が入っていない</b>ためです
-    （Excelに無かった項目）。<br>
-    <span class="small">案件に<b>オープン予定日</b>を入れると、そこから逆算して
-      電力申請の〆・部品の発注〆・外注への日程連絡が自動でこの表に並びます。</span></div>`:''}`;
+  ${!inBar && !total ? `<div class="note" style="margin-top:10px">
+    <b>いまは予定が出ません。</b>移行した986件には<b>施工日が入っていない</b>ためです
+    （Excelに無く、村山さんのGoogleカレンダーだけに入っていました）。<br>
+    <span class="small">案件に<b>施工 開始〜終了</b>を入れると、ここに横棒で並びます（色は顧客ごと）。<br>
+      <b>オープン予定日</b>も入れると、そこから逆算して
+      電力申請の〆・部品の発注〆・外注への日程連絡が印として付きます。</span></div>`:''}`;
 
   document.getElementById('calPrev').onclick  = ()=>shift(-1);
   document.getElementById('calNext').onclick  = ()=>shift(1);
@@ -1228,6 +1318,9 @@ function drawCalendar(){
     calPick = (calPick===b.dataset.cd) ? null : b.dataset.cd;
     drawCalendar();
   });
+  // 帯を押したらその案件を開く
+  box.querySelectorAll('.cbar[data-openjob]').forEach(b=>
+    b.onclick = ()=> openJob(b.dataset.openjob));
 
   // 選んだ日の中身
   const dayBox = document.getElementById('calDay');
@@ -2891,7 +2984,7 @@ let mk = { job:null, client_id:'', title:'', lines:[], discount:0, tax_rate:0.10
            status:'見積提出', quoted_at:'', invoiced_at:'', delivered_at:'', due_date:'',
            payment_terms:'現金', bank_account_id:'', note:'',
            site_postal_code:'', site_address:'', site_building:'', open_date:'', paid_at:'',
-           fromInbox:null, labor_days:0 };
+           fromInbox:null, labor_days:0, build_start:'', build_end:'' };
 const today = () => new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
 function resetMake(){
   mk = { job:null, client_id:'', title:'', lines:[], discount:0, tax_rate:0.10, saving:false, msg:'',
@@ -2899,7 +2992,7 @@ function resetMake(){
          status:'見積提出', quoted_at:today(), invoiced_at:'', delivered_at:'', due_date:'',
          payment_terms:'現金', bank_account_id:(M.banks.find(b=>b.is_default)||M.banks[0]||{}).id||'', note:'',
          site_postal_code:'', site_address:'', site_building:'', open_date:'', paid_at:'',
-         fromInbox:null, labor_days:0 };
+         fromInbox:null, labor_days:0, build_start:'', build_end:'' };
 }
 async function editJob(id){
   const j = M.jobs.find(x=>x.id===id); if(!j) return;
@@ -2922,6 +3015,7 @@ async function editJob(id){
   mk.site_building = j.site_building||'';
   mk.open_date = j.open_date||''; mk.paid_at = j.paid_at||'';
   mk.labor_days = Number((j.data&&j.data.labor_person_days)||0);
+  mk.build_start = (j.data&&j.data.build_start)||''; mk.build_end = (j.data&&j.data.build_end)||'';
   mk.lines = items.map(it=>({ id:it.id, work_type_id:it.work_type_id, name:it.name,
     supply_type:it.supply_type||'材工', opt_gl_cut:!!it.opt_gl_cut, opt_pole:it.opt_pole||'',
     section:Number(it.section)===2?2:1,
@@ -3039,6 +3133,10 @@ BP泊第6駐車場 設置工事のお見積り依頼
         ${STATUSES.map(s=>`<option ${mk.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
       <label class="f">見積日<input type="date" id="mkqd" value="${esc(mk.quoted_at)}"></label>
       <label class="f">オープン予定日<input type="date" id="mkod" value="${esc(mk.open_date)}"></label>
+      <span style="width:14px"></span>
+      <label class="f" title="予定表に横棒で出ます。1日だけなら開始と同じ日を入れてください">
+        施工 開始<input type="date" id="mkbs" value="${esc(mk.build_start)}"></label>
+      <label class="f">〜 終了<input type="date" id="mkbe" value="${esc(mk.build_end)}"></label>
       <span style="width:14px"></span>
       <label class="f">請求日<input type="date" id="mkid" value="${esc(mk.invoiced_at)}"></label>
       <label class="f">納期<input type="date" id="mkdd" value="${esc(mk.delivered_at)}"></label>
@@ -3405,6 +3503,7 @@ function aMake(){
   bind('mkbank','bank_account_id');
   bind('mkspc','site_postal_code'); bind('mksa','site_address'); bind('mksb','site_building');
   bind('mkod','open_date'); bind('mkpd','paid_at');
+  bind('mkbs','build_start'); bind('mkbe','build_end');
   const mm=document.getElementById('mkmap');
   if(mm) mm.onclick=()=>{
     const a=(document.getElementById('mksa')||{}).value||'';
@@ -3780,8 +3879,11 @@ async function doSave(){
     // 移行データも同じ場所に入れてある（_SEEK_05_labor.sql）
     // 0のときも必ず送る。送らないと、DB側は合成（||）なので
     // 「人工を消したのに前の値が残る」ことになる。
+    // 施工期間は予定表の横棒のもと。空文字ではなく null で送る（jsonbに '' を残さない）
     data: { labor_person_days: Number(mk.labor_days||0),
-            labor_cost: Number(mk.labor_days||0)*LABOR_UNIT() } };
+            labor_cost: Number(mk.labor_days||0)*LABOR_UNIT(),
+            build_start: mk.build_start || null,
+            build_end:  (mk.build_end || mk.build_start) || null } };
   if(mk.job){ job.id = mk.job.id; job.version = mk.job.version; }
   else { job.amounts_locked = false; }
   const wasEdit = !!mk.job;
@@ -4505,6 +4607,11 @@ function drawGasSetup(el){
         <span class="muted">何件見つかるかがログに出るだけで、まだ取り込みません</span></li>
       <li>トリガー → 時間主導 → 分ベース → <b>5分おき</b> → 関数 <code>pullMail</code></li>
     </ol>
+    <div class="note" style="margin-top:14px">
+      <b>施工予定はSEEKの予定表で管理します。</b>
+      <span class="small">Googleカレンダーへの書き出しは作りません（2026-09-09 決定）。
+        案件に「施工 開始〜終了」を入れると、ダッシュボードの予定表に横棒で並びます。</span>
+    </div>
     <div class="note">
       <b>Web App として公開しません。</b>トリガーで動くだけなので <code>doGet/doPost</code> を作っていません
       ＝ 公開URLが存在しません。<br>

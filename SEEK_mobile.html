@@ -158,6 +158,24 @@ button.card:active{background:var(--panel-2);transform:scale(.995)}
   color:#fff;background:rgba(0,0,0,.55);padding:2px 4px;text-align:center}
 
 /* ---------- 下タブ ---------- */
+/* 予定（月表示・横棒）。スマホの幅なので、日付は小さく帯は1行に。 */
+.calhd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.calhd b{flex:1;text-align:center;font-size:16px}
+.c7{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cwk{margin-bottom:4px}
+.cwk div{text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
+.cwk .sun{color:var(--danger)} .cwk .sat{color:var(--pri)}
+.cw{margin-bottom:6px}
+.cw+.cw{border-top:1px dashed var(--line);padding-top:5px}
+.cd{text-align:center;font-size:13px;font-weight:700;color:var(--ink-2);padding:1px 0}
+.cd.off{opacity:.3} .cd.sun{color:var(--danger)} .cd.sat{color:var(--pri)}
+.cd.now{color:#fff;background:var(--brand);border-radius:var(--r-pill)}
+.cb{margin-top:2px}
+.cbar{border:none;border-radius:4px;padding:3px 6px;font-size:11px;font-weight:700;color:#fff;
+  text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  min-height:22px;line-height:16px;font-family:inherit}
+.cbar.l{border-top-left-radius:0;border-bottom-left-radius:0}
+.cbar.r{border-top-right-radius:0;border-bottom-right-radius:0}
 #nav{flex-shrink:0;display:none;background:var(--nav-bg);
   padding-bottom:var(--safe-bottom);border-top:1px solid rgba(255,255,255,.08)}
 #nav.on{display:flex}
@@ -209,6 +227,7 @@ button.card:active{background:var(--panel-2);transform:scale(.995)}
   <nav id="nav">
     <button data-nav="today"><span class="ic">📋</span>今日</button>
     <button data-nav="jobs"><span class="ic">🏗</span>現場</button>
+    <button data-nav="cal"><span class="ic">📅</span>予定</button>
     <button data-nav="menu"><span class="ic">⚙</span>設定</button>
   </nav>
 </div>
@@ -313,6 +332,18 @@ async function sbPost(table, rows, prefer){
   if(!res.ok) throw new Error('保存できませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
   return await res.json().catch(()=>[]);
 }
+/* 状態を進める。現場は seek_jobs を直接さわれないので、専用の関数を呼ぶ。
+   行き先が正しいか・進められる案件か・事務所が先に直していないかは、DB側で確かめる。
+   2026-09-09 第2段。 */
+async function sbAdvance(id, to, version){
+  const res=await fetch(SB_URL+'/rest/v1/rpc/seek_field_advance',{
+    method:'POST',
+    headers: await H({'Content-Type':'application/json'}),
+    body: JSON.stringify({p_id:id, p_to:to, p_version:Number(version||0)})});
+  if(res.status===401||res.status===403) throw expired();
+  if(!res.ok) throw new Error('更新できませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+  return await res.json();
+}
 async function sbPatch(table, qs, patch){
   const res=await fetch(SB_URL+'/rest/v1/'+table+'?'+qs,{
     method:'PATCH',
@@ -411,13 +442,12 @@ const M = { jobs:[], logs:[], loadedAt:null };
 let screen='today', jobId=null, stack=[];
 
 async function loadAll(){
-  // ⛔ 金額の列は取らない。unit_price / amount / total_* は現場に出さない。
+  /* ⛔ 金額は「取らない」ではなく「取れない」ようにしてある。
+     2026-09-09 第2段: 現場は seek_jobs に直接さわれない。
+     読むのは seek_field_jobs（金額の列を持たないビュー）。
+     状態が受注〜施工完了の行だけがそもそも入っている。 */
   const [jobs, logs] = await Promise.all([
-    sbGet('seek_jobs',
-      'select=id,job_no,status,client_name,title,site_postal_code,site_address,site_building,'
-      + 'open_date,car_count,quoted_at,version'
-      + '&status=in.(' + FIELD.map(encodeURIComponent).join(',') + ')'
-      + '&order=open_date.asc.nullslast'),
+    sbGet('seek_field_jobs', 'select=*&order=open_date.asc.nullslast'),
     sbGet('seek_worklogs','select=*&order=work_date.desc&limit=400')
   ]);
   M.jobs=jobs; M.logs=logs; M.loadedAt=new Date();
@@ -437,9 +467,101 @@ function render(){
   if(gated){ $('hd-ttl').innerHTML='<span class="mk">SEEK</span> 現場'; return drawGate(); }
   if(screen==='today') return drawToday();
   if(screen==='jobs')  return drawJobs();
+  if(screen==='cal')   return drawCal();
   if(screen==='job')   return drawJob();
   if(screen==='menu')  return drawMenu();
 }
+/* ============================================================
+   予定（月表示・横棒）
+   ------------------------------------------------------------
+   村山さんはこれまでGoogleカレンダーの月表示で、現場ごとの横帯を見ていた。
+   2026-09-09「カレンダーはシステム内のカレンダーを利用」で、ここが本番になる。
+   ＝スマホで見られないと、いままで見えていたものが見えなくなる。
+   月曜始まり・帯の色は顧客ごと。PC版と同じ見た目にしてある。
+   ============================================================ */
+let calYM = null;                                  // 'YYYY-MM'。null なら今月
+const d2s = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+function calColor(name){                           // 顧客名から色を決める（PC版と同じ考え方）
+  const s = String(name||''); let h = 5381;
+  for(let i=0;i<s.length;i++) h = ((h*33) ^ s.charCodeAt(i)) >>> 0;
+  return 'hsl(' + (h % 360) + ' 48% 40%)';
+}
+function calBars(){
+  return (M.jobs||[])
+    .filter(j => /^\d{4}-\d{2}-\d{2}$/.test(j.build_start||''))
+    .map(j => ({ j, s:j.build_start,
+                 e:(/^\d{4}-\d{2}-\d{2}$/.test(j.build_end||'') && j.build_end >= j.build_start)
+                     ? j.build_end : j.build_start }))
+    .sort((a,b)=> a.s.localeCompare(b.s) || b.e.localeCompare(a.e));
+}
+function drawCal(){
+  const t = today();
+  const ym = calYM || t.slice(0,7);
+  const [Y,Mo] = ym.split('-').map(Number);
+  const days  = new Date(Y, Mo, 0).getDate();
+  const first = new Date(Y, Mo-1, 1);
+  const mStart = ym + '-01', mEnd = ym + '-' + String(days).padStart(2,'0');
+  const bars = calBars();
+  const inMonth = bars.filter(b => b.s <= mEnd && b.e >= mStart);
+  const wk0 = new Date(Y, Mo-1, 1 - ((first.getDay()+6)%7));   // その週の月曜から
+
+  const week = (mon) => {
+    const wS = d2s(mon), wE = d2s(new Date(mon.getTime()+6*86400000));
+    const hit = bars.filter(b => b.s <= wE && b.e >= wS);
+    const lanes = [];
+    const placed = hit.map(b=>{
+      const c1 = Math.floor((new Date(Math.max(new Date(b.s), mon)) - mon)/86400000) + 1;
+      const c2 = Math.floor((new Date(Math.min(new Date(b.e), new Date(wE))) - mon)/86400000) + 2;
+      let lane = lanes.findIndex(end => end <= c1);
+      if(lane < 0){ lane = lanes.length; lanes.push(0); }
+      lanes[lane] = c2;
+      return {b, c1, c2, lane};
+    });
+    const nums = Array.from({length:7},(_,i)=>{
+      const dt = new Date(mon.getTime()+i*86400000), d = d2s(dt);
+      const cls = [d===t?'now':'', (d<mStart||d>mEnd)?'off':'',
+                   dt.getDay()===0?'sun':'', dt.getDay()===6?'sat':''].filter(Boolean).join(' ');
+      return '<div class="cd '+cls+'">'+dt.getDate()+'</div>';
+    }).join('');
+    return '<div class="cw"><div class="c7">'+nums+'</div>'
+      + (placed.length ? '<div class="c7 cb">' + placed.map(p=>
+          '<button class="cbar'+(p.b.s<wS?' l':'')+(p.b.e>wE?' r':'')+'"'
+          + ' style="grid-column:'+p.c1+' / '+p.c2+';grid-row:'+(p.lane+1)+';'
+          + 'background:'+calColor(p.b.j.client_name)+'"'
+          + ' data-open="'+esc(p.b.j.id)+'">'
+          + esc((p.b.j.title||'').replace(/^仮）/,'')) + '</button>').join('') + '</div>' : '')
+      + '</div>';
+  };
+  const weeks = [];
+  for(let w = new Date(wk0); d2s(w) <= mEnd; w = new Date(w.getTime()+7*86400000)) weeks.push(week(w));
+
+  $('hd-ttl').innerHTML = '<span class="mk">予定</span> ' + Y + '年' + Mo + '月';
+  $('scr').innerHTML = `
+  <div class="calhd">
+    <button class="btn gh sm" id="c-prev">←</button>
+    <b>${Y}年 ${Mo}月</b>
+    <button class="btn gh sm" id="c-next">→</button>
+    <button class="btn gh sm" id="c-now">今月</button>
+  </div>
+  <div class="c7 cwk">${['月','火','水','木','金','土','日']
+    .map((w,i)=>'<div class="'+(i===6?'sun':i===5?'sat':'')+'">'+w+'</div>').join('')}</div>
+  ${weeks.join('')}
+  ${inMonth.length ? '' : `<div class="note" style="margin-top:14px">
+    この月に施工予定の現場はありません。<br>
+    <span class="small">事務所が案件に「施工 開始〜終了」を入れると、ここに横棒で並びます。</span></div>`}
+  <div class="small muted" style="margin-top:14px;padding:0 2px">
+    色はお客さんごとです。棒を押すとその現場が開きます。<br>
+    受注してから施工完了までの現場だけ出ます。
+  </div>`;
+  const shift = n => { calYM = (d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))
+                                (new Date(Y, Mo-1+n, 1)); drawCal(); };
+  $('c-prev').onclick = ()=>shift(-1);
+  $('c-next').onclick = ()=>shift(1);
+  $('c-now').onclick  = ()=>{ calYM=null; drawCal(); };
+  document.querySelectorAll('#scr .cbar[data-open]').forEach(b=>
+    b.onclick = ()=> openJob(b.dataset.open));
+}
+
 function go(s){ if(s!=='job') jobId=null; screen=s; $('scr').scrollTop=0; render(); }
 function openJob(id){ jobId=id; screen='job'; $('scr').scrollTop=0; render(); }
 
@@ -660,7 +782,8 @@ async function loadJobDetail(j){
   try{
     // ⛔ 単価・金額は取らない
     const [items, files] = await Promise.all([
-      sbGet('seek_job_items','select=id,name,qty,unit,section&job_id=eq.'
+      // 明細も現場用のビューから。単価・金額の列がそもそも無い。
+      sbGet('seek_field_items','select=id,name,qty,unit,section&job_id=eq.'
         + encodeURIComponent(j.id) + '&order=section.asc,line_no.asc'),
       sbGet('seek_files','select=*&job_id=eq.'+encodeURIComponent(j.id)+'&order=created_at.desc')
     ]);
@@ -713,14 +836,12 @@ async function advance(j){
   $('s-ok').onclick=async()=>{
     closeSheet(); busy(true,'更新中…');
     try{
-      // version を条件に入れて、事務所側が同時に直したときは上書きしない
-      const r=await sbPatch('seek_jobs',
-        'id=eq.'+encodeURIComponent(j.id)+'&version=eq.'+Number(j.version||0),
-        {status:to, updated_by:(sbSession()||{}).email||null});
-      if(!r.length){
+      // version を渡して、事務所側が同時に直したときは上書きしない
+      const r=await sbAdvance(j.id, to, j.version);
+      if(!r || !r.ok){
         toast('事務所で先に更新されています。読み直してください。',1);
       }else{
-        j.status=r[0].status; j.version=r[0].version;
+        j.status=r.status; j.version=r.version;
         toast(to+'にしました');
       }
       render();
@@ -778,10 +899,8 @@ function logSheet(j){
       // 「着手」で受注/手配のままなら施工中へ、「完了」なら施工完了へ、まとめて進める
       const want = progress==='完了' ? '施工完了' : (progress==='着手'||progress==='施工中') ? '施工中' : null;
       if(want && j.status!==want && FIELD.indexOf(want)>FIELD.indexOf(j.status)){
-        const r=await sbPatch('seek_jobs',
-          'id=eq.'+encodeURIComponent(j.id)+'&version=eq.'+Number(j.version||0),
-          {status:want, updated_by:mine||null});
-        if(r.length){ j.status=r[0].status; j.version=r[0].version; toast(want+'にしました'); }
+        const r=await sbAdvance(j.id, want, j.version);
+        if(r && r.ok){ j.status=r.status; j.version=r.version; toast(want+'にしました'); }
       }
       render();
     }catch(e){ toast(e.message,1); if(e.reauth) render(); }
