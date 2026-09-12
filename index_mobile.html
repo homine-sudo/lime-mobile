@@ -2157,7 +2157,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-09-05';
+const APP_VERSION = '2026-09-12a';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -3053,6 +3053,19 @@ function mergeCollection(localArr, diskArr, snapMap){
   });
   return merged;
 }
+// ★2026-09-12 削除優先 (PC LIMEOne と同一): isDeleted=true なのに status≠キャンセル の「半分削除」を
+//   キャンセルに戻す。古い端末の自動処理が削除済み案件の status を書き換えると、フィールド単位マージで
+//   status と isDeleted が別々の勝者になり食い違う (0388-2 事故)。updatedAt は上げない。
+function _enforceDeletedWins(arr){
+  let n = 0;
+  (arr||[]).forEach(c => {
+    if(c && c.isDeleted === true && c.status !== 'キャンセル'){
+      console.warn('[削除優先] ' + (c.caseNo||c.id) + ': status ' + c.status + ' → キャンセル');
+      c.status = 'キャンセル'; c.isCancelled = true; n++;
+    }
+  });
+  return n;
+}
 function mergeAll(local, disk, snap){
   if(!disk) return local;
   if(!local) return disk;
@@ -3060,6 +3073,7 @@ function mergeAll(local, disk, snap){
   ['cases','vehicles','insurers','factories','staff'].forEach(key => {
     result[key] = mergeCollection(local[key], disk[key], snap ? snap[key] : null);
   });
+  _enforceDeletedWins(result.cases);
   const lSet = local.settings || {}, dSet = disk.settings || {};
   result.settings = (Number(lSet._updatedAt||0) >= Number(dSet._updatedAt||0)) ? lSet : dSet;
   Object.keys(disk).forEach(k => { if(!(k in result)) result[k] = disk[k]; });
