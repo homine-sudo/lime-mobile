@@ -521,6 +521,10 @@ body.kb-open .m-confirm-card{display:none}
 }
 .m-card-row.m-card-memo .lbl{background:transparent;min-width:auto;padding:0}
 .m-card-row.m-card-memo .val{color:#5A3F00;font-size:12.5px}
+/* 🔧 回収カードの点検期日 (2026-09-15): 完了確認の「点検期日」行と同じ色味 */
+.m-card-row.m-card-due{background:#FFF9E6;border:1px solid #F0D58A;border-radius:7px;padding:6px 8px;margin-top:6px}
+.m-card-row.m-card-due .lbl{background:transparent;color:#7A4500;min-width:auto;padding:0}
+.m-card-row.m-card-due .val{color:#7A4500;font-size:12.5px}
 /* 🚗 車両ナンバーを主役に (2026-07-23 回収の視認性): 現場で実車と一目で照合。車種名とナンバーは同等の大きさ+カラー表示 */
 .m-plate-hero{background:#FCF2F2;border:1px solid #F2D3D3;border-radius:10px;padding:9px 12px 10px;text-align:center;margin:8px 0}
 .m-plate-hero-nm{font-size:22px;font-weight:800;color:#1E2A36;line-height:1.2}
@@ -2157,7 +2161,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-09-12a';
+const APP_VERSION = '2026-09-15a';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -4469,6 +4473,12 @@ function _renderCaseCard(c, kind){
       tel(_rd.isDifferent ? _rd.tel : (c.dispatchToContactTel || _rd.tel))
     ].filter(Boolean).join('　');
     const recToLine = [_recName, _recSub].filter(Boolean).join('<br>');
+    // 🔧 点検期日 (2026-09-15 ユーザー要望「一覧のところに点検の表示出して」): 完了確認と同じ判定 _mVehAlertForCase
+    //   (車検60日・点検30日以内) を一覧カードにも出す。回収に出る前に「そのまま工場へ」が分かるように
+    const _va = (typeof _mVehAlertForCase === 'function') ? _mVehAlertForCase(c) : null;
+    const _vaRow = _va
+      ? `<div class="m-card-row m-card-due"><span class="lbl"><svg class="m-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10h3v-3l-3.5-3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8l3.5 3.5"/></svg> 点検期日</span><span class="val"><b>${esc(_va.kind)}</b> ${_va.daysLeft<0?`<span style="color:#A32D2D;font-weight:bold">${-_va.daysLeft}日超過</span>`:`残${_va.daysLeft}日`} <span style="color:var(--muted)">(${esc(fmtDateFull(_va.date))})</span><br><b>→ 回収後そのまま工場へ</b></span></div>`
+      : '';
     const recMapsLink = _rd.address
       ? `<a class="m-map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(_rd.address)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg class="m-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg> 地図</a>`
       : '';
@@ -4482,6 +4492,7 @@ function _renderCaseCard(c, kind){
             ${detailBtn}
           </div>
           ${_mPlateHero(c)}
+          ${_vaRow}
           ${driver ? `<div class="m-card-row"><span class="lbl">運転者</span><span class="val">${driverLine}</span></div>` : ''}
           ${recToLine ? `<div class="m-card-row"><span class="lbl">回収先</span><span class="val">${recToLine}</span></div>` : ''}
           ${_rd.address ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(_rd.address)} ${recMapsLink}</span></div>` : ''}
