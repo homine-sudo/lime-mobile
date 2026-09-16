@@ -2161,7 +2161,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-09-15a';
+const APP_VERSION = '2026-09-16a';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -5630,8 +5630,8 @@ async function undoLastComplete(undoState, toastEl){
     // 訂正LINE: グループに「完了を取り消した」と知らせる (完了通知は既に飛んでいるため)
     try {
       const lbl = u.kind === 'recovery' ? '回収完了' : '配車完了';
-      const who = c.updatedBy || c.staff || '';
-      const txt = ['↩️ '+lbl+'を取り消しました', '受付No: '+(c.caseNo||''), who ? '担当: '+who : ''].filter(Boolean).join('\n');
+      // 担当=案件担当。操作者は _withOperatorLine が末尾に足す (2026-09-16)
+      const txt = ['↩️ '+lbl+'を取り消しました', '受付No: '+(c.caseNo||''), c.staff ? '担当: '+c.staff : ''].filter(Boolean).join('\n');
       await sendExternalNotify('updateCase', { line: { text: txt }, calendar: null });
     } catch(e){}
     toast('↩️ '+(u.kind==='recovery'?'回収':'配車')+'完了を取り消しました', 'success');
@@ -7764,9 +7764,20 @@ function calcAmounts(c){
 // ============================================================
 // EXTERNAL NOTIFY (GAS / LINE)
 // ============================================================
+// ★2026-09-16 ユーザー要望「操作者をすべてに追加してほしい」: LINE 本文の末尾に「操作者: 名前」を足す
+//   (PC LIMEOne.html の _withOperatorLine と同じ規則)。送信の入口1箇所で足すので個別文面の通知も漏れない。
+//   ・既に「操作者:」行がある本文 (車両の点検入庫/復帰) には足さない ・sendFax / test は対象外
+function _withOperatorLine(eventType, payload){
+  if(eventType === 'sendFax' || eventType === 'test') return payload;
+  const text = payload && payload.line && payload.line.text;
+  if(!text || /(^|\n)操作者: /.test(text)) return payload;
+  const who = (localStorage.getItem(LS_KEYS.editor) || '').trim() || 'mobile';
+  return { ...payload, line: { ...payload.line, text: text + '\n操作者: ' + who } };
+}
 async function sendExternalNotify(eventType, payload){
   const url = (DATA?.settings?.gasWebAppUrl || '').trim();
   if(!url) return { ok:false, reason:'no_url' };
+  payload = _withOperatorLine(eventType, payload);
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -7923,7 +7934,9 @@ function _buildLineMessage(c, eventType, diff){
   // ★2026-05-22: LINE通知の「担当」= その操作を保存した人 (操作者)。
   //   通知直前に _stampUpdated が c.updatedBy=現操作者(LS_KEYS.editor) をセット済み。
   //   未設定時のみ案件担当 c.staff にフォールバック。ラベルは全イベント「担当」に統一。
-  const _lineStaff = c.updatedBy || c.staff || '';
+  // ★2026-09-16: 操作者は _withOperatorLine が末尾に「操作者:」行で出すようになったので、
+  //   「担当」は PC と同じく案件担当 (c.staff) に戻す (上の 2026-05-22 の方針はここで置き換え。同じ名前の2行を防ぐ)。
+  const _lineStaff = c.staff || '';
   const staffLine = _lineStaff ? '担当: ' + _lineStaff : '';
   if(eventType === 'newCase'){
     return [

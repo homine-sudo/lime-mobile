@@ -3147,7 +3147,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-09-12a';
+const APP_VERSION = '2026-09-16a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -17522,9 +17522,24 @@ function saveSettings(){
    外部連携 (Google カレンダー + LINE 通知) via GAS Web App
    ============================================================ */
 // GAS への POST (CORS 回避のため text/plain で送信)
+// ★2026-09-16 ユーザー要望「操作者をすべてに追加してほしい」: 案件/車両の操作で飛ぶ LINE 本文の末尾に
+//   「操作者: 名前」を足す。送信の入口1箇所で足すので、個別に文面を組む通知 (車両乗り換え・受付No自動修正・
+//   完了取り消し 等) も漏れない。🚨 PC と モバイル index_mobile.html で同じ規則に保つこと。
+//   ・本文に既に「操作者:」行がある通知 (車両の点検入庫/復帰) には足さない
+//   ・sendFax (LINEなし) / test (文面はGAS側で組む) は対象外
+//   ・PC は操作者名 (共有フォルダパネルの「編集者名」) が未設定だと誰か分からないので、未設定と分かる表記にする
+function _withOperatorLine(eventType, payload){
+  if(eventType === 'sendFax' || eventType === 'test') return payload;
+  const text = payload && payload.line && payload.line.text;
+  if(!text || /(^|\n)操作者: /.test(text)) return payload;
+  const n = (getEditorName() || '').trim();
+  const who = n || ('未設定(' + getPcId() + ')');
+  return { ...payload, line: { ...payload.line, text: text + '\n操作者: ' + who } };
+}
 async function sendExternalNotify(eventType, payload){
   const url = (DATA.settings && DATA.settings.gasWebAppUrl) || '';
   if(!url) return { ok:false, reason:'no_url' };
+  payload = _withOperatorLine(eventType, payload);
   try {
     const res = await fetch(url, {
       method: 'POST',
