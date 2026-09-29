@@ -351,6 +351,24 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .mktbl th.gq span,.mktbl th.gc span{font-weight:400;font-size:11px;color:var(--muted);margin-left:8px}
 .mktbl .c{background:var(--panel-2)}
 .mktbl .c1{border-left:2px solid var(--line)}
+/* 案件の画面の上の部分とボタンのまとまり（2026-09-29） */
+.jd-head{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.jd-who{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.jd-who .cl{font-size:17px;font-weight:800;letter-spacing:.01em}
+.jd-facts{display:grid;grid-template-columns:repeat(4,minmax(92px,auto));gap:2px 28px}
+.jd-facts .k,.jd-amt .k{font-size:11px;color:var(--muted)}
+.jd-facts .v{font-weight:700;font-variant-numeric:tabular-nums}
+.jd-amt{text-align:right}
+.jd-amt .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1.2}
+.jd-act{display:flex;flex-wrap:wrap;gap:12px 0;padding:12px 4px;margin-bottom:14px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--panel-2)}
+.jd-act .grp{display:flex;flex-direction:column;gap:6px;padding:0 16px;border-left:1px solid var(--line)}
+.jd-act .grp:first-child{border-left:0}
+.jd-act .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.jd-act .btns{display:flex;gap:6px;flex-wrap:wrap}
+.lrow{margin-bottom:8px}
+button.btn.soft{background:var(--pri-soft);color:var(--pri);border:1px solid var(--pri-line);box-shadow:none}
+button.btn.soft:hover{filter:none;border-color:var(--pri)}
 .mksplit{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;margin-top:14px;align-items:start}
 .mksplit .ptot{margin-top:10px}
 .mksplit .profit{width:auto}
@@ -2090,51 +2108,116 @@ async function openJob(id){
   let items;
   try{ items = await loadItems(id); }
   catch(e){ document.getElementById('dlgB').innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
-  const cost = items.reduce((a,it)=>a+Number(it._cost_amount||0),0);
-  const hasCost = items.some(it=>it._cost_amount!=null);
+  const itemCost = items.reduce((a,it)=>a+Number(it._cost_amount||0),0);
+  const hasItemCost = items.some(it=>it._cost_amount!=null);
+  // 人工も原価に入れる（「見積を作る」の粗利と同じ数字にそろえる。9/29 までは明細の原価だけで出していた）
+  const D = j.data||{};
+  const lDays = Number(D.labor_person_days||0);
+  const lCost = D.labor_cost!=null ? Number(D.labor_cost||0) : lDays*LABOR_UNIT();
+  const lVendor = String(D.labor_vendor||'').trim();
+  const lUnit = lDays ? laborUnitOfJob(j) : 0;
+  const cost = itemCost + lCost;
+  const hasCost = hasItemCost || lCost>0;
   const ex = Number(j.total_ex_tax||0);
+  /* 案件の画面（2026-09-29 大嶺さん「並びがわかりにくい。もっとUXUIを意識して」）
+     ・上：誰の・どの状態の・いくらの案件か を一目で（金額と粗利は右に大きく）
+     ・ボタンは意味で3つに分ける ―「この案件」「書類を出す」「図面・添付」。
+       書類は仕事の順（見積書→電力申請→引渡書→請求書）に並べ、いまの状態で次に要るものを薄く目立たせる
+     ・明細は「見積を作る」と同じく 左＝見積書／右＝原価。ほとんど空だった支給区分・GL・柱の列は、品名の横の札にする */
+  const st = j.status||'';
+  const stTone = /請求済|入金済/.test(st) ? 'b' : /失注|キャンセル/.test(st) ? '' : 'q';
+  const next = st==='見積提出' ? 'quote' : /受注|手配/.test(st) ? 'power'
+             : /施工中|施工完了/.test(st) ? 'handover' : /請求済|入金済/.test(st) ? 'invoice' : '';
+  const docBtn = (key, label, attr) =>
+    `<button class="btn sm ${key===next?'soft':'ghost'}" ${attr}${key===next?' title="いまの状態で次に使う書類です"':''}>${label}</button>`;
+  const bs = (j.data&&j.data.build_start)||'', be = (j.data&&j.data.build_end)||'';
+  const build = bs ? (be && be!==bs ? `${bs.slice(5)}〜${be.slice(5)}` : bs) : '—';
+  const gpr = hasCost && ex ? (ex-cost)/ex*100 : null;
+  const gcol = gpr==null ? '' : gpr>=20 ? 'var(--ok)' : gpr>=0 ? 'var(--warn)' : 'var(--danger)';
+  const conds = it => [it.supply_type && it.supply_type!=='材工' ? it.supply_type : '',
+                       it.opt_gl_cut ? 'GLカット' : '', it.opt_pole||'']
+                      .filter(Boolean).map(c=>`<span class="pill">${esc(c)}</span>`).join('');
+  const nameCell = it => {
+    const nm = String(it.name||'').replace('(品名なし)','').trim();
+    const costOnly = !nm && !Number(it.amount) && it._cost_amount!=null;
+    return costOnly ? '<span class="muted small">（原価だけの行）</span>'
+                    : `${esc(nm||'—')} ${it.memo ? '' : conds(it)}`;   // 摘要に同じことが書いてあれば札は出さない
+  };
   document.getElementById('dlgB').innerHTML = `
-    <div class="row" style="gap:22px;margin-bottom:14px">
-      <div><div class="muted small">案件番号</div><b>${esc(j.job_no||'—')}</b></div>
-      <div><div class="muted small">顧客</div><b>${esc(j.client_name||'—')}</b></div>
-      <div><div class="muted small">状態</div><b>${esc(j.status)}</b></div>
-      <div><div class="muted small">見積日</div><b>${esc(j.quoted_at||'—')}</b></div>
-      <div><div class="muted small">請求日</div><b>${esc(j.invoiced_at||'—')}</b></div>
-      <div><div class="muted small">入金日</div><b>${esc(j.paid_at||'—')}</b></div>
-      <span class="spacer"></span>
-      <button class="btn sm" id="editJob">この案件を直す</button>
-      <button class="btn sm ghost" id="copyJob">これをもとに新しく作る</button>
-      <button class="btn sm ghost" id="gotoFiles">図面・添付</button>
-      <button class="btn sm ghost" data-print="quote">見積書</button>
-      <button class="btn sm ghost" data-print="invoice">請求書</button>
-      <button class="btn sm ghost" id="powerDoc">電力申請の必要事項</button>
-      <button class="btn sm ghost" id="handoverDoc">引渡書</button>
+    <div class="jd-head">
+      <div>
+        <div class="jd-who">
+          <span class="tag ${stTone}">${esc(st||'—')}</span>
+          <span class="cl">${esc(j.client_name||'—')}</span>
+          <span class="muted small">案件番号 ${esc(j.job_no||'—')}</span>
+        </div>
+        <div class="jd-facts">
+          <div><div class="k">見積日</div><div class="v">${esc(j.quoted_at||'—')}</div></div>
+          <div><div class="k">施工</div><div class="v">${esc(build)}</div></div>
+          <div><div class="k">請求日</div><div class="v">${esc(j.invoiced_at||'—')}</div></div>
+          <div><div class="k">入金日</div><div class="v">${esc(j.paid_at||'—')}</div></div>
+        </div>
+      </div>
+      <div class="jd-amt">
+        <div class="k">総合計（税込）</div>
+        <div class="v">¥${yen(j.total_in_tax)}</div>
+        ${gpr!=null?`<div class="small">粗利 <b style="color:${gcol}">${gpr.toFixed(1)}%</b>
+          <span class="muted">（${yen(ex-cost)}）</span></div>`:''}
+      </div>
     </div>
+
+    <div class="jd-act">
+      <div class="grp"><div class="lbl">この案件</div><div class="btns">
+        <button class="btn sm" id="editJob">直す</button>
+        <button class="btn sm ghost" id="copyJob" title="この見積の明細をそのまま使って、新しい見積を作ります（この案件は変わりません）">見積書複製</button>
+      </div></div>
+      <div class="grp"><div class="lbl">書類を出す</div><div class="btns">
+        ${docBtn('quote','見積書','data-print="quote"')}
+        ${docBtn('power','電力申請','id="powerDoc"')}
+        ${docBtn('handover','引渡書','id="handoverDoc"')}
+        ${docBtn('invoice','請求書','data-print="invoice"')}
+      </div></div>
+      <div class="grp"><div class="lbl">ファイル</div><div class="btns">
+        <button class="btn sm ghost" id="gotoFiles">図面・添付</button>
+      </div></div>
+    </div>
+
     ${siteRow(j)}
     ${openSchedule(j)}
-    ${j.amounts_locked?`<div class="note">この案件はExcelから移行したものです。
-      <b>当時の金額を正本として凍結</b>しています（明細を直しても合計は自動で変わりません）。</div>`:''}
-    <div class="scroll"><table>
-      <thead><tr><th>品名</th><th class="n">数量</th><th>単位</th><th class="n">単価</th><th class="n">金額</th>
-        <th>支給区分</th><th>GL</th><th>柱</th><th>摘要</th>${hasCost?'<th class="n">原価</th>':''}</tr></thead>
+    ${j.amounts_locked?`<div class="note" style="margin:0 0 12px">Excelから移した案件です。
+      <b>当時の金額のまま固定</b>しています（明細を直しても合計は変わりません）。</div>`:''}
+
+    <div class="scroll"><table class="mktbl tight">
+      <thead><tr><th colspan="6" class="gq">見積書<span>お客様に出る</span></th>
+        ${hasItemCost?'<th class="gc c1">原価<span>社内だけ</span></th>':''}</tr>
+        <tr><th style="min-width:240px">品名</th><th class="n">数量</th><th>単位</th><th class="n">単価</th>
+        <th class="n">金額</th><th>摘要</th>${hasItemCost?'<th class="n c c1">原価</th>':''}</tr></thead>
       <tbody>${items.map(it=>`<tr>
-        <td>${esc(it.name)}${!it.work_type_id?' <span class="pill">マスタ外</span>':''}</td>
+        <td>${nameCell(it)}</td>
         <td class="n">${it.qty??''}</td><td>${esc(it.unit||'')}</td>
-        <td class="n">${yen(it.unit_price)}</td><td class="n">${yen(it.amount)}</td>
-        <td class="small">${esc(it.supply_type||'')}</td>
-        <td class="small">${it.opt_gl_cut?'GLカット':''}</td>
-        <td class="small">${esc(it.opt_pole||'')}</td>
+        <td class="n">${Number(it.unit_price)?yen(it.unit_price):''}</td>
+        <td class="n">${Number(it.amount)?yen(it.amount):''}</td>
         <td class="small muted">${esc(it.memo||'')}</td>
-        ${hasCost?`<td class="n">${yen(it._cost_amount)}</td>`:''}</tr>`).join('')}</tbody></table></div>
-    <div class="ptot">
-      <div><span>小計</span><span>${yen(j.subtotal)}</span></div>
-      <div><span>値引き</span><span>${yen(j.discount)}</span></div>
-      <div><span>合計（税抜）</span><span>${yen(j.total_ex_tax)}</span></div>
-      <div><span>消費税（${Math.round(Number(j.tax_rate||0)*100)}%）</span><span>${yen(j.tax_amount)}</span></div>
-      <div class="g"><span>総合計</span><span>${yen(j.total_in_tax)}</span></div>
-      ${hasCost?`<div style="margin-top:10px"><span>原価計</span><span>${yen(cost)}</span></div>
-      <div><span>粗利益</span><span><b>${yen(ex-cost)}</b>（${ex?((ex-cost)/ex*100).toFixed(1):0}%）</span></div>`:''}
+        ${hasItemCost?`<td class="n c c1">${it._cost_amount!=null?yen(it._cost_amount):''}</td>`:''}</tr>`).join('')}</tbody></table></div>
+
+    <div class="mksplit">
+      <div class="mkq"><div class="ptot">
+        <div><span>小計</span><span>${yen(j.subtotal)}</span></div>
+        <div><span>値引き</span><span>${Number(j.discount||0)?'▲ '+yen(Math.abs(Number(j.discount))):'0'}</span></div>
+        <div><span>合計（税抜）</span><span>${yen(j.total_ex_tax)}</span></div>
+        <div><span>消費税（${Math.round(Number(j.tax_rate||0)*100)}%）</span><span>${yen(j.tax_amount)}</span></div>
+        <div class="g"><span>総合計</span><span>${yen(j.total_in_tax)}</span></div>
+      </div></div>
+      <div class="mkc">${hasCost?`<div class="profit">
+        <div class="phead">原価と粗利</div>
+        <div class="ptot" style="margin:0;width:auto">
+          <div><span>売上（税抜）</span><span>${yen(ex)}</span></div>
+          <div><span>原価（明細）</span><span>${yen(itemCost)}</span></div>
+          ${lDays||lCost?`<div><span>原価（人工 ${lDays}人日${lUnit?' × '+yen(lUnit):''}${lVendor?'・'+esc(lVendor):''}）</span><span>${yen(lCost)}</span></div>`:''}
+          <div class="g"><span>粗利</span><span style="color:${gcol}">${yen(ex-cost)}（${gpr.toFixed(1)}%）</span></div>
+        </div></div>`:`<div class="muted small" style="padding-top:10px">この案件には原価が入っていません。</div>`}</div>
     </div>
+
     <div class="card" style="margin-top:16px" id="filesBox">
       <h2>図面・添付</h2><div class="muted small">読み込み中…</div></div>
     <div class="small muted" style="margin-top:10px">version ${j.version}${j.source_file?' ／ 元Excel: '+esc(j.source_file):''}</div>`;
@@ -3194,7 +3277,7 @@ let mk = { job:null, client_id:'', title:'', lines:[], discount:0, tax_rate:0.10
            status:'見積提出', quoted_at:'', invoiced_at:'', delivered_at:'', due_date:'',
            payment_terms:'現金', bank_account_id:'', note:'',
            site_postal_code:'', site_address:'', site_building:'', open_date:'', paid_at:'',
-           fromInbox:null, labor_days:0, build_start:'', build_end:'' };
+           fromInbox:null, labor_days:0, labor_vendor:'', labor_unit:null, build_start:'', build_end:'' };
 const today = () => new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
 function resetMake(){
   mk = { job:null, client_id:'', title:'', lines:[], discount:0, tax_rate:0.10, saving:false, msg:'',
@@ -3202,7 +3285,7 @@ function resetMake(){
          status:'見積提出', quoted_at:today(), invoiced_at:'', delivered_at:'', due_date:'',
          payment_terms:'現金', bank_account_id:(M.banks.find(b=>b.is_default)||M.banks[0]||{}).id||'', note:'',
          site_postal_code:'', site_address:'', site_building:'', open_date:'', paid_at:'',
-         fromInbox:null, labor_days:0, build_start:'', build_end:'' };
+         fromInbox:null, labor_days:0, labor_vendor:'', labor_unit:null, build_start:'', build_end:'' };
 }
 async function editJob(id){
   const j = M.jobs.find(x=>x.id===id); if(!j) return;
@@ -3225,6 +3308,8 @@ async function editJob(id){
   mk.site_building = j.site_building||'';
   mk.open_date = j.open_date||''; mk.paid_at = j.paid_at||'';
   mk.labor_days = Number((j.data&&j.data.labor_person_days)||0);
+  mk.labor_vendor = (j.data&&j.data.labor_vendor)||'';
+  mk.labor_unit = laborUnitOfJob(j);            // その案件で使った単価のまま直す（あとでマスタを変えても過去は変わらない）
   mk.build_start = (j.data&&j.data.build_start)||''; mk.build_end = (j.data&&j.data.build_end)||'';
   mk.lines = items.map(it=>({ id:it.id, work_type_id:it.work_type_id, name:it.name,
     supply_type:it.supply_type||'材工', opt_gl_cut:!!it.opt_gl_cut, opt_pole:it.opt_pole||'',
@@ -3266,6 +3351,9 @@ async function copyJob(id){
   mk.site_building = src.site_building||'';
   mk.open_date = ''; mk.paid_at = '';   // 日付は引き継がない（別の現場になる）
   mk.labor_days = Number((src.data&&src.data.labor_person_days)||0);
+  mk.labor_vendor = (src.data&&src.data.labor_vendor)||'';   // 同じ現場の型なら、たいてい同じ外注先
+  // 単価は「いまの」登録単価を使う（複製は新しい見積なので）。登録が無ければ元の案件の単価
+  mk.labor_unit = laborRateOf(mk.labor_vendor) || laborUnitOfJob(src);
   mk.status = '見積提出';
   mk.quoted_at = today();
   mk.payment_terms = src.payment_terms||'現金';
@@ -3596,14 +3684,32 @@ function roundDown(){
 }
 /* 「この見積が通れば何％残るか」を出す欄 */
 function drawProfit(){
-  const p = profitOf(mk.lines, mk.discount, mk.labor_days);
+  const unit = mkLaborUnit();
+  const p = profitOf(mk.lines, mk.discount, mk.labor_days, unit);
   const yenc = n => yen(Math.round(n));
   const days = Number(mk.labor_days||0);
-  const laborRow = `<div class="row" style="gap:6px;align-items:center;margin-bottom:8px">
-      <span class="muted small">人工</span>
-      <input id="mkldays" style="width:64px;text-align:right" value="${days||''}"
-        placeholder="人日" title="3人4日なら 12 と入れます">
-      <span class="muted small">人日 × ${yen(LABOR_UNIT())} ＝ <b>${yenc(p.labor)}</b></span>
+  // 人工の外注先と単価（2026-09-29 大嶺さん「人工の外注先の名前を設定できるように」「外注先によって人工単価は違う」）。
+  // 外注先を選ぶと、マスタ →「人工の単価」に登録した単価が入る。単価はこの見積だけ手で直してもよい。
+  // 候補は 登録した外注先（単価つき）→ 前に入れた名前（よく使う順）→ 仕入先マスタ。候補に無い名前もそのまま打てる。
+  const vend = String(mk.labor_vendor||'').trim(), reg = laborRateOf(vend);
+  const laborRow = `<div class="lrow">
+      <div class="row" style="gap:6px;align-items:center;margin-bottom:6px">
+        <span class="muted small" style="width:30px">人工</span>
+        <input id="mklvendor" list="mklvlist" value="${esc(mk.labor_vendor||'')}" placeholder="外注先（選ぶか打つ）"
+          style="flex:1;min-width:0" title="人工を頼む外注先。選ぶと登録した単価が入ります。新しい名前もそのまま打てます">
+        <datalist id="mklvlist">${laborVendorNames().map(v=>
+          `<option value="${esc(v.name)}">${v.rate?yen(v.rate)+'円/人日':''}</option>`).join('')}</datalist>
+      </div>
+      <div class="row" style="gap:6px;align-items:center;flex-wrap:nowrap;padding-left:36px">
+        <input id="mkldays" style="width:56px;text-align:right" value="${days||''}"
+          placeholder="人日" title="3人4日なら 12 と入れます">
+        <span class="muted small">人日 ×</span>
+        <input id="mklunit" style="width:76px;text-align:right" value="${unit}" title="1人日あたりの単価（この見積だけの値）">
+        <span class="muted small">円 ＝ <b>${yenc(p.labor)}</b></span>
+      </div>
+      ${vend && !reg ? `<div class="small muted" style="margin-top:4px">「${esc(vend)}」の単価は未登録です。ここの単価はこの見積だけに使います
+        （マスタ →「人工の単価」で登録すると次から自動で入ります）。</div>`
+      : vend && reg && reg!==unit ? `<div class="small" style="margin-top:4px;color:var(--warn)">登録の単価は ${yen(reg)}円 です（この見積は ${yen(unit)}円 にしています）。</div>` : ''}
     </div>`;
 
   if(!p.known){
@@ -3639,7 +3745,7 @@ function drawProfit(){
     <div class="ptot" style="margin:0">
       <div><span>売上（税抜）</span><span>${yenc(p.sales)}</span></div>
       <div><span>原価（明細）</span><span>${yenc(p.itemCost)}</span></div>
-      <div><span>原価（人工 ${days||0}人日）</span><span>${yenc(p.labor)}</span></div>
+      <div><span>原価（人工 ${days||0}人日${mk.labor_vendor?"・"+esc(mk.labor_vendor):""}）</span><span>${yenc(p.labor)}</span></div>
       <div class="g"><span>粗利</span><span>${yenc(p.gp)}</span></div>
     </div>
     ${missing>0?`<div class="small muted" style="margin-top:8px">
@@ -3852,11 +3958,35 @@ function applyPrice(l){
    採算の目安は 要件定義 §1工程10「粗利20%超で良し」。
    ⚠ 原価が1行も入っていない見積では粗利を出さない。0円を原価として
       「粗利100%」と出すと嘘になる（移行データで実際にそうなる案件が多い）。 */
+// 外注先を入れないときの人工単価（既定）。外注先ごとの単価は settings.labor.vendors
 const LABOR_UNIT = () => Number((M.settings&&M.settings.labor&&M.settings.labor.unit_price) || 15000);
-function profitOf(lines, discount, laborDays){
+const laborVendors = () => ((M.settings&&M.settings.labor&&M.settings.labor.vendors)||[])
+  .filter(v=>v && String(v.name||'').trim());
+const laborRateOf = name => { const n=String(name||'').trim(); if(!n) return 0;
+  const v=laborVendors().find(x=>String(x.name).trim()===n); return v ? Number(v.unit_price)||0 : 0; };
+const mkLaborUnit = () => mk.labor_unit!=null && mk.labor_unit!=='' ? Number(mk.labor_unit)
+                        : (laborRateOf(mk.labor_vendor) || LABOR_UNIT());
+// 保存済みの案件で使った単価。9/29 より前の案件と移行データは単価を持っていないので、金額÷人日で戻す
+function laborUnitOfJob(j){
+  const d=(j&&j.data)||{}, days=Number(d.labor_person_days||0);
+  if(d.labor_unit_price) return Number(d.labor_unit_price);
+  if(days && d.labor_cost!=null) return Math.round(Number(d.labor_cost)/days);
+  return laborRateOf(d.labor_vendor) || LABOR_UNIT();
+}
+function laborVendorNames(){
+  const out=[], seen=new Set(), add=(name,rate)=>{ const n=String(name||'').trim();
+    if(n && !seen.has(n)){ seen.add(n); out.push({name:n, rate:rate||0}); } };
+  laborVendors().forEach(v=>add(v.name, Number(v.unit_price)||0));
+  const cnt = new Map();
+  (M.jobs||[]).forEach(j=>{ const v=String((j.data&&j.data.labor_vendor)||'').trim(); if(v) cnt.set(v,(cnt.get(v)||0)+1); });
+  [...cnt.entries()].sort((a,b)=>b[1]-a[1]).forEach(([n])=>add(n, 0));
+  (M.suppliers||[]).filter(s=>s.active!==false).forEach(s=>add(s.name, 0));
+  return out;
+}
+function profitOf(lines, discount, laborDays, laborUnit){
   const sales = lines.reduce((a,l)=>a+Number(l.amount||0),0) + Number(discount||0);
   const itemCost = lines.reduce((a,l)=>a+Number(l.cost_unit||0)*Number(l.qty||0),0);
-  const labor = Number(laborDays||0) * LABOR_UNIT();
+  const labor = Number(laborDays||0) * (laborUnit!=null ? Number(laborUnit) : LABOR_UNIT());
   const cost = itemCost + labor;
   const filled = lines.filter(l=>Number(l.cost_unit||0)>0).length;
   return { sales, itemCost, labor, cost, filled, total:lines.length,
@@ -3910,7 +4040,7 @@ function drawMake(){
   <div class="stickysum">
     <div><div class="k">総合計（税込）</div><div class="v">${yen(ex+tax)}</div></div>
     ${(()=>{
-      const p=profitOf(mk.lines, mk.discount, mk.labor_days);
+      const p=profitOf(mk.lines, mk.discount, mk.labor_days, mkLaborUnit());
       if(!p.known) return '<div><div class="k">粗利率</div><div class="rate muted">—</div></div>';
       const g=p.gpr*100, col=g>=20?'var(--ok)':(g>=0?'var(--warn)':'var(--danger)');
       const miss = p.total - p.filled;
@@ -3932,6 +4062,22 @@ function drawMake(){
     const v=numIn(e.target.value)||0;
     if(v===mk.labor_days) return;   // Tabで抜けるときの change を空振りさせる（行き先を消さない）
     mk.labor_days=v; keepFocus(drawMake);
+  };
+  // 外注先：打っている途中は描き直さない（候補の一覧を開いたまま選べるように）。
+  // 登録した外注先の名前になった時点で、その単価を入れて描き直す
+  const lv=document.getElementById('mklvendor');
+  if(lv) lv.oninput=lv.onchange=e=>{
+    const before=String(mk.labor_vendor||'').trim();
+    mk.labor_vendor=e.target.value;
+    const now=String(mk.labor_vendor).trim(), r=laborRateOf(now);
+    if(now!==before && r){ mk.labor_unit=r; keepFocus(drawMake); }
+    else if(e.type==='change' && now!==before) keepFocus(drawMake);   // 未登録の注意書きを出し入れする
+  };
+  const lu=document.getElementById('mklunit');
+  if(lu) lu.onchange=lu.oninput=e=>{
+    const v=numIn(e.target.value); if(!isFinite(v)) return;
+    if(v===mkLaborUnit()) return;
+    mk.labor_unit=v; keepFocus(drawMake);
   };
   document.getElementById('mkadd').onclick=()=>{ mk.lines.push(newLine(avail)); mk.msg=''; drawMake(); };
   document.getElementById('mkfree').onclick=()=>{ mk.lines.push({work_type_id:null,name:'',section:1,supply_type:'材工',
@@ -4124,7 +4270,9 @@ async function doSave(){
     // 「人工を消したのに前の値が残る」ことになる。
     // 施工期間は予定表の横棒のもと。空文字ではなく null で送る（jsonbに '' を残さない）
     data: { labor_person_days: Number(mk.labor_days||0),
-            labor_cost: Number(mk.labor_days||0)*LABOR_UNIT(),
+            labor_cost: Number(mk.labor_days||0)*mkLaborUnit(),
+            labor_unit_price: mkLaborUnit(),                        // その時の単価を案件に残す（マスタを変えても過去は変わらない）
+            labor_vendor: String(mk.labor_vendor||'').trim(),     // 空でも送る（消したのに前の名前が残らないように）
             build_start: mk.build_start || null,
             build_end:  (mk.build_end || mk.build_start) || null } };
   if(mk.job){ job.id = mk.job.id; job.version = mk.job.version; }
@@ -4225,6 +4373,7 @@ const MTABS = [
     ['gas', 'メール取込', ()=>null],
     ['user','利用者',     ()=>null],
     ['doc', '帳票・印鑑', ()=>null],
+    ['labor','人工の単価', ()=>null],
     ['backup','バックアップ', ()=>null],
   ]],
 ];
@@ -5297,6 +5446,8 @@ function drawMaster(){
     drawUsers(el);
   } else if(mTab==='doc'){
     drawDocSettings(el);
+  } else if(mTab==='labor'){
+    drawLaborSettings(el);
   } else if(mTab==='backup'){
     drawBackup(el);
   } else if(mTab==='sup'){
@@ -5399,6 +5550,81 @@ function drawDocSettings(el){
     if(del) del.onclick = async () => {
       if(!confirm('会社印を外します。帳票は印鑑なしで出るようになります。よろしいですか。')) return;
       try{ await saveSettings({sealCompany:''}); Object.assign(S, M.settings); draw('<div class="ok">会社印を外しました。</div>'); }
+      catch(err){ draw(`<div class="err">${esc(err.message)}</div>`); }
+    };
+  };
+  draw();
+}
+
+/* ============================================================
+   人工の単価（マスタ → 設定）
+   ------------------------------------------------------------
+   2026-09-29 大嶺さん「外注先によって人工単価は違う」。
+   seek_settings.data.labor = { unit_price: 既定の単価, vendors: [{name, unit_price}] }
+   ・見積を作る画面で外注先を選ぶと、ここの単価が入る
+   ・案件には「その時の単価」を残すので、ここを変えても過去の案件の原価は変わらない
+   ============================================================ */
+function drawLaborSettings(el){
+  const L0 = (M.settings&&M.settings.labor)||{};
+  let rows = laborVendors().map(v=>({name:String(v.name), unit_price:Number(v.unit_price)||''}));
+  let def = Number(L0.unit_price)||15000;
+  const used = () => {                         // 案件で使ったが、まだ単価を登録していない外注先
+    const have = new Set(rows.map(r=>String(r.name).trim()));
+    const cnt = new Map();
+    (M.jobs||[]).forEach(j=>{ const v=String((j.data&&j.data.labor_vendor)||'').trim(); if(v&&!have.has(v)) cnt.set(v,(cnt.get(v)||0)+1); });
+    return [...cnt.entries()].sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+  };
+  const draw = (msg='') => {
+    const miss = used();
+    el.innerHTML = `
+    <div class="hint"><b>人工（外注）の1人日あたりの単価です。</b><br>
+      <span class="small">見積を作る画面で外注先を選ぶと、ここの単価が入ります。
+      変えても、保存済みの案件の原価は変わりません（案件にはその時の単価が残ります）。</span></div>
+    ${msg}
+    <div class="card" style="margin-top:12px">
+      <h2>外注先ごとの単価</h2>
+      <div class="scroll"><table class="tight" style="max-width:560px">
+        <thead><tr><th>外注先</th><th class="n">単価（円／人日）</th><th></th></tr></thead>
+        <tbody>${rows.map((r,i)=>`<tr>
+          <td><input data-ln="${i}" value="${esc(r.name)}" placeholder="外注先の名前" style="width:220px"></td>
+          <td class="n"><input data-lu="${i}" value="${esc(r.unit_price)}" placeholder="15000" style="width:110px;text-align:right"></td>
+          <td><button class="btn ghost sm" data-ld="${i}" title="この行を消す">×</button></td></tr>`).join('')
+          || '<tr><td colspan="3" class="muted small">まだ登録がありません。</td></tr>'}</tbody></table></div>
+      <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap">
+        <button class="btn ghost sm" id="lAdd">＋ 外注先を足す</button>
+        ${miss.length?`<span class="muted small" style="margin-left:8px">案件で使った未登録の外注先：</span>
+          ${miss.slice(0,8).map(n=>`<button class="btn ghost sm" data-lq="${esc(n)}">＋ ${esc(n)}</button>`).join('')}`:''}
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>既定の単価</h2>
+      <label class="f">外注先を入れないときの単価（円／人日）
+        <input id="lDef" value="${def}" style="width:110px;text-align:right"></label>
+    </div>
+    <div class="row" style="margin-top:14px"><button class="btn" id="lSave">保存する</button></div>`;
+    const sync = () => {                        // 描き直す前に、打った内容を拾っておく
+      el.querySelectorAll('[data-ln]').forEach(x=>rows[+x.dataset.ln].name=x.value);
+      el.querySelectorAll('[data-lu]').forEach(x=>rows[+x.dataset.lu].unit_price=x.value);
+      def = document.getElementById('lDef').value;
+    };
+    document.getElementById('lAdd').onclick=()=>{ sync(); rows.push({name:'',unit_price:''}); draw(); };
+    el.querySelectorAll('[data-lq]').forEach(b=>b.onclick=()=>{ sync(); rows.push({name:b.dataset.lq, unit_price:''}); draw(); });
+    el.querySelectorAll('[data-ld]').forEach(b=>b.onclick=()=>{ sync(); rows.splice(+b.dataset.ld,1); draw(); });
+    document.getElementById('lSave').onclick = async () => {
+      sync();
+      const clean=[], seen=new Set();
+      for(const r of rows){
+        const n=String(r.name||'').trim(); if(!n) continue;
+        const u=numIn(r.unit_price);
+        if(!(u>0)) return draw(`<div class="err">「${esc(n)}」の単価を入れてください（1人日あたりの円）</div>`);
+        if(seen.has(n)) return draw(`<div class="err">「${esc(n)}」が2回入っています</div>`);
+        seen.add(n); clean.push({name:n, unit_price:u});
+      }
+      const d=numIn(def);
+      if(!(d>0)) return draw('<div class="err">既定の単価を入れてください</div>');
+      try{ await saveSettings({ labor: Object.assign({}, L0, {unit_price:d, vendors:clean}) });
+           rows = clean.map(x=>Object.assign({},x)); def=d;
+           draw('<div class="ok">保存しました。次に作る見積から使われます。</div>'); }
       catch(err){ draw(`<div class="err">${esc(err.message)}</div>`); }
     };
   };
