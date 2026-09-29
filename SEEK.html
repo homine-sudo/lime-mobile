@@ -367,6 +367,18 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .jd-act .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
 .jd-act .btns{display:flex;gap:6px;flex-wrap:wrap}
 .lrow{margin-bottom:8px}
+/* 工種を選ぶ（打つと絞り込み） */
+.wtp-in{width:100%;min-width:220px;box-sizing:border-box}
+.wtp-in.empty{border-color:var(--pri-line);background:var(--pri-soft)}
+.wtpop{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);
+  box-shadow:var(--sh-3);max-height:380px;overflow:auto;padding:4px 0;font-size:13px}
+.wtpop .h{font-size:11px;color:var(--muted);padding:8px 12px 3px;font-weight:700;letter-spacing:.03em}
+.wtpop .o{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:6px 12px;cursor:pointer}
+.wtpop .o b{font-weight:600}
+.wtpop .o .s{color:var(--muted);font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.wtpop .o.on,.wtpop .o:hover{background:var(--pri-soft)}
+.wtpop .free{border-top:1px solid var(--line);color:var(--pri);font-weight:600;margin-top:4px}
+.wtpop .none{padding:8px 12px;color:var(--muted)}
 /* 見積をつくる：入力欄を仕事の順に4つのまとまりに */
 .mkf{display:flex;flex-direction:column;gap:12px}
 .mkf-s{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px 14px;background:var(--panel)}
@@ -2736,8 +2748,128 @@ const XF_CSS = `
 document.head.insertAdjacentHTML('beforeend', '<style id="xfcss">'+XF_CSS+'</style>');
 /* ==== XFORM END ==== */
 
+/* ==== AVANT START ====
+   帳票の「前衛」様式（2026-09-29 大嶺さん「見積書と請求書の様式を前衛的にして。SEEKのロゴとか入れちゃう？」
+   →「見積も前衛的になってないよ」）。9/29 に見せた案B（左に赤い帯・大きな合計・黒い見出し）を本番にしたもの。
+   ・色はロゴの2色（赤 #AB1A22・墨 #454140）。数字は Bahnschrift（Windows標準）
+   ・明細は使う行だけ（Excel様式の26行の空行は出さない）。長ければ自然に2枚目へ流れる
+   ・会社印と担当者印（村山）は Excel様式と同じものを使う。会社印は設定（DB）から読む
+   ・Excel様式もそのまま残してある（プレビューで切り替え／マスタ→帳票・印鑑で既定を選ぶ） */
+function xformAvantHtml(d){
+  const isQ = d.kind==='quote', S = d.S||{};
+  const co = S.company || 'ＳＥＥＫ電総株式会社';
+  let no = 0;
+  const row = (it, exp) => {
+    const head = !Number(it.amount) && !Number(it.unit_price) && !Number(it.qty);   // 見出し・注記の行
+    if(head) return String(it.name||'').trim() ? `<tr class="hd"><td></td><td colspan="5">${esc(it.name)}</td></tr>` : '';
+    return `<tr${exp?' class="ex"':''}><td class="no">${exp?'＋':String(++no).padStart(2,'0')}</td>
+      <td>${esc(it.name||'')}${it.memo?`<div class="memo">${esc(it.memo)}</div>`:''}</td>
+      <td class="c">${it.qty!=null&&it.qty!==''?xfNum(it.qty):''}</td><td class="c">${esc(it.unit||'')}</td>
+      <td class="n">${Number(it.unit_price)?xfNum(it.unit_price):''}</td>
+      <td class="n">${Number(it.amount)||exp?xfNum(it.amount||0):''}</td></tr>`;
+  };
+  const tags = isQ
+    ? ['納入　御社ご指定場所','納期　発注日より30日以内','有効期限　一ヶ月','現金及びリース']
+    : [d.delivered ? '納期　'+xfReiwa(d.delivered) : '', d.payTerms ? 'お支払方法　'+d.payTerms : '',
+       d.due ? 'お支払期限　'+xfReiwa(d.due) : ''].filter(Boolean);
+  const b = d.bank||{};
+  const sumRows = [
+    ['工事 小計', xfNum(d.sub1)],
+    d.expense.length ? ['諸経費', xfNum(d.sub2)] : null,
+    d.discount ? ['お値引き', '▲ '+xfNum(Math.abs(d.discount))] : null,
+    ['合計（税抜）', xfNum(d.ex)],
+    [`消費税 ${Math.round((d.taxRate||0)*100)}%`, xfNum(d.tax)],
+  ].filter(Boolean);
+  const notes = isQ
+    ? ['上記の通りお見積り申し上げます。何卒ご用命賜りますよう、お願い申し上げます。',
+       '※ 上記以外の作業、部材等につきましては、別途御見積りとさせていただきます。',
+       '※ 見積有効期限後のご注文の節は、一応ご照会願います。']
+    : ['上記の通りご請求申し上げます。'];
+  return `<div class="apage">
+  <div class="band"><div class="mk"><img src="seek_logo.png" alt=""></div>
+    <div class="vs">SEEK DENSO</div><div class="vt">${isQ?'QUOTATION':'INVOICE'}</div></div>
+  <div class="main">
+    <div class="hd1"><h1>${isQ?'御見積書':'請求書'}</h1>
+      <div class="meta">${d.no?`No. ${esc(d.no)}<br>`:''}${isQ?'':'発行日 '}${esc(xfReiwa(d.date))}</div></div>
+    <div class="bar"></div>
+    <div class="grid">
+      <div><div class="cl">${esc(d.client)}<span>御中</span></div>
+        <div class="sub">${isQ?'':'件名　'}${esc(d.title||'')}</div>
+        ${!isQ && d.site ? `<div class="sub small">納入先　${esc(d.site)}</div>`:''}
+        <div class="tags">${tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
+      <div class="tot"><i>${isQ?'TOTAL AMOUNT':'AMOUNT DUE'}</i><b>¥${xfNum(d.total)}</b>
+        <small>${isQ?'お見積金額':'ご請求金額'}（税込・うち消費税 ¥${xfNum(d.tax)}）</small></div>
+    </div>
+    <table><thead><tr><th></th><th style="width:52%">品名</th><th class="c">数量</th><th class="c">単位</th>
+      <th class="n">単価</th><th class="n">金額</th></tr></thead>
+      <tbody>${d.work.map(it=>row(it,false)).join('')}${d.expense.map(it=>row(it,true)).join('')}</tbody></table>
+    <div class="low">
+      <div class="anote">${notes.map(esc).join('<br>')}
+        ${!isQ && b.bank_name ? `<div class="bank"><i>お振込先</i>
+          ${esc(b.bank_name)} ${esc(b.branch_name||'')}　${esc(b.account_type||'')} ${esc(b.account_no||'')}<br>
+          口座名義　${esc(b.holder||'')}</div>`:''}</div>
+      <div class="sum">${sumRows.map(([k,v])=>`<div><span>${k}</span><span>${v}</span></div>`).join('')}
+        <div class="t"><span>総合計</span><span>¥${xfNum(d.total)}</span></div></div>
+    </div>
+  </div>
+  <div class="from"><div class="co"><b>${esc(co)}</b><br>${esc(S.address||'')}<br>
+      TEL ${esc(S.tel||'')}　FAX ${esc(S.fax||'')}${S.regNo?`　登録番号 ${esc(S.regNo)}`:''}
+      ${d.seal?`<img class="seal" src="${esc(d.seal)}" alt="">`:''}</div>
+    <div class="tan">担当 ${d.stamp?`<div class="stamp"><span>${esc(d.stamp)}</span></div>`:''}</div></div>
+</div>`;
+}
+const AV_CSS = `
+.apage{position:relative;width:210mm;min-height:297mm;box-sizing:border-box;background:#fff;color:#1d1b1a;
+  padding:14mm 14mm 12mm 34mm;display:flex;flex-direction:column;
+  font-family:'Yu Gothic','YuGothic','游ゴシック','Meiryo',sans-serif;font-size:9pt;line-height:1.5;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.apage .band{position:absolute;left:0;top:0;bottom:0;width:24mm;background:#AB1A22;overflow:hidden}
+.apage .band .mk{position:absolute;left:4mm;top:12mm;width:16mm;height:16mm;background:#fff;border-radius:2mm;display:flex;align-items:center;justify-content:center}
+.apage .band .mk img{width:14mm}
+.apage .band .vs{position:absolute;left:9mm;top:40mm;writing-mode:vertical-rl;font:600 7pt 'Bahnschrift','Segoe UI',sans-serif;letter-spacing:.5em;color:#fff}
+.apage .band .vt{position:absolute;left:3mm;bottom:14mm;writing-mode:vertical-rl;transform:rotate(180deg);font:700 38pt 'Bahnschrift','Segoe UI',sans-serif;letter-spacing:.12em;color:rgba(255,255,255,.18)}
+.apage .hd1{display:flex;justify-content:space-between;align-items:flex-end}
+.apage h1{margin:0;font-size:30pt;font-weight:300;letter-spacing:.2em;line-height:1}
+.apage .meta{text-align:right;font:8.5pt 'Bahnschrift','Segoe UI',sans-serif;color:#777;line-height:1.7}
+.apage .bar{height:1.2mm;background:#1d1b1a;margin:5mm 0 0;width:22mm}
+.apage .grid{display:grid;grid-template-columns:1fr 66mm;gap:8mm;margin-top:8mm}
+.apage .cl{font-size:15pt;font-weight:700;line-height:1.3}.apage .cl span{font-size:10pt;font-weight:400;margin-left:3mm;color:#777}
+.apage .sub{margin-top:2.5mm;font-size:9.5pt}.apage .sub.small{font-size:8.5pt;color:#555;margin-top:1mm}
+.apage .tags{margin-top:4mm;display:flex;flex-wrap:wrap;gap:1.5mm}
+.apage .tags span{font-size:7.5pt;border:.3mm solid #1d1b1a;padding:.8mm 2.2mm;border-radius:10mm}
+.apage .tot{background:#1d1b1a;color:#fff;padding:5mm 5mm 4mm}
+.apage .tot i{font:600 7pt 'Bahnschrift','Segoe UI',sans-serif;letter-spacing:.35em;color:#ff5a5f;font-style:normal}
+.apage .tot b{display:block;font:600 25pt 'Bahnschrift','Segoe UI',sans-serif;margin-top:1mm;letter-spacing:-.01em}
+.apage .tot small{font-size:7pt;color:#bbb}
+.apage table{width:100%;border-collapse:collapse;margin-top:8mm;font-size:9pt}
+.apage th{background:#1d1b1a;color:#fff;font-size:7.5pt;font-weight:600;letter-spacing:.15em;padding:2mm;text-align:left;position:static}
+.apage td{padding:2.2mm 2mm;border-bottom:.25mm solid #e4e1df;color:#1d1b1a;background:transparent}
+.apage tr{page-break-inside:avoid}
+.apage td.no{font:600 8pt 'Bahnschrift','Segoe UI',sans-serif;color:#AB1A22;width:7mm}
+.apage .n{text-align:right;font-family:'Bahnschrift','Segoe UI',sans-serif;white-space:nowrap}.apage .c{text-align:center}
+.apage tr.ex td{background:#f6f3f1}
+.apage tr.hd td{font-weight:700;padding-top:3.5mm;border-bottom:.25mm solid #1d1b1a}
+.apage .memo{font-size:7.5pt;color:#777}
+.apage .low{display:grid;grid-template-columns:1fr 70mm;gap:8mm;margin-top:6mm;page-break-inside:avoid}
+.apage .anote{font-size:7.8pt;color:#555;line-height:1.8}
+.apage .bank{margin-top:4mm;border-left:1mm solid #AB1A22;padding:1.5mm 0 1.5mm 3mm;color:#1d1b1a;font-size:8.5pt}
+.apage .bank i{display:block;font-style:normal;font-size:7pt;color:#AB1A22;font-weight:700;letter-spacing:.2em}
+.apage .sum div{display:flex;justify-content:space-between;padding:1.4mm 0;border-bottom:.25mm solid #e4e1df}
+.apage .sum div span:last-child{font-family:'Bahnschrift','Segoe UI',sans-serif}
+.apage .sum .t{border:0;background:#AB1A22;color:#fff;padding:2.5mm 3mm;margin-top:2mm;font-weight:700;font-size:11pt}
+.apage .from{margin-top:auto;padding-top:4mm;border-top:.3mm solid #1d1b1a;display:flex;justify-content:space-between;align-items:flex-end;page-break-inside:avoid}
+.apage .from .co{font-size:8pt;line-height:1.7;position:relative;padding-right:22mm}.apage .from .co b{font-size:12pt;letter-spacing:.06em}
+.apage .from .seal{position:absolute;right:0;top:-4mm;width:20mm;height:19mm;mix-blend-mode:multiply;object-fit:fill}
+.apage .from .tan{display:flex;gap:2mm;align-items:center;font-size:7pt;color:#777}
+.apage .from .stamp{width:11mm;height:11mm;box-sizing:border-box;border:1.2pt solid #f00;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#f00;font-family:'HGP行書体','HGPGyoshotai','HG行書体',serif;font-size:10pt;line-height:1}
+.apage .from .stamp span{writing-mode:vertical-rl;text-orientation:upright}
+@media print{#printArea .apage{page:xform}}`;
+document.head.insertAdjacentHTML('beforeend', '<style id="avcss">'+AV_CSS+'</style>');
+/* ==== AVANT END ==== */
+
 /* 見積書・請求書のプレビュー → 印刷／PDF。
    opt.draft … 「見積を作る」の途中（まだ保存していない）から開いたとき。 */
+let docStyleNow = null;    // プレビューで切り替えた様式（このあと開く帳票にも使う）
 function printDoc(j, items, kind, opt={}){
   const isQ = kind==='quote';
   const bank = M.banks.find(b=>b.id===j.bank_account_id) || M.banks.find(b=>b.is_default) || M.banks[0] || {};
@@ -2760,8 +2892,10 @@ function printDoc(j, items, kind, opt={}){
   const gap = (sub1+sub2) - (ex - Number(j.discount||0));
   const date = isQ ? (j.quoted_at || today()) : (j.invoiced_at || today());
   const seal = S.sealCompany || '';
-  const html = xformHtml({
-    kind, date, client, title: j.title||'',
+  // 様式：前衛（既定）／Excelと同じ。プレビューの切り替え → 設定の既定 → 前衛 の順
+  const style = opt.style || docStyleNow || (M.settings||{}).docStyle || 'avant';
+  const html = (style==='excel' ? xformHtml : xformAvantHtml)({
+    kind, date, client, title: j.title||'', no: j.job_no||'',
     total: Number(j.total_in_tax||0), sub1, sub2, discount: Number(j.discount||0), ex,
     taxRate: Number(j.tax_rate||0), tax: Number(j.tax_amount||0),
     work, expense,
@@ -2773,13 +2907,16 @@ function printDoc(j, items, kind, opt={}){
   if(!seal) warn.push('会社印がまだ登録されていないので、印鑑なしで出ています。マスタ →「帳票・印鑑」で登録できます。');
   if(!isQ && !j.invoiced_at) warn.push('請求日が入っていないので、発行日は今日の日付で出しています。');
   if(!isQ && !S.regNo) warn.push('登録番号（インボイス）が未登録なので出していません。マスタ →「帳票・印鑑」で登録できます。');
-  if(work.length > XF[kind].work[1]) warn.push(`明細が${work.length}行あり、1枚（${XF[kind].work[1]}行）に入りきらないので2枚目に続きます。`);
+  if(style==='excel' && work.length > XF[kind].work[1]) warn.push(`明細が${work.length}行あり、1枚（${XF[kind].work[1]}行）に入りきらないので2枚目に続きます。`);
   if(gap) warn.push(`明細の合計（${yen(sub1+sub2)}）と、この案件に記録されている合計（${yen(ex-Number(j.discount||0))}）が
     ${yen(Math.abs(gap))} ちがいます。Excelから移行した当時の金額をそのまま出しています。`);
   document.getElementById('dlgT').textContent = isQ?'見積書プレビュー':'請求書プレビュー';
   document.getElementById('dlgB').innerHTML = `
     ${warn.length?`<div class="note" style="margin-top:0">${warn.join('<br>')}</div>`:''}
     <div class="row" style="margin:0 0 12px">
+      <div class="seg" title="マスタ → 帳票・印鑑 で、いつもの様式を決められます">
+        <button data-dstyle="avant" class="${style!=='excel'?'on':''}">前衛</button>
+        <button data-dstyle="excel" class="${style==='excel'?'on':''}">Excelと同じ</button></div>
       <button class="btn" id="doPrint">印刷 / PDFで保存</button>
       <span class="muted small">印刷画面で「PDFに保存」を選ぶとPDFになります（用紙 A4・余白なし）</span>
     </div>
@@ -2788,6 +2925,8 @@ function printDoc(j, items, kind, opt={}){
     <div class="note" style="margin-top:10px">取引先に送る前に、必ずこの内容を目で確認してください
       （標準手順書 G2「外部送信は人間の最終確認を通す」）。</div>`;
   if(!dlg.open) dlg.showModal();
+  document.querySelectorAll('#dlgB [data-dstyle]').forEach(b=>b.onclick=()=>{
+    docStyleNow=b.dataset.dstyle; printDoc(j, items, kind, Object.assign({}, opt, {style:docStyleNow})); });
   const pb=document.getElementById('doPrint');
   if(pb) pb.onclick=()=>printPaper(
     [isQ?'見積書':'請求書', j.job_no, (client||'').replace(/[\\/:*?"<>|]/g,''),
@@ -4309,7 +4448,11 @@ function drawMake(){
     if(v===mkLaborUnit()) return;
     mk.labor_unit=v; keepFocus(drawMake);
   };
-  document.getElementById('mkadd').onclick=()=>{ mk.lines.push(newLine(avail)); mk.msg=''; drawMake(); };
+  document.getElementById('mkadd').onclick=()=>{
+    mk.lines.push(newLine()); mk.msg=''; drawMake();
+    const ins=document.querySelectorAll('#mkbody .wtp-in'); if(ins.length) ins[ins.length-1].focus();
+  };
+  bindWtPicker(body);
   document.getElementById('mkfree').onclick=()=>{ mk.lines.push({work_type_id:null,name:'',section:1,supply_type:'材工',
     opt_gl_cut:false,opt_pole:'',qty:1,unit:'式',unit_price:0,amount:0,cost_unit:null,cost_amount:null}); drawMake(); };
   document.getElementById('mkwelfare').onclick=addWelfare;
@@ -4356,7 +4499,7 @@ function drawMake(){
    保存はしない。金額は保存のときと同じ計算（明細合計＋値引き、税は四捨五入）。 */
 function previewMakeQuote(){
   if(!mk.client_id){ alert('先に顧客を選んでください'); return; }
-  if(!mk.lines.length){ alert('明細が1行もありません'); return; }
+  if(!mk.lines.filter(l=>!(l._pick && !l.work_type_id)).length){ alert('明細が1行もありません'); return; }
   const c = clientMap.get(mk.client_id) || {};
   const sub = mk.lines.reduce((a,l)=>a+Number(l.amount||0),0);
   const ex = sub + Number(mk.discount||0), tax = Math.round(ex*Number(mk.tax_rate||0));
@@ -4366,7 +4509,7 @@ function previewMakeQuote(){
     discount: Number(mk.discount||0), tax_rate: mk.tax_rate,
     total_ex_tax: ex, tax_amount: tax, total_in_tax: ex+tax,
     bank_account_id: mk.bank_account_id || null };
-  printDoc(j, mk.lines.map(l=>Object.assign({}, l)), 'quote', {draft:true});
+  printDoc(j, mk.lines.filter(l=>!(l._pick && !l.work_type_id)).map(l=>Object.assign({}, l)), 'quote', {draft:true});
 }
 /* 画面を作り直すと、いま打っている入力欄が「別の要素」に差し替わる。
    ブラウザはフォーカスを body に落とすので、2文字目からどこにも入らなくなる。
@@ -4416,20 +4559,106 @@ function keepFocus(redraw){
     try{ if(s != null) n.setSelectionRange(s, e); }catch(_){}
   }
 }
-function newLine(avail){
-  const w = avail[0];
-  const l = { work_type_id: w?w.id:null, name: w?w.name:'', section: (w&&w.category==='経費')?2:1,
-              supply_type:'材工', opt_gl_cut:false, opt_pole:'',
-              qty:1, unit: w?(w.default_unit||'台'):'台', unit_price:0, amount:0, cost_unit:null, cost_amount:null };
-  applyPrice(l); l.amount=l.qty*l.unit_price; return l;
+/* 「明細を追加」は、工種を選んでいない空の行を足す（2026-09-29 大嶺さん「明細を追加を押すと選択されて出てくる」）。
+   前は一覧の先頭（2400×1200片面 支給）が入った行が出ていた。 */
+function newLine(){
+  return { work_type_id:null, _pick:true, name:'', section:1,
+           supply_type:'材工', opt_gl_cut:false, opt_pole:'',
+           qty:1, unit:'台', unit_price:0, amount:0, cost_unit:null, cost_amount:null };
 }
+/* 工種を選ぶ（2026-09-29 大嶺さん「ドロップリストもリストが多すぎて選びにくい」）
+   ・空のときは「この顧客の単価表で よく使う順」に15個。打つと絞り込む
+   ・打ったときは、この顧客の単価表に無い工種も「ほかの工種」として出す
+   ・↑↓で選んで Enter、Esc でやめる。見つからなければ、打った文字で「自由入力の行」にできる
+   ・選んだら数量の欄へ進む */
+const wtNorm = s => String(s||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+function wtCandidates(q){
+  const nq = wtNorm(q), mine = new Map();
+  if(priceIdx) for(const [k,list] of priceIdx){
+    if(!k.startsWith(mk.client_id+'/')) continue;
+    mine.set(k.slice(k.indexOf('/')+1), list.slice().sort((a,b)=>(b.sample_count||0)-(a.sample_count||0))[0]);
+  }
+  const hit = w => !nq || wtNorm(w.name).includes(nq);
+  const a = [...mine.entries()].map(([wid,p])=>({w:wtMap.get(wid), p})).filter(x=>x.w && hit(x.w))
+             .sort((x,y)=>(y.p.sample_count||0)-(x.p.sample_count||0));
+  const b = nq ? (M.wts||[]).filter(w=>w.active!==false && !mine.has(w.id) && hit(w))
+                   .sort((x,y)=>(y.sample_count||0)-(x.sample_count||0)) : [];
+  return { a: a.slice(0, nq?30:15), aAll: a.length, b: b.slice(0,20) };
+}
+let wtp = null;                                  // いま開いている候補 {i, sel, items, inp}
+function wtpPop(){ let el=document.getElementById('wtpop');
+  if(!el){ el=document.createElement('div'); el.id='wtpop'; el.className='wtpop'; document.body.appendChild(el); } return el; }
+function closeWtp(){ wtp=null; const el=document.getElementById('wtpop'); if(el) el.hidden=true; }
+function openWtp(inp){
+  const i=+inp.dataset.wtp, q=inp.value.trim(), c=wtCandidates(q);
+  const items=[...c.a.map(x=>({id:x.w.id, name:x.w.name, g:'a',
+                  sub: yen(x.p.unit_price)+(x.p.unit?'／'+x.p.unit:''), n:x.p.sample_count||0})),
+               ...c.b.map(w=>({id:w.id, name:w.name, g:'b', sub:'この顧客の単価表に無い', n:0}))];
+  if(q) items.push({free:true, name:q});
+  wtp = {i, items, inp, sel: items.length ? 0 : -1};
+  drawWtp();
+}
+function drawWtp(){
+  if(!wtp) return;
+  const el=wtpPop(), r=wtp.inp.getBoundingClientRect(), it=wtp.items;
+  let h='', g='';
+  it.forEach((x,k)=>{
+    if(!x.free && x.g!==g){ g=x.g; h+=`<div class="h">${g==='a'?'この顧客の単価表（よく使う順）':'ほかの工種'}</div>`; }
+    h+= x.free
+      ? `<div class="o free${k===wtp.sel?' on':''}" data-k="${k}">「${esc(x.name)}」を自由入力の行にする</div>`
+      : `<div class="o${k===wtp.sel?' on':''}" data-k="${k}"><b>${esc(x.name)}</b>
+           <span class="s">${esc(x.sub)}${x.n?`・実績${x.n}件`:''}</span></div>`;
+  });
+  if(!it.length) h='<div class="none">この顧客の単価表はまだありません。工種名を打つと全部から探せます</div>';
+  else if(!wtp.inp.value.trim()) h+='<div class="none small">打つと絞り込めます（単価表に無い工種も探せます）</div>';
+  el.innerHTML=h; el.hidden=false;
+  el.style.left=Math.round(r.left)+'px'; el.style.top=Math.round(r.bottom+2)+'px';
+  el.style.width=Math.max(r.width, 420)+'px';
+  const on=el.querySelector('.o.on'); if(on) on.scrollIntoView({block:'nearest'});
+  el.querySelectorAll('[data-k]').forEach(o=>o.onmousedown=e=>{ e.preventDefault(); pickWt(wtp.items[+o.dataset.k]); });
+}
+function pickWt(it){
+  if(!wtp || !it) return;
+  const i=wtp.i, l=mk.lines[i]; closeWtp(); if(!l) return;
+  if(it.free){ l.work_type_id=null; l._pick=false; l.name=it.name; }
+  else {
+    const w=wtMap.get(it.id); if(!w) return;
+    l.work_type_id=w.id; l.name=w.name; l.unit=w.default_unit||l.unit; l.section=w.category==='経費'?2:1; l._pick=false;
+    applyPrice(l);
+  }
+  l.amount=Number(l.qty||0)*Number(l.unit_price||0);
+  l.cost_amount=(l.cost_unit!=null)?Number(l.qty||0)*Number(l.cost_unit||0):null;
+  mk.msg=''; drawMake();
+  const q=document.querySelector(`[data-li="${i}"][data-f="qty"]`); if(q){ q.focus(); q.select(); }
+}
+function bindWtPicker(root){
+  root.querySelectorAll('.wtp-in').forEach(inp=>{
+    inp.onfocus=()=>{ inp.select(); openWtp(inp); };
+    inp.oninput=()=>openWtp(inp);
+    inp.onkeydown=e=>{
+      if(!wtp || wtp.inp!==inp) return;
+      const n=wtp.items.length;
+      if(e.key==='ArrowDown'){ e.preventDefault(); if(n){ wtp.sel=(wtp.sel+1)%n; drawWtp(); } }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); if(n){ wtp.sel=(wtp.sel-1+n)%n; drawWtp(); } }
+      else if(e.key==='Enter'){ e.preventDefault(); if(wtp.sel>=0) pickWt(wtp.items[wtp.sel]); }
+      else if(e.key==='Escape'){ e.preventDefault(); closeWtp(); inp.blur(); }
+    };
+    // 選ばずに離れたら、元の工種名に戻す（打ちかけの文字を残さない）
+    inp.onblur=()=>setTimeout(()=>{ if(wtp && wtp.inp===inp) closeWtp();
+      const l=mk.lines[+inp.dataset.wtp]; if(l && document.body.contains(inp)) inp.value = l.work_type_id ? l.name : ''; }, 120);
+  });
+}
+window.addEventListener('scroll', e=>{ if(wtp && !(e.target && e.target.id==='wtpop')) closeWtp(); }, true);
+window.addEventListener('resize', ()=>closeWtp());
 function lineRow(l,i,avail){
   const opts=avail.map(w=>`<option value="${esc(w.id)}" ${l.work_type_id===w.id?'selected':''}>${esc(w.name)}</option>`).join('');
   return `<tr class="itemrow">
-    <td>${l.work_type_id
-      ? `<select data-li="${i}" data-f="work_type_id">${opts}</select>`
+    <td>${(l.work_type_id || l._pick)
+      ? `<input class="wtp-in${l._pick&&!l.work_type_id?' empty':''}" data-wtp="${i}" value="${esc(l.work_type_id?l.name:'')}"
+           placeholder="工種を選ぶ（打つと絞り込み）" autocomplete="off" spellcheck="false" title="クリックすると、この顧客でよく使う工種が出ます。打つと絞り込めます">`
       : `<input data-li="${i}" data-f="name" value="${esc(l.name)}" placeholder="品名を入力">`}
-      ${!l.work_type_id ? '<span class="pill">自由入力</span>'
+      ${l._pick && !l.work_type_id ? ''
+        : !l.work_type_id ? '<span class="pill">自由入力</span>'
         : l._sample===undefined ? ''                       /* 保存済みの行。単価は入っているのでバッジを出さない */
         : l._sample ? `<span class="pill">実績 ${l._sample}件${l._exact?'':' / 近い条件'}</span>`
         : '<span class="pill">実績なし</span>'}</td>
@@ -4475,6 +4704,7 @@ async function doSave(){
   if(mk.saving) return;
   const c = clientMap.get(mk.client_id);
   if(!c){ mk.msg='<div class="err">顧客を選んでください</div>'; return drawMake(); }
+  mk.lines = mk.lines.filter(l=>!(l._pick && !l.work_type_id));   // 工種を選ばないまま残った空の行は保存しない
   if(!mk.lines.length){ mk.msg='<div class="err">明細が1行もありません</div>'; return drawMake(); }
   // 二重見積を「後から気づく」のではなく、保存する前に止める
   const dup = findDupes(mk.client_id, (document.getElementById('mkt')||{}).value || mk.title);
@@ -5822,6 +6052,13 @@ function drawDocSettings(el){
       </div>
     </div>
     <div class="card" style="margin-top:12px">
+      <h2>帳票の様式（いつもはこれで出す）</h2>
+      <div class="seg" id="dsStyle">
+        <button data-v="avant" class="${(S.docStyle||'avant')!=='excel'?'on':''}">前衛（SEEKのロゴ・赤い帯）</button>
+        <button data-v="excel" class="${S.docStyle==='excel'?'on':''}">Excelと同じ</button></div>
+      <div class="small muted" style="margin-top:6px">プレビューの画面でも、その場で切り替えられます。</div>
+    </div>
+    <div class="card" style="margin-top:12px">
       <h2>文字</h2>
       <label class="f" style="display:block;margin-bottom:10px">登録番号（インボイス）
         <input id="dsReg" value="${esc(S.regNo||'')}" placeholder="T4360001026723" style="width:260px"></label>
@@ -5837,9 +6074,12 @@ function drawDocSettings(el){
       try{ pending = await trimSealImage(f); draw(); }
       catch(err){ draw(`<div class="err">${esc(err.message)}</div>`); }
     };
+    el.querySelectorAll('#dsStyle [data-v]').forEach(b=>b.onclick=()=>{
+      el.querySelectorAll('#dsStyle [data-v]').forEach(x=>x.classList.toggle('on', x===b)); });
     document.getElementById('dsSave').onclick = async () => {
       const patch = { regNo: document.getElementById('dsReg').value.trim(),
-                      stampName: document.getElementById('dsStamp').value.trim() || '村山' };
+                      stampName: document.getElementById('dsStamp').value.trim() || '村山',
+                      docStyle: (el.querySelector('#dsStyle .on')||{}).dataset?.v || 'avant' };
       if(pending) patch.sealCompany = pending;
       try{ await saveSettings(patch); pending=null; Object.assign(S, M.settings);
            draw('<div class="ok">保存しました。次に開く見積書・請求書から使われます。</div>'); }
