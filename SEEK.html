@@ -367,6 +367,15 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .jd-act .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
 .jd-act .btns{display:flex;gap:6px;flex-wrap:wrap}
 .lrow{margin-bottom:8px}
+/* 外注からの請求 */
+.bill-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.bill-sum>div{padding:10px 14px;background:var(--panel-2)}
+.bill-sum>div+div{border-left:1px solid var(--line)}
+.bill-sum .k{font-size:11px;color:var(--muted)}
+.bill-sum .v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.bill-sum .s{font-size:11px;color:var(--muted)}
+.bill-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+@media(max-width:760px){.bill-sum{grid-template-columns:1fr 1fr}.bill-sum>div:nth-child(3){border-left:0}}
 button.btn.soft{background:var(--pri-soft);color:var(--pri);border:1px solid var(--pri-line);box-shadow:none}
 button.btn.soft:hover{filter:none;border-color:var(--pri)}
 .mksplit{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;margin-top:14px;align-items:start}
@@ -2218,6 +2227,8 @@ async function openJob(id){
         </div></div>`:`<div class="muted small" style="padding-top:10px">この案件には原価が入っていません。</div>`}</div>
     </div>
 
+    <div class="card" style="margin-top:16px" id="billsBox"></div>
+
     <div class="card" style="margin-top:16px" id="filesBox">
       <h2>図面・添付</h2><div class="muted small">読み込み中…</div></div>
     <div class="small muted" style="margin-top:10px">version ${j.version}${j.source_file?' ／ 元Excel: '+esc(j.source_file):''}</div>`;
@@ -2234,7 +2245,155 @@ async function openJob(id){
   const pw=document.getElementById('powerDoc');
   if(pw) pw.onclick=()=>printPower(j);
   bindMap(document.getElementById('dlgB'));
+  drawBills(j.id, {cost, lCost, lVendor, ex});
   drawFiles(j.id);
+}
+
+/* ============================================================
+   外注からの請求 ― 見込みの原価と照合する（2026-09-29 大嶺さん「①すすめて」）
+   ------------------------------------------------------------
+   置き場所: seek_jobs.data.vendor_bills = [{ id, vendor, billed_at, kind, amount_in, tax_mode,
+             amount_ex, memo, file:{path,name,size,mime}, at, by }]
+   ・DBの形は変えない（10/1に間に合わせるため）。data は事務だけが読める
+     （現場のスマホが読む seek_field_jobs には data を出していない）
+   ・★請求書のPDFは seek_files に入れない。入れると現場のスマホの「資料」に出る＝原価が見える。
+     Storage の office/bills/ に置き、場所は data にだけ持つ
+   ・比べるのは税抜。見込みの原価（明細の原価＋人工）が税抜なので、税込で入れたら10%を除く
+   ・書くときは「最新を読む → 足す → version付きで書く」。取り合いになったら読み直す
+   ============================================================ */
+const BILL_KINDS = ['人工','外注工事','材料','その他'];
+const billsOf = j => ((j && j.data && j.data.vendor_bills) || []).slice();
+async function patchJobData(jobId, mutate){
+  for(let n=0; n<3; n++){
+    const r = await fetch(`${SB_URL}/rest/v1/seek_jobs?id=eq.${encodeURIComponent(jobId)}&select=id,version,data`,
+                          {headers: await H()});
+    if(!r.ok) throw new Error('案件を読めませんでした（'+r.status+'）');
+    const cur = (await r.json())[0];
+    if(!cur) throw new Error('案件が見つかりません');
+    const data = Object.assign({}, cur.data||{});
+    mutate(data);
+    const p = await fetch(`${SB_URL}/rest/v1/seek_jobs?id=eq.${encodeURIComponent(jobId)}&version=eq.${cur.version}`, {
+      method:'PATCH', headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}),
+      body: JSON.stringify({data}) });
+    if(!p.ok) throw new Error('保存できませんでした（'+p.status+'）'+(await p.text()).slice(0,120));
+    const rows = await p.json();
+    if(rows.length){
+      const i = M.jobs.findIndex(x=>x.id===jobId);
+      if(i>=0) M.jobs[i] = Object.assign({}, M.jobs[i], rows[0]);
+      return rows[0];
+    }
+    // version が変わっていた＝その間に誰かが直した。読み直してもう一度
+  }
+  throw new Error('ほかの人が同時にこの案件を直していたため保存できませんでした。もう一度押してください');
+}
+async function uploadBillFile(jobId, billId, file){
+  if(file.size > MAX_FILE) throw new Error(`${file.name} は ${(file.size/1048576).toFixed(1)}MB あります（上限25MB）`);
+  const ext = (file.name.match(/\.[A-Za-z0-9]{1,8}$/)||[''])[0].toLowerCase();
+  const key = `office/bills/${jobId}/${billId}${ext}`;
+  const up = await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${key}`, {
+    method:'POST', headers: await H({'Content-Type': file.type || 'application/octet-stream', 'x-upsert':'true'}),
+    body: file });
+  if(!up.ok) throw new Error(`${file.name} のアップロードに失敗（${up.status}）${(await up.text()).slice(0,120)}`);
+  return { path:key, name:file.name, size:file.size, mime:file.type||'' };
+}
+function drawBills(jobId, plan){
+  const box = document.getElementById('billsBox'); if(!box) return;
+  const j = M.jobs.find(x=>x.id===jobId) || {};
+  const bills = billsOf(j).sort((a,b)=>String(a.billed_at||'').localeCompare(String(b.billed_at||'')));
+  const actual = bills.reduce((a,b)=>a+Number(b.amount_ex||0),0);
+  const diff = actual - plan.cost;
+  const tone = v => v>0 ? 'var(--danger)' : v<0 ? 'var(--ok)' : 'var(--ink)';
+  const sgn = v => v>0 ? '＋'+yen(v) : v<0 ? '−'+yen(-v) : '±0';
+  const gp = plan.ex - actual, gpr = plan.ex ? gp/plan.ex*100 : null;
+  // 人工は外注先がはっきりしているので、その外注先の請求だけで見込みと比べられる
+  const lv = String(plan.lVendor||'').trim();
+  const lActual = lv ? bills.filter(b=>String(b.vendor).trim()===lv).reduce((a,b)=>a+Number(b.amount_ex||0),0) : 0;
+  const defVendor = lv && !bills.some(b=>String(b.vendor).trim()===lv) ? lv : '';
+  box.innerHTML = `
+    <div class="row" style="align-items:baseline"><h2 style="margin:0">外注からの請求</h2>
+      <span class="muted small">届いた請求書をここに入れると、見込みの原価と比べます（社内だけ・現場のスマホには出ません）</span></div>
+    ${bills.length ? `
+    <div class="bill-sum">
+      <div><div class="k">見込みの原価</div><div class="v">${plan.cost ? yen(plan.cost) : '—'}</div></div>
+      <div><div class="k">請求の合計</div><div class="v">${yen(actual)}</div></div>
+      <div><div class="k">差（請求 − 見込み）</div>
+        <div class="v" style="color:${plan.cost?tone(diff):'var(--muted)'}">${plan.cost ? sgn(diff) : '—'}</div>
+        <div class="s">${!plan.cost ? '見込みの原価が入っていないので比べられません'
+          : diff>0 ? '見込みより高い' : diff<0 ? '見込みより安い' : '見込みどおり'}</div></div>
+      <div><div class="k">実際の粗利</div>
+        <div class="v" style="color:${gpr==null?'inherit':gpr>=20?'var(--ok)':gpr>=0?'var(--warn)':'var(--danger)'}">${yen(gp)}</div>
+        <div class="s">${gpr==null?'':gpr.toFixed(1)+'%'}</div></div>
+    </div>
+    ${lv && plan.lCost ? `<div class="small" style="margin:6px 0 2px">人工（${esc(lv)}）：見込み ${yen(plan.lCost)} → 請求 ${yen(lActual)}
+      <b style="color:${tone(lActual-plan.lCost)}">（${sgn(lActual-plan.lCost)}）</b></div>`:''}
+    <div class="small muted" style="margin-top:4px">税抜で比べています。まだ届いていない請求があれば、その分だけ「請求の合計」は少なく出ます。</div>
+    <div class="scroll" style="margin-top:8px"><table class="tight">
+      <thead><tr><th>請求日</th><th>外注先</th><th>内容</th><th class="n">金額（税抜）</th><th>メモ</th><th>請求書</th><th></th></tr></thead>
+      <tbody>${bills.map(b=>`<tr>
+        <td>${esc(b.billed_at||'')}</td><td>${esc(b.vendor||'')}</td><td class="small">${esc(b.kind||'')}</td>
+        <td class="n">${yen(b.amount_ex)}${b.tax_mode==='税込'?`<div class="small muted">税込 ${yen(b.amount_in)}</div>`:''}</td>
+        <td class="small muted">${esc(b.memo||'')}</td>
+        <td>${b.file?`<button class="btn ghost sm" data-bopen="${esc(b.id)}">開く</button>`:'<span class="muted small">なし</span>'}</td>
+        <td><button class="btn ghost sm" data-bdel="${esc(b.id)}" title="この請求を消す">×</button></td></tr>`).join('')}</tbody></table></div>`
+    : `<div class="muted small" style="margin:6px 0 2px">まだ請求は入っていません。${plan.cost?`見込みの原価は <b>${yen(plan.cost)}</b>（税抜）です。`:''}</div>`}
+    <div class="bill-form">
+      <label class="f">外注先<input id="bVendor" list="bVendorList" value="${esc(defVendor)}" placeholder="選ぶか打つ" style="width:150px"></label>
+      <datalist id="bVendorList">${laborVendorNames().map(v=>`<option value="${esc(v.name)}">`).join('')}</datalist>
+      <label class="f">請求日<input id="bDate" type="date" value="${today()}"></label>
+      <label class="f">内容<select id="bKind">${BILL_KINDS.map(k=>`<option ${k===(defVendor?'人工':'外注工事')?'selected':''}>${k}</option>`).join('')}</select></label>
+      <label class="f">金額<span class="row" style="gap:4px;flex-wrap:nowrap">
+        <input id="bAmt" placeholder="0" style="width:110px;text-align:right">
+        <select id="bTax"><option>税込</option><option>税抜</option></select></span></label>
+      <label class="f">メモ<input id="bMemo" placeholder="任意" style="width:140px"></label>
+      <label class="f">請求書（PDF・写真）<input id="bFile" type="file" accept="application/pdf,image/*"></label>
+      <button class="btn sm" id="bAdd">追加する</button>
+    </div>
+    <div id="bMsg"></div>`;
+
+  const msg = m => { document.getElementById('bMsg').innerHTML = m; };
+  document.getElementById('bAdd').onclick = async () => {
+    const vendor = document.getElementById('bVendor').value.trim();
+    const billed_at = document.getElementById('bDate').value;
+    const amt = numIn(document.getElementById('bAmt').value);
+    const tax_mode = document.getElementById('bTax').value;
+    if(!vendor) return msg('<div class="err">外注先を入れてください</div>');
+    if(!billed_at) return msg('<div class="err">請求日を入れてください</div>');
+    if(!(amt>0)) return msg('<div class="err">金額を入れてください</div>');
+    const btn = document.getElementById('bAdd'); btn.disabled = true; btn.textContent = '保存中…';
+    const id = 'vb-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    const f = (document.getElementById('bFile').files||[])[0];
+    let file = null;
+    try{
+      if(f) file = await uploadBillFile(jobId, id, f);
+      const bill = { id, vendor, billed_at, kind: document.getElementById('bKind').value,
+        amount_in: amt, tax_mode, amount_ex: tax_mode==='税込' ? Math.round(amt/1.1) : amt,
+        memo: document.getElementById('bMemo').value.trim(), file,
+        at: new Date().toISOString(), by: (sbSession()||{}).email||'' };
+      await patchJobData(jobId, d => { d.vendor_bills = (d.vendor_bills||[]).concat([bill]); });
+      drawBills(jobId, plan);
+      document.getElementById('bMsg').innerHTML = `<div class="ok">${esc(vendor)} の請求（税抜 ${yen(bill.amount_ex)}）を入れました。</div>`;
+    }catch(e){
+      // 請求は入らなかったのに PDF だけ残らないよう、置いたファイルを消す
+      if(file) try{ await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${file.path}`,{method:'DELETE',headers:await H()}); }catch(_){}
+      btn.disabled = false; btn.textContent = '追加する';
+      msg(`<div class="err">${esc(e.message)}</div>`);
+    }
+  };
+  box.querySelectorAll('[data-bopen]').forEach(b=>b.onclick = async () => {
+    const x = bills.find(y=>y.id===b.dataset.bopen); b.disabled = true;
+    try{ window.open(await fileUrl({storage_path: x.file.path}), '_blank', 'noopener'); }
+    catch(e){ msg(`<div class="err">${esc(e.message)}</div>`); }
+    finally{ b.disabled = false; }
+  });
+  box.querySelectorAll('[data-bdel]').forEach(b=>b.onclick = async () => {
+    const x = bills.find(y=>y.id===b.dataset.bdel);
+    if(!confirm(`${x.vendor} の請求（${x.billed_at}・税抜 ${yen(x.amount_ex)}）を消します。よろしいですか。`)) return;
+    try{
+      await patchJobData(jobId, d => { d.vendor_bills = (d.vendor_bills||[]).filter(y=>y.id!==x.id); });
+      if(x.file) try{ await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${x.file.path}`,{method:'DELETE',headers:await H()}); }catch(_){}
+      drawBills(jobId, plan);
+    }catch(e){ msg(`<div class="err">${esc(e.message)}</div>`); }
+  });
 }
 
 /* ---------- 図面・添付の欄 ---------- */
