@@ -367,6 +367,27 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .jd-act .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
 .jd-act .btns{display:flex;gap:6px;flex-wrap:wrap}
 .lrow{margin-bottom:8px}
+/* 見積をつくる：入力欄を仕事の順に4つのまとまりに */
+.mkf{display:flex;flex-direction:column;gap:12px}
+.mkf-s{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px 14px;background:var(--panel)}
+.mkf-h{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:700;margin-bottom:10px;color:var(--ink)}
+.mkf-h .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;
+  background:var(--pri-soft);color:var(--pri);font-size:11px;flex-shrink:0}
+.mkf-h .d{font-size:11.5px;font-weight:400;color:var(--muted)}
+.mkf-g{display:grid;gap:10px 14px;align-items:end}
+.mkf-g .f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.mkf-g .f input,.mkf-g .f select{width:100%;box-sizing:border-box}
+.mkf-g.g1{grid-template-columns:minmax(200px,1.1fr) minmax(240px,2fr) 150px 130px}
+.mkf-g.g2{grid-template-columns:120px minmax(220px,2fr) minmax(160px,1fr) auto}
+.mkf-g.g3{grid-template-columns:repeat(3,170px)}
+.mkf-g.g4{grid-template-columns:repeat(3,160px) 130px minmax(170px,1fr) 160px}
+details.mkf-bill{background:var(--panel-2)}
+details.mkf-bill>summary{cursor:pointer;list-style:none;margin-bottom:0}
+details.mkf-bill>summary::-webkit-details-marker{display:none}
+details.mkf-bill>summary::after{content:'▾ 開く';margin-left:auto;font-size:11.5px;font-weight:600;color:var(--pri)}
+details.mkf-bill[open]>summary{margin-bottom:10px}
+details.mkf-bill[open]>summary::after{content:'▴ たたむ'}
+@media(max-width:1100px){.mkf-g.g1,.mkf-g.g2,.mkf-g.g4{grid-template-columns:1fr 1fr}.mkf-g.g3{grid-template-columns:1fr 1fr 1fr}}
 /* 顧客別単価表：左に会社の一覧、右にその会社の表 */
 .pwrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:14px;align-items:start}
 .plist{display:flex;flex-direction:column;gap:2px;max-height:74vh;overflow:auto;padding-right:4px;position:sticky;top:0}
@@ -3456,6 +3477,7 @@ let mk = { job:null, client_id:'', title:'', lines:[], discount:0, tax_rate:0.10
            fromInbox:null, labor_days:0, labor_vendor:'', labor_unit:null, build_start:'', build_end:'' };
 const today = () => new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
 function resetMake(){
+  mkBillOpen = null;
   mk = { job:null, client_id:'', title:'', lines:[], discount:0, tax_rate:0.10, saving:false, msg:'',
          paste:'', read:null, picks:new Set(),
          status:'見積提出', quoted_at:today(), invoiced_at:'', delivered_at:'', due_date:'',
@@ -3511,6 +3533,7 @@ let copiedFrom = null;
      気づけなくなり、自動取込の意味が無くなる。
    2026-09-09 村山さんの立場で通しで触って気づいた。 */
 let mkFolded = true;
+let mkBillOpen = null;     // 請求・入金の欄を開いているか（null＝状態に合わせて自動）
 let docPasteHandler = null;   // 画面の再描画で paste ハンドラを二重登録しないように覚えておく
 async function copyJob(id){
   const src = M.jobs.find(x=>x.id===id); if(!src) return;
@@ -3560,7 +3583,7 @@ function vMake(){
   <div class="card${ed?' hidden':''}">
     <div class="row"><h2 style="margin:0">① 見積依頼のメールを取り込む</h2>
       <span class="spacer"></span>
-      <button class="btn ghost sm" id="mkfold">${mkFolded?'開く':'たたむ'}</button></div>
+      <button class="btn ghost sm" id="mkfold">${mkFolded?'メールを貼り付けて読み取る ▾':'たたむ ▴'}</button></div>
     <!-- 受信箱は畳んでも出す。隠すと「メールが来たこと」に気づけないため（2026-09-09） -->
     <div id="inboxBox"></div>
     <div id="mkpasteWrap" ${mkFolded?'hidden':''}>
@@ -3587,52 +3610,74 @@ BP泊第6駐車場 設置工事のお見積り依頼
 
   <div class="card">
     <h2>② 見積をつくる</h2>
-    <div class="row">
-      <label class="f" style="min-width:260px">顧客
-        <select id="mkc"><option value="">選んでください</option>
-        ${activeClients().slice().sort((a,b)=>(wtsByClient.get(b.id)?.size||0)-(wtsByClient.get(a.id)?.size||0))
-          .map(c=>`<option value="${esc(c.id)}" ${mk.client_id===c.id?'selected':''}>${esc(c.name)}${
-            wtsByClient.has(c.id)?`（単価表 ${wtsByClient.get(c.id).size}工種）`:''}</option>`).join('')}
-        </select></label>
-      <label class="f" style="flex:1;min-width:260px">案件名
-        <input id="mkt" value="${esc(mk.title)}" placeholder="例: BP泊第6設置工事（12台）"></label>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <label class="f" style="width:110px">現場の〒
-        <input id="mkspc" value="${esc(mk.site_postal_code)}" placeholder="902-0062"></label>
-      <label class="f" style="flex:1;min-width:240px">現場住所
-        <input id="mksa" value="${esc(mk.site_address)}" placeholder="那覇市松川770"></label>
-      <label class="f" style="min-width:180px">建物名・部屋番号
-        <input id="mksb" value="${esc(mk.site_building)}" placeholder="（あれば）"></label>
-      <button class="btn ghost sm" id="mkmap" style="align-self:flex-end">🗺 地図で見る</button>
-      <span class="muted small" style="align-self:flex-end">電力申請の書類と、現場へ向かうときに使います</span>
-    </div>
-    <div id="mkdup"></div>
+    <!-- 2026-09-29 大嶺さん「この画面もみにくい」。
+         11個の欄が同じ重さで並んでいたのを、仕事の順（お客様と件名 → 現場 → 日程 → 請求・入金）に分けた。
+         請求・入金は見積のときには使わないので、施工完了より前はたたんでおく（中身は1行で見せる）。 -->
+    <div class="mkf">
+      <div class="mkf-s">
+        <div class="mkf-h"><span class="n">1</span>お客様と件名</div>
+        <div class="mkf-g g1">
+          <label class="f">顧客
+            <select id="mkc"><option value="">選んでください</option>
+            ${activeClients().slice().sort((a,b)=>(wtsByClient.get(b.id)?.size||0)-(wtsByClient.get(a.id)?.size||0))
+              .map(c=>`<option value="${esc(c.id)}" ${mk.client_id===c.id?'selected':''}>${esc(c.name)}${
+                wtsByClient.has(c.id)?`（単価表 ${wtsByClient.get(c.id).size}工種）`:''}</option>`).join('')}
+            </select></label>
+          <label class="f">案件名
+            <input id="mkt" value="${esc(mk.title)}" placeholder="例：BP泊第6設置工事（12台）"></label>
+          <label class="f">見積日<input type="date" id="mkqd" value="${esc(mk.quoted_at)}"></label>
+          <label class="f">状態<select id="mkstatus">
+            ${STATUSES.map(s=>`<option ${mk.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
+        </div>
+        <div id="mkdup"></div>
+      </div>
 
-    <div class="row" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-      <label class="f">状態<select id="mkstatus">
-        ${STATUSES.map(s=>`<option ${mk.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
-      <label class="f">見積日<input type="date" id="mkqd" value="${esc(mk.quoted_at)}"></label>
-      <label class="f">オープン予定日<input type="date" id="mkod" value="${esc(mk.open_date)}"></label>
-      <span style="width:14px"></span>
-      <label class="f" title="予定表に横棒で出ます。1日だけなら開始と同じ日を入れてください">
-        施工 開始<input type="date" id="mkbs" value="${esc(mk.build_start)}"></label>
-      <label class="f">〜 終了<input type="date" id="mkbe" value="${esc(mk.build_end)}"></label>
-      <span style="width:14px"></span>
-      <label class="f">請求日<input type="date" id="mkid" value="${esc(mk.invoiced_at)}"></label>
-      <label class="f">納期<input type="date" id="mkdd" value="${esc(mk.delivered_at)}"></label>
-      <label class="f">支払期日<input type="date" id="mkud" value="${esc(mk.due_date)}"></label>
-      <label class="f">入金日<input type="date" id="mkpd" value="${esc(mk.paid_at)}"></label>
-      <label class="f">支払条件<input id="mkpt" style="width:110px" value="${esc(mk.payment_terms)}"></label>
-      <label class="f">振込先<select id="mkbank">
-        ${M.banks.map(b=>`<option value="${esc(b.id)}" ${mk.bank_account_id===b.id?'selected':''}>${
-          esc(b.bank_name)} ${esc(b.branch_name||'')}</option>`).join('')}</select></label>
-      <button class="btn ghost sm" id="mkbill">請求書にする</button>
-      <button class="btn ghost sm" id="mkpaid">入金を記録する</button>
+      <div class="mkf-s">
+        <div class="mkf-h"><span class="n">2</span>現場<span class="d">電力申請の書類と、現場へ向かうときに使います</span></div>
+        <div class="mkf-g g2">
+          <label class="f">〒<input id="mkspc" value="${esc(mk.site_postal_code)}" placeholder="例：902-0062"></label>
+          <label class="f">住所<input id="mksa" value="${esc(mk.site_address)}" placeholder="例：那覇市松川770"></label>
+          <label class="f">建物名・部屋番号<input id="mksb" value="${esc(mk.site_building)}" placeholder="あれば"></label>
+          <button class="btn ghost sm" id="mkmap">🗺 地図で見る</button>
+        </div>
+      </div>
+
+      <div class="mkf-s">
+        <div class="mkf-h"><span class="n">3</span>日程<span class="d">施工の日を入れると、予定表に横棒で出ます（1日だけなら開始と同じ日）</span></div>
+        <div class="mkf-g g3">
+          <label class="f">オープン予定日<input type="date" id="mkod" value="${esc(mk.open_date)}"></label>
+          <label class="f">施工 開始<input type="date" id="mkbs" value="${esc(mk.build_start)}"></label>
+          <label class="f">施工 終了<input type="date" id="mkbe" value="${esc(mk.build_end)}"></label>
+        </div>
+      </div>
+
+      ${(()=>{
+        const late = /施工完了|請求済|入金済/.test(mk.status||'') || !!mk.invoiced_at || !!mk.paid_at;
+        const open = mkBillOpen===null ? late : mkBillOpen;
+        const sum = [mk.invoiced_at?'請求日 '+mk.invoiced_at:'', mk.due_date?'支払期日 '+mk.due_date:'',
+                     mk.paid_at?'入金日 '+mk.paid_at:''].filter(Boolean).join('・') || 'まだ入っていません';
+        return `<details class="mkf-s mkf-bill" id="mkbillbox" ${open?'open':''}>
+        <summary class="mkf-h"><span class="n">4</span>請求・入金
+          <span class="d">施工が終わってから使います　／　${esc(sum)}</span></summary>
+        <div class="mkf-g g4">
+          <label class="f">納期<input type="date" id="mkdd" value="${esc(mk.delivered_at)}"></label>
+          <label class="f">請求日<input type="date" id="mkid" value="${esc(mk.invoiced_at)}"></label>
+          <label class="f">支払期日<input type="date" id="mkud" value="${esc(mk.due_date)}"></label>
+          <label class="f">支払条件<input id="mkpt" value="${esc(mk.payment_terms)}"></label>
+          <label class="f">振込先<select id="mkbank">
+            ${M.banks.map(b=>`<option value="${esc(b.id)}" ${mk.bank_account_id===b.id?'selected':''}>${
+              esc(b.bank_name)} ${esc(b.branch_name||'')}</option>`).join('')}</select></label>
+          <label class="f">入金日<input type="date" id="mkpd" value="${esc(mk.paid_at)}"></label>
+        </div>
+        <div class="row" style="margin-top:10px;gap:8px">
+          <button class="btn ghost sm" id="mkbill">請求書にする</button>
+          <button class="btn ghost sm" id="mkpaid">入金を記録する</button>
+          <span class="muted small">「請求書にする」＝請求日を今日・支払期日を月末＋1ヶ月・状態を「請求済」に。
+            「入金を記録する」＝入金日を今日・状態を「入金済」に。どちらもあとから直せます。</span>
+        </div>
+      </details>`;
+      })()}
     </div>
-    <div class="small muted" style="margin-top:4px">
-      「請求書にする」= 請求日を今日、支払期日を月末＋1ヶ月、状態を「請求済」にします。<br>
-    「入金を記録する」= 入金日を今日、状態を「入金済」にします。どちらもあとから直せます。</div>
 
     <div id="mkbody" style="margin-top:14px"></div></div>`;
 }
@@ -3700,7 +3745,7 @@ function drawInbox(){
     <b>📥 受信箱に ${inbox.length}件</b>
     <span class="small">Gmailで「見積依頼」ラベルを付けたメールが自動で入ります。
       押すと本文が読み取られた状態で下に入り、図面も一緒に付きます。</span>
-    <button class="btn ghost sm" id="inboxToggle" style="float:right">${inboxOpen?'たたむ':'開く'}</button>
+    <button class="btn ghost sm" id="inboxToggle" style="float:right">${inboxOpen?'たたむ ▴':`届いたメールを見る（${inbox.length}件） ▾`}</button>
   </div>
   ${inboxOpen?`<div class="scroll" style="max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:12px">
     <table><thead><tr><th>受信</th><th>差出人</th><th>件名</th><th class="n">図面</th><th></th></tr></thead>
@@ -4027,6 +4072,8 @@ function aMake(){
 
   const fold=document.getElementById('mkfold');
   if(fold) fold.onclick=()=>{ mkFolded=!mkFolded; render(); };
+  const billBox=document.getElementById('mkbillbox');
+  if(billBox) billBox.ontoggle=()=>{ mkBillOpen=billBox.open; };   // 開け閉めを覚えておく（描き直しても戻さない）
   // 顧客がまだなら、そこに枠を当てておく（開いてすぐ打ち始められる）
   if(!mk.job && !mk.client_id && sel && document.activeElement === document.body) sel.focus();
   const pa=document.getElementById('mkpaste');
