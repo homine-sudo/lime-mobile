@@ -367,6 +367,23 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .jd-act .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
 .jd-act .btns{display:flex;gap:6px;flex-wrap:wrap}
 .lrow{margin-bottom:8px}
+/* 顧客別単価表：左に会社の一覧、右にその会社の表 */
+.pwrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:14px;align-items:start}
+.plist{display:flex;flex-direction:column;gap:2px;max-height:74vh;overflow:auto;padding-right:4px;position:sticky;top:0}
+.plist button{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;
+  border:1px solid transparent;background:none;border-radius:var(--r-sm);padding:7px 10px;font:inherit;font-size:13px;
+  color:var(--ink-2);cursor:pointer}
+.plist button:hover{background:var(--panel-2)}
+.plist button.on{background:var(--pri-soft);border-color:var(--pri-line);color:var(--pri);font-weight:700}
+.plist .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plist .c{display:flex;gap:4px;flex-shrink:0;font-size:11px;font-variant-numeric:tabular-nums}
+.plist .c i{font-style:normal;background:var(--warn-soft);color:var(--warn);border-radius:99px;padding:1px 7px;font-weight:700}
+.plist .c i.ok{background:var(--ok-soft);color:var(--ok)}
+.plist .c i.bad{background:var(--danger-soft);color:var(--danger)}
+.phead{margin:0 0 8px;font-size:14px}
+tr.pgrp td{background:var(--panel-2);border-top:1px solid var(--line);padding-top:9px;padding-bottom:9px}
+@media(max-width:900px){.pwrap{grid-template-columns:1fr}.plist{position:static;max-height:none;flex-direction:row;flex-wrap:wrap}
+  .plist button{width:auto}}
 /* 外注からの請求 */
 .bill-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
 .bill-sum>div{padding:10px 14px;background:var(--panel-2)}
@@ -4097,16 +4114,23 @@ function applyPrice(l){
   //   もう1つ、行ごとの歯止め: マスタの原価がこの行の単価より高いなら入れない。
   //   工種としての原価率が正常でも、お客様ごとの単価が低いと逆転することがある
   //   （例: ロック板設置工事 原価54,000 に対し 大和ハウスの単価32,000）。
-  const cq = costFor(l);
+  // 顧客別単価表に「その顧客のときの原価」があれば、工種の原価マスタより先に使う（2026-09-29）。
+  // 例: 一次電源設置工事 … 原価マスタ150,000 ／ アップルパークは125,000（実績12件中9件）
+  const cq = (p && p.cost_unit!=null && p.cost_unit!=='')
+    ? { cost_unit: Number(p.cost_unit), sample_count: p.sample_count, is_stable: true, median_rate: null, _client: true }
+    : costFor(l);
   l._costMaster = cq || null;
   const price = Number(l.unit_price||0);
   l._costOverRate = !!(cq && (
         (cq.median_rate!=null && Number(cq.median_rate) > 1)
      || (price > 0 && Number(cq.cost_unit) > price)));
   const empty = (l.cost_unit===null || l.cost_unit===undefined || l.cost_unit==='' || Number(l.cost_unit)===0);
-  if(cq && empty && !l._costOverRate){
+  // 自動で入れた原価は、顧客や条件を変えたら入れ直す（手で入れた原価には触らない）
+  if(cq && (empty || l._costGuess) && !l._costOverRate){
     l.cost_unit = Number(cq.cost_unit);
     l._costGuess = true;              // 実績からの推定。手で入れた値と見分ける
+  } else if(l._costGuess){
+    l.cost_unit = null; l._costGuess = false;   // 前の顧客の原価を残さない
   }
 }
 /* この見積が通ったら、いくら残るか
@@ -4381,6 +4405,7 @@ function lineRow(l,i,avail){
     <td class="n c c1"><input style="width:96px;text-align:right" data-li="${i}" data-f="cost_unit" value="${l.cost_unit??''}" placeholder="原価単価">
       ${(()=>{
         const m=l._costMaster; if(!m) return '';
+        if(m._client && l._costGuess) return `<div class="small" style="white-space:nowrap;color:var(--pri)" title="顧客別単価表に入っている、この顧客のときの原価">この顧客の原価</div>`;
         if(l._costOverRate) return `<div class="small" style="white-space:nowrap;color:var(--danger)"
           title="Excelの原価が単価より高い。機器代が工事の行に入っている可能性があります">
           実績 ${yen(m.cost_unit)} ※単価より高い</div>`;
@@ -4598,6 +4623,9 @@ let pFilter = 'todo';    // todo=未確定だけ / done=確定済み / all=全�
 let pRecentOnly = true;
 // solid=「いつもこの単価」だけ / shaky=ばらついているものだけ / all=全部
 let pSure = 'all';
+// 会社ごとに見る（2026-09-29 大嶺さん「顧客別単価表は会社ごとに見やすいようにして」）。''＝すべての会社
+let pClient = '';
+const pKey = p => p.client_id || '_';          // 自社標準（顧客なし）の行もひとまとまりにする
 async function savePrice(row, patch){
   const res = await fetch(SB_URL+'/rest/v1/seek_price_lists?id=eq.'+encodeURIComponent(row.id),{
     method:'PATCH',
@@ -4620,7 +4648,7 @@ function drawPrices(el, q){
   // 直近の実績と食い違っていないか（食い違うものは、まとめて確定に混ぜてはいけない）
   const rec = r => recentPrice ? recentPrice.get(r.p.client_id+'|'+r.p.work_type_id) : null;
   const odd = r => { const v = rec(r); return v && Number(v.value) !== Number(r.p.unit_price); };
-  const rows = all
+  const rowsNC = all
     .filter(r=>!q || r.c.includes(q) || r.w.includes(q))
     .filter(r=> pRecentOnly ? r.recent : true)
     .filter(r=> pSure==='all' ? true
@@ -4632,7 +4660,32 @@ function drawPrices(el, q){
     .sort((a,b)=> pSure==='shaky'
       ? (Number(a.p.mode_share)-Number(b.p.mode_share)) || (b.p.sample_count-a.p.sample_count)
       : b.p.sample_count-a.p.sample_count);
+  const rows = rowsNC.filter(r=>!pClient || pKey(r.p)===pClient);
   const pct = all.length ? Math.round(done/all.length*100) : 0;
+  // 左の会社の一覧（いまの絞り込み＝未確定／直近1年／検索 を効かせた数）
+  const cstat = new Map();
+  all.filter(r=>(pRecentOnly ? r.recent : true) && (!q || r.c.includes(q) || r.w.includes(q)))
+     .forEach(r=>{ const k=pKey(r.p); const s=cstat.get(k)||{k, name:r.c, n:0, todo:0, odd:0};
+       s.n++; if(!r.p.confirmed_at){ s.todo++; if(odd(r)) s.odd++; } cstat.set(k,s); });
+  const clist = [...cstat.values()].sort((a,b)=>b.n-a.n);
+  const cur = pClient ? (cstat.get(pClient) || {k:pClient, name:(clientMap.get(pClient)||{}).name||'（自社標準）', n:0, todo:0, odd:0}) : null;
+  // 支給区分・GL・柱は、ほとんどの行で空なので列にせず工種の横の札にする（案件の画面と同じ）
+  const conds = p => [p.supply_type && p.supply_type!=='材工' ? p.supply_type : '',
+                      p.opt_gl_cut ? 'GLカット' : '', p.opt_pole||'']
+                     .filter(Boolean).map(c=>`<span class="pill">${esc(c)}</span>`).join('');
+  // すべての会社を出すときは、会社ごとに見出しを立ててまとめる（行ごとに会社名をくり返さない）
+  const pBody = (list, fn) => {
+    if(pClient) return list.map(fn).join('');
+    const groups = new Map();
+    list.forEach(r=>{ const k=pKey(r.p); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+    return [...groups.entries()].sort((a,b)=>b[1].length-a[1].length).map(([k,g])=>{
+      const s = cstat.get(k) || {n:g.length, todo:0, odd:0};
+      return `<tr class="pgrp"><td colspan="6"><b>${esc(g[0].c)}</b>
+        <span class="muted small">　${s.n}行${g.length<s.n?`（ここに出ているのは ${g.length}行。「この会社だけ見る」で全部）`:''}${s.todo?`・未確定 ${s.todo}`:''}${s.odd?`・<span style="color:var(--danger)">⚠ 直近とずれ ${s.odd}</span>`:''}</span>
+        <button class="btn ghost sm" data-pc="${esc(k)}" style="float:right">この会社だけ見る</button></td></tr>`
+        + g.map(fn).join('');
+    }).join('');
+  };
 
   el.innerHTML = `
   <div class="note">
@@ -4662,7 +4715,8 @@ function drawPrices(el, q){
        mode_share = その単価が過去の実績のうち何割を占めるか。
        1.0 なら「過去はいつもこの単価だった」＝迷う余地が無い。
        実データでは496行のうち306行が 1.0。ここを先にまとめて片付けてもらう。 */
-    const pool  = all.filter(r=>!r.p.confirmed_at && (pRecentOnly ? r.recent : true));
+    const pool  = all.filter(r=>!r.p.confirmed_at && (pRecentOnly ? r.recent : true)
+                             && (!pClient || pKey(r.p)===pClient));
     const oddR  = pool.filter(odd);
     const solid = pool.filter(r=>sure(r) && !odd(r));
     const shaky = pool.filter(r=>!sure(r) && !odd(r));
@@ -4697,15 +4751,35 @@ function drawPrices(el, q){
     ほかに <b>${later}行</b> ありますが、<b>直近1年で1度も使っていない単価</b>なので後回しで構いません。
     次に使うときに画面が「未確定」と出します。「古いものも」で見られます。</div>`:''}
   <div id="pMsg"></div>
-  <div class="scroll taller"><table class="tight">
-    <thead><tr><th>顧客</th><th>工種</th><th>支給区分</th><th>GL</th><th>柱</th><th>単位</th>
-      <th class="n">単価</th><th>過去の実績</th><th></th></tr></thead>
-    <tbody>${rows.slice(0,400).map((r,i)=>`<tr data-row="${esc(r.p.id)}">
-      <td>${esc(r.c)}</td><td>${esc(r.w)}</td><td class="small">${esc(r.p.supply_type)}</td>
-      <td class="small">${r.p.opt_gl_cut?'○':''}</td><td class="small">${esc(r.p.opt_pole||'')}</td>
+  <div class="pwrap">
+    <div class="plist">
+      <button data-pc="" class="${pClient?'':'on'}"><span>すべての会社</span><span class="c">${clist.reduce((a,s)=>a+s.n,0)}</span></button>
+      ${clist.map(s=>`<button data-pc="${esc(s.k)}" class="${pClient===s.k?'on':''}" title="${esc(s.name)}">
+        <span class="nm">${esc(s.name)}</span>
+        <span class="c">${s.odd?`<i class="bad">⚠${s.odd}</i>`:''}${s.todo?`<i>${s.todo}</i>`:'<i class="ok">✓</i>'}</span></button>`).join('')}
+    </div>
+    <div style="min-width:0">
+      ${cur ? `<div class="phead"><b>${esc(cur.name)}</b> の単価表
+        <span class="muted small">　${cur.n}行${cur.todo?`・未確定 ${cur.todo}`:'・すべて確定済み'}</span></div>` : ''}
+      <div class="scroll taller"><table class="tight">
+    <thead><tr><th>工種</th><th>単位</th>
+      <th class="n">単価</th><th class="n" title="この顧客のときの原価。空なら工種の原価マスタを使います">原価</th><th>過去の実績</th><th></th></tr></thead>
+    <tbody>${pBody(rows.slice(0,600), r=>`<tr data-row="${esc(r.p.id)}">
+      <td>${esc(r.w)} ${conds(r.p)}</td>
       <td class="small">${esc(r.p.unit||'')}</td>
       <td class="n"><input style="width:100px;text-align:right" data-price="${esc(r.p.id)}"
         value="${Number(r.p.unit_price)}"></td>
+      <td class="n">${(()=>{
+        // 空なら工種の原価マスタを使う（灰色で見せておく）。入っていれば「この顧客のときの原価」
+        const mc = costIdx.get(String(r.w).trim()), has = r.p.cost_unit!=null && r.p.cost_unit!=='';
+        const c = has ? Number(r.p.cost_unit) : (mc ? Number(mc.cost_unit) : null), pr = Number(r.p.unit_price);
+        const rate = c!=null && pr ? Math.round(c/pr*100) : null;
+        return `<input style="width:90px;text-align:right${has?';font-weight:700':''}" data-cost="${esc(r.p.id)}"
+          value="${has?Number(r.p.cost_unit):''}" placeholder="${mc?Number(mc.cost_unit):''}"
+          title="この顧客のときの原価。空なら工種の原価マスタ（${mc?yen(mc.cost_unit):'なし'}）を使います">
+          <div class="small" style="color:${rate==null?'var(--muted)':rate>100?'var(--danger)':rate>80?'var(--warn)':'var(--muted)'}">${
+            rate==null?'':(has?'この顧客 ':'マスタ ')+rate+'%'}</div>`;
+      })()}</td>
       <td class="small">${(()=>{
         // 「83件すべてこの単価」なのか「12件中8件」なのかで、見る手間がまるで違う
         const n = Number(r.p.sample_count), s = Number(r.p.mode_share);
@@ -4728,14 +4802,17 @@ function drawPrices(el, q){
       })()}</td>
       <td>${r.p.confirmed_at
         ? `<span class="tag b">確定</span> <button class="btn ghost sm" data-undo="${esc(r.p.id)}">戻す</button>`
-        : `<button class="btn sm" data-ok="${esc(r.p.id)}">確定</button>`}</td></tr>`).join('')
-      || '<tr><td colspan="9" class="muted">該当する行がありません</td></tr>'}</tbody></table></div>
-  ${rows.length>400?`<div class="small muted" style="margin-top:8px">表示は先頭400行（該当 ${rows.length}行）。絞り込んでお使いください</div>`:''}`;
+        : `<button class="btn sm" data-ok="${esc(r.p.id)}">確定</button>`}</td></tr>`)
+      || '<tr><td colspan="6" class="muted">該当する行がありません</td></tr>'}</tbody></table></div>
+    </div>
+  </div>
+  ${rows.length>600?`<div class="small muted" style="margin-top:8px">表示は先頭600行（該当 ${rows.length}行）。絞り込んでお使いください</div>`:''}`;
 
   const msg = m => document.getElementById('pMsg').innerHTML = m;
   const find = id => M.prices.find(x=>x.id===id);
 
   el.querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{ pFilter=b.dataset.pf; drawMaster(); });
+  el.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>{ pClient=b.dataset.pc; drawMaster(); });
   el.querySelectorAll('[data-prec]').forEach(b=>b.onclick=()=>{ pRecentOnly=b.dataset.prec==='1'; drawMaster(); });
   const sw=(id,v)=>{ const b=document.getElementById(id); if(b) b.onclick=()=>{ pSure=v; drawMaster(); }; };
   sw('pSolid','solid'); sw('pShaky','shaky'); sw('pAllSure','all'); sw('pOdd','odd');
@@ -4766,6 +4843,22 @@ function drawPrices(el, q){
     finally{ inp.disabled=false; }
   });
 
+  // 原価（この顧客のとき）。空にすると工種の原価マスタに戻る
+  el.querySelectorAll('[data-cost]').forEach(inp=>inp.onchange=async()=>{
+    const row=find(inp.dataset.cost); const t=inp.value.trim();
+    const v = t==='' ? null : numIn(t);
+    if(v!==null && (!isFinite(v) || v<0)){ inp.value=row.cost_unit??''; msg('<div class="err">原価は0以上の数字で入れてください（空にすると工種の原価マスタを使います）</div>'); return; }
+    const before = row.cost_unit==null||row.cost_unit==='' ? null : Number(row.cost_unit);
+    if(v===before) return;
+    inp.disabled=true;
+    try{ await savePrice(row,{cost_unit:v});
+         const nm=(wtMap.get(row.work_type_id)||{}).name||'';
+         const done=`<div class="ok">${esc(nm)} の原価を ${v==null?'空（工種の原価マスタを使う）':'<b>'+yen(v)+'</b>'} にしました</div>`;
+         drawMaster();                            // 原価率を出し直す（描き直すと知らせが消えるので、あとから出す）
+         const pm=document.getElementById('pMsg'); if(pm) pm.innerHTML=done; }
+    catch(e){ inp.value=before??''; msg(`<div class="err">${esc(e.message)}</div>`); }
+    finally{ inp.disabled=false; }
+  });
   el.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{
     const row=find(b.dataset.ok);
     const inp=el.querySelector(`[data-price="${CSS.escape(row.id)}"]`);
