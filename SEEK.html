@@ -341,7 +341,22 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
   font-variant-numeric:tabular-nums}
 .profit .bigrate .num small{font-size:16px;font-weight:700;margin-left:2px}
 .profit .bigrate .lbl{font-size:11px;line-height:1.4;color:var(--charcoal)}
+/* 見積の明細：左が見積書・右が原価（2026-09-29 大嶺さん）
+   現行Excelの見積りシートが「左＝見積（品名・数量・単価・金額）／右＝売上原価計算
+   （直接原価・直接原価費・原価率）」の並び。村山さんが8年見てきた形にそろえる。 */
+.mktbl th.gq,.mktbl th.gc{position:static;font-size:12.5px;color:var(--ink);letter-spacing:.02em;
+  padding-top:10px;padding-bottom:7px}
+.mktbl th.gq{border-bottom:2px solid var(--pri)}
+.mktbl th.gc{border-bottom:2px solid var(--warn);background:var(--warn-soft)}
+.mktbl th.gq span,.mktbl th.gc span{font-weight:400;font-size:11px;color:var(--muted);margin-left:8px}
+.mktbl .c{background:var(--panel-2)}
+.mktbl .c1{border-left:2px solid var(--line)}
+.mksplit{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;margin-top:14px;align-items:start}
+.mksplit .ptot{margin-top:10px}
+.mksplit .profit{width:auto}
 @media (max-width:1100px){
+  .mksplit{grid-template-columns:1fr}
+  .mksplit .mkc{order:-1}          /* 狭い画面では粗利を先に（下へ埋もれないように） */
   .totwrap{flex-direction:column-reverse;align-items:stretch}
   .totwrap .ptot{margin-left:auto}
   .profit{width:auto}
@@ -2211,22 +2226,247 @@ async function drawFiles(jobId){
    section が無い（＝画面で新しく作った）行だけ品名で拾う。 */
 const EXPENSE_RE = /諸経費|福利/;
 const inSection2 = it => (it.section!=null ? Number(it.section)===2 : EXPENSE_RE.test(it.name||''));
-function printDoc(j, items, kind){
+/* ==== XFORM START ====
+   帳票（御見積書・請求書）― Excelの様式をそのまま再現する
+   ------------------------------------------------------------
+   2026-09-29 大嶺さん「見積書と請求書の様式は忠実に再現して。印鑑も」。
+   寸法は、Excelが出したPDF（2026　8月/AP牧志コインPゲート処分費.pdf ＝ 見積、SEEk.pdf ＝ 請求）を
+   150dpiで画像にし、罫線と文字の位置を mm で測ったもの。フォントも Excel と同じ HG丸ゴシックM-PRO。
+   ・明細の行数も Excel と同じ（見積 26行・請求 22行、経費 2行）。上2行を空けて書き始めるのも実物どおり。
+     行があふれたときは表を下へ伸ばす（2ページ目に続く）。
+   ・会社印は画像。★SEEK.html には入れない（公開ページなので誰でも持ち出せてしまう）。
+     ログイン後に seek_settings.data.sealCompany（data URL）から読む。未登録なら押さない。
+   ・担当者印（村山）は、Excel と同じく「赤い丸 ＋ HGP行書体の縦書き」を描いている（画像ではない）。
+   ============================================================ */
+const XF_PT = 0.3528;                          // 1pt = 0.3528mm
+const XF_GRAY = '#d9d9d9';                     // Excelの灰色の行（実測 217/255）
+function xfReiwa(iso){
+  const m = String(iso||'').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(!m) return String(iso||'');
+  const y = +m[1]-2018; return `令和${y===1?'元':y}年${+m[2]}月${+m[3]}日`;
+}
+function xfNum(v){ if(v===''||v==null) return ''; const n=Number(v); return isFinite(n) ? n.toLocaleString('ja-JP') : ''; }
+// 長い文字は縮める（Excelの「縮小して全体を表示」と同じ）。全角1・半角0.55で幅を見積もる
+function xfFit(text, pt, maxMm){
+  let w=0; for(const ch of String(text||'')) w += /[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1;
+  const need = w*pt*XF_PT; return (maxMm && need>maxMm) ? Math.max(5, pt*maxMm/need) : pt;
+}
+// 文字。y は PDF で測った「文字の枠の上端」。a = l/c/r（x は左端／中心／右端）
+function xfT(x, y, text, o={}){
+  const pt = xfFit(text, o.pt||9, o.max), a=o.a||'l', w=o.w||150;
+  const left = a==='l' ? x : a==='c' ? x-w/2 : x-w;
+  // HG丸ゴシックの字面は行の上端から少し下にある。元PDFと重ねて測った補正（文字の大きさに比例）
+  return `<div class="xt" style="left:${left.toFixed(2)}mm;top:${(y+pt*XF_PT*0.03).toFixed(2)}mm;width:${w}mm;`
+    + `text-align:${a==='l'?'left':a==='c'?'center':'right'};font-size:${pt.toFixed(2)}pt${o.css?';'+o.css:''}">${esc(text)}</div>`;
+}
+const xfH = (x1,y,x2,t=0.17,c='#000') =>
+  `<div class="xl" style="left:${x1}mm;top:${(y-t/2).toFixed(3)}mm;width:${(x2-x1).toFixed(2)}mm;height:${t}mm;background:${c}"></div>`;
+const xfV = (x,y1,y2,t=0.17,c='#000') =>
+  `<div class="xl" style="left:${(x-t/2).toFixed(3)}mm;top:${y1}mm;width:${t}mm;height:${(y2-y1).toFixed(2)}mm;background:${c}"></div>`;
+const xfR = (x1,y1,x2,y2,fill) =>
+  `<div class="xl" style="left:${x1}mm;top:${y1}mm;width:${(x2-x1).toFixed(2)}mm;height:${(y2-y1).toFixed(2)}mm;background:${fill}"></div>`;
+const xfBox = (x1,y1,x2,y2,t=0.34,c='#000') =>
+  xfH(x1,y1,x2,t,c)+xfH(x1,y2,x2,t,c)+xfV(x1,y1,y2,t,c)+xfV(x2,y1,y2,t,c);
+// 担当者印：赤い丸（1.25pt）の中に HGP行書体 12pt の縦書き。Excelの図形と同じ作り
+function xfStamp(x1,y1,x2,y2,name){
+  const n = String(name||'').trim(); if(!n) return '';
+  const pt = n.length<=2 ? 12 : Math.max(7, 24/n.length);
+  return `<div class="xstamp" style="left:${x1}mm;top:${y1}mm;width:${(x2-x1).toFixed(2)}mm;height:${(y2-y1).toFixed(2)}mm;font-size:${pt}pt"><span>${esc(n)}</span></div>`;
+}
+const xfSeal = (x1,y1,x2,y2,src) => src
+  ? `<img class="xseal" alt="" src="${esc(src)}" style="left:${x1}mm;top:${y1}mm;width:${(x2-x1).toFixed(2)}mm;height:${(y2-y1).toFixed(2)}mm">` : '';
+
+/* 様式ごとの寸法（mm）。PDFの実測値 */
+const XF = {
+  quote: {
+    left:18.6, right:190.8, head:[99.9,104.6], work:[104.6,26,4.319], expRow:[4.5,4.1],
+    cols:[85.3,95.5,103.8,124.3,150.0], labelC:51.95,
+    hdr:[['品　　　名',51.95],['数量',90.4],['単位',99.65],['単　価',114.05],['金　額',137.15],['摘　要',170.4]], hdrY:100.7,
+    txt:{name:19.4, qty:90.4, unit:99.65, price:123.7, amount:149.2, memo:150.8},
+    rowLine:'#000', colLine:'#000', headT:0.34, rowDy:0.2, nameDy:0.3, bigAmtX:149.2,
+  },
+  invoice: {
+    left:23.7, right:195.9, head:[104.8,109.6], work:[109.6,22,4.341], expRow:[4.2,4.2],
+    cols:[90.3,100.6,108.7,129.2,154.9], labelC:57.0,
+    hdr:[['品　　　名',57.25],['数量',95.45],['単位',104.65],['単　価',119.3],['金　額',142.35],['摘　要',175.65]], hdrY:105.7,
+    txt:{name:24.5, qty:95.45, unit:104.65, price:128.6, amount:154.2, memo:155.7},
+    rowLine:'#dfdfdf', colLine:'#a5a5a5', headT:0.5, rowDy:-0.4, nameDy:0, bigAmtX:153.75,
+  },
+};
+
+/* d = { kind, date, client, title, total, sub1, sub2, discount, ex, taxRate, tax,
+         work:[明細], expense:[経費の明細], note, delivered, payTerms, due, site, bank, S, seal, stamp } */
+function xformHtml(d){
+  const isQ = d.kind==='quote', F = XF[d.kind], S = d.S||{};
+  const out = [];
+  const L=F.left, R=F.right, [ws, cap, rh] = F.work;
+  // 明細：上2行を空けて書く（実物どおり）。入りきらないときは空けない→それでも足りなければ伸ばす
+  const n = d.work.length, blank = Math.max(0, Math.min(2, cap-n)), rows = Math.max(cap, n);
+  const shift = (rows-cap)*rh;
+  const nExp = Math.max(2, d.expense.length), expShift = (nExp-2)*F.expRow[1];
+  const Y = y => y + shift;                     // 明細より下の位置は、あふれた分だけ下げる
+  const YE = y => y + shift + expShift;         // 経費より下
+
+  /* ---- 表の下地（灰色の行）を先に敷く ---- */
+  const sumTop = ws + rows*rh;                  // 「小計」の上端
+  const tot = isQ
+    ? { sub:[0,4.8], exp:4.8, sub2:[0,4.7], plus:[4.7,4.9], disc:[9.6,4.3], gt:[13.9,4.7], tax:[18.6,4.4], all:[23.0,4.8] }
+    : { sub:[0,4.9], exp:4.9, sub2:[0,5.0], plus:[5.0,4.7], disc:[9.7,4.4], gt:[14.1,4.7], tax:[18.8,4.3], all:[23.1,4.7] };
+  const expTop = sumTop + tot.exp, s2Top = expTop + F.expRow[0] + F.expRow[1] + expShift;
+  const rowsSum = [                              // [上端, 高さ, 灰色, 見出し, 金額, 文字pt]
+    [sumTop,        tot.sub[1],  true,  '小　計',       d.sub1, 9],
+    [s2Top,         tot.sub2[1], true,  '小　計　②',   d.sub2, 9],
+    [s2Top+tot.plus[0], tot.plus[1], true, '① ＋ ②',   d.sub1+d.sub2, 9],
+    [s2Top+tot.disc[0], tot.disc[1], false,'《お値引き》', d.discount ? '▲ '+xfNum(Math.abs(d.discount)) : '', 8],
+    [s2Top+tot.gt[0],   tot.gt[1],   true, '合　　計',   d.ex, 9],
+    [s2Top+tot.tax[0],  tot.tax[1],  false,`＜消費税＞　${Math.round((d.taxRate||0)*100)}%`, d.tax, 8],
+    [s2Top+tot.all[0],  tot.all[1],  true, '総　合　計', d.total, 9],
+  ];
+  const tableBottom = s2Top + tot.all[0] + tot.all[1];
+  rowsSum.forEach(([y,h,g])=>{ if(g) out.push(xfR(L, y, R, y+h, XF_GRAY)); });
+
+  /* ---- 表の罫線 ----（縦の灰色の線を先に。黒い横線がその上に来る＝Excelと同じ重なり） */
+  F.cols.forEach(x=>out.push(xfV(x, F.head[0], tableBottom, 0.17, F.colLine)));
+  out.push(xfH(L, F.head[0], R, F.headT), xfH(L, F.head[1], R, F.headT));
+  for(let i=1;i<rows;i++) out.push(xfH(L, ws+i*rh, R, 0.17, F.rowLine));
+  // 経費の行の区切り
+  for(let i=1;i<nExp;i++) out.push(xfH(L, expTop+F.expRow[0]+(i-1)*F.expRow[1], R, 0.17, isQ?'#000':F.rowLine));
+  const thick = isQ ? [0.34,0.34,0.17,0.34,0.5,0.34,0.34,0.5,0.34,0.34] : [0.34,0.17,0.17,0.5,0.34,0.34,0.17,0.34,0.34,0.34];
+  [sumTop, expTop, null, s2Top, s2Top+tot.plus[0], s2Top+tot.disc[0], s2Top+tot.gt[0], s2Top+tot.tax[0], s2Top+tot.all[0], tableBottom]
+    .forEach((y,i)=>{ if(y!=null) out.push(xfH(L, y, R, thick[i])); });
+
+  /* ---- 表の文字 ---- */
+  F.hdr.forEach(([t,x])=>out.push(xfT(x, F.hdrY, t, {pt:9, a:'c', w:40})));
+  const T = F.txt, nameW = F.cols[0]-T.name-0.6;
+  const line = (it, top, h, isExp) => {
+    // 見積の工事の行は、品名・単価・金額が数量・単位より少し下に出る（Excelの実物どおり。請求は同じ高さ）
+    const y = top + (h-8*XF_PT)/2 + (isExp ? 0.1 : F.rowDy), y2 = isExp ? y : y+F.nameDy;
+    const head = !Number(it.amount) && !Number(it.unit_price) && !Number(it.qty);   // 見出し・注記の行
+    out.push(xfT(T.name, y2, it.name||'', {pt:8, max:nameW, w:nameW}));
+    if(head) return;
+    if(it.qty!=null && it.qty!=='') out.push(xfT(T.qty, y, xfNum(it.qty), {pt:8, a:'c', w:10}));
+    if(it.unit) out.push(xfT(T.unit, y, it.unit, {pt:8, a:'c', w:8, max:7.8}));
+    if(Number(it.unit_price)) out.push(xfT(T.price, y2, xfNum(it.unit_price), {pt:8, a:'r', w:20}));
+    // 工事の行は0円を出さない（Excelの式が""を返す）。経費の行は打った0をそのまま出す
+    if(Number(it.amount) || isExp) out.push(xfT(T.amount, y2, xfNum(it.amount||0), {pt:8, a:'r', w:25}));
+    if(it.memo) out.push(xfT(T.memo, y2, it.memo, {pt:8, w:R-T.memo-0.5, max:R-T.memo-0.5}));
+  };
+  d.work.forEach((it,i)=>line(it, ws+(blank+i)*rh, rh, false));
+  d.expense.forEach((it,i)=>line(it, i===0 ? expTop : expTop+F.expRow[0]+(i-1)*F.expRow[1], i===0?F.expRow[0]:F.expRow[1], true));
+  rowsSum.forEach(([y,h,,label,amt,pt],k)=>{
+    const ty = y + (h-pt*XF_PT)/2 - 0.05;
+    if(k===5){   // 消費税は「＜消費税＞」と率が別のセル（Excelの B56 と I56）
+      out.push(xfT(F.labelC-12.2, ty, '＜消費税＞', {pt}), xfT(F.labelC+4.3, ty, Math.round((d.taxRate||0)*100)+'%', {pt}));
+    } else out.push(xfT(F.labelC, ty, label, {pt, a:'c', w:60}));
+    const ax = (k===4 || k===6) ? F.bigAmtX : T.amount;           // 合計・総合計は実物で少し左
+    if(amt!=='' && amt!=null) out.push(xfT(ax, ty, typeof amt==='string'?amt:xfNum(amt), {pt, a:'r', w:30}));
+  });
+
+  /* ---- 上の部分 ---- */
+  const co = S.company||'ＳＥＥＫ電総株式会社';
+  if(isQ){
+    [['御',87.35],['見',96.77],['積',106.15],['書',115.57]].forEach(([c,x])=>out.push(xfT(x, 14.85, c, {pt:20, w:8})));
+    out.push(xfR(150.0,28.6,191.0,32.5,XF_GRAY), xfBox(150.0,28.6,191.0,32.5,0.17));
+    out.push(xfT(170.5, 28.8, xfReiwa(d.date), {pt:9, a:'c', w:40}));
+    out.push(xfT(57.05, 37.8, d.client, {pt:13, a:'c', w:77, max:76}), xfH(18.6,44.0,95.5,0.34));
+    out.push(xfT(95.6, 38.0, '御中', {pt:12}));
+    out.push(xfT(20.2, 45.7, '案件名：', {pt:9}), xfT(34.7, 46.0, d.title, {pt:7, max:61, w:62}));
+    out.push(xfT(19.6, 53.9, '下記の通りお見積り申し上げます。', {pt:10}));
+    out.push(xfT(19.6, 57.8, '何卒ご用命賜りますよう、お願い申し上げます。', {pt:10}));
+    out.push(xfT(19.5, 65.8, '納 入 場 所'), xfT(19.5, 70.6, '納'), xfT(32.2, 70.6, '期'),
+             xfT(19.5, 75.4, '見積有効期限'), xfT(19.5, 80.1, '取 引 方 法'));
+    [69.8,74.5,79.2,84.2].forEach(y=>out.push(xfH(39.3,y,85.2,0.17)));
+    out.push(xfT(62.25, 65.5, '御社ご指定場所', {pt:10, a:'c', w:46}),
+             xfT(62.25, 70.2, '発注日より30日以内', {pt:10, a:'c', w:46}),
+             xfT(53.6, 75.0, '一ヶ月', {pt:10, a:'c', w:20}),
+             xfT(60.3, 75.7, '※ 期限後注文の節は一応御照会願います。', {pt:7}),
+             xfT(62.25, 79.8, '現金及びリース', {pt:10, a:'c', w:46}));
+    out.push(xfT(157.8, 44.8, co, {pt:14, a:'c', w:70}),
+             xfT(160.4, 51.1, S.address||'', {pt:10, a:'c', w:60}),
+             xfT(160.2, 55.9, 'TEL'+(S.tel||''), {pt:10, a:'c', w:60}),
+             xfT(160.2, 60.7, 'FAX'+(S.fax||''), {pt:10, a:'c', w:60}));
+    out.push(xfBox(129.4,64.9,190.8,84.2,0.34), xfV(149.9,64.9,84.2,0.34), xfV(170.3,64.9,84.2,0.34));
+    out.push(xfT(180.55, 65.2, '担当者', {pt:8, a:'c', w:20}));
+    out.push(xfStamp(173.7,69.3,187.8,83.7, d.stamp));
+    // お見積り金額の枠
+    out.push(xfBox(18.5,86.9,191.0,95.0,0.34), xfV(18.5,86.9,95.0,0.5), xfV(44.4,86.9,95.0,0.17));
+    out.push(xfT(31.45, 89.2, 'お見積り金額', {pt:10, a:'c', w:26}));
+    out.push(xfT(70.1, 88.8, '¥'+xfNum(d.total)+' -', {pt:12, a:'c', w:50}));
+    out.push(xfT(98.3, 87.6, '＜リース契約の場合＞', {pt:6}),
+             xfT(99.1, 91.3, 'リース期間：', {pt:8}), xfT(120.8, 91.3, 'ヶ月', {pt:8}),
+             xfT(135.0, 91.3, '月額リース料：', {pt:8}));
+    // 備考
+    const bt = YE(260.9), bb = YE(277.7);
+    out.push(xfBox(18.5,bt,191.0,bb,0.34), xfV(18.5,bt,bb,0.5), xfH(18.5,bb,191.0,0.5), xfV(29.0,bt,bb,0.17));
+    out.push(xfT(23.85, bt+2.8, '備', {pt:10, a:'c', w:8}), xfT(23.85, bt+10.7, '考', {pt:10, a:'c', w:8}));
+    if(d.note) out.push(xfT(30.5, bt+1.6, d.note, {pt:8, w:158, css:'white-space:pre-wrap;line-height:1.5'}));
+    out.push(xfT(185.1, bt+12.6, '※ 上記以外の作業、部材等につきましては、別途御見積りとさせていただきます。', {pt:8, a:'r', w:120}));
+    out.push(xfSeal(167.1,43.3,190.3,64.3, d.seal));
+  } else {
+    out.push(xfR(144.6,14.4,195.9,23.5,XF_GRAY), xfBox(144.6,14.4,195.9,23.5,0.2,'#9c9c9c'), xfH(144.6,19.0,195.9,0.17,'#8c8c8c'));
+    out.push(xfT(145.6, 14.9, '発行日', {pt:10}), xfT(159.6, 14.9, xfReiwa(d.date), {pt:10}));
+    [['請',87.50],['求',99.38],['書',111.19]].forEach(([c,x])=>out.push(xfT(x, 25.08, c, {pt:20, w:8})));
+    out.push(xfT(52.05, 38.1, d.client, {pt:11, a:'c', w:56, max:55}), xfT(81.2, 37.9, '御中', {pt:12}));
+    if(S.regNo) out.push(xfT(135.4, 44.1, '登録番号', {pt:11}), xfT(154.9, 44.1, S.regNo, {pt:11}));
+    out.push(xfT(24.5, 55.9, '仕'), xfT(34.0, 55.9, '様'), xfT(24.5, 61.6, '駐車場名'),
+             xfT(24.5, 67.5, '納入先住所', {pt:8.5}), xfT(24.5, 73.1, '納'), xfT(34.0, 73.1, '期'),
+             xfT(24.5, 81.6, '支払条件'));
+    [60.3,66.0,71.8,77.6,83.3,89.1].forEach(y=>out.push(xfH(39.1,y,108.7,0.17,'#a6a6a6')));
+    out.push(xfT(74.0, 61.1, d.title, {pt:11, a:'c', w:70, max:69}),
+             xfT(74.0, 67.0, d.site||'', {pt:10, a:'c', w:70, max:69}),
+             xfT(74.0, 72.6, xfReiwa(d.delivered), {pt:11, a:'c', w:70}),
+             xfT(74.0, 78.6, d.payTerms||'', {pt:10, a:'c', w:70}),
+             xfT(74.0, 84.3, d.due ? xfReiwa(d.due)+'支払' : '', {pt:10, a:'c', w:70}));
+    out.push(xfT(167.95, 54.8, co, {pt:14, a:'c', w:70}),
+             xfT(170.5, 61.3, S.address||'', {pt:10, a:'c', w:60}),
+             xfT(167.95, 67.0, 'TEL'+(S.tel||''), {pt:10, a:'c', w:60}),
+             xfT(167.9, 72.8, 'FAX'+(S.fax||''), {pt:10, a:'c', w:60}));
+    out.push(xfBox(134.3,83.1,196.1,100.2,0.34), xfV(154.8,83.1,100.2,0.34), xfV(175.4,83.1,100.2,0.34));
+    out.push(xfT(185.75, 83.6, '担当者', {pt:8, a:'c', w:20}));
+    out.push(xfStamp(178.6,86.5,191.7,99.9, d.stamp));
+    out.push(xfBox(23.5,91.8,108.9,100.2,0.4), xfV(49.3,91.8,100.2,0.17));
+    out.push(xfT(36.4, 94.2, '合計金額', {pt:10, a:'c', w:25}));
+    out.push(xfT(79.1, 93.9, '¥'+xfNum(d.total)+' -', {pt:12, a:'c', w:58}));
+    out.push(xfT(24.7, 100.5, '注文内訳', {pt:12}));
+    const b = d.bank||{}, by = tableBottom + 0.9;
+    if(b.bank_name){
+      out.push(xfT(24.6, by, '振込先'),
+               xfT(24.6, by+4.8, `銀行名　：${b.bank_name} ${b.branch_name||''}`),
+               xfT(24.6, by+9.6, `口座番号：${b.account_no||''}　（${b.account_type||''}）`),
+               xfT(24.6, by+14.1, `口座名義：${b.holder||''}`));
+    }
+    out.push(xfSeal(172.9,59.9,197.4,82.3, d.seal));
+  }
+  const pageH = Math.max(297, (isQ ? YE(277.7) : tableBottom+20) + 12);
+  return `<div class="xpage" style="height:${pageH.toFixed(1)}mm">${out.join('')}</div>`;
+}
+const XF_CSS = `
+.xpage{position:relative;width:210mm;background:#fff;color:#000;overflow:hidden;
+  font-family:'HG丸ｺﾞｼｯｸM-PRO','HGMaruGothicMPRO','Meiryo',sans-serif;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.xpage .xt{position:absolute;line-height:1;white-space:nowrap;overflow:visible;letter-spacing:0}
+.xpage .xl{position:absolute}
+.xpage .xseal{position:absolute;mix-blend-mode:multiply;object-fit:fill}
+.xpage .xstamp{position:absolute;box-sizing:border-box;border:1.25pt solid #f00;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:#f00;line-height:1;
+  font-family:'HGP行書体','HGPGyoshotai','HG行書体','HGGyoshotai',serif}
+.xpage .xstamp span{writing-mode:vertical-rl;text-orientation:upright}
+.paper.xpaper{padding:0;width:210mm;margin:0 auto;border-radius:0}
+@page xform{size:A4;margin:0}
+@media print{#printArea .xpage{page:xform}}`;
+document.head.insertAdjacentHTML('beforeend', '<style id="xfcss">'+XF_CSS+'</style>');
+/* ==== XFORM END ==== */
+
+/* 見積書・請求書のプレビュー → 印刷／PDF。
+   opt.draft … 「見積を作る」の途中（まだ保存していない）から開いたとき。 */
+function printDoc(j, items, kind, opt={}){
   const isQ = kind==='quote';
-  const bank = M.banks.find(b=>b.id===j.bank_account_id) || M.banks[0] || {};
+  const bank = M.banks.find(b=>b.id===j.bank_account_id) || M.banks.find(b=>b.is_default) || M.banks[0] || {};
   const S = M.settings || {};
-  // 「<機器設置工事>」のような見出しだけの行は、数量や0円を出さずに見出しとして出す
-  const isHead = it => !Number(it.amount) && !Number(it.unit_price) && !Number(it.qty);
-  const paperRow = it => isHead(it)
-    ? `<tr><td colspan="6" style="font-weight:700">${esc(it.name)}</td></tr>`
-    : `<tr><td>${esc(it.name)}</td>
-        <td style="text-align:right">${it.qty??''}</td><td>${esc(it.unit||'')}</td>
-        <td style="text-align:right">${yen(it.unit_price)}</td>
-        <td style="text-align:right">${yen(it.amount)}</td>
-        <td>${esc(it.memo||'')}</td></tr>`;
-  const sumRow = (label, v, strong) => `<tr style="background:#eee">
-    <td colspan="4" style="text-align:center;${strong?'font-weight:700;':''}">${label}</td>
-    <td style="text-align:right;${strong?'font-weight:700;':''}">${yen(v)}</td><td></td></tr>`;
+  const c = clientMap.get(j.client_id);
+  // 宛名：Excelから移行した案件は、当時の紙に書いた宛名（client_name）をそのまま出す。
+  // 画面で作った案件の client_name は短い呼び名（アップルパーク）なので、正式名（株式会社アップルパーク）を出す。
+  const client = (j.client_name && c && j.client_name!==c.name) ? j.client_name
+               : ((c && c.formal_name) || j.client_name || '');
   // Excelに空行がそのまま残っている明細がある（品名も金額も無い）。帳票には出さない。
   // ⚠ 金額か数量か単価が入っているものは、品名が空でも必ず残す
   //    （移行の初期に品名だけ見て落として 35,500円 を1件飛ばしたことがある）
@@ -2238,62 +2478,39 @@ function printDoc(j, items, kind){
   const ex = Number(j.total_ex_tax||0);
   // 移行した案件は当時の金額を凍結しているので、明細を足した値と合わないことがある（実データで3件）
   const gap = (sub1+sub2) - (ex - Number(j.discount||0));
+  const date = isQ ? (j.quoted_at || today()) : (j.invoiced_at || today());
+  const seal = S.sealCompany || '';
+  const html = xformHtml({
+    kind, date, client, title: j.title||'',
+    total: Number(j.total_in_tax||0), sub1, sub2, discount: Number(j.discount||0), ex,
+    taxRate: Number(j.tax_rate||0), tax: Number(j.tax_amount||0),
+    work, expense,
+    delivered: j.delivered_at || '', payTerms: j.payment_terms || S.paymentTerms || '現金', due: j.due_date || '',
+    site: [j.site_address, j.site_building].filter(Boolean).join(' '),
+    bank, S, seal, stamp: S.stampName || '村山' });
+  const warn = [];
+  if(opt.draft) warn.push('<b>まだ保存していない見積です。</b>画面で入れている内容をそのまま見積書にしています。');
+  if(!seal) warn.push('会社印がまだ登録されていないので、印鑑なしで出ています。マスタ →「帳票・印鑑」で登録できます。');
+  if(!isQ && !j.invoiced_at) warn.push('請求日が入っていないので、発行日は今日の日付で出しています。');
+  if(!isQ && !S.regNo) warn.push('登録番号（インボイス）が未登録なので出していません。マスタ →「帳票・印鑑」で登録できます。');
+  if(work.length > XF[kind].work[1]) warn.push(`明細が${work.length}行あり、1枚（${XF[kind].work[1]}行）に入りきらないので2枚目に続きます。`);
+  if(gap) warn.push(`明細の合計（${yen(sub1+sub2)}）と、この案件に記録されている合計（${yen(ex-Number(j.discount||0))}）が
+    ${yen(Math.abs(gap))} ちがいます。Excelから移行した当時の金額をそのまま出しています。`);
   document.getElementById('dlgT').textContent = isQ?'見積書プレビュー':'請求書プレビュー';
   document.getElementById('dlgB').innerHTML = `
-    <div class="paper">
-      <h3>${isQ?'御 見 積 書':'請 求 書'}</h3>
-      <div class="pgrid">
-        <div>
-          <div style="font-size:15px;border-bottom:1px solid #333;padding-bottom:3px;display:inline-block">
-            ${esc(j.client_name||'')} 御中</div>
-          <div style="margin-top:12px">案件名：${esc(j.title||'')}</div>
-          ${j.job_no?`<div>案件番号：${esc(j.job_no)}</div>`:''}
-          <div style="margin-top:14px;font-size:11px;color:#555">
-            ${isQ?`納入場所：御社ご指定場所<br>納　　期：発注日より30日以内<br>見積有効期限：一ヶ月`
-                 :`納　　期：${esc(j.delivered_at||'')}<br>支払条件：${esc(j.payment_terms||'現金')}<br>支払期日：${esc(j.due_date||'')}`}
-          </div>
-          <div style="margin-top:16px;font-size:15px">${isQ?'お見積り金額':'ご請求金額'}
-            <b style="font-size:20px;margin-left:12px;border-bottom:2px solid #333">¥${yen(j.total_in_tax)}-</b></div>
-        </div>
-        <div style="text-align:right;font-size:11px">
-          <div style="font-size:13px;font-weight:700">${esc(S.company||'')}</div>
-          <div>${esc(S.address||'')}</div>
-          <div>TEL ${esc(S.tel||'')}　FAX ${esc(S.fax||'')}</div>
-          <div style="margin-top:6px;font-size:10px;color:#666">${esc(S.license||'')}</div>
-          <div style="margin-top:10px;color:#666">${isQ?'見積日':'請求日'}　${esc((isQ?j.quoted_at:j.invoiced_at)||'')}</div>
-        </div>
-      </div>
-      <table><thead><tr><th>品　名</th><th style="text-align:right">数量</th><th>単位</th>
-        <th style="text-align:right">単　価</th><th style="text-align:right">金　額</th><th>摘　要</th></tr></thead>
-        <tbody>${work.map(paperRow).join('')}
-        ${expense.length?`
-          ${sumRow('小　計', sub1)}
-          ${expense.map(paperRow).join('')}
-          ${sumRow('小　計　②', sub2)}
-          ${sumRow('①　＋　②', sub1+sub2)}`
-        : sumRow('小　計', sub1)}
-        ${Number(j.discount||0)?`<tr><td colspan="4" style="text-align:center">《お値引き》</td>
-          <td style="text-align:right">▲ ${yen(Math.abs(Number(j.discount)))}</td><td></td></tr>`:''}
-        ${sumRow('合　計', ex, true)}
-        <tr><td colspan="4" style="text-align:center">＜消費税＞　${Math.round(Number(j.tax_rate||0)*100)}%</td>
-          <td style="text-align:right">${yen(j.tax_amount)}</td><td></td></tr>
-        ${sumRow('総　合　計', j.total_in_tax, true)}
-        </tbody></table>
-      ${gap?`<div style="margin-top:6px;font-size:10px;color:#b3261e">
-        ※ 明細の合計（${yen(sub1+sub2)}）と、この案件に記録されている合計（${yen(Number(j.total_ex_tax)-Number(j.discount||0))}）が
-        ${yen(Math.abs(gap))} ちがいます。Excelから移行した当時の金額をそのまま出しています。</div>`:''}
-      ${!isQ&&bank.bank_name?`<div style="margin-top:18px;font-size:11px;border-top:1px solid #ddd;padding-top:10px">
-        <b>お振込先</b><br>${esc(bank.bank_name)}　${esc(bank.branch_name||'')}　${esc(bank.account_type||'')} ${esc(bank.account_no||'')}　${esc(bank.holder||'')}</div>`:''}
-    </div>
-    <div class="row" style="margin-top:14px">
+    ${warn.length?`<div class="note" style="margin-top:0">${warn.join('<br>')}</div>`:''}
+    <div class="row" style="margin:0 0 12px">
       <button class="btn" id="doPrint">印刷 / PDFで保存</button>
-      <span class="muted small">印刷画面で「PDFとして保存」を選ぶとPDFになります</span>
+      <span class="muted small">印刷画面で「PDFに保存」を選ぶとPDFになります（用紙 A4・余白なし）</span>
     </div>
+    <div style="overflow:auto;background:var(--bg);padding:10px;border-radius:8px">
+      <div class="paper xpaper">${html}</div></div>
     <div class="note" style="margin-top:10px">取引先に送る前に、必ずこの内容を目で確認してください
       （標準手順書 G2「外部送信は人間の最終確認を通す」）。</div>`;
+  if(!dlg.open) dlg.showModal();
   const pb=document.getElementById('doPrint');
   if(pb) pb.onclick=()=>printPaper(
-    [isQ?'見積書':'請求書', j.job_no, (j.client_name||'').replace(/[\\/:*?"<>|]/g,''),
+    [isQ?'見積書':'請求書', j.job_no, (client||'').replace(/[\\/:*?"<>|]/g,''),
      (j.title||'').replace(/^仮\s*[）)]\s*/,'').replace(/[\\/:*?"<>|]/g,'').slice(0,30)]
       .filter(Boolean).join('_'));
 }
@@ -3661,10 +3878,12 @@ function drawMake(){
   const ex=sub+Number(mk.discount||0), tax=Math.round(ex*mk.tax_rate);
   body.innerHTML = `
   ${mk.msg}
-  <div class="scroll"><table>
-    <thead><tr><th style="min-width:220px">工種</th><th style="width:130px">条件</th>
-      <th class="n">数量</th><th>単位</th><th class="n">単価</th><th class="n">金額</th>
-      <th class="n">原価単価</th><th class="n">原価率</th><th></th></tr></thead>
+  <div class="scroll"><table class="mktbl">
+    <thead><tr><th colspan="7" class="gq">見積書<span>お客様に出る</span></th>
+      <th colspan="3" class="gc c1">原価<span>社内だけ・見積書には出ません</span></th></tr>
+      <tr><th style="min-width:220px">工種</th><th style="width:130px">条件</th>
+      <th class="n">数量</th><th>単位</th><th class="n">単価</th><th class="n">金額</th><th></th>
+      <th class="n c c1">原価単価</th><th class="n c">原価金額</th><th class="n c">原価率</th></tr></thead>
     <tbody>${mk.lines.map((l,i)=>lineRow(l,i,avail)).join('')}</tbody></table></div>
   <div class="row" style="margin-top:10px">
     <button class="btn sm ghost" id="mkadd">＋ 明細を追加</button>
@@ -3672,13 +3891,13 @@ function drawMake(){
     <span class="spacer"></span>
     <span class="muted small">${mk.lines.length}行</span>
   </div>
-  <div class="row" style="margin-top:14px;justify-content:flex-end;gap:8px">
+  <div class="mksplit"><div class="mkq">
+  <div class="row" style="justify-content:flex-end;gap:8px">
     <button class="btn sm ghost" id="mkwelfare" title="工事の小計の4%。紙の見積書3枚と実データ199件で確認">＋ 法定福利費（4%）</button>
     <button class="btn sm ghost" id="mkround">端数を落とす</button>
     <label class="f">値引き<input id="mkdisc" style="width:110px;text-align:right"
       value="${Math.abs(Number(mk.discount)||0)}" title="いくら引くかを入れてください"></label>
   </div>
-  <div class="totwrap">
     <div class="ptot">
       <div><span>小計</span><span>${yen(sub)}</span></div>
       <div><span>値引き</span><span>${Number(mk.discount||0) ? '▲ '+yen(Math.abs(Number(mk.discount))) : '0'}</span></div>
@@ -3686,8 +3905,8 @@ function drawMake(){
       <div><span>消費税（10%）</span><span>${yen(tax)}</span></div>
       <div class="g"><span>総合計</span><span>${yen(ex+tax)}</span></div>
     </div>
-    ${drawProfit()}
   </div>
+  <div class="mkc">${drawProfit()}</div></div>
   <div class="stickysum">
     <div><div class="k">総合計（税込）</div><div class="v">${yen(ex+tax)}</div></div>
     ${(()=>{
@@ -3699,6 +3918,7 @@ function drawMake(){
         <div class="rate" style="color:${col}">${g.toFixed(1)}%</div></div>`;
     })()}
     <span class="spacer"></span>
+    <button class="btn ghost" id="mkpdf" title="いま入れている内容で御見積書を開きます（保存はしません）">見積書で確認（PDF）</button>
     <button class="btn" id="mksave" ${mk.saving?'disabled':''}>${mk.saving?'保存中…':'保存する'}</button>
   </div>
   <div class="small muted" style="margin-top:8px">
@@ -3737,6 +3957,7 @@ function drawMake(){
     mk.discount=v; keepFocus(drawMake);
   };
   document.getElementById('mksave').onclick=doSave;
+  document.getElementById('mkpdf').onclick=previewMakeQuote;
   body.querySelectorAll('[data-li]').forEach(el=>{
     el.oninput=el.onchange=()=>{
       const i=+el.dataset.li, f=el.dataset.f, l=mk.lines[i];
@@ -3754,6 +3975,22 @@ function drawMake(){
     };
   });
   body.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ mk.lines.splice(+b.dataset.del,1); drawMake(); });
+}
+/* 「見積を作る」の途中の内容で御見積書を開く（2026-09-29 大嶺さん「見積を作るタブでもPDFで確認できるように」）。
+   保存はしない。金額は保存のときと同じ計算（明細合計＋値引き、税は四捨五入）。 */
+function previewMakeQuote(){
+  if(!mk.client_id){ alert('先に顧客を選んでください'); return; }
+  if(!mk.lines.length){ alert('明細が1行もありません'); return; }
+  const c = clientMap.get(mk.client_id) || {};
+  const sub = mk.lines.reduce((a,l)=>a+Number(l.amount||0),0);
+  const ex = sub + Number(mk.discount||0), tax = Math.round(ex*Number(mk.tax_rate||0));
+  const j = { client_id: mk.client_id, client_name: c.name||'',
+    title: (document.getElementById('mkt')||{}).value || mk.title || '',
+    quoted_at: mk.quoted_at || today(), job_no: mk.job ? mk.job.job_no : '',
+    discount: Number(mk.discount||0), tax_rate: mk.tax_rate,
+    total_ex_tax: ex, tax_amount: tax, total_in_tax: ex+tax,
+    bank_account_id: mk.bank_account_id || null };
+  printDoc(j, mk.lines.map(l=>Object.assign({}, l)), 'quote', {draft:true});
 }
 /* 画面を作り直すと、いま打っている入力欄が「別の要素」に差し替わる。
    ブラウザはフォーカスを body に落とすので、2文字目からどこにも入らなくなる。
@@ -3835,7 +4072,8 @@ function lineRow(l,i,avail){
     <td class="n"><input style="width:96px;text-align:right" data-li="${i}" data-f="unit_price" value="${l.unit_price}">
       ${(!l.unit_price && l._median) ? `<div class="small muted" style="white-space:nowrap">参考 ${yen(l._median)}</div>`:''}</td>
     <td class="n">${yen(l.amount)}</td>
-    <td class="n"><input style="width:96px;text-align:right" data-li="${i}" data-f="cost_unit" value="${l.cost_unit??''}" placeholder="原価単価">
+    <td><button class="btn ghost sm" data-del="${i}" title="この行を消す">×</button></td>
+    <td class="n c c1"><input style="width:96px;text-align:right" data-li="${i}" data-f="cost_unit" value="${l.cost_unit??''}" placeholder="原価単価">
       ${(()=>{
         const m=l._costMaster; if(!m) return '';
         if(l._costOverRate) return `<div class="small" style="white-space:nowrap;color:var(--danger)"
@@ -3844,14 +4082,17 @@ function lineRow(l,i,avail){
         if(l._costGuess) return `<div class="small muted" style="white-space:nowrap">実績${m.sample_count}件${m.is_stable?'':'・ばらつき'}</div>`;
         return `<div class="small muted" style="white-space:nowrap">実績 ${yen(m.cost_unit)}</div>`;
       })()}</td>
-    <td class="n">${(()=>{
+    <td class="n c">${(()=>{
+      const c=Number(l.cost_unit||0)*Number(l.qty||0);      // Excelの「直接原価費」（数量×原価単価）
+      return c ? yen(c) : '<span class="muted">—</span>';
+    })()}</td>
+    <td class="n c">${(()=>{
       const amt=Number(l.amount||0), c=Number(l.cost_unit||0)*Number(l.qty||0);
       if(!amt || !c) return '<span class="muted">—</span>';
       const r=c/amt;
       const col = r>1 ? 'var(--danger)' : (r>0.8 ? 'var(--warn)' : 'var(--ok)');
       return `<b style="color:${col}">${(r*100).toFixed(0)}%</b>`;
-    })()}</td>
-    <td><button class="btn ghost sm" data-del="${i}">×</button></td></tr>`;
+    })()}</td></tr>`;
 }
 async function doSave(){
   if(mk.saving) return;
@@ -3983,6 +4224,7 @@ const MTABS = [
     ['bank','振込先',     ()=>null],
     ['gas', 'メール取込', ()=>null],
     ['user','利用者',     ()=>null],
+    ['doc', '帳票・印鑑', ()=>null],
     ['backup','バックアップ', ()=>null],
   ]],
 ];
@@ -4661,7 +4903,9 @@ function drawBackup(el){
   <div class="card" style="margin-top:12px">
     <h2>毎朝の自動バックアップ（設置のしかた）</h2>
     <ol class="small" style="line-height:2;padding-left:20px">
-      <li>Googleドライブに<b>バックアップ用のフォルダ</b>を作り、URL末尾のIDを控える</li>
+      <li><b>村山さんのGoogleドライブ</b>に「SEEKバックアップ」フォルダを作り、URL末尾のIDを控える<br>
+        <span class="muted">SEEKのデータはSEEKが持つ、という決まりです（2026-09-09）。<br>
+        メール取込と同じGASに入れるので、置き場所は自然と村山さん側になります。</span></li>
       <li>メール取込と<b>同じGASプロジェクト</b>に <code>_GAS_seek-backup.gs</code> を貼る</li>
       <li>スクリプト プロパティに <code>BACKUP_FOLDER_ID</code> を足す</li>
       <li><code>backup_dryrun</code> を1回実行（<b>書き込みません</b>。何行取れるか出るだけ）</li>
@@ -4767,13 +5011,15 @@ function drawGasSetup(el){
   <div class="card" style="margin-top:12px">
     <h2>設置のしかた（大嶺さん）</h2>
     <ol class="small" style="line-height:2;padding-left:20px">
-      <li><b>Supabase の Storage で bucket <code>seek-files</code> を作る</b>（Public は OFF）</li>
+      <li><span class="muted">Supabase の Storage の bucket <code>seek-files</code> は作成済み</span></li>
       <li><a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a>
           で新しいプロジェクトを作り、下のコードを<b>丸ごと貼る</b></li>
       <li>プロジェクトの設定 → <b>スクリプト プロパティ</b> に3つ登録する
         <div class="scroll" style="margin:6px 0"><table><tbody>
           <tr><td><code>SB_URL</code></td><td>SupabaseのURL（<code>https://xxxxx.supabase.co</code>）</td></tr>
-          <tr><td><code>SB_KEY</code></td><td><b>Secret key</b>（<code>sb_secret_…</code>）
+          <tr><td><code>SB_KEY</code></td><td><b>旧方式の service_role キー</b>（<code>eyJ…</code> で始まる長い文字列）<br>
+            <span class="small muted">Supabase → Project Settings → API Keys →「Legacy」のタブ → service_role。
+            新方式の <code>sb_secret_…</code> はGASからだと拒まれる（9/8 実機で確認）</span><br>
             <span style="color:var(--danger)">★ここにしか置かない。SEEK.html には絶対に書かない</span></td></tr>
           <tr><td><code>SEEK_LABEL</code></td><td><code>見積依頼</code>（Gmailのラベル名）</td></tr>
         </tbody></table></div></li>
@@ -5049,6 +5295,8 @@ function drawMaster(){
     drawGasSetup(el);
   } else if(mTab==='user'){
     drawUsers(el);
+  } else if(mTab==='doc'){
+    drawDocSettings(el);
   } else if(mTab==='backup'){
     drawBackup(el);
   } else if(mTab==='sup'){
@@ -5062,6 +5310,99 @@ function drawMaster(){
         <td>${esc(b.account_type||'')}</td><td>${esc(b.account_no||'')}</td><td>${esc(b.holder||'')}</td>
         <td>${b.is_default?'<span class="tag b">既定</span>':''}</td></tr>`).join('')}</tbody></table></div>`;
   }
+}
+
+/* ============================================================
+   帳票・印鑑（マスタ → 設定）
+   ------------------------------------------------------------
+   会社印の画像・登録番号（インボイス）・担当者印の名前を seek_settings.data に持つ。
+   ★会社印は SEEK.html に書かない（公開ページなので、書くと誰でも持ち出せる）。
+     DBの seek_settings は事務・管理者しか読めない（第1段のRLS）。
+   画像は、まわりの白や透明の余白を自動で切り落としてから保存する
+   （帳票の印鑑の枠は、Excelの印影そのものの大きさで測ってあるため）。
+   ============================================================ */
+async function trimSealImage(file){
+  const url = await new Promise((ok,ng)=>{ const r=new FileReader(); r.onload=()=>ok(r.result);
+    r.onerror=()=>ng(new Error('画像を読めませんでした')); r.readAsDataURL(file); });
+  const img = await new Promise((ok,ng)=>{ const i=new Image(); i.onload=()=>ok(i);
+    i.onerror=()=>ng(new Error('画像として開けませんでした（PNGかJPEGにしてください）')); i.src=url; });
+  const cv=document.createElement('canvas'); cv.width=img.naturalWidth; cv.height=img.naturalHeight;
+  const g=cv.getContext('2d'); g.drawImage(img,0,0);
+  const {data,width:w,height:h}=g.getImageData(0,0,cv.width,cv.height);
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const k=(y*w+x)*4;
+    const ink = data[k+3]>40 && !(data[k]>235 && data[k+1]>235 && data[k+2]>235);   // 白と透明は余白
+    if(ink){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+  if(x1<0) throw new Error('印影が見つかりませんでした（真っ白な画像です）');
+  const cw=x1-x0+1, ch=y1-y0+1, sc=Math.min(1, 480/Math.max(cw,ch));
+  const out=document.createElement('canvas'); out.width=Math.round(cw*sc); out.height=Math.round(ch*sc);
+  out.getContext('2d').drawImage(cv, x0,y0,cw,ch, 0,0,out.width,out.height);
+  return out.toDataURL('image/png');
+}
+async function saveSettings(patch){
+  const data = Object.assign({}, M.settings||{}, patch);
+  const res = await fetch(SB_URL+'/rest/v1/seek_settings?id=eq.1',{
+    method:'PATCH', headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}),
+    body: JSON.stringify({data}) });
+  if(!res.ok) throw new Error('保存できませんでした（'+res.status+'）'+(await res.text()).slice(0,160));
+  const rows = await res.json();
+  if(!rows.length) throw new Error('設定の行が見つかりませんでした（権限が無い可能性があります）');
+  M.settings = rows[0].data || data;
+}
+function drawDocSettings(el){
+  const S = M.settings || {};
+  let pending = null;                        // 選んだが、まだ保存していない印影
+  const draw = (msg='') => {
+    const seal = pending || S.sealCompany || '';
+    el.innerHTML = `
+    <div class="hint"><b>御見積書・請求書に押す印鑑と、請求書の登録番号です。</b><br>
+      <span class="small">帳票の様式はExcelと同じにしてあります（2026-09-29）。ここで入れたものが次に開く帳票から使われます。</span></div>
+    ${msg}
+    <div class="card" style="margin-top:12px">
+      <h2>会社印</h2>
+      <div class="row" style="align-items:flex-start;gap:18px">
+        <div style="width:120px;height:110px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;background:#fff">
+          ${seal?`<img src="${esc(seal)}" style="max-width:110px;max-height:100px">`:'<span class="muted small">未登録</span>'}</div>
+        <div class="small" style="line-height:1.9">
+          <input type="file" id="dsSeal" accept="image/png,image/jpeg"><br>
+          PNG か JPEG。まわりの余白は自動で切り落とします。<br>
+          <span class="muted">白い背景のままで大丈夫です（紙の上で文字に重なっても透けて見えます）。</span>
+          ${pending?'<br><b style="color:var(--warn)">まだ保存していません。下の「保存する」を押してください。</b>':''}
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>文字</h2>
+      <label class="f" style="display:block;margin-bottom:10px">登録番号（インボイス）
+        <input id="dsReg" value="${esc(S.regNo||'')}" placeholder="T4360001026723" style="width:260px"></label>
+      <label class="f" style="display:block">担当者印の名前（赤い丸の中に縦書き）
+        <input id="dsStamp" value="${esc(S.stampName||'村山')}" style="width:120px"></label>
+    </div>
+    <div class="row" style="margin-top:14px;gap:8px">
+      <button class="btn" id="dsSave">保存する</button>
+      ${S.sealCompany?'<button class="btn ghost sm" id="dsDel">会社印を外す</button>':''}
+    </div>`;
+    document.getElementById('dsSeal').onchange = async e => {
+      const f = e.target.files && e.target.files[0]; if(!f) return;
+      try{ pending = await trimSealImage(f); draw(); }
+      catch(err){ draw(`<div class="err">${esc(err.message)}</div>`); }
+    };
+    document.getElementById('dsSave').onclick = async () => {
+      const patch = { regNo: document.getElementById('dsReg').value.trim(),
+                      stampName: document.getElementById('dsStamp').value.trim() || '村山' };
+      if(pending) patch.sealCompany = pending;
+      try{ await saveSettings(patch); pending=null; Object.assign(S, M.settings);
+           draw('<div class="ok">保存しました。次に開く見積書・請求書から使われます。</div>'); }
+      catch(err){ draw(`<div class="err">${esc(err.message)}</div>`); }
+    };
+    const del = document.getElementById('dsDel');
+    if(del) del.onclick = async () => {
+      if(!confirm('会社印を外します。帳票は印鑑なしで出るようになります。よろしいですか。')) return;
+      try{ await saveSettings({sealCompany:''}); Object.assign(S, M.settings); draw('<div class="ok">会社印を外しました。</div>'); }
+      catch(err){ draw(`<div class="err">${esc(err.message)}</div>`); }
+    };
+  };
+  draw();
 }
 
 /* ============================================================
