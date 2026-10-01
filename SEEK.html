@@ -190,6 +190,8 @@ nav button.on svg{opacity:1;color:var(--pri-2)}
 .cnum.pick{background:var(--pri-soft);border-color:var(--pri)}
 .cnum .mk{font-size:10px;line-height:1.3;font-style:normal}
 .cbars{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:2px}
+.cbar.mark{background:var(--panel);border:1px solid currentColor;font-weight:600}
+.cbar .cmen{font-weight:400;opacity:.9;margin-left:4px}
 .cbar{border:none;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700;color:#fff;
   text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
   min-height:18px;line-height:14px}
@@ -367,6 +369,13 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .jd-act .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
 .jd-act .btns{display:flex;gap:6px;flex-wrap:wrap}
 .lrow{margin-bottom:8px}
+.subchk{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:6px;font-size:13px;color:var(--ink);width:auto!important;margin:0}
+.subchk input{width:auto!important;margin:0}
+.subchk.off{opacity:.5}
+.carcnt{margin:0 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:var(--r-sm);font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.msum{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+.msum>div{border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 14px;background:var(--panel-2);display:flex;flex-direction:column}
+.msum i{font-style:normal;font-size:11px;color:var(--muted)} .msum b{font-size:17px;font-variant-numeric:tabular-nums}
 .supform{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px 14px;align-items:end}
 .supform .f{display:flex;flex-direction:column;gap:3px;font-size:12px}
 .supform input{width:100%;box-sizing:border-box}
@@ -697,10 +706,16 @@ function makeDrafts_(sbUrl, sbKey) {
       var opts = { name: prop_('FROM_NAME', 'ＳＥＥＫ電総株式会社') };
       if (r.cc) opts.cc = r.cc;
       if (r.file_path) {
-        var f = UrlFetchApp.fetch(sbUrl + '/storage/v1/object/seek-files/' + r.file_path,
-          { method: 'get', headers: hdr_(sbKey), muteHttpExceptions: true });
-        if (f.getResponseCode() >= 300) throw new Error('PDFを読めませんでした ' + f.getResponseCode());
-        opts.attachments = [f.getBlob().setName(r.file_name || '見積書.pdf')];
+        // 添付は1つ（見積書のPDF）か、改行で区切った複数（外注への連絡の図面）
+        var paths = String(r.file_path).split('\n'), names = String(r.file_name || '').split('\n');
+        opts.attachments = [];
+        for (var k = 0; k < paths.length; k++) {
+          if (!paths[k]) continue;
+          var f = UrlFetchApp.fetch(sbUrl + '/storage/v1/object/seek-files/' + paths[k],
+            { method: 'get', headers: hdr_(sbKey), muteHttpExceptions: true });
+          if (f.getResponseCode() >= 300) throw new Error('添付を読めませんでした（' + (names[k] || paths[k]) + '） ' + f.getResponseCode());
+          opts.attachments.push(f.getBlob().setName(names[k] || ('添付' + (k + 1) + '.pdf')));
+        }
       }
       var draft = null;
       if (r.reply_thread_id) {                         // 見積依頼メールへの返信にする
@@ -1361,13 +1376,17 @@ function calEvents(){
 /* 施工期間の横棒。data.build_start 〜 data.build_end を1本の帯にする。
    村山さんはいま Googleカレンダーで現場ごとの帯を引いて管理しているので、同じ見た目にする。 */
 function calBars(){
-  const out = [];
+  const out = [], ok = x => /^\d{4}-\d{2}-\d{2}$/.test(x||'');
   (M.jobs||[]).forEach(j=>{
     if(['失注','キャンセル'].includes(j.status)) return;
     const d = j.data || {};
     const s = d.build_start, e = d.build_end || d.build_start;
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(s||'')) return;
-    out.push({ job:j, s, e:(/^\d{4}-\d{2}-\d{2}$/.test(e||'') && e >= s) ? e : s });
+    if(ok(s)) out.push({ job:j, s, e:(ok(e) && e >= s) ? e : s });
+    // 施工の日が無くても、納期だけ入っている受注中の案件は、その日に「納期」として出す（2026-10-01 村山さん「会社全部の納期をカレンダーに」）
+    else if(ok(j.delivered_at) && /受注|手配|施工中/.test(j.status)) out.push({ job:j, s:j.delivered_at, e:j.delivered_at, kind:'納期' });
+    // オープン予定日（施工の棒とは別に、その日に旗を立てる）
+    if(ok(j.open_date) && j.status!=='入金済')
+      out.push({ job:j, s:j.open_date, e:j.open_date, kind:'オープン' });
   });
   return out.sort((a,b)=> a.s.localeCompare(b.s) || b.e.localeCompare(a.e));
 }
@@ -1434,10 +1453,12 @@ function drawCalendar(){
       <div class="cgrid7">${days7.join('')}</div>
       ${placed.length ? `<div class="cbars">${placed.map(p=>{
         const ttl = (p.b.job.title||'(案件名なし)').replace(/^仮）/,'');
-        return `<button class="cbar${p.b.s < wS?' l':''}${p.b.e > wE?' r':''}"
-          style="grid-column:${p.c1} / ${p.c2};grid-row:${p.lane+1};background:${clientColor(p.b.job.client_id)}"
+        const men = p.b.kind ? 0 : jobWorkers(p.b.job.id);
+        const pre = p.b.kind==='オープン' ? '🚩オープン ' : p.b.kind==='納期' ? '📦納期 ' : '';
+        return `<button class="cbar${p.b.s < wS?' l':''}${p.b.e > wE?' r':''}${p.b.kind?' mark':''}"
+          style="grid-column:${p.c1} / ${p.c2};grid-row:${p.lane+1};${p.b.kind?'color':'background'}:${clientColor(p.b.job.client_id)}"
           data-openjob="${esc(p.b.job.id)}"
-          title="${esc(p.b.job.client_name||'')}　${esc(ttl)}　${esc(p.b.s)}〜${esc(p.b.e)}">${esc(ttl)}</button>`;
+          title="${esc(p.b.job.client_name||'')}　${esc(ttl)}　${p.b.kind?esc(p.b.kind)+' ':''}${esc(p.b.s)}${p.b.e!==p.b.s?'〜'+esc(p.b.e):''}${men?'　人工 '+men+'人日':''}">${pre}${esc(ttl)}${men?` <span class="cmen">👷${men}</span>`:''}</button>`;
       }).join('')}</div>` : ''}
     </div>`;
   };
@@ -2000,7 +2021,10 @@ async function drawDash(){
 }
 
 /* ---------- 案件を探す ---------- */
-let fq = {q:'', client:'', status:''};
+let fq = {q:'', client:'', status:'', mbasis:'done', month:''};
+// 月で絞るときの「いつ」（2026-10-01 村山さん「完工・請求済みで何月かを選びたい」）
+const jobMonthDate = (j, basis) => basis==='bill' ? (j.invoiced_at||'')
+  : basis==='quote' ? (j.quoted_at||'') : ((j.data||{}).completed_at || j.delivered_at || '');
 let fTrash = false;        // ゴミ箱（削除した案件）を見ている
 function drawTrash(){
   const el=document.getElementById('fres'); if(!el) return;
@@ -2034,6 +2058,9 @@ function vFind(){
         </select></label>
       <label class="f">状態<select id="fs"><option value="">すべて</option>
         ${STATUSES.map(s=>`<option ${fq.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
+      <label class="f">月で絞る<span class="row" style="gap:4px;flex-wrap:nowrap">
+        <select id="fmb">${[['done','完工した月'],['bill','請求した月'],['quote','見積の月']].map(([k,l])=>`<option value="${k}" ${fq.mbasis===k?'selected':''}>${l}</option>`).join('')}</select>
+        <input type="month" id="fmm" value="${esc(fq.month||'')}"></span></label>
       <button class="btn ghost sm" id="fclear">クリア</button>
       <span class="spacer"></span>
       ${(M.trash||[]).length?`<button class="btn ghost sm" id="ftrash">${fTrash?'← 案件の一覧に戻る':`ゴミ箱 ${M.trash.length}`}</button>`:''}
@@ -2098,9 +2125,10 @@ function drawBulk(){
 }
 function aFind(){
   const q=document.getElementById('fq'), c=document.getElementById('fc'), s=document.getElementById('fs');
-  const run=()=>{ fq={q:q.value, client:c.value, status:s.value}; drawFind(); drawBulk(); };
-  q.addEventListener('input',run); [c,s].forEach(e=>e.addEventListener('change',run));
-  document.getElementById('fclear').onclick=()=>{ fq={q:'',client:'',status:''}; render(); };
+  const mb=document.getElementById('fmb'), mm=document.getElementById('fmm');
+  const run=()=>{ fq={q:q.value, client:c.value, status:s.value, mbasis:mb.value, month:mm.value}; drawFind(); drawBulk(); };
+  q.addEventListener('input',run); [c,s,mb,mm].forEach(e=>e.addEventListener('change',run));
+  document.getElementById('fclear').onclick=()=>{ fq={q:'',client:'',status:'',mbasis:'done',month:''}; render(); };
   document.getElementById('fbulk').onclick=()=>{ bulkOpen=!bulkOpen; drawBulk(); };
   document.getElementById('freload').onclick=async()=>{
     try{ M.itemCache.clear(); await loadAll(); render(); }catch(e){ alert(e.message); }
@@ -2115,6 +2143,7 @@ function matchJobs(){
   return M.jobs.filter(j=>{
     if(fq.client && j.client_id!==fq.client) return false;
     if(fq.status && j.status!==fq.status) return false;
+    if(fq.month && !String(jobMonthDate(j, fq.mbasis)).startsWith(fq.month)) return false;
     if(q){ const hay=((j.title||'')+' '+(j.client_name||'')+' '+(j.job_no||'')+' '+(j.source_file||'')).toLowerCase();
            if(!hay.includes(q)) return false; }
     return true;
@@ -2136,6 +2165,20 @@ function drawFind(){
     <div class="row" style="margin:12px 0 6px"><b>${hit.length}件</b>
       <span class="muted small">税抜合計 ${yen(total)} 円</span>
       ${hit.length>300?'<span class="muted small">（表示は先頭300件）</span>':''}</div>
+    ${fq.month ? (()=>{
+      // その月の売上・原価・粗利（原価＝明細の原価＋人工。原価が1円も入っていない案件は数えて見せる）
+      if(!costByJob){ loadCostsNow().then(()=>drawFind()).catch(()=>{}); return '<div class="muted small">原価を読み込んでいます…</div>'; }
+      let cost=0, none=0;
+      hit.forEach(j=>{ const D=j.data||{};
+        const c=(costByJob.get(j.id)||0) + (D.labor_cost!=null ? Number(D.labor_cost||0) : Number(D.labor_person_days||0)*LABOR_UNIT());
+        cost+=c; if(!c) none++; });
+      const gp=total-cost, r=total?gp/total*100:0;
+      const lbl={done:'完工',bill:'請求',quote:'見積'}[fq.mbasis];
+      return `<div class="msum"><div><i>${esc(fq.month.replace('-','年'))}月に${lbl}</i><b>${hit.length}件</b></div>
+        <div><i>売上（税抜）</i><b>${yen(total)}</b></div><div><i>原価</i><b>${yen(cost)}</b></div>
+        <div><i>粗利</i><b style="color:${r>=20?'var(--ok)':r>=0?'var(--warn)':'var(--danger)'}">${yen(gp)}（${r.toFixed(1)}%）</b></div>
+        ${none?`<div class="small muted" style="align-self:center">原価が入っていない案件 ${none}件（その分、粗利は多めに出ています）</div>`:''}</div>`;
+    })() : ''}
     <div class="scroll tall"><table>
       <thead><tr><th>案件番号</th><th>状態</th><th>顧客</th><th>案件名</th><th>見積日</th><th>請求日</th>
         <th class="n">税抜合計</th><th></th></tr></thead>
@@ -2389,6 +2432,7 @@ async function openJob(id){
         </div></div>`:`<div class="muted small" style="padding-top:10px">この案件には原価が入っていません。</div>`}</div>
     </div>
 
+    <div id="workBox"></div>
     <div class="card" style="margin-top:16px" id="billsBox"></div>
     <div id="outboxBox"></div>
 
@@ -2410,6 +2454,7 @@ async function openJob(id){
   bindMap(document.getElementById('dlgB'));
   bindFlow(j);
   drawOutbox(j.id);
+  drawWork(j);
   drawBills(j.id, {cost, lCost, lVendor, ex});
   drawFiles(j.id);
 }
@@ -2648,8 +2693,12 @@ function flowHtml(j){
       <div class="row" style="gap:8px;align-items:center;margin-top:8px">
         <span class="small">② 電力申請の必要事項を出す</span>
         <button class="btn ghost sm" id="flowPower">電力申請</button>
-        <span class="muted small">③ 外注への連絡（図面・オープン日）はこれから作ります</span>
-      </div></div>` : ''}
+      </div>
+      <div class="row" style="gap:8px;align-items:center;margin-top:8px">
+        <span class="small">③ 外注に連絡する（現場・日程・オープン日・図面をメールで）</span>
+        <button class="btn ghost sm" id="flowSub">外注に連絡</button>
+      </div>
+      <div id="subMailBox"></div></div>` : ''}
   </div>`;
 }
 function bindFlow(j){
@@ -2697,6 +2746,7 @@ function bindFlow(j){
     after(()=>patchJobFields(j.id, o ? {open_date:o} : null, dataP));
   };
   const pw=document.getElementById('flowPower'); if(pw) pw.onclick=()=>printPower(j);
+  const fsb=document.getElementById('flowSub'); if(fsb) fsb.onclick=()=>openSubMail(j);
 }
 
 /* ============================================================
@@ -2831,6 +2881,93 @@ async function openMailForm(j, kind, fileName){
         この案件の画面の「送ったメール」で、下書きになったかを見られます。</span></div>`;
     }catch(e){ btn.disabled=false; btn.textContent='Gmailの下書きを作る'; m.innerHTML=`<div class="err">${esc(e.message)}</div>`; }
   };
+}
+/* 受注したら外注に連絡（2026-10-01 村山さん「受注 → メールそのまま飛ばせるように」）。
+   外注先（メールが入っているもの）を選ぶと、現場・日程・オープン日・工事の内容（数量だけ。金額は出さない）と
+   図面を添付した Gmail の下書きを、外注先ごとに作る（送信は村山さんが見てから）。仕組みは見積書のメールと同じ */
+async function openSubMail(j){
+  const box=document.getElementById('subMailBox'); if(!box) return;
+  const S=M.settings||{}, co=S.company||'ＳＥＥＫ電総株式会社', c=clientMap.get(j.client_id)||{}, D=j.data||{};
+  const sups=(M.suppliers||[]).filter(s=>s.active!==false);
+  let files=[], items=[];
+  try{ [files, items] = await Promise.all([listFiles(j.id), loadItems(j.id)]); }catch(e){}
+  const draws=files.filter(f=>/図面/.test(f.kind)||/pdf/i.test(f.mime_type||''));
+  const work=items.filter(it=>!inSection2(it) && (Number(it.qty)||0) && String(it.name||'').trim());
+  const fmt=d=>d?d.replace(/^(\d{4})-(\d{2})-(\d{2})$/,'$1年$2月$3日'):'未定';
+  const bodyFor=s=>`${s.formal_name||s.name} 御中\n${s.contact?s.contact+' 様\n':''}\nいつもお世話になっております。${co}の${S.stampName||'村山'}です。\n下記の現場の施工をお願いいたします。\n\n`
+    + `■現場：${String(j.title||'').replace(/^仮\s*[）)]\s*/,'')}\n■お客様：${c.formal_name||j.client_name||''}\n`
+    + `■場所：${[j.site_postal_code?'〒'+j.site_postal_code:'', j.site_address||'', j.site_building||''].filter(Boolean).join(' ')||'（図面をご確認ください）'}\n`
+    + `■施工予定：${D.build_start ? fmt(D.build_start)+(D.build_end&&D.build_end!==D.build_start?'〜'+fmt(D.build_end):'') : '未定'}${j.delivered_at?'（納期 '+fmt(j.delivered_at)+'）':''}\n`
+    + `■オープン予定：${fmt(j.open_date)}\n`
+    + `■内容：\n${work.map(it=>`・${it.name}　${xfNum(it.qty)}${it.unit||''}`).join('\n')||'・（図面をご確認ください）'}\n\n`
+    + `${draws.length?'図面を添付しますので、ご確認ください。\n':''}ご都合の悪い点がございましたら、ご連絡ください。\nよろしくお願いいたします。\n\n`
+    + `――――――――――――――――\n${co}\n${S.address||''}\nTEL ${S.tel||''}　FAX ${S.fax||''}\n――――――――――――――――`;
+  const big = draws.reduce((a,f)=>a+Number(f.byte_size||0),0) > 20*1024*1024;
+  box.innerHTML=`<div class="mailform" style="margin-top:10px">
+    <div class="mf-h"><b>外注に連絡（Gmailの下書き）</b><span class="muted small">選んだ外注先ごとに、村山さんの Gmail に下書きを作ります。送信は Gmail で中身を見てから。</span></div>
+    <div class="f">外注先${sups.length?'':'：まだ登録がありません（マスタ → 外注先・仕入先 で足してください）'}
+      <div class="row" style="gap:12px;flex-wrap:wrap;margin-top:4px">${sups.map(s=>`<label class="subchk${s.email?'':' off'}">
+        <input type="checkbox" data-subto="${esc(s.id)}" ${s.email?'':'disabled'}>${esc(s.name)}${s.category?`（${esc(s.category)}）`:''}${s.email?'':' ・メール未登録'}</label>`).join('')}</div></div>
+    <div class="f">添付する図面${draws.length?'':'：この案件にはまだ図面がありません（案件の「図面・添付」から入れられます）'}
+      <div class="row" style="gap:12px;flex-wrap:wrap;margin-top:4px">${draws.map(f=>`<label class="subchk">
+        <input type="checkbox" data-subfile="${esc(f.id)}" checked>${esc(f.file_name)}（${fileSize(f.byte_size)}）</label>`).join('')}</div>
+      ${big?'<div class="small" style="color:var(--warn)">図面の合計が20MBを超えています。Gmailは25MBまでなので、いくつか外してください</div>':''}</div>
+    <label class="f">件名<input id="subSubj" value="${esc(`【施工のご依頼】${String(j.title||'').replace(/^仮\s*[）)]\s*/,'')}（${co}）`)}"></label>
+    <label class="f">本文（外注先の名前は、外注先ごとに入れ替わります）<textarea id="subBody" rows="12">${esc(bodyFor(sups.find(s=>s.email)||{name:'○○'}))}</textarea></label>
+    <div class="row" style="gap:8px"><button class="btn" id="subGo">下書きを作る</button><button class="btn ghost sm" id="subCancel">やめる</button></div>
+    <div id="subMsg"></div></div>`;
+  document.getElementById('subCancel').onclick=()=>{ box.innerHTML=''; };
+  document.getElementById('subGo').onclick=async()=>{
+    const m=document.getElementById('subMsg'), btn=document.getElementById('subGo');
+    const to=[...box.querySelectorAll('[data-subto]:checked')].map(i=>sups.find(s=>s.id===i.dataset.subto));
+    const fs=[...box.querySelectorAll('[data-subfile]:checked')].map(i=>draws.find(f=>f.id===i.dataset.subfile));
+    if(!to.length) return m.innerHTML='<div class="err">外注先を選んでください</div>';
+    if(fs.reduce((a,f)=>a+Number(f.byte_size||0),0) > 24*1024*1024) return m.innerHTML='<div class="err">図面の合計が大きすぎます（Gmailは25MBまで）。いくつか外してください</div>';
+    const tmpl=document.getElementById('subBody').value, first=sups.find(s=>s.email)||{name:'○○'};
+    const head0=`${first.formal_name||first.name} 御中`;
+    btn.disabled=true;
+    try{
+      const rows=to.map(s=>({ id:'mo-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), org_id:'seek', job_id:j.id,
+        kind:'外注連絡', to_email:s.email, subject:document.getElementById('subSubj').value,
+        body: tmpl.startsWith(head0) ? `${s.formal_name||s.name} 御中`+tmpl.slice(head0.length) : tmpl,
+        file_path: fs.map(f=>f.storage_path).join('\n') || null, file_name: fs.map(f=>f.file_name).join('\n') || null,
+        created_by:(sbSession()||{}).email||'' }));
+      const ins=await fetch(`${SB_URL}/rest/v1/seek_outbox`, { method:'POST',
+        headers: await H({'Content-Type':'application/json', Prefer:'return=minimal'}), body: JSON.stringify(rows) });
+      if(!ins.ok) throw new Error('頼めませんでした（'+ins.status+'）'+(await ins.text()).slice(0,120));
+      box.innerHTML=`<div class="ok" style="margin-top:10px"><b>✓ ${to.map(s=>esc(s.name)).join('・')} への下書きを頼みました。</b>
+        <span class="small">5分以内に村山さんの Gmail の「下書き」に入ります。この画面の下の「送ったメール」でも見られます。</span></div>`;
+      drawOutbox(j.id);
+    }catch(e){ btn.disabled=false; m.innerHTML=`<div class="err">${esc(e.message)}</div>`; }
+  };
+}
+/* 現場の人工（2026-10-01 村山さん「進捗状況、何人が作業してるのか」）。
+   現場のスマホの「人工と進み具合」（seek_worklogs）を、案件の画面と予定表に出す */
+let worklogsAll = null;
+function jobWorkers(jobId){
+  if(!worklogsAll){ if(worklogsAll===null){ worklogsAll=false;
+      sbFetchAll('seek_worklogs','select=job_id,workers').then(r=>{ worklogsAll=r; if(view==='dash') drawCalendar(); }).catch(()=>{ worklogsAll=[]; }); }
+    return 0; }
+  return worklogsAll.filter(w=>w.job_id===jobId).reduce((a,w)=>a+Number(w.workers||0),0);
+}
+async function drawWork(j){
+  const box=document.getElementById('workBox'); if(!box) return;
+  let rows=[]; try{ rows=await sbFetchAll('seek_worklogs','select=*&job_id=eq.'+encodeURIComponent(j.id)+'&order=work_date.asc'); }catch(e){ box.innerHTML=''; return; }
+  const est=Number((j.data||{}).labor_person_days||0);
+  if(!rows.length){ box.innerHTML = /受注|手配|施工中|施工完了/.test(j.status)
+    ? `<div class="card" style="margin-top:16px"><h2>現場の人工</h2><div class="muted small">まだ入っていません。現場のスマホの「👷 人工と進み具合を入れる」から入ります。${est?`見積の人工は ${est}人日 です。`:''}</div></div>` : ''; return; }
+  const sum=rows.reduce((a,w)=>a+Number(w.workers||0),0), unit=laborUnitOfJob(j);
+  const last=rows[rows.length-1];
+  box.innerHTML=`<div class="card" style="margin-top:16px"><div class="row" style="align-items:baseline"><h2 style="margin:0">現場の人工（スマホから）</h2>
+      <span class="muted small">日ごとに現場で入れたもの</span></div>
+    <div class="bill-sum" style="grid-template-columns:repeat(4,1fr)">
+      <div><div class="k">これまでの人工</div><div class="v">${sum}人日</div><div class="s">${rows.length}日ぶん</div></div>
+      <div><div class="k">見積の人工</div><div class="v">${est?est+'人日':'—'}</div><div class="s">${est?(sum>est?`<span style="color:var(--danger)">${sum-est}人日 多い</span>`:`あと ${est-sum}人日`):''}</div></div>
+      <div><div class="k">人工の金額（実績）</div><div class="v">${yen(sum*unit)}</div><div class="s">${yen(unit)}／人日</div></div>
+      <div><div class="k">最後の入力</div><div class="v" style="font-size:15px">${esc(String(last.work_date).slice(5).replace('-','/'))} ${esc(last.progress||'')}</div><div class="s">${esc(last.workers)}人</div></div></div>
+    <div class="scroll" style="margin-top:8px"><table class="tight"><thead><tr><th>日</th><th class="n">人数</th><th>進み具合</th><th>メモ</th><th>入れた人</th></tr></thead>
+      <tbody>${rows.map(w=>`<tr><td>${esc(w.work_date)}</td><td class="n">${esc(w.workers)}</td><td class="small">${esc(w.progress||'')}</td>
+        <td class="small muted">${esc(w.note||'')}</td><td class="small muted">${esc(w.created_by||'')}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 async function drawOutbox(jobId){
   const box=document.getElementById('outboxBox'); if(!box) return;
@@ -4804,6 +4941,15 @@ function drawMake(){
   const ex=sub+Number(mk.discount||0), tax=Math.round(ex*mk.tax_rate);
   body.innerHTML = `
   ${mk.msg}
+  ${(()=>{
+    /* 台数だけ変える（2026-10-01 村山さん「台数だけ変更するパターンが多い」）。
+       見積書複製のあとに使う想定。単位が「台」の行のうち、いまの台数と同じ数量の行と、案件名の「（12台）」をまとめて変える */
+    const cur = carCountOf();
+    if(!cur) return '';
+    const n = mk.lines.filter(l=>l.unit==='台' && Number(l.qty)===cur).length;
+    return `<div class="carcnt">台数をまとめて変える：いま <b>${cur}台</b>（明細 ${n}行${/(\d+)台/.test((document.getElementById('mkt')||{}).value||mk.title||'')?'・案件名':''}）→
+      <input id="mkcar" style="width:64px;text-align:right" placeholder="${cur}"> 台に <button class="btn ghost sm" id="mkcarGo">変える</button></div>`;
+  })()}
   <div class="scroll"><table class="mktbl">
     <thead><tr><th colspan="6" class="gq">見積書<span>お客様に出る</span></th>
       <th colspan="3" class="gc c1">原価<span>社内だけ・見積書には出ません</span></th></tr>
@@ -4908,6 +5054,18 @@ function drawMake(){
   document.getElementById('mksave').onclick=doSave;
   document.getElementById('mkpdf').onclick=previewMakeQuote;
   const nt=document.getElementById('mknote'); if(nt) nt.oninput=e=>{ mk.note=e.target.value; };
+  const cg=document.getElementById('mkcarGo'); if(cg) cg.onclick=()=>{
+    const cur=carCountOf(), to=numIn(document.getElementById('mkcar').value);
+    if(!(to>0) || to!==Math.round(to)) return alert('台数を入れてください（整数）');
+    let n=0;
+    mk.lines.forEach(l=>{ if(l.unit==='台' && Number(l.qty)===cur){ l.qty=to; l.amount=to*Number(l.unit_price||0);
+      l.cost_amount=(l.cost_unit!=null)?to*Number(l.cost_unit||0):null; n++; } });
+    const t=document.getElementById('mkt'); const tt=(t?t.value:mk.title)||'';
+    const nt2=tt.replace(new RegExp('(^|[^0-9])'+cur+'台'), '$1'+to+'台');
+    if(nt2!==tt){ mk.title=nt2; if(t) t.value=nt2; }
+    mk.msg=`<div class="ok">${cur}台 → <b>${to}台</b> にしました（明細 ${n}行${nt2!==tt?'・案件名':''}）。単価が台数で変わる行は確かめてください</div>`;
+    drawMake();
+  };
   body.querySelectorAll('[data-li]').forEach(el=>{
     el.oninput=el.onchange=()=>{
       const i=+el.dataset.li, f=el.dataset.f, l=mk.lines[i];
@@ -4992,6 +5150,14 @@ function keepFocus(redraw){
 }
 /* 「明細を追加」は、工種を選んでいない空の行を足す（2026-09-29 大嶺さん「明細を追加を押すと選択されて出てくる」）。
    前は一覧の先頭（2400×1200片面 支給）が入った行が出ていた。 */
+// いまの見積の「台数」：案件名の「（12台）」、無ければ単位が台の行でいちばん多い数量（2以上）
+function carCountOf(){
+  const t=((document.getElementById('mkt')||{}).value||mk.title||'').normalize('NFKC'), m=t.match(/(\d+)台/);
+  if(m) return Number(m[1]);
+  const c={}; mk.lines.forEach(l=>{ if(l.unit==='台' && Number(l.qty)>1) c[l.qty]=(c[l.qty]||0)+1; });
+  const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];
+  return top ? Number(top[0]) : 0;
+}
 function newLine(){
   return { work_type_id:null, _pick:true, name:'', section:1,
            supply_type:'材工', opt_gl_cut:false, opt_pole:'',
