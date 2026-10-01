@@ -39,6 +39,16 @@
   --danger:#b3261e; --danger-soft:#fdeeed; --danger-line:#f0c9c6;
   --ok:#0f6b4a; --ok-soft:#eaf5f0; --ok-line:#c2e0d3;
 
+  /* 案件の状態の色（2026-10-01 大嶺さん「色味でシステムをわかりやすく」）。スマホ版も同じ色 */
+  --st-q:#475569; --st-q-bg:#eef2f6; --st-q-line:#d3dbe5;      /* 見積提出：返事待ち＝灰青 */
+  --st-o:#1d4ed8; --st-o-bg:#eaf1fe; --st-o-line:#c3d6fb;      /* 受注：青 */
+  --st-a:#7c3aed; --st-a-bg:#f3eefe; --st-a-line:#ddd0fb;      /* 手配：紫 */
+  --st-w:#c2410c; --st-w-bg:#fff1e6; --st-w-line:#fbd3b5;      /* 施工中：オレンジ */
+  --st-d:#0f766e; --st-d-bg:#e7f6f4; --st-d-line:#b9e3dd;      /* 施工完了：青緑 */
+  --st-i:#15803d; --st-i-bg:#e9f7ee; --st-i-line:#bfe5cb;      /* 請求済：緑 */
+  --st-p:#4d7c0f; --st-p-bg:#f1f7e7; --st-p-line:#d5e8b8;      /* 入金済：黄緑（終わり） */
+  --st-x:#8b95a1; --st-x-bg:#f4f5f7; --st-x-line:#e2e5ea;      /* 失注・キャンセル：薄い灰 */
+
   --r-xs:6px; --r-sm:8px; --r:11px; --r-lg:14px; --r-pill:999px;
   --sh-1:0 1px 2px rgba(20,28,40,.05);
   --sh-2:0 4px 14px -4px rgba(20,28,40,.12), 0 2px 5px -2px rgba(20,28,40,.05);
@@ -66,6 +76,15 @@
     --warn:#e0a53a; --warn-soft:#2a2313; --warn-line:#473a1a;
     --danger:#f0736a; --danger-soft:#2c1614; --danger-line:#552a26;
     --ok:#3fbd85; --ok-soft:#0f2a20; --ok-line:#1d4635;
+
+    --st-q:#a9b6c6; --st-q-bg:#1b222c; --st-q-line:#2c3644;
+    --st-o:#7aa7ff; --st-o-bg:#14213b; --st-o-line:#23396a;
+    --st-a:#b49af5; --st-a-bg:#221a36; --st-a-line:#3b2d61;
+    --st-w:#f59e5b; --st-w-bg:#2c1b10; --st-w-line:#533119;
+    --st-d:#4fd1c5; --st-d-bg:#0f2826; --st-d-line:#1d4a46;
+    --st-i:#4ade80; --st-i-bg:#0f2a19; --st-i-line:#1c4a2c;
+    --st-p:#a3d16a; --st-p-bg:#1b2510; --st-p-line:#33461f;
+    --st-x:#6b7683; --st-x-bg:#171c23; --st-x-line:#252d38;
 
     --sh-1:0 1px 2px rgba(0,0,0,.35);
     --sh-2:0 8px 20px -6px rgba(0,0,0,.55);
@@ -229,6 +248,11 @@ nav button.on svg{opacity:1;color:var(--pri-2)}
 .pipe .ind{margin-top:9px;height:44px;display:flex;align-items:flex-end}
 .pipe .ind div{width:100%;background:linear-gradient(180deg,var(--pri-2),var(--pri));border-radius:3px;
   transition:height .4s var(--ease)}
+.pipe .stg[data-st]{border-top:3px solid var(--sf)}
+.pipe .stg[data-st] .nm{color:var(--sf);font-weight:800}
+.pipe .stg[data-st] .ind div{background:var(--sf);opacity:.85}
+.pipe .stg[data-st]:hover{border-color:var(--sl);border-top-color:var(--sf)}
+.jd-hero[data-st]{border-top:4px solid var(--sf)}
 .pipe .arw{display:flex;align-items:center;color:var(--line);font-size:18px;font-weight:700;user-select:none}
 .spacer{flex:1}
 main{padding:22px 26px 84px;max-width:1320px;width:100%}
@@ -310,6 +334,23 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .tag.q{background:var(--pri-soft);color:var(--pri);border-color:var(--pri-line)}
 .tag.b{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
 .tag.w{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}
+/* 状態の色：data-st を付けたものは、その状態の色（--sf 文字・--sb 地・--sl 線）を使える */
+[data-st="見積提出"]{--sf:var(--st-q);--sb:var(--st-q-bg);--sl:var(--st-q-line)}
+[data-st="受注"]{--sf:var(--st-o);--sb:var(--st-o-bg);--sl:var(--st-o-line)}
+[data-st="手配"]{--sf:var(--st-a);--sb:var(--st-a-bg);--sl:var(--st-a-line)}
+[data-st="施工中"]{--sf:var(--st-w);--sb:var(--st-w-bg);--sl:var(--st-w-line)}
+[data-st="施工完了"]{--sf:var(--st-d);--sb:var(--st-d-bg);--sl:var(--st-d-line)}
+[data-st="請求済"]{--sf:var(--st-i);--sb:var(--st-i-bg);--sl:var(--st-i-line)}
+[data-st="入金済"]{--sf:var(--st-p);--sb:var(--st-p-bg);--sl:var(--st-p-line)}
+[data-st="失注"],[data-st="キャンセル"]{--sf:var(--st-x);--sb:var(--st-x-bg);--sl:var(--st-x-line)}
+.tag[data-st]{background:var(--sb);color:var(--sf);border-color:var(--sl);white-space:nowrap}
+.tag[data-st]::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin:0 5px 1px 0;vertical-align:middle}
+.tag[data-st="失注"],.tag[data-st="キャンセル"]{text-decoration:line-through;text-decoration-thickness:1px}
+tr.st-row>td:first-child{box-shadow:inset 3px 0 0 var(--sf)}
+.stlegend{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 2px}
+.stlegend .tag{cursor:pointer;opacity:.55;transition:opacity .15s}
+.stlegend .tag:hover,.stlegend .tag.on{opacity:1}
+.stlegend .tag.on{box-shadow:0 0 0 2px var(--sl)}
 .muted{color:var(--muted)} .small{font-size:12px}
 .note,.err,.ok{padding:11px 15px;border-radius:var(--r-sm);font-size:12.5px;margin:12px 0;
   border:1px solid transparent;line-height:1.7}
@@ -1221,6 +1262,8 @@ const setMeta = () => { const b=document.getElementById('barMeta');
     + ` / 単価 ${M.prices.length}　｜　読込 ${t}`; };
 
 const STATUSES = ['見積提出','受注','手配','施工中','施工完了','請求済','入金済','失注','キャンセル'];
+// 状態の札（色は CSS の [data-st]）
+const stTag = s => `<span class="tag" data-st="${esc(s||'')}">${esc(s||'—')}</span>`;
 // 全体工程表に並べる順（失注・キャンセルは流れから外れるので入れない）
 const FLOW = ['見積提出','受注','手配','施工中','施工完了','請求済','入金済'];
 const VIEWS = [['dash','ダッシュボード'],['find','案件検索'],['make','見積作成'],['master','マスタ'],['check','初期設定']];
@@ -1563,7 +1606,7 @@ function drawCalendar(){
         <td><button class="btn ghost sm" data-openjob="${esc(x.job.id)}"
           style="text-align:left">${esc(x.job.title||'(案件名なし)')}</button></td>
         <td class="small muted">${esc(x.job.client_name||'')}</td>
-        <td><span class="tag q">${esc(x.job.status)}</span></td>
+        <td>${stTag(x.job.status)}</td>
       </tr>`).join('')}</tbody></table></div>
     </div>`;
     document.getElementById('calClose').onclick = ()=>{ calPick=null; drawCalendar(); };
@@ -1780,7 +1823,7 @@ async function drawDash(){
       ${FLOW.map((s,i)=>{
         const b=byStatus[s]||{n:0,s:0};
         const mx=Math.max(1,...FLOW.map(x=>(byStatus[x]||{n:0}).n));
-        return `<div class="stg${b.n?'':' off'}" data-stage="${esc(s)}" title="${s} ${b.n}件 ${yen(b.s)}円">
+        return `<div class="stg${b.n?'':' off'}" data-stage="${esc(s)}" data-st="${esc(s)}" title="${s} ${b.n}件 ${yen(b.s)}円">
           <div class="nm">${esc(s)}</div>
           <div class="ct">${b.n}<span>件</span></div>
           <div class="am">${b.s?man(b.s)+'万':'—'}</div>
@@ -1790,7 +1833,7 @@ async function drawDash(){
     </div>
     <div class="legend2">
       ${['失注','キャンセル'].filter(s=>byStatus[s]).map(s=>
-        `<span>${s} ${byStatus[s].n}件（${yen(byStatus[s].s)}円）</span>`).join('')}
+        `<span>${stTag(s)} ${byStatus[s].n}件（${yen(byStatus[s].s)}円）</span>`).join('')}
       <span>段をクリックすると、その状態の案件を一覧で開きます</span>
     </div>
     <div class="note" style="margin-top:12px">
@@ -2204,6 +2247,7 @@ function drawFind(){
   const hit = matchJobs();
   const total = hit.reduce((a,j)=>a+Number(j.total_ex_tax||0),0);
   document.getElementById('fres').innerHTML = `
+    <div class="stlegend"><span class="muted small">状態の色</span>${STATUSES.map(s=>`<span class="tag${fq.status===s?' on':''}" data-st="${esc(s)}" data-stpick="${esc(s)}" title="押すと「${esc(s)}」だけに絞り込みます">${esc(s)}</span>`).join('')}</div>
     <div class="row" style="margin:12px 0 6px"><b>${hit.length}件</b>
       <span class="muted small">税抜合計 ${yen(total)} 円</span>
       ${hit.length>300?'<span class="muted small">（表示は先頭300件）</span>':''}</div>
@@ -2225,9 +2269,9 @@ function drawFind(){
     <div class="scroll tall"><table>
       <thead><tr><th>案件番号</th><th>状態</th><th>顧客</th><th>案件名</th><th>見積日</th><th>請求日</th>
         <th class="n">税抜合計</th><th></th></tr></thead>
-      <tbody>${hit.slice(0,300).map(j=>`<tr class="clickable" data-id="${esc(j.id)}">
+      <tbody>${hit.slice(0,300).map(j=>`<tr class="clickable st-row" data-st="${esc(j.status)}" data-id="${esc(j.id)}">
         <td class="small">${esc(j.job_no||'')}</td>
-        <td><span class="tag ${j.status==='請求済'||j.status==='入金済'?'b':'q'}">${esc(j.status)}</span></td>
+        <td>${stTag(j.status)}</td>
         <td>${esc(j.client_name||(clientMap.get(j.client_id)||{}).name||'—')}</td>
         <td>${esc(j.title||'')}</td>
         <td class="small muted">${esc(j.quoted_at||'')}</td>
@@ -2238,6 +2282,12 @@ function drawFind(){
           : ''}</td></tr>`).join('')
         || '<tr><td colspan="8" class="muted">該当なし</td></tr>'}</tbody></table></div>`;
   document.querySelectorAll('#fres tr[data-id]').forEach(tr=>tr.onclick=()=>openJob(tr.dataset.id));
+  // 色の札を押すと、その状態だけに絞る（もう一度押すと解除）
+  document.querySelectorAll('#fres [data-stpick]').forEach(t=>t.onclick=()=>{
+    const s=t.dataset.stpick; fq.status = fq.status===s ? '' : s;
+    const sel=document.getElementById('fs'); if(sel) sel.value=fq.status;
+    drawFind(); drawBulk();
+  });
   bindMap(document.getElementById('fres'));
 }
 
@@ -2409,10 +2459,10 @@ async function openJob(id){
   const docSeg = (key, label, attr) =>
     `<button class="${key===next?'on':''}" ${attr}${key===next?' title="いまの状態で次に使う書類です"':''}>${label}</button>`;
   document.getElementById('dlgB').innerHTML = `
-    <div class="jd-hero">
+    <div class="jd-hero" data-st="${esc(st)}">
       <div class="jd-top">
         <div class="jd-main">
-          <div class="jd-meta"><span class="tag ${stTone}">${esc(st||'—')}</span><span class="no">No. ${esc(j.job_no||'—')}</span></div>
+          <div class="jd-meta">${stTag(st||'—')}<span class="no">No. ${esc(j.job_no||'—')}</span></div>
           <div class="jd-cl">${esc(j.client_name||'—')}</div>
           <div class="jd-facts">
             <div><span class="k">見積日</span><span class="v">${esc(j.quoted_at||'—')}</span></div>
