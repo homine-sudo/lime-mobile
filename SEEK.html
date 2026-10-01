@@ -2570,9 +2570,15 @@ function drawBills(jobId, plan){
   const lv = String(plan.lVendor||'').trim();
   const lActual = lv ? bills.filter(b=>String(b.vendor).trim()===lv).reduce((a,b)=>a+Number(b.amount_ex||0),0) : 0;
   const defVendor = lv && !bills.some(b=>String(b.vendor).trim()===lv) ? lv : '';
+  /* 1つの案件に、外注先が何社も請求してくる（2026-10-01 大嶺さん「外注からの請求は複数社になることがある」）。
+     会社ごとにまとめて小計を出し、外注先の候補は 外注先マスタ＋人工の外注先 から出す */
+  const byV = new Map();
+  bills.forEach(b=>{ const k=String(b.vendor||'').trim()||'（外注先なし）'; const s=byV.get(k)||{n:0, ex:0, list:[]}; s.n++; s.ex+=Number(b.amount_ex||0); s.list.push(b); byV.set(k,s); });
+  const vendors = [...byV.entries()].sort((a,b)=>b[1].ex-a[1].ex);
+  const vNames = [...new Set([...(M.suppliers||[]).filter(s=>s.active!==false).map(s=>s.name), ...laborVendorNames().map(v=>v.name)].map(s=>String(s).trim()).filter(Boolean))];
   box.innerHTML = `
-    <div class="row" style="align-items:baseline"><h2 style="margin:0">外注からの請求</h2>
-      <span class="muted small">届いた請求書をここに入れると、見込みの原価と比べます（社内だけ・現場のスマホには出ません）</span></div>
+    <div class="row" style="align-items:baseline"><h2 style="margin:0">外注からの請求${bills.length?` <span class="muted small" style="font-weight:600">${vendors.length}社・${bills.length}件</span>`:''}</h2>
+      <span class="muted small">届いた請求書を1枚ずつ追加すると、会社ごとにまとめて見込みの原価と比べます。何社でも追加できます（社内だけ・現場のスマホには出ません）</span></div>
     ${bills.length ? `
     <div class="bill-sum">
       <div><div class="k">見込みの原価</div><div class="v">${plan.cost ? yen(plan.cost) : '—'}</div></div>
@@ -2589,17 +2595,22 @@ function drawBills(jobId, plan){
       <b style="color:${tone(lActual-plan.lCost)}">（${sgn(lActual-plan.lCost)}）</b></div>`:''}
     <div class="small muted" style="margin-top:4px">税抜で比べています。まだ届いていない請求があれば、その分だけ「請求の合計」は少なく出ます。</div>
     <div class="scroll" style="margin-top:8px"><table class="tight">
-      <thead><tr><th>請求日</th><th>外注先</th><th>内容</th><th class="n">金額（税抜）</th><th>メモ</th><th>請求書</th><th></th></tr></thead>
-      <tbody>${bills.map(b=>`<tr>
-        <td>${esc(b.billed_at||'')}</td><td>${esc(b.vendor||'')}</td><td class="small">${esc(b.kind||'')}</td>
+      <thead><tr><th>外注先</th><th>請求日</th><th>内容</th><th class="n">金額（税抜）</th><th>メモ</th><th>請求書</th><th></th></tr></thead>
+      ${vendors.map(([v,s])=>`<tbody class="vgrp">
+        <tr class="pgrp"><td colspan="3"><b>${esc(v)}</b> <span class="muted small">${s.n}件</span></td>
+          <td class="n"><b>${yen(s.ex)}</b></td><td colspan="3" class="small muted">${vendors.length>1&&actual?`請求の合計の ${Math.round(s.ex/actual*100)}%`:''}</td></tr>
+        ${s.list.map(b=>`<tr>
+        <td></td><td>${esc(b.billed_at||'')}</td><td class="small">${esc(b.kind||'')}</td>
         <td class="n">${yen(b.amount_ex)}${b.tax_mode==='税込'?`<div class="small muted">税込 ${yen(b.amount_in)}</div>`:''}</td>
         <td class="small muted">${esc(b.memo||'')}</td>
         <td>${b.file?`<button class="btn ghost sm" data-bopen="${esc(b.id)}">開く</button>`:'<span class="muted small">なし</span>'}</td>
-        <td><button class="btn ghost sm" data-bdel="${esc(b.id)}" title="この請求を削除">×</button></td></tr>`).join('')}</tbody></table></div>`
+        <td><button class="btn ghost sm" data-bdel="${esc(b.id)}" title="この請求を削除">×</button></td></tr>`).join('')}</tbody>`).join('')}
+      ${vendors.length>1?`<tfoot><tr><td colspan="3"><b>合計（${vendors.length}社）</b></td><td class="n"><b>${yen(actual)}</b></td><td colspan="3"></td></tr></tfoot>`:''}
+      </table></div>`
     : `<div class="muted small" style="margin:6px 0 2px">まだ請求は入っていません。${plan.cost?`見込みの原価は <b>${yen(plan.cost)}</b>（税抜）です。`:''}</div>`}
     <div class="bill-form">
       <label class="f">外注先<input id="bVendor" list="bVendorList" value="${esc(defVendor)}" placeholder="選択または入力" style="width:150px"></label>
-      <datalist id="bVendorList">${laborVendorNames().map(v=>`<option value="${esc(v.name)}">`).join('')}</datalist>
+      <datalist id="bVendorList">${vNames.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
       <label class="f">請求日<input id="bDate" type="date" value="${today()}"></label>
       <label class="f">内容<select id="bKind">${BILL_KINDS.map(k=>`<option ${k===(defVendor?'人工':'外注工事')?'selected':''}>${k}</option>`).join('')}</select></label>
       <label class="f">金額<span class="row" style="gap:4px;flex-wrap:nowrap">
@@ -2607,7 +2618,7 @@ function drawBills(jobId, plan){
         <select id="bTax"><option>税込</option><option>税抜</option></select></span></label>
       <label class="f">メモ<input id="bMemo" placeholder="任意" style="width:140px"></label>
       <label class="f">請求書（PDF・写真）<input id="bFile" type="file" accept="application/pdf,image/*"></label>
-      <button class="btn sm" id="bAdd">追加する</button>
+      <button class="btn sm" id="bAdd">追加</button>
     </div>
     <div id="bMsg"></div>`;
 
@@ -2632,11 +2643,12 @@ function drawBills(jobId, plan){
         at: new Date().toISOString(), by: (sbSession()||{}).email||'' };
       await patchJobData(jobId, d => { d.vendor_bills = (d.vendor_bills||[]).concat([bill]); });
       drawBills(jobId, plan);
-      document.getElementById('bMsg').innerHTML = `<div class="ok">${esc(vendor)} の請求（税抜 ${yen(bill.amount_ex)}）を入れました。</div>`;
+      document.getElementById('bMsg').innerHTML = `<div class="ok">${esc(vendor)} の請求（税抜 ${yen(bill.amount_ex)}）を追加しました。ほかの会社の請求も、続けて追加できます。</div>`;
+      const bv=document.getElementById('bVendor'); if(bv){ bv.value=''; bv.focus(); }
     }catch(e){
       // 請求は入らなかったのに PDF だけ残らないよう、置いたファイルを消す
       if(file) try{ await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${file.path}`,{method:'DELETE',headers:await H()}); }catch(_){}
-      btn.disabled = false; btn.textContent = '追加する';
+      btn.disabled = false; btn.textContent = '追加';
       msg(`<div class="err">${esc(e.message)}</div>`);
     }
   };
@@ -3080,7 +3092,7 @@ async function drawFiles(jobId){
       <label class="f">種類<select id="fkind">
         ${['図面','着工前写真','完了後写真','写真','納品書','見積書','その他'].map(k=>`<option>${k}</option>`).join('')}</select></label>
       <label class="f">ファイル<input type="file" id="fpick" multiple></label>
-      <button class="btn sm" id="fup">追加する</button>
+      <button class="btn sm" id="fup">追加</button>
       <span class="muted small">メールに添付されてきた図面PDFをそのまま添付してください（1つ25MBまで）</span>
     </div>
     <div id="fmsg"></div>
