@@ -372,7 +372,9 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .subchk{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:6px;font-size:13px;color:var(--ink);width:auto!important;margin:0}
 .subchk input{width:auto!important;margin:0}
 .subchk.off{opacity:.5}
-.carcnt{margin:0 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:var(--r-sm);font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.carcnt{margin:0 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:var(--r-sm);font-size:13px;display:flex;flex-direction:column;gap:6px}
+.carlist{display:flex;flex-wrap:wrap;gap:4px 16px}
+.carlist .carto{color:var(--pri);margin-left:2px}
 .msum{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
 .msum>div{border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 14px;background:var(--panel-2);display:flex;flex-direction:column}
 .msum i{font-style:normal;font-size:11px;color:var(--muted)} .msum b{font-size:17px;font-variant-numeric:tabular-nums}
@@ -4961,12 +4963,21 @@ function drawMake(){
   ${mk.msg}
   ${(()=>{
     /* 台数だけ変える（2026-10-01 村山さん「台数だけ変更するパターンが多い」）。
-       見積書複製のあとに使う想定。単位が「台」の行のうち、いまの台数と同じ数量の行と、案件名の「（12台）」をまとめて変える */
+       見積書複製のあとに使う想定。案件名の「（12台）」と、明細の数量をまとめて変える。
+       対象の行（2026-10-01 大嶺さん「ロック板とか5台以上の数字の部分は変える対象」）：
+         数量が5以上の行（単位は問わない。m・式などは除く）と、いまの台数と同じ数量の行。
+         いまの台数と同じ行は新しい台数に、違う数の行（例 ロック板14基）は差の分だけ増減する。チェックを外せば変えない */
     const cur = carCountOf();
     if(!cur) return '';
-    const n = mk.lines.filter(l=>l.unit==='台' && Number(l.qty)===cur).length;
-    return `<div class="carcnt">台数をまとめて変える：いま <b>${cur}台</b>（明細 ${n}行${/(\d+)台/.test((document.getElementById('mkt')||{}).value||mk.title||'')?'・案件名':''}）→
-      <input id="mkcar" style="width:64px;text-align:right" placeholder="${cur}"> 台に <button class="btn ghost sm" id="mkcarGo">変える</button></div>`;
+    const tg = carTargets(cur), inTitle=/(\d+)台/.test(((document.getElementById('mkt')||{}).value||mk.title||'').normalize('NFKC'));
+    return `<div class="carcnt">
+      <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">台数をまとめて変える：いま <b>${cur}台</b>${inTitle?'（案件名から）':''} →
+        <input id="mkcar" style="width:64px;text-align:right" placeholder="${cur}"> 台に <button class="btn ghost sm" id="mkcarGo">変える</button></div>
+      ${tg.length ? `<div class="carlist">${tg.map(t=>`<label class="subchk"><input type="checkbox" data-carline="${t.i}" ${t.l._carOff?'':'checked'}>
+          ${esc(t.l.name||'（工種なし）')} <span class="muted">${xfNum(t.l.qty)}${esc(t.l.unit||'')}</span><b class="carto" data-carto="${t.i}"></b></label>`).join('')}</div>
+        <div class="small muted">数量が5以上の行と、いまの台数と同じ数の行です。違う数の行は差の分だけ増減します。変えない行はチェックを外してください</div>`
+      : '<div class="small muted">変える行がありません（数量が5以上の行も、いまの台数と同じ数の行もありません）。案件名だけ変わります</div>'}
+    </div>`;
   })()}
   <div class="scroll"><table class="mktbl">
     <thead><tr><th colspan="6" class="gq">見積書<span>お客様に出る</span></th>
@@ -5072,14 +5083,24 @@ function drawMake(){
   document.getElementById('mksave').onclick=doSave;
   document.getElementById('mkpdf').onclick=previewMakeQuote;
   const nt=document.getElementById('mknote'); if(nt) nt.oninput=e=>{ mk.note=e.target.value; };
+  const carIn=document.getElementById('mkcar');
+  const carPreview=()=>{ const cur=carCountOf(), to=numIn(carIn.value);
+    document.querySelectorAll('[data-carto]').forEach(b=>{ const l=mk.lines[+b.dataset.carto];
+      b.textContent = (to>0 && l && !l._carOff) ? ' → '+carNewQty(Number(l.qty)||0, cur, to) : ''; }); };
+  if(carIn) carIn.oninput=carPreview;
+  document.querySelectorAll('[data-carline]').forEach(c=>c.onchange=()=>{ const l=mk.lines[+c.dataset.carline]; if(l) l._carOff=!c.checked; carPreview(); });
   const cg=document.getElementById('mkcarGo'); if(cg) cg.onclick=()=>{
-    const cur=carCountOf(), to=numIn(document.getElementById('mkcar').value);
+    const cur=carCountOf(), to=numIn(carIn.value);
     if(!(to>0) || to!==Math.round(to)) return alert('台数を入れてください（整数）');
     let n=0;
-    mk.lines.forEach(l=>{ if(l.unit==='台' && Number(l.qty)===cur){ l.qty=to; l.amount=to*Number(l.unit_price||0);
-      l.cost_amount=(l.cost_unit!=null)?to*Number(l.cost_unit||0):null; n++; } });
+    carTargets(cur).forEach(({l})=>{ if(l._carOff) return;
+      const q=carNewQty(Number(l.qty)||0, cur, to); if(q===Number(l.qty)) return;
+      l.qty=q; l.amount=q*Number(l.unit_price||0);
+      l.cost_amount=(l.cost_unit!=null)?q*Number(l.cost_unit||0):null; n++; });
+    mk.lines.forEach(l=>{ delete l._carOff; });
     const t=document.getElementById('mkt'); const tt=(t?t.value:mk.title)||'';
-    const nt2=tt.replace(new RegExp('(^|[^0-9])'+cur+'台'), '$1'+to+'台');
+    // 案件名の台数は全角数字（１５台）でも見つける
+    const nt2=tt.replace(/([0-9０-９]+)(\s*台)/, (m0,d,s)=> Number(d.normalize('NFKC'))===cur ? to+s : m0);
     if(nt2!==tt){ mk.title=nt2; if(t) t.value=nt2; }
     mk.msg=`<div class="ok">${cur}台 → <b>${to}台</b> にしました（明細 ${n}行${nt2!==tt?'・案件名':''}）。単価が台数で変わる行は確かめてください</div>`;
     drawMake();
@@ -5169,6 +5190,13 @@ function keepFocus(redraw){
 /* 「明細を追加」は、工種を選んでいない空の行を足す（2026-09-29 大嶺さん「明細を追加を押すと選択されて出てくる」）。
    前は一覧の先頭（2400×1200片面 支給）が入った行が出ていた。 */
 // いまの見積の「台数」：案件名の「（12台）」、無ければ単位が台の行でいちばん多い数量（2以上）
+// 台数をまとめて変えるときの対象の行と、変えたあとの数量
+const CAR_SKIP_UNIT = /^(m|ｍ|M|Ｍ|㎡|m2|ｍ2|kg|ｋｇ|式|ｍ³|m3)$/;
+function carTargets(cur){
+  return mk.lines.map((l,i)=>({i,l})).filter(({l})=>{ const q=Number(l.qty)||0;
+    return q>0 && (q===cur || (q>=5 && !CAR_SKIP_UNIT.test(String(l.unit||'').trim()))); });
+}
+const carNewQty = (q, cur, to) => q===cur ? to : Math.max(1, q+(to-cur));
 function carCountOf(){
   const t=((document.getElementById('mkt')||{}).value||mk.title||'').normalize('NFKC'), m=t.match(/(\d+)台/);
   if(m) return Number(m[1]);
