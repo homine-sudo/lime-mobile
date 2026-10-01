@@ -1274,6 +1274,7 @@ async function loadCostsNow(){
   const g = await res.json();
 
   costByJob = new Map(Object.entries(g.cost || {}).map(([k,v]) => [k, Number(v)]));
+  wtLastAny = null;
   lastUse = {
     byPair: new Map(Object.entries(g.pair || {})),
     byName: new Map(Object.entries(g.name || {}))
@@ -2015,16 +2016,26 @@ async function drawDash(){
   el.querySelectorAll('[data-stage]').forEach(s=>s.onclick=()=>{
     const st=s.dataset.stage;
     if(!(byStatus[st]||{}).n) return;
-    fq={q:'', client:'', status:st};
+    fq=Object.assign(fqBlank(), {status:st});
     view='find'; render();
   });
 }
 
 /* ---------- 案件を探す ---------- */
-let fq = {q:'', client:'', status:'', mbasis:'done', month:''};
+/* 年度で切り替える（2026-10-01 大嶺さん「案件を探すは年度で切り替えられるようにして」）。
+   年度は10月始まり（fiscalYearOf）。「いつで」（見積日／完工日／請求日）を選び、年度 → 月 の順に絞る */
+const fqBlank = () => ({q:'', client:'', status:'', mbasis:'quote', fy:'', month:''});
+let fq = fqBlank();
 // 月で絞るときの「いつ」（2026-10-01 村山さん「完工・請求済みで何月かを選びたい」）
 const jobMonthDate = (j, basis) => basis==='bill' ? (j.invoiced_at||'')
   : basis==='quote' ? (j.quoted_at||'') : ((j.data||{}).completed_at || j.delivered_at || '');
+// 年度の選択肢：案件の見積日がある年度（新しい順）。今年度は案件がまだ無くても出す
+function findYears(){
+  const s=new Set([fiscalYearOf(today())]);
+  (M.jobs||[]).forEach(j=>{ if(j.quoted_at){ const y=fiscalYearOf(j.quoted_at); if(y) s.add(y); } });
+  const now=fiscalYearOf(today());
+  return [...s].filter(y=>y && y<=now).sort((a,b)=>b-a);   // 見積日の打ち間違い（2028年など）で未来の年度が出ないように
+}
 let fTrash = false;        // ゴミ箱（削除した案件）を見ている
 function drawTrash(){
   const el=document.getElementById('fres'); if(!el) return;
@@ -2058,9 +2069,12 @@ function vFind(){
         </select></label>
       <label class="f">状態<select id="fs"><option value="">すべて</option>
         ${STATUSES.map(s=>`<option ${fq.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
-      <label class="f">月で絞る<span class="row" style="gap:4px;flex-wrap:nowrap">
-        <select id="fmb">${[['done','完工した月'],['bill','請求した月'],['quote','見積の月']].map(([k,l])=>`<option value="${k}" ${fq.mbasis===k?'selected':''}>${l}</option>`).join('')}</select>
-        <input type="month" id="fmm" value="${esc(fq.month||'')}"></span></label>
+      <label class="f">年度・月で絞る<span class="row" style="gap:4px;flex-wrap:nowrap">
+        <select id="fmb" title="どの日付で数えるか">${[['quote','見積日で'],['done','完工日で'],['bill','請求日で']].map(([k,l])=>`<option value="${k}" ${fq.mbasis===k?'selected':''}>${l}</option>`).join('')}</select>
+        <select id="ffy"><option value="">全年度</option>${findYears().map(y=>`<option value="${y}" ${String(fq.fy)===String(y)?'selected':''}>${y}年度</option>`).join('')}</select>
+        <select id="fmm" ${fq.fy?'':'disabled title="先に年度を選んでください"'}><option value="">年度の全部</option>${fq.fy ? fyMonths().map(m=>{
+          const v=(m>=FY_START()?+fq.fy:+fq.fy+1)+'-'+String(m).padStart(2,'0');
+          return `<option value="${v}" ${fq.month===v?'selected':''}>${m}月</option>`; }).join('') : ''}</select></span></label>
       <button class="btn ghost sm" id="fclear">クリア</button>
       <span class="spacer"></span>
       ${(M.trash||[]).length?`<button class="btn ghost sm" id="ftrash">${fTrash?'← 案件の一覧に戻る':`ゴミ箱 ${M.trash.length}`}</button>`:''}
@@ -2125,10 +2139,12 @@ function drawBulk(){
 }
 function aFind(){
   const q=document.getElementById('fq'), c=document.getElementById('fc'), s=document.getElementById('fs');
-  const mb=document.getElementById('fmb'), mm=document.getElementById('fmm');
-  const run=()=>{ fq={q:q.value, client:c.value, status:s.value, mbasis:mb.value, month:mm.value}; drawFind(); drawBulk(); };
+  const mb=document.getElementById('fmb'), mm=document.getElementById('fmm'), fy=document.getElementById('ffy');
+  const run=()=>{ fq={q:q.value, client:c.value, status:s.value, mbasis:mb.value, fy:fy.value, month:fy.value?mm.value:''}; drawFind(); drawBulk(); };
   q.addEventListener('input',run); [c,s,mb,mm].forEach(e=>e.addEventListener('change',run));
-  document.getElementById('fclear').onclick=()=>{ fq={q:'',client:'',status:'',mbasis:'done',month:''}; render(); };
+  // 年度を変えたら月の選択肢が変わるので、画面ごと描き直す
+  fy.addEventListener('change',()=>{ fq=Object.assign({}, fq, {q:q.value, client:c.value, status:s.value, mbasis:mb.value, fy:fy.value, month:''}); render(); });
+  document.getElementById('fclear').onclick=()=>{ fq=fqBlank(); render(); };
   document.getElementById('fbulk').onclick=()=>{ bulkOpen=!bulkOpen; drawBulk(); };
   document.getElementById('freload').onclick=async()=>{
     try{ M.itemCache.clear(); await loadAll(); render(); }catch(e){ alert(e.message); }
@@ -2143,7 +2159,8 @@ function matchJobs(){
   return M.jobs.filter(j=>{
     if(fq.client && j.client_id!==fq.client) return false;
     if(fq.status && j.status!==fq.status) return false;
-    if(fq.month && !String(jobMonthDate(j, fq.mbasis)).startsWith(fq.month)) return false;
+    if(fq.month){ if(!String(jobMonthDate(j, fq.mbasis)).startsWith(fq.month)) return false; }
+    else if(fq.fy){ const d=jobMonthDate(j, fq.mbasis); if(!d || String(fiscalYearOf(d))!==String(fq.fy)) return false; }
     if(q){ const hay=((j.title||'')+' '+(j.client_name||'')+' '+(j.job_no||'')+' '+(j.source_file||'')).toLowerCase();
            if(!hay.includes(q)) return false; }
     return true;
@@ -2165,7 +2182,7 @@ function drawFind(){
     <div class="row" style="margin:12px 0 6px"><b>${hit.length}件</b>
       <span class="muted small">税抜合計 ${yen(total)} 円</span>
       ${hit.length>300?'<span class="muted small">（表示は先頭300件）</span>':''}</div>
-    ${fq.month ? (()=>{
+    ${(fq.month || fq.fy) ? (()=>{
       // その月の売上・原価・粗利（原価＝明細の原価＋人工。原価が1円も入っていない案件は数えて見せる）
       if(!costByJob){ loadCostsNow().then(()=>drawFind()).catch(()=>{}); return '<div class="muted small">原価を読み込んでいます…</div>'; }
       let cost=0, none=0;
@@ -2174,7 +2191,8 @@ function drawFind(){
         cost+=c; if(!c) none++; });
       const gp=total-cost, r=total?gp/total*100:0;
       const lbl={done:'完工',bill:'請求',quote:'見積'}[fq.mbasis];
-      return `<div class="msum"><div><i>${esc(fq.month.replace('-','年'))}月に${lbl}</i><b>${hit.length}件</b></div>
+      const when = fq.month ? `${+fq.month.slice(0,4)}年${+fq.month.slice(5,7)}月` : `${fq.fy}年度`;
+      return `<div class="msum"><div><i>${esc(when)}に${lbl}</i><b>${hit.length}件</b></div>
         <div><i>売上（税抜）</i><b>${yen(total)}</b></div><div><i>原価</i><b>${yen(cost)}</b></div>
         <div><i>粗利</i><b style="color:${r>=20?'var(--ok)':r>=0?'var(--warn)':'var(--danger)'}">${yen(gp)}（${r.toFixed(1)}%）</b></div>
         ${none?`<div class="small muted" style="align-self:center">原価が入っていない案件 ${none}件（その分、粗利は多めに出ています）</div>`:''}</div>`;
@@ -5071,7 +5089,7 @@ function drawMake(){
       const i=+el.dataset.li, f=el.dataset.f, l=mk.lines[i];
       const before=JSON.stringify(l);   // 中身が変わっていなければ作り直さない（Tabの行き先を消さないため）
       if(f==='opt_gl_cut') l[f]=el.checked;
-      else if(f==='qty'||f==='unit_price'||f==='cost_unit') l[f]=numIn(el.value)||0;
+      else if(f==='qty'||f==='unit_price'||f==='cost_unit'){ l[f]=numIn(el.value)||0; if(f==='unit_price') l._from=null; }
       else if(f==='work_type_id'){ l.work_type_id=el.value; const w=wtMap.get(el.value);
         if(w){ l.name=w.name; l.unit=w.default_unit||l.unit; l.section = w.category==='経費'?2:1; } }
       else l[f]=el.value;
@@ -5169,6 +5187,35 @@ function newLine(){
    ・↑↓で選んで Enter、Esc でやめる。見つからなければ、打った文字で「自由入力の行」にできる
    ・選んだら数量の欄へ進む */
 const wtNorm = s => String(s||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+/* 6か月使っていない工種は候補に出さない（2026-10-01 大嶺さん「工種が多いから、6か月以内に使用してないのはなし」）。
+   使った日＝見積日（seek_dash_agg の pair）。単価表に6か月以内に足した行は、まだ使っていなくても出す。
+   消すわけではない：打って探したときだけ、いちばん下に「6か月以上使っていない」として少し出す */
+const SIX_MONTHS_AGO = (()=>{ const d=new Date(); d.setMonth(d.getMonth()-6);
+  return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); })();
+let wtLastAny = null;                            // 工種 -> どの顧客かを問わず最後に使った日
+function wtUsedRecently(wid, clientId, p){
+  if(!lastUse){ loadCostsNow().catch(()=>{}); return true; }   // 読み込むまでは全部出す
+  if(p && String(p.created_at||'').slice(0,10) >= SIX_MONTHS_AGO) return true;
+  if(clientId) return (lastUse.byPair.get(clientId+'|'+wid)||'') >= SIX_MONTHS_AGO;
+  if(!wtLastAny){ wtLastAny = new Map();
+    for(const [k,d] of lastUse.byPair){ const w=k.slice(k.indexOf('|')+1); if((wtLastAny.get(w)||'') < d) wtLastAny.set(w,d); } }
+  return (wtLastAny.get(wid)||'') >= SIX_MONTHS_AGO;
+}
+/* ほかの会社の単価表で、その工種の単価。いちばん最近使った会社のものを返す（同じなら実績の多いほう）。
+   {p:単価表の行, k:その工種が載っている会社の数} */
+function otherPrice(wid, exceptClient){
+  if(!priceIdx) return null;
+  let best=null, bd='', k=0;
+  for(const [key,list] of priceIdx){
+    if(!key.endsWith('/'+wid)) continue;
+    const cid=key.slice(0, key.indexOf('/')); if(cid===exceptClient) continue;
+    const p=list.slice().sort((a,b)=>(b.sample_count||0)-(a.sample_count||0))[0]; if(!p) continue;
+    k++;
+    const d=(lastUse && lastUse.byPair.get(cid+'|'+wid)) || '';
+    if(!best || d>bd || (d===bd && (p.sample_count||0)>(best.sample_count||0))){ best=p; bd=d; }
+  }
+  return best ? {p:best, k} : null;
+}
 function wtCandidates(q){
   const nq = wtNorm(q), mine = new Map();
   if(priceIdx) for(const [k,list] of priceIdx){
@@ -5176,11 +5223,21 @@ function wtCandidates(q){
     mine.set(k.slice(k.indexOf('/')+1), list.slice().sort((a,b)=>(b.sample_count||0)-(a.sample_count||0))[0]);
   }
   const hit = w => !nq || wtNorm(w.name).includes(nq);
-  const a = [...mine.entries()].map(([wid,p])=>({w:wtMap.get(wid), p})).filter(x=>x.w && hit(x.w))
+  const all = [...mine.entries()].map(([wid,p])=>({w:wtMap.get(wid), p})).filter(x=>x.w && hit(x.w))
              .sort((x,y)=>(y.p.sample_count||0)-(x.p.sample_count||0));
-  const b = nq ? (M.wts||[]).filter(w=>w.active!==false && !mine.has(w.id) && hit(w))
+  const a = all.filter(x=>wtUsedRecently(x.w.id, mk.client_id, x.p));
+  const bAll = nq ? (M.wts||[]).filter(w=>w.active!==false && !mine.has(w.id) && hit(w))
                    .sort((x,y)=>(y.sample_count||0)-(x.sample_count||0)) : [];
-  return { a: a.slice(0, nq?30:15), aAll: a.length, b: b.slice(0,20) };
+  // ほかの会社の単価表にある工種は、打たなくても「ほかの会社の工種」として少し出す（2026-10-01 大嶺さん
+  // 「工種はA社の工種でもB社が選択できるようにして」）。打ったときは単価表に無い工種も全部から探す
+  const b = nq ? bAll.filter(w=>wtUsedRecently(w.id))
+               : (M.wts||[]).filter(w=>w.active!==false && !mine.has(w.id) && otherPrice(w.id, mk.client_id) && wtUsedRecently(w.id))
+                   .sort((x,y)=>(wtLastAny&&wtLastAny.get(y.id)||'').localeCompare(wtLastAny&&wtLastAny.get(x.id)||'')
+                              || (y.sample_count||0)-(x.sample_count||0)).slice(0,10);
+  // 打って探したときだけ、6か月以上使っていないものを下に少し出す
+  const old = nq ? [...all.filter(x=>!a.includes(x)).map(x=>x.w), ...bAll.filter(w=>!b.includes(w))].slice(0,8) : [];
+  if(!nq && lastUse && !wtLastAny) wtUsedRecently('', null);   // wtLastAny を作っておく（並べ替えに使う）
+  return { a: a.slice(0, nq?30:15), aAll: a.length, b: b.slice(0,20), old, hidden: all.length-a.length };
 }
 let wtp = null;                                  // いま開いている候補 {i, sel, items, inp}
 function wtpPop(){ let el=document.getElementById('wtpop');
@@ -5190,9 +5247,13 @@ function openWtp(inp){
   const i=+inp.dataset.wtp, q=inp.value.trim(), c=wtCandidates(q);
   const items=[...c.a.map(x=>({id:x.w.id, name:x.w.name, g:'a',
                   sub: yen(x.p.unit_price)+(x.p.unit?'／'+x.p.unit:''), n:x.p.sample_count||0})),
-               ...c.b.map(w=>({id:w.id, name:w.name, g:'b', sub:'この顧客の単価表に無い', n:0}))];
+               ...c.b.map(w=>{ const o=otherPrice(w.id, mk.client_id);
+                 return {id:w.id, name:w.name, g:'b', n:0,
+                   sub: o ? `${(clientMap.get(o.p.client_id)||{}).name||'ほかの会社'} ${yen(o.p.unit_price)}${o.p.unit?'／'+o.p.unit:''}${o.k>1?`（ほか${o.k-1}社）`:''}`
+                          : 'どの単価表にも無い'}; }),
+               ...c.old.map(w=>({id:w.id, name:w.name, g:'c', sub:'6か月以上使っていない', n:0}))];
   if(q) items.push({free:true, name:q});
-  wtp = {i, items, inp, sel: items.length ? 0 : -1};
+  wtp = {i, items, inp, sel: items.length ? 0 : -1, hidden: c.hidden};
   drawWtp();
 }
 function drawWtp(){
@@ -5200,14 +5261,16 @@ function drawWtp(){
   const el=wtpPop(), r=wtp.inp.getBoundingClientRect(), it=wtp.items;
   let h='', g='';
   it.forEach((x,k)=>{
-    if(!x.free && x.g!==g){ g=x.g; h+=`<div class="h">${g==='a'?'この顧客の単価表（よく使う順）':'ほかの工種'}</div>`; }
+    if(!x.free && x.g!==g){ g=x.g; h+=`<div class="h">${g==='a'?'この顧客の単価表（よく使う順・6か月以内に使ったもの）':g==='b'?'ほかの会社の工種（選ぶと、その会社の単価が入ります）':'6か月以上使っていない工種'}</div>`; }
     h+= x.free
       ? `<div class="o free${k===wtp.sel?' on':''}" data-k="${k}">「${esc(x.name)}」を自由入力の行にする</div>`
       : `<div class="o${k===wtp.sel?' on':''}" data-k="${k}"><b>${esc(x.name)}</b>
            <span class="s">${esc(x.sub)}${x.n?`・実績${x.n}件`:''}</span></div>`;
   });
-  if(!it.length) h='<div class="none">この顧客の単価表はまだありません。工種名を打つと全部から探せます</div>';
-  else if(!wtp.inp.value.trim()) h+='<div class="none small">打つと絞り込めます（単価表に無い工種も探せます）</div>';
+  if(!it.length) h = wtp.hidden
+    ? `<div class="none">この顧客で6か月以内に使った工種はありません（それより前のものが ${wtp.hidden}件）。工種名を打つと探せます</div>`
+    : '<div class="none">この顧客の単価表はまだありません。工種名を打つと全部から探せます</div>';
+  else if(!wtp.inp.value.trim()) h+='<div class="none small">打つと絞り込めます（単価表に無い工種や、6か月以上使っていない工種も探せます）</div>';
   el.innerHTML=h; el.hidden=false;
   el.style.left=Math.round(r.left)+'px'; el.style.top=Math.round(r.bottom+2)+'px';
   el.style.width=Math.max(r.width, 420)+'px';
@@ -5221,7 +5284,15 @@ function pickWt(it){
   else {
     const w=wtMap.get(it.id); if(!w) return;
     l.work_type_id=w.id; l.name=w.name; l.unit=w.default_unit||l.unit; l.section=w.category==='経費'?2:1; l._pick=false;
+    l._from=null;
     applyPrice(l);
+    // この顧客の単価表に無い工種は、ほかの会社の単価を入れておく（あとで直せる）
+    if(!priceFor(mk.client_id, w.id, l.supply_type, l.opt_gl_cut, l.opt_pole)){
+      const o=otherPrice(w.id, mk.client_id);
+      if(o){ l.unit_price=Number(o.p.unit_price); l.unit=o.p.unit||l.unit;
+             l._from=(clientMap.get(o.p.client_id)||{}).name||'ほかの会社';
+             if(l.cost_unit==null && o.p.cost_unit!=null && o.p.cost_unit!=='') l.cost_unit=Number(o.p.cost_unit); l._costGuess=true; }
+    }
   }
   l.amount=Number(l.qty||0)*Number(l.unit_price||0);
   l.cost_amount=(l.cost_unit!=null)?Number(l.qty||0)*Number(l.cost_unit||0):null;
@@ -5256,6 +5327,7 @@ function lineRow(l,i,avail){
       : `<input data-li="${i}" data-f="name" value="${esc(l.name)}" placeholder="品名を入力">`}
       ${l._pick && !l.work_type_id ? ''
         : !l.work_type_id ? '<span class="pill">自由入力</span>'
+        : l._from ? `<span class="pill" style="color:var(--warn);border-color:var(--warn)" title="この顧客の単価表に無いので、${esc(l._from)}の単価を入れました。必要なら直してください">${esc(l._from)}の単価</span>`
         : l._sample===undefined ? ''                       /* 保存済みの行。単価は入っているのでバッジを出さない */
         : l._sample ? `<span class="pill">実績 ${l._sample}件${l._exact?'':' / 近い条件'}</span>`
         : '<span class="pill">実績なし</span>'}
