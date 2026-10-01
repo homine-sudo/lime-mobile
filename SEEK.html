@@ -4152,6 +4152,10 @@ function titleOf(text){
    実物②は全行がこの形（・精算機　1台 / ・バリカー設置　4本）、
    実物③は「・精算機　サニカ中古(前払い用) 支給」のように支給区分だけが付く。 */
 const SKIP_LINE = /^(TEL|FAX|Mobile|E-?mail|URL|http|携帯|〒|住所|案件地|所在地|現場住所|運営方式|施設名|駐車場名|台数|件名|標題|表題|Subject|To|Cc|From)\b|^(TEL|FAX|携帯|住所|案件地|所在地|運営方式|施設名|駐車場名|台数)\s*[:：]/i;
+/* 品目ではない「項目：値」の行（2026-10-01 実物「■車室数：10車室」「■撤去日：2027年1月6日」が品目に入っていた） */
+const META_LINE = /^(車室数|車室|区画数?|駐車台数|収容台数|台数|撤去日|撤去予定日?|施工日|施工予定日?|工事日|工事予定日?|設置日|設置予定日?|着工日|着工予定日?|作業日|作業予定日?|オープン日?|オープン予定日?|開業日?|開業予定日?|納期|期日|工期|希望日|日時|日程|担当|担当者|連絡先|ご担当|添付資料?|添付ファイル|図面)\s*[:：]/;
+/* 「内容：機器撤去・撤去品運搬」のように、1行に品目を並べて書く項目 */
+const LIST_LINE = /^(内\s*容|工事内容|作業内容|依頼内容|ご依頼内容|工事|作業)\s*[:：]\s*(.+)$/;
 function readLines(text){
   const out=[];
   const all=String(text).split(/\r?\n/);
@@ -4163,13 +4167,31 @@ function readLines(text){
        表の行＝タブを含む行。HTMLメールの <table> と、Excelから貼り付けた表が同じ形になる。
        これが無いと、表で書かれた依頼メールは1行も拾えない（2026-09-08 の点検で確認）。 */
     const isRow = all[i].includes('\t');
-    if(!/^[・･•\-*＊○◇◆■]/.test(s) && !/[:：]/.test(s) && !isRow) continue;
+    if(!/^[・･•\-*＊○◇◆■※]/.test(s) && !/[:：]/.test(s) && !isRow) continue;
     // 表の見出し行（品名／数量／単位…）は品目ではない
     if(isRow && s.split('\t').map(x=>x.trim()).filter(Boolean)
                  .every(x=>/^(品名|品目|項目|工事名|工種|内容|名称|数量|数|単位|単価|金額|備考|摘要|no\.?|№|#)$/i.test(x))) continue;
-    let body = s.replace(/^[・･•\-*＊○◇◆■]\s*/,'');
+    let body = s.replace(/^[・･•\-*＊○◇◆■※]\s*/,'');
     if(isRow) body = body.replace(/\t+/g,' ').trim();
     if(SKIP_LINE.test(body)) continue;                     // 署名・現場情報の行
+    if(/^(Re|Fw|Fwd)\s*[:：]/i.test(body) || /^[【\[].*見積.*[】\]]/.test(body)) continue;   // 返信の引用に出てくる件名
+    const bodyN = body.replace(/[\s　]/g,'');
+    if(META_LINE.test(bodyN) || /^(添付|図面)/.test(bodyN)) continue;   // 車室数・撤去日・添付資料などの「項目：値」
+    // 「内容：A・B（…）」は、並んだ品目を1つずつに分ける
+    const lm = bodyN.match(LIST_LINE);
+    if(lm){
+      lm[2].replace(/[（(][^（()）]*[）)]/g,'').split(/[・、,，／\/]|及び|および/).map(x=>x.trim()).filter(x=>x.length>=2)
+        .forEach(x=>out.push({ raw:all[i].trim(), name:x, qty:null, unit:'', supply:'' }));
+      continue;
+    }
+    // 数字の無い「コンテナ移動機器・精算機」のような行は、短い語の並びなら分ける
+    if(!/\d/.test(body) && /・/.test(body) && !/[\s　]/.test(body)){
+      const parts = body.replace(/[（(][^（()）]*[）)]/g,'').split('・').map(x=>x.trim()).filter(Boolean);
+      if(parts.length>=2 && parts.length<=5 && parts.every(x=>x.length>=2 && x.length<=12)){
+        parts.forEach(x=>out.push({ raw:all[i].trim(), name:x, qty:null, unit:'', supply:'' }));
+        continue;
+      }
+    }
     if(/^\(?\d[\d\-()\s]{7,}$/.test(body)) continue;       // 電話番号だけの行
     let supply='';
     for(const [k,re] of SUPPLY_RE){ if(re.test(body)){ supply=k; break; } }
@@ -4182,6 +4204,7 @@ function readLines(text){
                                .reduce((a,q)=>a+Number(q[1]),0) : null;
     const name = nop.replace(new RegExp('\\s*\\d+(?:\\.\\d+)?\\s*('+UNIT_RE+')(?![0-9]).*$'),'')
                     .replace(/(支給|貸与|SEEK様手配|SEEK様対応|当社手配|当社対応|弊社手配)/gi,' ')
+                    .replace(/[\s　]*[×✕＊*][\s　]*$/,'').replace(/[\s　]+[xX][\s　]*$/,'')   // 「照明×1台」の × を残さない（FLBOX の X は残す）
                     .replace(/\s+/g,' ').trim();
     if(!name || name.length<2) continue;
     out.push({ raw:all[i].trim(), name, qty, unit, supply });
@@ -4189,26 +4212,75 @@ function readLines(text){
   return out;
 }
 
-function readRequest(text){
+/* 読み取りの精度を上げる（2026-10-01 大嶺さん「メールからの見積作成の精度が低い」）。
+   実物「【見積依頼】ザ・パーク辻第2 機器撤去」で、顧客が自社（SEEK電総＝宛名）になり、車室数・撤去日を取りこぼし、
+   テント撤去が2種類・看板撤去が2種類入っていた。
+     ・自社の名前は顧客にしない。差出人のメールのドメインで顧客を当てる（一度その顧客で保存すると覚える）
+     ・案件名の頭の略号（AP=アップルパーク のように過去の案件名で使われているもの）でも当てる
+     ・「車室数：10車室」は全体の台数、「撤去日：」「オープン日：」は日程に入れる
+     ・同じものの言い方違い（テント撤去／テント撤去（抜き））は1つにする
+     ・諸経費は、その種類の過去の案件の半分以上に入っているので、最初から入れておく */
+const OWN_CO_RE = /SEEK電総|ＳＥＥＫ電総|シーク電総|シークデンソウ|seekdenso/i;
+const PUBLIC_MAIL = /^(gmail\.com|yahoo\.co\.jp|yahoo\.com|ymail\.ne\.jp|icloud\.com|me\.com|outlook\.(com|jp)|hotmail\.(com|co\.jp)|live\.(jp|com)|docomo\.ne\.jp|ezweb\.ne\.jp|au\.com|softbank\.ne\.jp|i\.softbank\.jp|.*\.ocn\.ne\.jp|.*\.biglobe\.ne\.jp|nifty\.com)$/i;
+const mailDomain = e => { const m=String(e||'').toLowerCase().match(/@([a-z0-9.\-]+)/); return m ? m[1] : ''; };
+let brandMap = null;    // 案件名の頭の略号 → 顧客（過去の案件名から作る）
+function brandOf(title){
+  if(!brandMap){
+    brandMap = new Map(); const cnt = new Map();
+    (M.jobs||[]).forEach(j=>{
+      const m = String(j.title||'').normalize('NFKC').replace(/^仮\s*[)）]\s*/,'').match(/^([A-Z]{2,3})(?=[^A-Za-z])/);
+      if(!m || !j.client_id) return;
+      const s = cnt.get(m[1]) || new Map(); s.set(j.client_id, (s.get(j.client_id)||0)+1); cnt.set(m[1], s);
+    });
+    cnt.forEach((s,k)=>{ const tot=[...s.values()].reduce((a,b)=>a+b,0); const top=[...s.entries()].sort((a,b)=>b[1]-a[1])[0];
+      if(tot>=5 && top[1]/tot>=0.8) brandMap.set(k, top[0]); });
+  }
+  const m = String(title||'').normalize('NFKC').match(/^([A-Z]{2,3})(?=[^A-Za-z])/);
+  return m ? brandMap.get(m[1]) || '' : '';
+}
+// 「2027年1月6日」「2027/1/6」「1月6日」→ YYYY-MM-DD（年が無ければ、今日より前なら来年とみなす）
+function dateOf(s){
+  s = han(s);
+  let m = s.match(/(20\d{2})\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})/);
+  let y, mo, d;
+  if(m){ y=+m[1]; mo=+m[2]; d=+m[3]; }
+  else { m = s.match(/(\d{1,2})\s*[月\/]\s*(\d{1,2})\s*日?/); if(!m) return '';
+         mo=+m[1]; d=+m[2]; y=+today().slice(0,4);
+         if(`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}` < today()) y++; }
+  if(mo<1||mo>12||d<1||d>31) return '';
+  return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function readRequest(text, opt){
+  opt = opt || {};
   const t = String(text||'');
   const flat = flatten(t);
-  const r = { kind:'', kind_why:'', client_id:'', client_name:'', title:'', qty:null,
-              hits:[], numbers:[], items:[], site:'' };
+  const r = { kind:'', kind_why:'', client_id:'', client_name:'', client_why:'', title:'', qty:null,
+              hits:[], numbers:[], items:[], site:'', build_date:'', open_date:'', from_domain:'' };
 
   // 1) 種類（件名優先）
   const k = kindOf(t); r.kind=k.kind; r.kind_why=k.why;
 
-  // 2) 顧客（マスタの正規名＋Excelでの表記ゆれ全部で照合。長い名前を優先）
-  const cands=[];
-  activeClients().forEach(c=>{
-    const names=[c.name, c.formal_name].concat(c.name_variants||[]).filter(Boolean);
-    names.forEach(n=>{ const key=flatten(n);
-      if(key.length>=2 && flat.includes(key)) cands.push({c, len:key.length}); });
-  });
-  if(cands.length){ cands.sort((a,b)=>b.len-a.len); r.client_id=cands[0].c.id; r.client_name=cands[0].c.name; }
-
-  // 3) 案件名・現場住所
+  // 2) 顧客。①差出人のドメイン（覚えたもの）②本文の社名（自社は除く。長い名前を優先）③案件名の略号
   r.title = titleOf(t);
+  const dom = mailDomain(opt.from); r.from_domain = dom && !PUBLIC_MAIL.test(dom) ? dom : '';
+  const setC = (c, why) => { r.client_id=c.id; r.client_name=c.name; r.client_why=why; };
+  const byDom = r.from_domain && activeClients().find(c=>((c.data&&c.data.email_domains)||[]).includes(r.from_domain)
+                                            || mailDomain((c.data||{}).email)===r.from_domain);
+  if(byDom) setC(byDom, '差出人のメール（@'+r.from_domain+'）');
+  else {
+    const cands=[];
+    activeClients().forEach(c=>{
+      if(OWN_CO_RE.test(c.name+' '+(c.formal_name||''))) return;          // 自社（宛名の「SEEK電総株式会社 村山様」）は顧客ではない
+      const names=[c.name, c.formal_name].concat(c.name_variants||[]).filter(Boolean);
+      names.forEach(n=>{ const key=flatten(n);
+        if(key.length>=2 && flat.includes(key)) cands.push({c, len:key.length}); });
+    });
+    if(cands.length){ cands.sort((a,b)=>b.len-a.len); setC(cands[0].c, '本文の社名'); }
+    else { const bid = brandOf(r.title); const bc = bid && clientMap.get(bid);
+           if(bc && bc.active!==false) setC(bc, '案件名の頭の略号'); }
+  }
+
+  // 3) 案件名・現場住所・日程
   const sm = han(t).match(/^[\s　]*[・･•\-*＊○◇◆■]?[\s　]*(?:住所|案件地|所在地|現場住所|所在)[\s　]*[:：][\s　]*(.+)$/m);
   if(sm) r.site = sm[1].replace(/[（(][^）)]*[）)]\s*$/,'').trim().slice(0,120);
   else {
@@ -4224,8 +4296,17 @@ function readRequest(text){
   //    （箇条書きの「防犯カメラ 2台」を全体台数と取り違えないため）
   for(const m of han(t).matchAll(/(\d{1,3})\s*台/g)) r.numbers.push(+m[1]);
   const decl = han(t).match(/台\s*数\s*[:：]\s*(\d{1,3})/)          // 「台数：7台」
-            || r.title.match(/[（(](\d{1,3})\s*台[）)]/);          // 「…設置工事（20台）」
+            || han(t).match(/(?:車\s*室\s*数?|区\s*画\s*数?)\s*[:：]\s*(\d{1,3})/)   // 「車室数：10車室」
+            || r.title.match(/[（(](\d{1,3})\s*(?:台|車室)[）)]/);  // 「…設置工事（20台）」
   r.qty = decl ? +decl[1] : null;
+  // 日程：「撤去日：2027年1月6日」→ 施工開始、「オープン予定日：」→ オープン予定日
+  for(const line of han(t).split(/\r?\n/)){
+    const s = line.replace(/^[\s　・･•\-*＊○◇◆■※]+/,'').replace(/[\s　]/g,'');
+    const bm = s.match(/^(撤去|施工|工事|設置|着工|作業)(予定)?日[:：](.+)$/);
+    if(bm && !r.build_date) r.build_date = dateOf(bm[3]);
+    const om = s.match(/^(オープン|OPEN|開業|稼働|運用開始)(予定)?日?[:：](.+)$/i);
+    if(om && !r.open_date) r.open_date = dateOf(om[3]);
+  }
 
   // 6) 工種の照合。まず箇条書きの1行ずつ、次に本文全体。
   const byId = new Map();
@@ -4277,7 +4358,29 @@ function readRequest(text){
     if(nameKey.length>=3 && flat.includes(nameKey)) add(w,'名称',null);
     else if(flat.includes(core) && kindOk(w)) add(w,'核語',null);
   });
-  r.hits = [...byId.values()];
+  // 同じものの言い方違いを1つにする。
+  // 依頼の行で当たった工種があれば、核となる語が重なる「名称・核語」の当たりは落とす
+  // （「テント」の行 → テント撤去工事。核語の テント撤去工事（抜き）は落とす／料金看板 → 看板撤去工事（カット）は落とす）
+  const coreOf = id => flatten((((wtMap.get(id)||{}).data)||{}).core||'');
+  const lineCores = [...byId.values()].filter(h=>h.why==='依頼の行').map(h=>coreOf(h.id)).filter(Boolean);
+  let hits = [...byId.values()].filter(h=> h.why==='依頼の行'
+    || !lineCores.some(c=>{ const k=coreOf(h.id); return k && (c.includes(k)||k.includes(c)); }));
+  // 名称・核語どうしでも、核が同じなら実績のいちばん多い1つだけにする
+  const best = new Map();
+  hits.filter(h=>h.why!=='依頼の行').forEach(h=>{ const k=coreOf(h.id)||h.id, w=wtMap.get(h.id)||{};
+    const cur=best.get(k); if(!cur || (w.sample_count||0)>((wtMap.get(cur.id)||{}).sample_count||0)) best.set(k,h); });
+  hits = hits.filter(h=>h.why==='依頼の行' || best.get(coreOf(h.id)||h.id)===h);
+  // 諸経費：その種類の過去の案件の半分以上に入っているなら、最初から入れる（顧客の単価表にある諸経費を優先）
+  if(r.kind && !hits.some(h=>EXPENSE_RE.test((wtMap.get(h.id)||{}).name||''))){
+    const exps = M.wts.filter(w=>w.active!==false && /^諸経費/.test(w.name));
+    const share = exps.reduce((a,w)=>a+(((w.data||{}).freq||{})[r.kind]||0),0);
+    if(share >= 0.5){
+      const mine = r.client_id ? exps.filter(w=>priceIdx.has(r.client_id+'/'+w.id)) : [];
+      const pick = (mine.length?mine:exps).slice().sort((a,b)=>(b.sample_count||0)-(a.sample_count||0))[0];
+      if(pick) hits.push({id:pick.id, name:pick.name, why:'いつも入る諸経費', qty:1, unit:'式', supply:'', raw:''});
+    }
+  }
+  r.hits = hits;
   return r;
 }
 // 種類ごとの候補（出現率順）。本文でヒットしたものは最初から✓
@@ -4657,10 +4760,13 @@ function drawRead(){
       ${r.kind_why?`<span class="muted small">${esc(r.kind_why)}</span>`:''}</label>
     <label class="f">全体の台数${r.numbers.length?`<span class="muted">（本文に ${r.numbers.join('/')} 台）</span>`:''}
       <input id="rqty" style="width:90px;text-align:right" value="${r.qty??''}" placeholder="—"></label>
-    <div class="f"><span>顧客</span><b>${r.client_id?esc(r.client_name):'<span class="muted">読み取れず</span>'}</b></div>
+    <div class="f"><span>顧客</span><b>${r.client_id?esc(r.client_name):'<span class="muted">読み取れず（下の②で選んでください）</span>'}</b>
+      ${r.client_why?`<span class="muted small">${esc(r.client_why)}</span>`:''}
+      ${!r.client_id && r.from_domain?`<span class="muted small">選んで保存すると @${esc(r.from_domain)} をその顧客として覚えます</span>`:''}</div>
     <div class="f" style="flex:1"><span>案件名</span><b>${esc(r.title)||'<span class="muted">読み取れず</span>'}</b></div>
   </div>
   ${r.site?`<div class="small muted" style="margin:-4px 0 8px">現場住所として <b>${esc(r.site)}</b> を読み取りました（②に入れてあります）</div>`:''}
+  ${(r.build_date||r.open_date)?`<div class="small muted" style="margin:-4px 0 8px">日程：${r.build_date?`施工 <b>${esc(r.build_date)}</b>`:''}${r.build_date&&r.open_date?'・':''}${r.open_date?`オープン予定 <b>${esc(r.open_date)}</b>`:''}（③に入れてあります）</div>`:''}
   ${!r.kind?'<div class="note">工事の種類を読み取れませんでした。上で選ぶと候補が出ます。</div>':''}
   ${(r.items&&r.items.length)?`<div class="hint" style="margin:10px 0">
     <b>依頼の行を ${r.items.length}行 読みました。</b>数量と支給区分はこの行から取ります。
@@ -4947,7 +5053,7 @@ function aMake(){
     mk.paste = pa.value;
     if(!mk.paste.trim()){ alert('メールの件名と本文を貼り付けてください'); return; }
     setBar('メールを読み取りました');
-    mk.read = readRequest(mk.paste);
+    mk.read = readRequest(mk.paste, {from: mk.fromInbox && mk.fromInbox.from_email});
     // 最初から✓を付けるのは「お客様が書いてきた行」と「工種名がそのまま出てきたもの」。
     // 核語だけの当たり（「精算機」→精算機設置/撤去…）は、工事の種類が決まっているときだけ✓。
     // 種類が読み取れないメールで核語まで✓にすると、撤去も設置も全部入って邪魔になる。
@@ -4965,6 +5071,8 @@ function aMake(){
       mk.site_address = mk.read.site;
       const sa=document.getElementById('mksa'); if(sa) sa.value = mk.site_address;
     }
+    if(mk.read.build_date && !mk.build_start){ mk.build_start = mk.read.build_date; if(!mk.build_end) mk.build_end = mk.read.build_date; }
+    if(mk.read.open_date && !mk.open_date) mk.open_date = mk.read.open_date;
     drawMake(); drawRead();
   }
   document.getElementById('mkread').onclick=doRead;
@@ -5583,6 +5691,13 @@ async function doSave(){
         const n = await attachInboxFiles(saved.id, src);
         if(n) fileMsg += `<br>メールの添付 ${n}件を案件に付けました`;
         await setInboxStatus(src, '案件にした', saved.id);
+        // 差出人のドメインを、この顧客として覚える（次から同じ会社のメールは顧客が自動で入る）
+        const dom = mailDomain(src.from_email), c = clientMap.get(saved.client_id);
+        if(dom && !PUBLIC_MAIL.test(dom) && c && !OWN_CO_RE.test(c.name)
+           && !((c.data&&c.data.email_domains)||[]).includes(dom)){
+          try{ await patchClient(c, {data:Object.assign({}, c.data||{}, {email_domains:[...((c.data&&c.data.email_domains)||[]), dom]})});
+               fileMsg += `<br>@${esc(dom)} のメールは、次から「${esc(c.name)}」として読み取ります`; }catch(_){}
+        }
       }catch(e){
         fileMsg += `<br><b>メールの添付を案件に付けられませんでした。</b>${esc(e.message)}`;
       }
