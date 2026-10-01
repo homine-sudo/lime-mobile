@@ -369,6 +369,9 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .jd-act .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
 .jd-act .btns{display:flex;gap:6px;flex-wrap:wrap}
 .lrow{margin-bottom:8px}
+/* マスタの「＋ 足す」の1行 */
+.madd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:var(--r-sm);background:var(--panel-2)}
+.madd b{color:var(--pri)}
 .subchk{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:6px;font-size:13px;color:var(--ink);width:auto!important;margin:0}
 .subchk input{width:auto!important;margin:0}
 .subchk.off{opacity:.5}
@@ -609,7 +612,7 @@ dialog::backdrop{background:rgba(10,13,18,.5);backdrop-filter:blur(3px)}
 <div id="printArea"></div>
 
 <!-- 見積依頼メールの自動取込に使う Google Apps Script のテンプレート。
-     マスタ →「メール取込」から丸ごとコピーして script.google.com に貼る。
+     SEEK の 初期設定 →「メール取込の設定」から丸ごとコピーして script.google.com に貼る。
      type="text/plain" なのでブラウザは実行しない。 -->
 <script type="text/plain" id="gasTpl">
 /**
@@ -1067,7 +1070,7 @@ function reindex(){
   priceIdx = new Map(); wtsByClient = new Map();
   // 工種名 → 直接原価の単価（seek_cost_prices）。工種マスタに無い名前でも引けるよう名前で持つ
   costIdx = new Map();
-  (M.costPrices||[]).forEach(c=>costIdx.set(String(c.name).trim(), c));
+  (M.costPrices||[]).forEach(c=>{ if(c.active!==false) costIdx.set(String(c.name).trim(), c); });   // マスタで消した原価は使わない
   M.prices.forEach(p=>{
     if(p.active===false) return;               // 単価表で「消した」行は見積で使わない（2026-09-30）
     const k = p.client_id+'/'+p.work_type_id;
@@ -1185,7 +1188,7 @@ const setMeta = () => { const b=document.getElementById('barMeta');
 const STATUSES = ['見積提出','受注','手配','施工中','施工完了','請求済','入金済','失注','キャンセル'];
 // 全体工程表に並べる順（失注・キャンセルは流れから外れるので入れない）
 const FLOW = ['見積提出','受注','手配','施工中','施工完了','請求済','入金済'];
-const VIEWS = [['dash','ダッシュボード'],['find','案件を探す'],['make','見積をつくる'],['master','マスタ']];
+const VIEWS = [['dash','ダッシュボード'],['find','案件を探す'],['make','見積をつくる'],['master','マスタ'],['check','初期設定']];
 let view = 'dash';
 
 // サイドナビのアイコン（外部ファイルを増やさないよう、線画をその場で描く）
@@ -1193,10 +1196,12 @@ const ICON = {
   dash:  '<path d="M3 12h5l2 6 4-14 2 8h5"/>',
   find:  '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
   make:  '<path d="M4 3.5h9l5 5V20a.5.5 0 0 1-.5.5h-13A.5.5 0 0 1 4 20V3.5Z"/><path d="M13 3.5V9h5"/><path d="M8 13h7M8 16.5h5"/>',
-  master:'<path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5Z"/><circle cx="12" cy="12" r="2.6"/>'
+  master:'<path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5Z"/><circle cx="12" cy="12" r="2.6"/>',
+  check: '<rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8.5 12.2l2.3 2.3 4.7-4.9"/>'
 };
 function renderNav(){
-  document.getElementById('nav').innerHTML = VIEWS.map(([k,l])=>
+  // 初期設定は、終えたらメニューから消す（2026-10-01 大嶺さん「マスタとは別に初期設定のタブ作って。完了時は消すから」）
+  document.getElementById('nav').innerHTML = VIEWS.filter(([k])=>!(k==='check' && (M.settings||{}).setupDone && view!=='check')).map(([k,l])=>
     `<button data-v="${k}" class="${k===view?'on':''}">
       <svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]||''}</svg>${l}</button>`).join('');
   const t = (VIEWS.find(([k])=>k===view)||[,''])[1];
@@ -1220,8 +1225,8 @@ addEventListener('resize', syncBarHeight);
 function render(){
   renderNav();
   const m = document.getElementById('main');
-  m.innerHTML = ({dash:vDash, find:vFind, make:vMake, master:vMaster})[view]();
-  ({dash:aDash, find:aFind, make:aMake, master:aMaster})[view]?.();
+  m.innerHTML = ({dash:vDash, find:vFind, make:vMake, master:vMaster, check:vCheck})[view]();
+  ({dash:aDash, find:aFind, make:aMake, master:aMaster, check:aCheck})[view]?.();
   window.scrollTo(0,0);
   syncBarHeight();
 }
@@ -1684,7 +1689,7 @@ async function drawDash(){
     <div class="b warn"><div class="v">${oku(gp)}<em>億円</em></div>
       <div class="l">粗利益（<b style="color:var(--warn)">参考値</b>）</div>
       <div class="s">利益率 ${gpr.toFixed(1)}%。<b>いまの原価データはそのままでは使えません</b>
-        <button class="btn ghost sm" data-godash="data" style="margin-left:6px">理由を見る</button></div></div>
+        <button class="btn ghost sm" data-gocheck="data" style="margin-left:6px">理由を見る</button></div></div>
     <div class="b"><div class="v">${M.clients.length}<em>社</em></div><div class="l">お取引先</div>
       <div class="s">上位5社で ${(top5/Math.max(1,sum(activeJ))*100).toFixed(0)}% を占める</div></div>
     <div class="b"><div class="v">${man(sum(activeJ)/Math.max(1,activeJ.length))}<em>万円</em></div><div class="l">1案件あたりの平均</div>
@@ -1710,24 +1715,7 @@ async function drawDash(){
       ${dropped.length?`<span>※ 請求日が他とかけ離れている ${dropped.length}ヶ月（各3件未満）は外しています</span>`:''}</div>
   </div>
 
-  <div class="card" style="border-left:3px solid var(--warn)">
-    <h2>原価データの点検</h2>
-    <div class="row" style="gap:26px;align-items:flex-start">
-      <div><div class="v" style="font-size:26px;font-weight:800;color:var(--danger)">${over.length}<span
-        style="font-size:13px;color:var(--muted);font-weight:700">件</span></div>
-        <div class="muted small">原価が売上を超えている<br>（${withCost.length}件中 <b>${(over.length/withCost.length*100).toFixed(0)}%</b>）</div></div>
-      <div><div class="v" style="font-size:26px;font-weight:800">${(medRate*100).toFixed(0)}<span
-        style="font-size:13px;color:var(--muted);font-weight:700">%</span></div>
-        <div class="muted small">原価率の中央値</div></div>
-      <div style="flex:1;min-width:260px" class="small">
-        これは赤字が ${over.length}件あるという意味ではありません。<br>
-        現行Excelでは<b>原価を明細と対応させずに入れている</b>ためです
-        （例：「精算機設置工事 単価33,000円」の行に、機器代を含めた原価420,000円をまとめて入れている）。<br>
-        <b>だから今は正しい粗利が出せません。</b>システムでは明細ごとに原価を持つので、
-        入れ方を揃えれば月ごと・顧客ごとの本当の利益率が見えるようになります。
-      </div>
-    </div>
-  </div>
+  <!-- 「原価データの点検」は「初期設定」へ移した（2026-10-01） -->
 
   <div class="card">
     <h2>お取引先 上位10</h2>
@@ -2972,8 +2960,36 @@ function jobWorkers(jobId){
 }
 async function drawWork(j){
   const box=document.getElementById('workBox'); if(!box) return;
-  let rows=[]; try{ rows=await sbFetchAll('seek_worklogs','select=*&job_id=eq.'+encodeURIComponent(j.id)+'&order=work_date.asc'); }catch(e){ box.innerHTML=''; return; }
+  const id=encodeURIComponent(j.id);
+  const [rows, ents] = await Promise.all([
+    sbFetchAll('seek_worklogs','select=*&job_id=eq.'+id+'&order=work_date.asc').catch(()=>[]),
+    sbFetchAll('seek_work_entries','select=*&job_id=eq.'+id+'&order=work_date.asc').catch(()=>[]) ]);
   const est=Number((j.data||{}).labor_person_days||0);
+  // 出面（だれが・何時から何時まで）があれば、作業員の単価で金額まで出す（2026-10-01）
+  if(ents.length){
+    if(workersReady===null) await loadWorkers();
+    const D=j.data||{}, estCost = D.labor_cost!=null ? Number(D.labor_cost||0) : est*laborUnitOfJob(j);
+    const dates=[...new Set(ents.map(e=>String(e.work_date)))].sort();
+    let pd=0, pay=0, unknown=0, people=0;
+    const days=dates.map(d=>{ const es=ents.filter(e=>String(e.work_date)===d).map(e=>({e, c:entryCalc(e)}));
+      const dpd=es.reduce((a,x)=>a+x.c.days,0), dpay=es.reduce((a,x)=>a+(x.c.pay||0),0);
+      pd+=dpd; pay+=dpay; unknown+=es.filter(x=>x.c.pay==null).length; people+=es.length;
+      return {d, es, dpd, dpay, log:rows.find(w=>String(w.work_date)===d)}; });
+    const last=days[days.length-1];
+    box.innerHTML=`<div class="card" style="margin-top:16px"><div class="row" style="align-items:baseline"><h2 style="margin:0">現場の人工（スマホから）</h2>
+        <span class="muted small">だれが何時から何時まで入ったか。金額は「マスタ → 作業員」の単価で出しています</span></div>
+      <div class="bill-sum" style="grid-template-columns:repeat(4,1fr)">
+        <div><div class="k">これまでの人工</div><div class="v">${dayStr(pd)}人日</div><div class="s">${dates.length}日・のべ${people}人</div></div>
+        <div><div class="k">見積の人工</div><div class="v">${est?est+'人日':'—'}</div><div class="s">${est?(pd>est?`<span style="color:var(--danger)">${dayStr(pd-est)}人日 多い</span>`:`あと ${dayStr(est-pd)}人日`):''}</div></div>
+        <div><div class="k">人工の金額（実績）</div><div class="v">${yen(pay)}</div><div class="s">${estCost?(pay>estCost?`<span style="color:var(--danger)">見積 ${yen(estCost)} より ${yen(pay-estCost)} 多い</span>`:`見積 ${yen(estCost)}`):''}${unknown?`<br><span style="color:var(--warn)">単価が入っていない ${unknown}人日ぶんは0円で数えています</span>`:''}</div></div>
+        <div><div class="k">最後の入力</div><div class="v" style="font-size:15px">${esc(last.d.slice(5).replace('-','/'))} ${esc((last.log&&last.log.progress)||'')}</div><div class="s">${last.es.length}人</div></div></div>
+      <div class="scroll" style="margin-top:8px"><table class="tight"><thead><tr><th>日</th><th>入った人</th><th class="n">人日</th><th class="n">金額</th><th>進み具合・メモ</th></tr></thead>
+        <tbody>${days.map(x=>`<tr><td>${esc(x.d)}</td>
+          <td class="small">${x.es.map(({e,c})=>`${esc(e.worker_name||(c.w&&c.w.name)||'')} <span class="muted">${esc(String(e.start_time).slice(0,5))}〜${esc(String(e.end_time).slice(0,5))}${c.otMin?'・残業'+hmS(c.otMin):''}</span>${c.pay==null?' <span style="color:var(--warn)">単価なし</span>':''}`).join('<br>')}</td>
+          <td class="n">${dayStr(x.dpd)}</td><td class="n">${yen(x.dpay)}</td>
+          <td class="small">${esc((x.log&&x.log.progress)||'')} <span class="muted">${esc((x.log&&x.log.note)||'')}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+    return;
+  }
   if(!rows.length){ box.innerHTML = /受注|手配|施工中|施工完了/.test(j.status)
     ? `<div class="card" style="margin-top:16px"><h2>現場の人工</h2><div class="muted small">まだ入っていません。現場のスマホの「👷 人工と進み具合を入れる」から入ります。${est?`見積の人工は ${est}人日 です。`:''}</div></div>` : ''; return; }
   const sum=rows.reduce((a,w)=>a+Number(w.workers||0),0), unit=laborUnitOfJob(j);
@@ -5251,7 +5267,7 @@ function wtCandidates(q){
     mine.set(k.slice(k.indexOf('/')+1), list.slice().sort((a,b)=>(b.sample_count||0)-(a.sample_count||0))[0]);
   }
   const hit = w => !nq || wtNorm(w.name).includes(nq);
-  const all = [...mine.entries()].map(([wid,p])=>({w:wtMap.get(wid), p})).filter(x=>x.w && hit(x.w))
+  const all = [...mine.entries()].map(([wid,p])=>({w:wtMap.get(wid), p})).filter(x=>x.w && x.w.active!==false && hit(x.w))
              .sort((x,y)=>(y.p.sample_count||0)-(x.p.sample_count||0));
   const a = all.filter(x=>wtUsedRecently(x.w.id, mk.client_id, x.p));
   const bAll = nq ? (M.wts||[]).filter(w=>w.active!==false && !mine.has(w.id) && hit(w))
@@ -5498,7 +5514,7 @@ async function doSave(){
 }
 
 /* ---------- マスタ ---------- */
-let mTab='price', mQ='';
+let mTab='mprice', mQ='';
 /* ============================================================
    マスタ画面
    ------------------------------------------------------------
@@ -5512,42 +5528,34 @@ let mTab='price', mQ='';
 /* 件数は「直近1年で実際に使ったもの」だけを数える。
    1年使っていない単価まで先に確認してもらう必要はない（次に使うときに未確定と出る）。
    これで 847件 → 576件 になった（2026-09-07 実測）。 */
+/* マスタ＝村山さんが普段直すところ（2026-10-01 確認作業と最初に1回だけやる設定は「初期設定」へ分けた） */
 const MTABS = [
-  ['確認する', [
-    ['price','顧客別単価表', ()=>(M.prices||[]).filter(p=>!p.confirmed_at
-        && usedRecently(p.client_id+'|'+p.work_type_id)).length],
-    ['cost', '原価',         ()=>(M.costPrices||[]).filter(c=>!c.confirmed_at
-        && usedRecently((c.name||'').trim())).length],
-    ['client','顧客',        ()=>(M.clients||[]).filter(c=>!(c.data&&c.data.reviewed_at)
-        && recentClient(c.id)).length],
-  ]],
-  ['見る', [
-    ['wt',  '工種',   ()=>null],
-    ['sup', '外注先・仕入先', ()=>null],
+  ['直す・足す・消す', [
+    ['mprice','単価表',          ()=>null],
+    ['wt',    '工種',            ()=>null],
+    ['mclient','顧客',           ()=>null],
+    ['sup',   '外注先・仕入先',  ()=>null],
+    ['worker','作業員',          ()=>null],
+    ['mcost', '原価',            ()=>null],
   ]],
   ['設定', [
     ['bank','振込先',     ()=>null],
-    ['gas', 'メール取込', ()=>null],
-    ['user','利用者',     ()=>null],
     ['doc', '帳票・印鑑', ()=>null],
-    ['labor','人工の単価', ()=>null],
-    ['backup','バックアップ', ()=>null],
+    ['labor','人工の単価（見積）', ()=>null],
+    ['user','利用者',     ()=>null],
   ]],
 ];
 const MTAB_ALL = MTABS.flatMap(([,ts])=>ts);
-const SEARCHABLE = new Set(['price','cost','sup','wt','client']);   // 絞り込みが効くタブ
+const SEARCHABLE = new Set(['mprice','mcost','sup','wt','mclient','worker']);   // 絞り込みが効くタブ
 
 /* 見出し（残り件数のまとめ＋タブ）。確定を押すたびに数字が減るよう、ここだけ描き直す。
    render() を呼ぶと画面が先頭まで戻ってしまい、1行ずつ確認していく作業の邪魔になる。 */
 function masterHead(){
-  const todo = MTABS[0][1].map(([k,l,fn])=>({k,l,n:fn()||0}));
-  const total = todo.reduce((a,x)=>a+x.n,0);
-  return `${total>0?`<div class="hint" style="margin-bottom:12px">
-      <b>村山さんに確認してもらうもの：あと ${total.toLocaleString()}件</b>
-      <span class="small">${todo.filter(x=>x.n).map(x=>`${x.l} ${x.n.toLocaleString()}`).join('　/　')}</span><br>
-      <span class="small muted">Excelの実績から機械的に出した初期値です。
-        1行ずつ「これでOK」を押すか、直してください。まとめて確定もできます。</span>
-    </div>`:''}
+  if(!MTAB_ALL.some(([k])=>k===mTab)) mTab='mprice';
+  const left = checkLeft(), done = (M.settings||{}).setupDone;
+  return `<div class="small muted" style="margin-bottom:12px">ふだん直すところです。直すとその場で保存され、次に作る見積から使われます。
+      ${done ? `<button class="btn ghost sm" id="setupAgain" title="終えた初期設定を、もう一度メニューに出します">初期設定をもう一度出す</button>`
+             : `Excelから移した中身の確認やメール取込などは <button class="btn ghost sm" data-gocheck="price">初期設定${left?`（あと ${left.toLocaleString()}件）`:''}</button>`}</div>
     <div class="row" style="align-items:flex-end;gap:18px">
       ${MTABS.map(([g,ts])=>`<div>
         <div class="muted small" style="margin-bottom:3px">${g}</div>
@@ -5570,15 +5578,18 @@ function vMaster(){
 /* 確定したあと、残り件数のまとめとタブのバッジを描き直す。
    これが無いと「あと847件」が減らず、どこまで進んだか分からない。 */
 function refreshMasterHead(){
-  const h=document.getElementById('mhead'); if(!h) return;
+  const chk = view==='check';
+  const h=document.getElementById(chk?'chead':'mhead'); if(!h) return;
   const scroll=window.scrollY;
   // 絞り込み欄(#mq)に打っている最中に呼ばれることがある（原価の読み込みが終わった時など）。
   // そのまま作り直すと欄が別物になり、打っていた文字とフォーカスが消える。
-  keepFocus(()=>{ h.innerHTML=masterHead(); bindMasterHead(); });
+  keepFocus(()=>{ h.innerHTML=chk?checkHead():masterHead(); chk?bindCheckHead():bindMasterHead(); });
   window.scrollTo(0,scroll);
 }
 function bindMasterHead(){
   document.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{ mTab=b.dataset.mt; render(); });
+  const sa=document.getElementById('setupAgain');
+  if(sa) sa.onclick=async()=>{ try{ await saveSettings({setupDone:false}); chkTab='price'; view='check'; render(); }catch(e){ alert(e.message); } };
   const q=document.getElementById('mq');
   if(q) q.oninput=()=>{ mQ=q.value; drawMaster(); };
 }
@@ -6777,6 +6788,8 @@ function drawCostPrices(el, all0){
 }
 
 function drawMaster(){
+  // 確認の画面（drawPrices など）は、描き直しに drawMaster を呼ぶ。「初期設定」を見ているときはそちらを描く
+  if(view==='check') return drawCheck();
   const el=document.getElementById('mres'); if(!el) return;
   const q=mQ.trim();
   // 「直近1年で使ったか」は明細から出す。ダッシュボードを開かずにマスタへ来た場合、
@@ -6784,12 +6797,16 @@ function drawMaster(){
   if(!lastUse){
     loadCosts().then(()=>{ recentClientSet=null; drawMaster(); refreshMasterHead(); }).catch(()=>{});
   }
-  if(mTab==='price'){
-    drawPrices(el, q);
+  if(mTab==='mprice'){
+    drawMPrices(el, q);
   } else if(mTab==='wt'){
-    drawWorkTypes(el, q);
-  } else if(mTab==='cost'){
-    drawCosts(el, q);
+    drawWtMaster(el, q);
+  } else if(mTab==='mcost'){
+    drawMCosts(el, q);
+  } else if(mTab==='mclient'){
+    drawMClients(el, q);
+  } else if(mTab==='worker'){
+    drawWorkers(el, q);
   } else if(mTab==='gas'){
     drawGasSetup(el);
   } else if(mTab==='user'){
@@ -6802,8 +6819,6 @@ function drawMaster(){
     drawBackup(el);
   } else if(mTab==='sup'){
     drawSuppliers(el, q);
-  } else if(mTab==='client'){
-    drawClients(el, q);
   } else {
     el.innerHTML=`<div class="scroll"><table><thead><tr><th>銀行</th><th>支店</th><th>種別</th><th>口座番号</th>
       <th>名義</th><th>既定</th></tr></thead><tbody>
@@ -7040,15 +7055,108 @@ async function mergeWorkTypes(keep, drops){
   return {moved, hidden};
 }
 let wtDupTab = 'A';
-function drawWorkTypes(el, q){
+/* ============================================================
+   登録内容の確認（2026-10-01 大嶺さん「いまのシステムが本番用と、登録内容の確認とが混同しててわかりにくい。
+   確認用のタブ作ってまとめて。マスタは村山さんが編集できるような仕様にしたい」）
+   ------------------------------------------------------------
+   Excel から移した中身（単価表・原価の初期値、顧客の名寄せ、同じかもしれない工種、原価データの点検）を
+   1つずつ確かめる画面。中身はこれまでマスタにあった確認の画面をそのまま使う。
+   普段の直し・足し・消しは「マスタ」でやる（下の drawMPrices など）。
+   ============================================================ */
+let chkTab = 'price';
+const CHK_TABS = [
+  ['price', '単価表',  ()=>(M.prices||[]).filter(p=>p.active!==false && !p.confirmed_at
+      && usedRecently(p.client_id+'|'+p.work_type_id)).length],
+  ['cost',  '原価',    ()=>(M.costPrices||[]).filter(c=>c.active!==false && !c.confirmed_at
+      && usedRecently((c.name||'').trim())).length],
+  ['client','顧客',    ()=>(M.clients||[]).filter(c=>!(c.data&&c.data.reviewed_at) && recentClient(c.id)).length],
+  ['wtdup', '同じかもしれない工種', ()=>{ const G=wtDupGroups(); return G.A.length+G.B.length+G.C.length; }],
+  ['data',  '原価データの点検', ()=>null],
+  // 最初に1回だけやる設定（もとはマスタの「設定」にあったもの）
+  ['gas',   'メール取込の設定', ()=>null],
+  ['backup','バックアップの設定', ()=>null],
+];
+const checkLeft = () => CHK_TABS.slice(0,3).reduce((a,[,,fn])=>a+(fn()||0),0);
+function checkHead(){
+  const total = checkLeft();
+  return `<div class="hint" style="margin-bottom:12px">
+      <div class="row" style="align-items:flex-start;gap:12px"><div style="flex:1">
+      <b>初期設定${total?`（確認が あと ${total.toLocaleString()}件）`:''}</b><br>
+      <span class="small">Excelから移した中身の確認（過去の見積から機械が拾った初期値なので、合っているかを見るところ）と、
+        最初に1回だけやる設定です。全部終わったら、このタブごとメニューから消します。
+        <b>普段の単価・工種・顧客の直し、足し、消しは「マスタ」</b>でできます。</span></div>
+      <button class="btn ghost sm" id="setupDone" title="メニューから「初期設定」を消します（マスタからもう一度出せます）">初期設定を終える</button></div></div>
+    <div class="row" style="align-items:flex-end;gap:18px">
+      <div class="seg">${CHK_TABS.map(([k,l,fn])=>{ const n=fn();
+        return `<button data-ck="${k}" class="${chkTab===k?'on':''}">${l}${n?`<span class="tabn">${n.toLocaleString()}</span>`:''}</button>`; }).join('')}</div>
+      <span class="spacer"></span>
+      ${['price','cost','client'].includes(chkTab)
+        ? `<label class="f" style="min-width:200px">絞り込み<input id="mq" value="${esc(mQ)}" placeholder="名前で検索"></label>` : ''}
+    </div>`;
+}
+function vCheck(){
+  return `<div class="card"><div id="chead">${checkHead()}</div><div id="cres" style="margin-top:12px"></div></div>`;
+}
+function bindCheckHead(){
+  document.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{ chkTab=b.dataset.ck; render(); });
+  const sd=document.getElementById('setupDone');
+  if(sd) sd.onclick=async()=>{
+    const left=checkLeft();
+    if(!confirm(`初期設定を終えて、メニューから「初期設定」を消します。${left?`\n\n⚠ まだ確認していないものが ${left}件 あります（あとで見ても大丈夫です）。`:''}\n\nマスタの上の「初期設定をもう一度出す」で戻せます。よろしいですか。`)) return;
+    sd.disabled=true;
+    try{ await saveSettings({setupDone:true}); view='master'; render(); setBar('初期設定を終えました。メニューから消しました'); }
+    catch(e){ sd.disabled=false; alert(e.message); }
+  };
+  const q=document.getElementById('mq'); if(q) q.oninput=()=>{ mQ=q.value; drawCheck(); };
+}
+function aCheck(){ bindCheckHead(); drawCheck(); }
+function drawCheck(){
+  const el=document.getElementById('cres'); if(!el) return;
+  const q=mQ.trim();
+  if(!lastUse) loadCosts().then(()=>{ recentClientSet=null; if(view==='check'){ drawCheck(); refreshMasterHead(); } }).catch(()=>{});
+  if(chkTab==='price') drawPrices(el, q);
+  else if(chkTab==='cost') drawCosts(el, q);
+  else if(chkTab==='client') drawClients(el, q);
+  else if(chkTab==='wtdup') drawWtDup(el);
+  else if(chkTab==='gas') drawGasSetup(el);
+  else if(chkTab==='backup') drawBackup(el);
+  else drawDataCheck(el);
+}
+// 原価データの点検（もとはダッシュボードの「データの点検」にあったもの）
+async function drawDataCheck(el){
+  el.innerHTML='<div class="muted">集計しています…</div>';
+  let cost; try{ cost=await loadCosts(); }catch(e){ el.innerHTML=`<div class="err">${esc(e.message)}</div>`; return; }
+  const ex=j=>Number(j.total_ex_tax||0), costOf=j=>cost.get(j.id)||0;
+  const withCost=M.jobs.filter(j=>costOf(j)>0 && ex(j)>0);
+  const over=withCost.filter(j=>costOf(j)>ex(j));
+  const rates=withCost.map(j=>costOf(j)/ex(j)).sort((a,b)=>a-b);
+  const medRate=rates.length ? rates[Math.floor(rates.length/2)] : 0;
+  el.innerHTML = `<div class="card" style="border-left:3px solid var(--warn)">
+    <h2>原価データの点検</h2>
+    <div class="row" style="gap:26px;align-items:flex-start">
+      <div><div class="v" style="font-size:26px;font-weight:800;color:var(--danger)">${over.length}<span
+        style="font-size:13px;color:var(--muted);font-weight:700">件</span></div>
+        <div class="muted small">原価が売上を超えている<br>（${withCost.length}件中 <b>${withCost.length?(over.length/withCost.length*100).toFixed(0):0}%</b>）</div></div>
+      <div><div class="v" style="font-size:26px;font-weight:800">${(medRate*100).toFixed(0)}<span
+        style="font-size:13px;color:var(--muted);font-weight:700">%</span></div>
+        <div class="muted small">原価率の中央値</div></div>
+      <div style="flex:1;min-width:260px" class="small">
+        これは赤字が ${over.length}件あるという意味ではありません。<br>
+        現行Excelでは<b>原価を明細と対応させずに入れている</b>ためです
+        （例：「精算機設置工事 単価33,000円」の行に、機器代を含めた原価420,000円をまとめて入れている）。<br>
+        <b>だから移した過去の案件では正しい粗利が出せません。</b>SEEKで作る見積は明細ごとに原価を持つので、
+        これからの案件は月ごと・顧客ごとの本当の利益率が見えます。
+      </div>
+    </div>
+  </div>`;
+}
+// 同じかもしれない工種（もとはマスタの工種の上半分）
+function drawWtDup(el){
   const G = wtDupGroups(), list = G[wtDupTab]||[];
   const prN = id => M.prices.filter(p=>p.work_type_id===id && p.active!==false).length;
-  const rows = (M.wts||[]).filter(w=>w.active!==false && (!q || w.name.includes(q)));
   const merged = (M.wts||[]).filter(w=>w.active===false && w.data && w.data.merged_into);
   el.innerHTML = `
-  <div class="card">
-    <div class="row" style="align-items:baseline"><h2 style="margin:0">同じかもしれない工種</h2>
-      <span class="muted small">書き方の違いで同じ工種が2つ以上になっているものです。残す名前を選んで「まとめる」と、選択肢がすっきりします（過去の見積は変わりません）</span></div>
+    <div class="small muted">書き方の違いで同じ工種が2つ以上になっているものです。残す名前を選んで「まとめる」と、見積の選択肢がすっきりします（過去の見積は変わりません）</div>
     <div class="seg" style="margin:10px 0">
       <button data-wdt="A" class="${wtDupTab==='A'?'on':''}">字の違いだけ ${G.A.length}</button>
       <button data-wdt="B" class="${wtDupTab==='B'?'on':''}">工・工事の違い ${G.B.length}</button>
@@ -7064,16 +7172,7 @@ function drawWorkTypes(el, q){
         <button class="btn sm" data-wdmerge="${gi}">選んだ名前にまとめる</button>
         <button class="btn ghost sm" data-wdign="${gi}">別物なので出さない</button></div></div>`).join('')
       : '<div class="muted small">このなかには、もうありません。</div>'}
-  </div>
-  <div class="card" style="margin-top:12px">
-    <div class="row"><b>工種 ${rows.length}種</b><span class="muted small">名前は「直す」で変えられます（過去の見積の品名は変わりません）</span></div>
-    <div class="scroll tall" style="margin-top:6px"><table class="tight"><thead><tr><th>工種</th><th>分類</th><th>既定の単位</th>
-      <th class="n">実績</th><th class="n">単価表</th><th></th></tr></thead><tbody>
-      ${rows.slice(0,600).map(w=>`<tr><td>${esc(w.name)}</td><td>${esc(w.category||'')}</td>
-        <td>${esc(w.default_unit||'')}</td><td class="n">${w.sample_count||0}</td><td class="n">${prN(w.id)}</td>
-        <td><button class="btn ghost sm" data-wtren="${esc(w.id)}">直す</button></td></tr>`).join('')}</tbody></table></div>
-    ${merged.length?`<div class="small muted" style="margin-top:8px">まとめて外した工種 ${merged.length}種：${merged.slice(0,30).map(w=>esc(w.name)+' → '+esc((wtMap.get(w.data.merged_into)||{}).name||'')).join('、')}</div>`:''}
-  </div>`;
+    ${merged.length?`<div class="small muted" style="margin-top:12px">まとめて外した工種 ${merged.length}種：${merged.slice(0,30).map(w=>esc(w.name)+' → '+esc((wtMap.get(w.data.merged_into)||{}).name||'')).join('、')}</div>`:''}`;
   const wmsg = m => { const b=document.getElementById('wdMsg'); if(b) b.innerHTML=m; };
   el.querySelectorAll('[data-wdt]').forEach(b=>b.onclick=()=>{ wtDupTab=b.dataset.wdt; drawMaster(); });
   el.querySelectorAll('[data-wdmerge]').forEach(b=>b.onclick=async()=>{
@@ -7081,26 +7180,585 @@ function drawWorkTypes(el, q){
     const keep=g.find(w=>w.id===kid), drops=g.filter(w=>w.id!==kid);
     if(!confirm(`「${keep.name}」にまとめます。\n\n外す：${drops.map(w=>w.name).join('、')}\n\n外す方の単価表の行は「${keep.name}」へ移ります（同じ顧客にもう行があれば、外す方の行は「消した行」にします）。\n過去の見積の品名と金額は変わりません。よろしいですか。`)) return;
     b.disabled=true;
-    try{ const r=await mergeWorkTypes(keep, drops); drawMaster();
+    try{ const r=await mergeWorkTypes(keep, drops); drawMaster(); refreshMasterHead();
          wmsg(`<div class="ok">「${esc(keep.name)}」にまとめました（単価表の行 ${r.moved}行を移し、${r.hidden}行は重なるので消した行にしました）</div>`); }
     catch(e){ b.disabled=false; wmsg(`<div class="err">${esc(e.message)}</div>`); }
   });
   el.querySelectorAll('[data-wdign]').forEach(b=>b.onclick=async()=>{
     const g=list[+b.dataset.wdign]; b.disabled=true;
-    try{ await saveSettings({wtDupIgnore: [...(((M.settings||{}).wtDupIgnore)||[]), wtKey(g)]}); drawMaster(); }
+    try{ await saveSettings({wtDupIgnore: [...(((M.settings||{}).wtDupIgnore)||[]), wtKey(g)]}); drawMaster(); refreshMasterHead(); }
     catch(e){ b.disabled=false; wmsg(`<div class="err">${esc(e.message)}</div>`); }
   });
-  el.querySelectorAll('[data-wtren]').forEach(b=>b.onclick=async()=>{
-    const w=wtMap.get(b.dataset.wtren); const nm=prompt('新しい名前（過去の見積の品名は変わりません）', w.name);
-    if(nm===null || !nm.trim() || nm.trim()===w.name) return;
-    try{
-      const res=await fetch(SB_URL+'/rest/v1/seek_work_types?id=eq.'+encodeURIComponent(w.id), { method:'PATCH',
-        headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}), body: JSON.stringify({name:nm.trim()}) });
-      if(res.status===409) throw new Error('同じ名前の工種がもうあります。「同じかもしれない工種」でまとめてください');
-      if(!res.ok) throw new Error('直せませんでした（'+res.status+'）');
-      Object.assign(w,(await res.json())[0]); reindex(); drawMaster();
-    }catch(e){ alert(e.message); }
+}
+// どの画面からでも「初期設定」の、あるタブへ飛ぶ（ダッシュボードの「理由を見る」など）
+document.addEventListener('click', e=>{
+  const b=e.target.closest('[data-gocheck]'); if(!b) return;
+  chkTab=b.dataset.gocheck; view='check'; render();
+});
+
+/* ============================================================
+   マスタ（村山さんが普段直すところ）
+   ------------------------------------------------------------
+   見て・直して・足して・消すだけ。確認作業の表示（未確定・実績◯件・ばらつき・まとめて確定）は出さない。
+   ここで単価や原価を直したら、その行は「確認済み」にする（村山さんが自分で入れた値なので）。
+   消す＝active=false。行は残るので「消した行」からいつでも戻せる。
+   ============================================================ */
+const mMsg = (id, m) => { const b=document.getElementById(id); if(b) b.innerHTML=m; };
+const okBox = m => `<div class="ok">${m}</div>`, errBox = m => `<div class="err">${esc(m)}</div>`;
+
+/* ---------- 単価表（会社ごと） ---------- */
+let mpClient = null;     // 見ている会社（null＝行のいちばん多い会社）
+let mpHidden = false;    // 消した行を見ている
+function drawMPrices(el, q){
+  const cnt=new Map(); M.prices.forEach(p=>{ if(p.active!==false){ const k=pKey(p); cnt.set(k,(cnt.get(k)||0)+1); } });
+  const comps = activeClients().map(c=>({k:c.id, name:c.name, n:cnt.get(c.id)||0}));
+  if(cnt.has('_')) comps.push({k:'_', name:'（自社標準）', n:cnt.get('_')});
+  const wn = p => (wtMap.get(p.work_type_id)||{}).name||'';
+  const hitC = s => !q || s.name.includes(q)
+    || M.prices.some(p=>p.active!==false && pKey(p)===s.k && wn(p).includes(q));
+  const list = comps.filter(hitC).sort((a,b)=>b.n-a.n || a.name.localeCompare(b.name,'ja'));
+  if(!mpClient || !list.some(s=>s.k===mpClient)) mpClient = (list[0]||{}).k || null;
+  const cur = list.find(s=>s.k===mpClient);
+  const c = mpClient && mpClient!=='_' ? clientMap.get(mpClient) : null;
+  const nameHit = cur && q && cur.name.includes(q);
+  const mine = M.prices.filter(p=>pKey(p)===mpClient);
+  const hiddenN = mine.filter(p=>p.active===false).length;
+  const rows = mine.filter(p=> mpHidden ? p.active===false : p.active!==false)
+    .filter(p=> !q || nameHit || wn(p).includes(q))
+    .sort((a,b)=>wn(a).localeCompare(wn(b),'ja'));
+  const conds = p => [p.supply_type && p.supply_type!=='材工' ? p.supply_type : '', p.opt_gl_cut ? 'GLカット' : '', p.opt_pole||'']
+                       .filter(Boolean).map(x=>`<span class="pill">${esc(x)}</span>`).join('');
+  el.innerHTML = `
+  <div class="pwrap">
+    <div class="plist">${list.map(s=>`<button data-mpc="${esc(s.k)}" class="${s.k===mpClient?'on':''}" title="${esc(s.name)}">
+        <span class="nm">${esc(s.name)}</span><span class="c">${s.n}</span></button>`).join('')
+      || '<div class="muted small">該当する会社がありません</div>'}</div>
+    <div style="min-width:0">${!cur ? '' : `
+      <div class="phead row" style="gap:10px;align-items:baseline">
+        <span><b>${esc(cur.name)}</b> の単価表 <span class="muted small">${cur.n}行</span></span>
+        <span class="spacer"></span>
+        ${hiddenN||mpHidden?`<button class="btn ghost sm" id="mpHid">${mpHidden?'← 単価表に戻る':`消した行 ${hiddenN}`}</button>`:''}
+        ${c?`<button class="btn ghost sm" id="mpHideC" title="見積をつくるの「顧客」の一覧に出さない（いつでも戻せます）">見積の顧客一覧から隠す</button>`:''}
+      </div>
+      ${mpHidden?'':`<div class="madd">
+        <b class="small">＋ 足す</b>
+        <input id="maName" list="maList" placeholder="工種（打つと候補。無ければ新しく作ります）" style="flex:1;min-width:220px">
+        <datalist id="maList">${(M.wts||[]).filter(w=>w.active!==false).map(w=>`<option value="${esc(w.name)}">`).join('')}</datalist>
+        <input id="maUnit" placeholder="単位" style="width:60px">
+        <input id="maPrice" placeholder="単価" style="width:100px;text-align:right">
+        <input id="maCost" placeholder="原価（空でよい）" style="width:120px;text-align:right">
+        <button class="btn sm" id="maAdd">足す</button></div>`}
+      <div id="mpMsg"></div>
+      <div class="scroll taller"><table class="tight">
+        <thead><tr><th>工種</th><th>単位</th><th class="n">単価</th>
+          <th class="n" title="この会社のときの原価。空なら「原価」のタブの共通の原価を使います">原価</th><th></th></tr></thead>
+        <tbody>${rows.map(p=>{ const mc=costIdx.get(wn(p).trim()), has=p.cost_unit!=null && p.cost_unit!=='';
+          return `<tr>
+          <td>${esc(wn(p))} ${conds(p)}</td>
+          <td><input data-mpu="${esc(p.id)}" value="${esc(p.unit||'')}" style="width:56px" ${mpHidden?'disabled':''}></td>
+          <td class="n"><input data-mpp="${esc(p.id)}" value="${Number(p.unit_price)}" style="width:100px;text-align:right" ${mpHidden?'disabled':''}></td>
+          <td class="n"><input data-mpk="${esc(p.id)}" value="${has?Number(p.cost_unit):''}" placeholder="${mc?Number(mc.cost_unit):''}"
+              style="width:100px;text-align:right" title="空なら共通の原価（${mc?yen(mc.cost_unit):'なし'}）を使います" ${mpHidden?'disabled':''}></td>
+          <td style="white-space:nowrap">${mpHidden
+            ? `<button class="btn sm" data-mprev="${esc(p.id)}">戻す</button>`
+            : `<button class="btn ghost sm" data-mpdel="${esc(p.id)}">消す</button>`}</td></tr>`; }).join('')
+          || `<tr><td colspan="5" class="muted">${mpHidden?'消した行はありません':'まだ行がありません。上の「＋ 足す」から入れてください'}</td></tr>`}</tbody></table></div>
+      <div class="small muted" style="margin-top:8px">直すと、その場で保存されます。次に作る見積から使われます（保存済みの見積は変わりません）。
+        原価が灰色の行は、共通の原価（「原価」のタブ）を使っています。</div>`}
+    </div>
+  </div>`;
+  const find=id=>M.prices.find(p=>p.id===id), nm=row=>wn(row);
+  el.querySelectorAll('[data-mpc]').forEach(b=>b.onclick=()=>{ mpClient=b.dataset.mpc; mpHidden=false; drawMaster(); });
+  const hb=document.getElementById('mpHid'); if(hb) hb.onclick=()=>{ mpHidden=!mpHidden; drawMaster(); };
+  const hc=document.getElementById('mpHideC'); if(hc) hc.onclick=async()=>{
+    if(!confirm(`「${c.name}」を、見積をつくるの顧客の一覧から隠します。\n過去の案件と単価表は残ります。「顧客」のタブの「隠している顧客」から戻せます。`)) return;
+    hc.disabled=true;
+    try{ await patchClient(c,{active:false}); reindex(); mpClient=null; drawMaster(); }
+    catch(e){ hc.disabled=false; mMsg('mpMsg', errBox(e.message)); }
+  };
+  const save = async (inp, row, patch, done) => {
+    inp.disabled=true;
+    try{ await savePrice(row, Object.assign({source:'手入力', confirmed_at:new Date().toISOString()}, patch)); reindex(); mMsg('mpMsg', okBox(done)); }
+    catch(e){ mMsg('mpMsg', errBox(e.message)); return false; }
+    finally{ inp.disabled=false; }
+    return true;
+  };
+  el.querySelectorAll('[data-mpp]').forEach(inp=>inp.onchange=async()=>{
+    const row=find(inp.dataset.mpp), v=numIn(inp.value), before=Number(row.unit_price);
+    if(!isFinite(v) || v<0){ inp.value=before; return mMsg('mpMsg', errBox('単価は0以上の数字で入れてください')); }
+    if(v===before) return;
+    if(!await save(inp, row, {unit_price:v}, `${esc(nm(row))} の単価を ${yen(before)} → <b>${yen(v)}</b> にしました`)) inp.value=before;
   });
+  el.querySelectorAll('[data-mpk]').forEach(inp=>inp.onchange=async()=>{
+    const row=find(inp.dataset.mpk), t=inp.value.trim(), v=t===''?null:numIn(t);
+    const before=row.cost_unit==null||row.cost_unit===''?null:Number(row.cost_unit);
+    if(v!==null && (!isFinite(v) || v<0)){ inp.value=before??''; return mMsg('mpMsg', errBox('原価は0以上の数字か、空にしてください')); }
+    if(v===before) return;
+    if(!await save(inp, row, {cost_unit:v}, `${esc(nm(row))} の原価を ${v==null?'空（共通の原価を使う）':'<b>'+yen(v)+'</b>'} にしました`)) inp.value=before??'';
+  });
+  el.querySelectorAll('[data-mpu]').forEach(inp=>inp.onchange=async()=>{
+    const row=find(inp.dataset.mpu), v=inp.value.trim(), before=row.unit||'';
+    if(v===before) return;
+    if(!await save(inp, row, {unit:v||null}, `${esc(nm(row))} の単位を「${esc(v)}」にしました`)) inp.value=before;
+  });
+  el.querySelectorAll('[data-mpdel]').forEach(b=>b.onclick=async()=>{
+    const row=find(b.dataset.mpdel);
+    if(!confirm(`「${nm(row)}」（${yen(row.unit_price)}）を、この会社の単価表から消します。\n見積をつくるで出なくなります。「消した行」から戻せます。`)) return;
+    b.disabled=true;
+    try{ await savePrice(row,{active:false}); reindex(); drawMaster(); mMsg('mpMsg', okBox(`「${esc(nm(row))}」を消しました（「消した行」から戻せます）`)); }
+    catch(e){ b.disabled=false; mMsg('mpMsg', errBox(e.message)); }
+  });
+  el.querySelectorAll('[data-mprev]').forEach(b=>b.onclick=async()=>{
+    const row=find(b.dataset.mprev); b.disabled=true;
+    try{ await savePrice(row,{active:true}); reindex();
+         if(!M.prices.some(p=>pKey(p)===mpClient && p.active===false)) mpHidden=false;
+         drawMaster(); mMsg('mpMsg', okBox(`「${esc(nm(row))}」を単価表に戻しました`)); }
+    catch(e){ b.disabled=false; mMsg('mpMsg', errBox(e.message)); }
+  });
+  const an=document.getElementById('maName');
+  if(an) an.onchange=()=>{ const w=(M.wts||[]).find(x=>String(x.name).trim()===an.value.trim());
+    const u=document.getElementById('maUnit'); if(w && u && !u.value) u.value=w.default_unit||''; };
+  const aa=document.getElementById('maAdd'); if(aa) aa.onclick=async()=>{
+    const name=an.value.trim(), unit=document.getElementById('maUnit').value.trim();
+    const price=numIn(document.getElementById('maPrice').value), ct=document.getElementById('maCost').value.trim();
+    const cost = ct==='' ? null : numIn(ct);
+    if(!name) return mMsg('mpMsg', errBox('工種を入れてください'));
+    if(!(price>=0) || !isFinite(price)) return mMsg('mpMsg', errBox('単価を入れてください'));
+    if(cost!==null && (!isFinite(cost) || cost<0)) return mMsg('mpMsg', errBox('原価は0以上の数字か、空にしてください'));
+    const isNew = !(M.wts||[]).some(x=>String(x.name).trim()===name);
+    if(isNew && !confirm(`「${name}」は工種の一覧にありません。新しい工種として作って、この会社の単価表に足します。よろしいですか。`)) return;
+    aa.disabled=true;
+    try{ const r=await addPriceRow(mpClient==='_'?null:mpClient, name, unit, price, cost); drawMaster();
+         mMsg('mpMsg', okBox(`「${esc(r.w.name)}」を ${yen(price)} で${r.revived?'単価表に戻して直しました':'足しました'}${isNew?'（工種も新しく作りました）':''}。見積をつくるですぐ使えます`)); }
+    catch(e){ aa.disabled=false; mMsg('mpMsg', errBox(e.message)); }
+  };
+}
+
+/* ---------- 原価（共通） ---------- */
+let mcHidden = false;
+function drawMCosts(el, q){
+  const all=(M.costPrices||[]);
+  const hiddenN=all.filter(c=>c.active===false).length;
+  const rows=all.filter(c=>(mcHidden ? c.active===false : c.active!==false) && (!q || String(c.name).includes(q)))
+                .sort((a,b)=>String(a.name).localeCompare(String(b.name),'ja'));
+  el.innerHTML = `
+  <div class="row" style="gap:10px;align-items:baseline"><b>共通の原価 ${all.filter(c=>c.active!==false).length}件</b>
+    <span class="muted small">お客様に出す単価ではなく、こちらの原価です。会社ごとに違う原価は「単価表」の原価の欄に入れます。ここは、その欄が空のときに使います。</span>
+    <span class="spacer"></span>
+    ${hiddenN||mcHidden?`<button class="btn ghost sm" id="mcHid">${mcHidden?'← 戻る':`消した行 ${hiddenN}`}</button>`:''}</div>
+  ${mcHidden?'':`<div class="madd" style="margin-top:10px"><b class="small">＋ 足す</b>
+    <input id="mcName" list="mcList" placeholder="工種" style="flex:1;min-width:220px">
+    <datalist id="mcList">${(M.wts||[]).filter(w=>w.active!==false).map(w=>`<option value="${esc(w.name)}">`).join('')}</datalist>
+    <input id="mcUnit" placeholder="単位" style="width:60px">
+    <input id="mcCost" placeholder="原価" style="width:110px;text-align:right">
+    <button class="btn sm" id="mcAdd">足す</button></div>`}
+  <div id="mcMsg"></div>
+  <div class="scroll taller" style="margin-top:8px"><table class="tight" style="max-width:760px">
+    <thead><tr><th>工種</th><th>単位</th><th class="n">原価（単価）</th><th></th></tr></thead>
+    <tbody>${rows.slice(0,800).map(c=>`<tr><td>${esc(c.name)}</td>
+      <td><input data-mcu="${esc(c.id)}" value="${esc(c.unit||'')}" style="width:56px" ${mcHidden?'disabled':''}></td>
+      <td class="n"><input data-mck="${esc(c.id)}" value="${Number(c.cost_unit)}" style="width:110px;text-align:right" ${mcHidden?'disabled':''}></td>
+      <td>${mcHidden?`<button class="btn sm" data-mcrev="${esc(c.id)}">戻す</button>`:`<button class="btn ghost sm" data-mcdel="${esc(c.id)}">消す</button>`}</td></tr>`).join('')
+      || '<tr><td colspan="4" class="muted">該当なし</td></tr>'}</tbody></table></div>`;
+  const find=id=>all.find(c=>c.id===id);
+  const hb=document.getElementById('mcHid'); if(hb) hb.onclick=()=>{ mcHidden=!mcHidden; drawMaster(); };
+  el.querySelectorAll('[data-mck]').forEach(inp=>inp.onchange=async()=>{
+    const row=find(inp.dataset.mck), v=numIn(inp.value), before=Number(row.cost_unit);
+    if(!isFinite(v) || v<0){ inp.value=before; return mMsg('mcMsg', errBox('原価は0以上の数字で入れてください')); }
+    if(v===before) return; inp.disabled=true;
+    try{ await saveCostPrice(row,{cost_unit:v, source:'手入力', confirmed_at:new Date().toISOString()}); reindex();
+         mMsg('mcMsg', okBox(`${esc(row.name)} の原価を ${yen(before)} → <b>${yen(v)}</b> にしました`)); }
+    catch(e){ inp.value=before; mMsg('mcMsg', errBox(e.message)); }
+    finally{ inp.disabled=false; }
+  });
+  el.querySelectorAll('[data-mcu]').forEach(inp=>inp.onchange=async()=>{
+    const row=find(inp.dataset.mcu), v=inp.value.trim(); if(v===(row.unit||'')) return; inp.disabled=true;
+    try{ await saveCostPrice(row,{unit:v||null}); mMsg('mcMsg', okBox(`${esc(row.name)} の単位を「${esc(v)}」にしました`)); }
+    catch(e){ inp.value=row.unit||''; mMsg('mcMsg', errBox(e.message)); }
+    finally{ inp.disabled=false; }
+  });
+  el.querySelectorAll('[data-mcdel]').forEach(b=>b.onclick=async()=>{
+    const row=find(b.dataset.mcdel);
+    if(!confirm(`「${row.name}」の共通の原価（${yen(row.cost_unit)}）を消します。\n見積に原価が自動で入らなくなります。「消した行」から戻せます。`)) return;
+    b.disabled=true;
+    try{ await saveCostPrice(row,{active:false}); reindex(); drawMaster(); mMsg('mcMsg', okBox(`「${esc(row.name)}」を消しました`)); }
+    catch(e){ b.disabled=false; mMsg('mcMsg', errBox(e.message)); }
+  });
+  el.querySelectorAll('[data-mcrev]').forEach(b=>b.onclick=async()=>{
+    const row=find(b.dataset.mcrev); b.disabled=true;
+    try{ await saveCostPrice(row,{active:true}); reindex(); if(!all.some(c=>c.active===false)) mcHidden=false; drawMaster(); }
+    catch(e){ b.disabled=false; mMsg('mcMsg', errBox(e.message)); }
+  });
+  const ca=document.getElementById('mcAdd'); if(ca) ca.onclick=async()=>{
+    const name=document.getElementById('mcName').value.trim(), unit=document.getElementById('mcUnit').value.trim();
+    const cost=numIn(document.getElementById('mcCost').value);
+    if(!name) return mMsg('mcMsg', errBox('工種を入れてください'));
+    if(!isFinite(cost) || cost<0) return mMsg('mcMsg', errBox('原価を入れてください'));
+    const same=all.find(c=>String(c.name).trim()===name);
+    ca.disabled=true;
+    try{
+      const vals={unit:unit||null, cost_unit:cost, source:'手入力', active:true, confirmed_at:new Date().toISOString()};
+      if(same) await saveCostPrice(same, vals);
+      else {
+        const w=(M.wts||[]).find(x=>String(x.name).trim()===name);
+        const res=await fetch(SB_URL+'/rest/v1/seek_cost_prices',{method:'POST',
+          headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}),
+          body: JSON.stringify([Object.assign({id:'cp-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), org_id:'seek',
+            name, work_type_id:w?w.id:null, sample_count:0, mode_count:0, variant_count:0, is_stable:true}, vals)])});
+        if(!res.ok) throw new Error('足せませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+        (M.costPrices=M.costPrices||[]).push((await res.json())[0]);
+      }
+      reindex(); drawMaster(); mMsg('mcMsg', okBox(`「${esc(name)}」の原価を ${yen(cost)} で${same?'直しました':'足しました'}`));
+    }catch(e){ ca.disabled=false; mMsg('mcMsg', errBox(e.message)); }
+  };
+}
+
+/* ---------- 工種 ---------- */
+let mwHidden = false;
+async function patchWt(w, patch){
+  const res=await fetch(SB_URL+'/rest/v1/seek_work_types?id=eq.'+encodeURIComponent(w.id), { method:'PATCH',
+    headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}), body: JSON.stringify(patch) });
+  if(res.status===409) throw new Error('同じ名前の工種がもうあります（「初期設定」→「同じかもしれない工種」でまとめられます）');
+  if(!res.ok) throw new Error('保存できませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+  Object.assign(w, (await res.json())[0]||{}); reindex(); return w;
+}
+function drawWtMaster(el, q){
+  const nC = id => new Set(M.prices.filter(p=>p.work_type_id===id && p.active!==false).map(pKey)).size;
+  const all=(M.wts||[]);
+  const off=all.filter(w=>w.active===false && !(w.data&&w.data.merged_into));
+  const rows=(mwHidden ? off : all.filter(w=>w.active!==false)).filter(w=>!q || w.name.includes(q))
+    .sort((a,b)=>a.name.localeCompare(b.name,'ja'));
+  el.innerHTML = `
+  <div class="row" style="gap:10px;align-items:baseline"><b>工種 ${all.filter(w=>w.active!==false).length}種</b>
+    <span class="muted small">名前を直しても、過去の見積の品名は変わりません。似た名前のまとめは「初期設定」→「同じかもしれない工種」で。</span>
+    <span class="spacer"></span>
+    ${off.length||mwHidden?`<button class="btn ghost sm" id="mwHid">${mwHidden?'← 戻る':`消した工種 ${off.length}`}</button>`:''}</div>
+  ${mwHidden?'':`<div class="madd" style="margin-top:10px"><b class="small">＋ 足す</b>
+    <input id="mwName" placeholder="工種の名前" style="flex:1;min-width:220px">
+    <input id="mwCat" placeholder="分類（設置・撤去など）" style="width:150px">
+    <input id="mwUnit" placeholder="単位" style="width:60px">
+    <button class="btn sm" id="mwAdd">足す</button></div>`}
+  <div id="mwMsg"></div>
+  <div class="scroll taller" style="margin-top:8px"><table class="tight">
+    <thead><tr><th>工種</th><th>分類</th><th>既定の単位</th><th class="n">単価表に載せている会社</th><th></th></tr></thead>
+    <tbody>${rows.slice(0,800).map(w=>`<tr>
+      <td><input data-mwn="${esc(w.id)}" value="${esc(w.name)}" style="width:100%;min-width:240px" ${mwHidden?'disabled':''}></td>
+      <td><input data-mwc="${esc(w.id)}" value="${esc(w.category||'')}" style="width:110px" ${mwHidden?'disabled':''}></td>
+      <td><input data-mwu="${esc(w.id)}" value="${esc(w.default_unit||'')}" style="width:56px" ${mwHidden?'disabled':''}></td>
+      <td class="n">${nC(w.id)||'<span class="muted">—</span>'}</td>
+      <td>${mwHidden?`<button class="btn sm" data-mwrev="${esc(w.id)}">戻す</button>`:`<button class="btn ghost sm" data-mwdel="${esc(w.id)}">消す</button>`}</td></tr>`).join('')
+      || '<tr><td colspan="5" class="muted">該当なし</td></tr>'}</tbody></table></div>`;
+  const find=id=>all.find(w=>w.id===id);
+  const hb=document.getElementById('mwHid'); if(hb) hb.onclick=()=>{ mwHidden=!mwHidden; drawMaster(); };
+  const edit=(attr, key, label)=>el.querySelectorAll(`[data-${attr}]`).forEach(inp=>inp.onchange=async()=>{
+    const w=find(inp.dataset[attr]), v=inp.value.trim(), before=w[key]||'';
+    if(v===before) return;
+    if(key==='name' && !v){ inp.value=before; return mMsg('mwMsg', errBox('名前を空にはできません')); }
+    inp.disabled=true;
+    try{ await patchWt(w, {[key]: v||null}); mMsg('mwMsg', okBox(`${label}を「${esc(v)}」にしました`)); }
+    catch(e){ inp.value=before; mMsg('mwMsg', errBox(e.message)); }
+    finally{ inp.disabled=false; }
+  });
+  edit('mwn','name','名前'); edit('mwc','category','分類'); edit('mwu','default_unit','既定の単位');
+  el.querySelectorAll('[data-mwdel]').forEach(b=>b.onclick=async()=>{
+    const w=find(b.dataset.mwdel), ps=M.prices.filter(p=>p.work_type_id===w.id && p.active!==false);
+    if(!confirm(`「${w.name}」を工種の一覧から消します。\n見積をつくるの選択肢に出なくなります${ps.length?`。\nこの工種が載っている単価表の行（${ps.length}行）も消します`:''}。\n過去の見積は変わりません。「消した工種」から戻せます。`)) return;
+    b.disabled=true;
+    try{ for(const p of ps) await savePrice(p,{active:false});
+         await patchWt(w,{active:false}); drawMaster(); mMsg('mwMsg', okBox(`「${esc(w.name)}」を消しました`)); }
+    catch(e){ b.disabled=false; mMsg('mwMsg', errBox(e.message)); }
+  });
+  el.querySelectorAll('[data-mwrev]').forEach(b=>b.onclick=async()=>{
+    const w=find(b.dataset.mwrev); b.disabled=true;
+    try{ await patchWt(w,{active:true}); if(!(M.wts||[]).some(x=>x.active===false && !(x.data&&x.data.merged_into))) mwHidden=false;
+         drawMaster(); mMsg('mwMsg', okBox(`「${esc(w.name)}」を戻しました（単価表の行は、単価表の「消した行」から戻してください）`)); }
+    catch(e){ b.disabled=false; mMsg('mwMsg', errBox(e.message)); }
+  });
+  const wa=document.getElementById('mwAdd'); if(wa) wa.onclick=async()=>{
+    const name=document.getElementById('mwName').value.trim();
+    if(!name) return mMsg('mwMsg', errBox('名前を入れてください'));
+    if(all.some(w=>String(w.name).trim()===name)) return mMsg('mwMsg', errBox('同じ名前の工種がもうあります（消した工種も見てください）'));
+    wa.disabled=true;
+    try{
+      const res=await fetch(SB_URL+'/rest/v1/seek_work_types',{method:'POST',
+        headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}),
+        body: JSON.stringify([{ id:'w-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), org_id:'seek', name,
+          category:document.getElementById('mwCat').value.trim()||'工事', default_unit:document.getElementById('mwUnit').value.trim()||'式',
+          sort_no:9999, sample_count:0, active:true }])});
+      if(!res.ok) throw new Error('足せませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+      M.wts.push((await res.json())[0]); reindex(); drawMaster();
+      mMsg('mwMsg', okBox(`「${esc(name)}」を足しました。単価は「単価表」で会社ごとに入れてください`));
+    }catch(e){ wa.disabled=false; mMsg('mwMsg', errBox(e.message)); }
+  };
+}
+
+/* ---------- 顧客 ---------- */
+const CLI_FIELDS = [['name','呼び名','例：沖縄ゼネラル'],['formal_name','正式名称（見積書の宛名）','例：有限会社沖縄ゼネラル'],
+  ['honorific','敬称','御中 / 様'],['tel','TEL',''],['postal_code','〒','例：900-0013'],['address','住所',''],['building','建物名',''],['note','メモ','']];
+let mcEdit = null;         // 直している顧客の id（'new' は新しく足す）
+let mclHidden = false;
+function cliForm(c){
+  return `<div class="supform">${CLI_FIELDS.map(([k,l,ph])=>`<label class="f">${l}
+      <input data-clf="${k}" value="${esc((c&&c[k]!=null?c[k]:(k==='honorific'?'御中':'')))}" placeholder="${esc(ph)}"></label>`).join('')}
+    <div class="row" style="gap:8px;align-items:flex-end">
+      <button class="btn sm" id="cliSave">${c?'保存する':'足す'}</button>
+      <button class="btn ghost sm" id="cliCancel">やめる</button></div></div>`;
+}
+function drawMClients(el, q){
+  const pN = id => M.prices.filter(p=>p.client_id===id && p.active!==false).length;
+  const off = M.clients.filter(c=>c.active===false && !(c.data&&c.data.merged_into));
+  const rows = (mclHidden ? off : activeClients())
+    .filter(c=>!q || (c.name+' '+(c.formal_name||'')+' '+(c.address||'')+' '+(c.tel||'')).includes(q))
+    .map(c=>({c, n:clientJobs(c).length})).sort((a,b)=>b.n-a.n || a.c.name.localeCompare(b.c.name,'ja'));
+  el.innerHTML = `
+  <div class="row" style="gap:10px;align-items:baseline"><b>顧客 ${activeClients().length}社</b>
+    <span class="muted small">見積をつくるの「顧客」に出る会社です。正式名称が見積書・請求書の宛名になります。</span>
+    <span class="spacer"></span>
+    ${off.length||mclHidden?`<button class="btn ghost sm" id="mclHid">${mclHidden?'← 戻る':`隠している顧客 ${off.length}`}</button>`:''}
+    ${mclHidden?'':'<button class="btn sm" id="cliAdd">＋ 顧客を足す</button>'}</div>
+  <div id="cliMsg"></div>
+  ${mcEdit==='new'?`<div class="card" style="margin-top:12px"><h2>顧客を足す</h2>${cliForm(null)}</div>`:''}
+  <div class="scroll taller" style="margin-top:10px"><table class="tight">
+    <thead><tr><th>呼び名</th><th>正式名称・敬称</th><th>TEL</th><th>住所</th><th class="n">案件</th><th class="n">単価表</th><th></th></tr></thead>
+    <tbody>${rows.slice(0,400).map(({c,n})=> mcEdit===c.id
+      ? `<tr><td colspan="7"><div style="padding:6px 0"><b>${esc(c.name)} を直す</b>${cliForm(c)}</div></td></tr>`
+      : `<tr><td><b>${esc(c.name)}</b></td>
+        <td class="small">${esc(c.formal_name||'')} ${esc(c.honorific||'')}</td>
+        <td class="small">${esc(c.tel||'')}</td>
+        <td class="small">${esc([c.postal_code?'〒'+c.postal_code:'', c.address||'', c.building||''].filter(Boolean).join(' '))}</td>
+        <td class="n">${n}</td><td class="n">${pN(c.id)}</td>
+        <td style="white-space:nowrap">${mclHidden
+          ? `<button class="btn sm" data-clrev="${esc(c.id)}">一覧に戻す</button>`
+          : `<button class="btn ghost sm" data-cledit="${esc(c.id)}">直す</button>
+             <button class="btn ghost sm" data-clhide="${esc(c.id)}" title="見積をつくるの顧客の一覧に出さない（過去の案件は残ります）">隠す</button>`}</td></tr>`).join('')
+      || '<tr><td colspan="7" class="muted">該当なし</td></tr>'}</tbody></table></div>`;
+  const find=id=>M.clients.find(c=>c.id===id);
+  const hb=document.getElementById('mclHid'); if(hb) hb.onclick=()=>{ mclHidden=!mclHidden; mcEdit=null; drawMaster(); };
+  const ad=document.getElementById('cliAdd'); if(ad) ad.onclick=()=>{ mcEdit='new'; drawMaster(); };
+  el.querySelectorAll('[data-cledit]').forEach(b=>b.onclick=()=>{ mcEdit=b.dataset.cledit; drawMaster(); });
+  const cc=document.getElementById('cliCancel'); if(cc) cc.onclick=()=>{ mcEdit=null; drawMaster(); };
+  const cs=document.getElementById('cliSave'); if(cs) cs.onclick=async()=>{
+    const vals={}; el.querySelectorAll('[data-clf]').forEach(i=>vals[i.dataset.clf]=i.value.trim());
+    if(!vals.name) return mMsg('cliMsg', errBox('呼び名を入れてください'));
+    const dup=M.clients.find(c=>c.id!==mcEdit && c.name===vals.name);
+    if(dup) return mMsg('cliMsg', errBox(`「${vals.name}」はもうあります${dup.active===false?'（隠している顧客）':''}`));
+    Object.keys(vals).forEach(k=>{ if(vals[k]==='') vals[k]=null; });
+    cs.disabled=true;
+    try{
+      if(mcEdit==='new'){
+        const res=await fetch(SB_URL+'/rest/v1/seek_clients',{method:'POST',
+          headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}),
+          body: JSON.stringify([Object.assign({id:'c-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6), org_id:'seek',
+            name_variants:[vals.formal_name||vals.name], active:true, data:{reviewed_at:new Date().toISOString(), created_in:'マスタ'}},
+            vals, {honorific: vals.honorific||'御中'})])});
+        if(!res.ok) throw new Error('足せませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+        M.clients.push((await res.json())[0]);
+      } else await patchClient(find(mcEdit), vals);
+      const wasNew=mcEdit==='new'; mcEdit=null; reindex(); drawMaster();
+      mMsg('cliMsg', okBox(`「${esc(vals.name)}」を${wasNew?'足しました。見積をつくるの顧客に出ます':'直しました'}`));
+    }catch(e){ cs.disabled=false; mMsg('cliMsg', errBox(e.message)); }
+  };
+  el.querySelectorAll('[data-clhide]').forEach(b=>b.onclick=async()=>{
+    const c=find(b.dataset.clhide);
+    if(!confirm(`「${c.name}」を、見積をつくるの顧客の一覧から隠します。\n過去の案件と単価表は残ります。「隠している顧客」から戻せます。`)) return;
+    b.disabled=true;
+    try{ await patchClient(c,{active:false}); reindex(); drawMaster(); mMsg('cliMsg', okBox(`「${esc(c.name)}」を隠しました`)); }
+    catch(e){ b.disabled=false; mMsg('cliMsg', errBox(e.message)); }
+  });
+  el.querySelectorAll('[data-clrev]').forEach(b=>b.onclick=async()=>{
+    const c=find(b.dataset.clrev); b.disabled=true;
+    try{ await patchClient(c,{active:true}); reindex(); if(!M.clients.some(x=>x.active===false && !(x.data&&x.data.merged_into))) mclHidden=false;
+         drawMaster(); mMsg('cliMsg', okBox(`「${esc(c.name)}」を一覧に戻しました`)); }
+    catch(e){ b.disabled=false; mMsg('cliMsg', errBox(e.message)); }
+  });
+}
+
+/* ============================================================
+   作業員と出面（2026-10-01 9/30打ち合わせ
+   「今日の現場に誰が入ったか、何時から何時まで」「人工は人によって違う。マスタで決めて、その人の単価で」
+   「定時から延長した分は時給いくらで足す」「月いくら渡しているか分かるように」）
+   ------------------------------------------------------------
+   ・作業員（seek_workers）… 名前・区分・払い方（日当／時給）・日当・時給（日当の人は残業の時給）
+   ・出面（seek_work_entries）… 現場のスマホで入れる。1行＝1人・1現場・1日・開始と終了の時刻。金額は持たない
+   ・金額はここで計算する（作業員の単価が変わったら、過去の分も新しい単価で出る＝あとで直せる）
+     定時（設定。既定 8:00〜18:00・休憩60分）の中で働いた分 … 日当 ×（働いた時間 ÷ 定時の時間）。定時いっぱいなら日当そのまま
+     定時より前・後に働いた分 … 残業。30分単位で切り捨てて × 時給
+     時給の人 … 働いた時間（休憩を除く）× 時給
+     休憩は、定時の中で5時間を超えて働いた日だけ引く
+   ============================================================ */
+M.workers = M.workers || [];
+let workersReady = null;   // null=まだ / true=表がある / false=表がない（_SEEK_17 を流す前）
+async function loadWorkers(){
+  try{ M.workers = await sbFetchAll('seek_workers','select=*&order=sort_no.asc,name.asc'); workersReady=true; }
+  catch(e){ M.workers=[]; workersReady=false; }
+  return M.workers;
+}
+function laborStd(){
+  const s=(((M.settings||{}).labor||{}).std)||{};
+  return { start:s.start||'08:00', end:s.end||'18:00', brk: s.break_min!=null ? Number(s.break_min) : 60, step: Number(s.ot_step)||30 };
+}
+const hm = t => { const m=String(t||'').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1])*60+(+m[2]) : null; };
+const hmS = n => String(Math.floor(n/60))+':'+String(n%60).padStart(2,'0');
+function workerOf(e){
+  return (M.workers||[]).find(w=>w.id===e.worker_id) || (M.workers||[]).find(w=>w.name===e.worker_name) || null;
+}
+// 出面1行の 人日・残業・金額。単価が入っていなければ pay は null
+function entryCalc(e){
+  const S=laborStd(), s=hm(e.start_time), en=hm(e.end_time), ss=hm(S.start), se=hm(S.end), w=workerOf(e);
+  if(s==null || en==null || en<=s || ss==null || se==null) return {days:0, regMin:0, otMin:0, pay:0, w, bad:true};
+  const stdMin = Math.max(1, (se-ss)-S.brk);
+  const inStd = Math.max(0, Math.min(en,se)-Math.max(s,ss));
+  const regMin = Math.max(0, inStd - (inStd>300 ? S.brk : 0));
+  const otRaw = Math.max(0, en-se) + Math.max(0, ss-s);
+  const otMin = Math.floor(otRaw/S.step)*S.step;
+  const days = Math.min(1, regMin/stdMin);
+  let pay = null;
+  if(w){
+    const dr=Number(w.day_rate)||0, hr=Number(w.hour_rate)||0;
+    if((w.pay_type||'日当')==='時給'){ if(hr) pay=Math.round((regMin+otMin)/60*hr); }
+    else if(dr){ pay=Math.round(dr*days) + Math.round(otMin/60*hr); }
+  }
+  return {days, regMin, otMin, pay, w, bad:false};
+}
+const dayStr = n => (Math.round(n*100)/100).toString();
+
+let wkMonth = null;        // 支払いを見る月 'YYYY-MM'
+async function drawWorkers(el, q){
+  if(workersReady===null){ el.innerHTML='<div class="muted">読み込んでいます…</div>'; await loadWorkers(); }
+  if(!workersReady){
+    el.innerHTML=`<div class="note"><b>作業員の表がまだありません。</b><br>
+      <span class="small">Supabase の SQL Editor で <code>_SEEK_17_作業員と出面.sql</code> を流すと使えるようになります。</span></div>`;
+    return;
+  }
+  const S=laborStd();
+  const rows=(M.workers||[]).filter(w=>w.active!==false && (!q || w.name.includes(q)));
+  const off=(M.workers||[]).filter(w=>w.active===false);
+  wkMonth = wkMonth || today().slice(0,7);
+  el.innerHTML = `
+  <div class="hint"><b>現場に入る人と、その人の単価です。</b><br>
+    <span class="small">現場のスマホで「今日だれが何時から何時まで入ったか」を入れると、ここの単価で人工の金額が出ます。
+      単価を直すと、過去の分も新しい単価で計算し直します。</span></div>
+  <div class="card" style="margin-top:12px">
+    <h2>定時</h2>
+    <div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <label class="f">始まり<input type="time" id="wsS" value="${esc(S.start)}"></label>
+      <label class="f">終わり<input type="time" id="wsE" value="${esc(S.end)}"></label>
+      <label class="f">休憩（分）<input id="wsB" value="${S.brk}" style="width:70px;text-align:right"></label>
+      <label class="f">残業の数え方<select id="wsT">${[15,30,60].map(n=>`<option value="${n}" ${S.step===n?'selected':''}>${n}分単位（切り捨て）</option>`).join('')}</select></label>
+      <button class="btn sm" id="wsSave">保存する</button>
+      <span class="muted small">定時より前・後に働いた分が残業です。休憩は定時の中で5時間を超えて働いた日だけ引きます。</span>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="row" style="align-items:baseline"><h2 style="margin:0">作業員 ${rows.length}人</h2>
+      <span class="muted small">日当＝定時いっぱい働いた1日分。時給＝時給の人の時給／日当の人は残業の時給</span>
+      <span class="spacer"></span>${off.length?`<span class="muted small">消した人 ${off.length}人：${off.map(w=>`${esc(w.name)} <button class="btn ghost sm" data-wrev="${esc(w.id)}">戻す</button>`).join(' ')}</span>`:''}</div>
+    <div id="wkMsg"></div>
+    <div class="scroll" style="margin-top:8px"><table class="tight" style="max-width:860px">
+      <thead><tr><th>名前</th><th>区分</th><th>払い方</th><th class="n">日当</th><th class="n">時給</th><th>メモ</th><th></th></tr></thead>
+      <tbody>${rows.map(w=>`<tr>
+        <td><input data-wf="name" data-wid="${esc(w.id)}" value="${esc(w.name)}" style="width:130px"></td>
+        <td><select data-wf="kind" data-wid="${esc(w.id)}">${['社員','バイト','外注'].map(k=>`<option ${w.kind===k?'selected':''}>${k}</option>`).join('')}</select></td>
+        <td><select data-wf="pay_type" data-wid="${esc(w.id)}">${['日当','時給'].map(k=>`<option ${(w.pay_type||'日当')===k?'selected':''}>${k}</option>`).join('')}</select></td>
+        <td class="n"><input data-wf="day_rate" data-wid="${esc(w.id)}" value="${w.day_rate!=null?Number(w.day_rate):''}" placeholder="${(w.pay_type||'日当')==='時給'?'—':'15000'}" style="width:90px;text-align:right"></td>
+        <td class="n"><input data-wf="hour_rate" data-wid="${esc(w.id)}" value="${w.hour_rate!=null?Number(w.hour_rate):''}" placeholder="1900" style="width:80px;text-align:right"></td>
+        <td><input data-wf="note" data-wid="${esc(w.id)}" value="${esc(w.note||'')}" style="width:160px"></td>
+        <td><button class="btn ghost sm" data-wdel="${esc(w.id)}">消す</button></td></tr>`).join('')
+        || '<tr><td colspan="7" class="muted">まだいません。下から足してください</td></tr>'}</tbody></table></div>
+    <div class="madd" style="margin-top:10px"><b class="small">＋ 足す</b>
+      <input id="waName" placeholder="名前（例：智也）" style="width:140px">
+      <select id="waKind"><option>社員</option><option>バイト</option><option>外注</option></select>
+      <select id="waPay"><option>日当</option><option>時給</option></select>
+      <input id="waDay" placeholder="日当" style="width:90px;text-align:right">
+      <input id="waHour" placeholder="時給" style="width:80px;text-align:right">
+      <button class="btn sm" id="waAdd">足す</button></div>
+  </div>
+  <div class="card" style="margin-top:12px" id="payBox"></div>`;
+  const msg=m=>mMsg('wkMsg', m);
+  document.getElementById('wsSave').onclick=async()=>{
+    const s=document.getElementById('wsS').value, e=document.getElementById('wsE').value, b=numIn(document.getElementById('wsB').value);
+    if(hm(s)==null || hm(e)==null || hm(e)<=hm(s)) return msg(errBox('始まりと終わりの時刻を確かめてください'));
+    if(!isFinite(b) || b<0) return msg(errBox('休憩は0以上の分で入れてください'));
+    try{ await saveSettings({labor: Object.assign({}, (M.settings||{}).labor||{}, {std:{start:s, end:e, break_min:b, ot_step:+document.getElementById('wsT').value}})});
+         drawMaster(); mMsg('wkMsg', okBox('定時を保存しました')); }
+    catch(err){ msg(errBox(err.message)); }
+  };
+  const patchW = async (w, patch) => {
+    const res=await fetch(SB_URL+'/rest/v1/seek_workers?id=eq.'+encodeURIComponent(w.id),{method:'PATCH',
+      headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}), body: JSON.stringify(patch)});
+    if(res.status===409) throw new Error('同じ名前の人がもういます');
+    if(!res.ok) throw new Error('保存できませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+    Object.assign(w,(await res.json())[0]||{});
+  };
+  el.querySelectorAll('[data-wf]').forEach(inp=>inp.onchange=async()=>{
+    const w=M.workers.find(x=>x.id===inp.dataset.wid), f=inp.dataset.wf; let v=inp.value.trim();
+    if(f==='day_rate'||f==='hour_rate'){ v = v==='' ? null : numIn(v); if(v!==null && (!isFinite(v)||v<0)){ inp.value=w[f]??''; return msg(errBox('金額は0以上の数字で入れてください')); } }
+    if(f==='name' && !v){ inp.value=w.name; return msg(errBox('名前を空にはできません')); }
+    inp.disabled=true;
+    try{ await patchW(w, {[f]: v===''?null:v}); msg(okBox(`${esc(w.name)} を直しました`)); drawPay(); }
+    catch(e){ inp.value=w[f]??''; msg(errBox(e.message)); }
+    finally{ inp.disabled=false; }
+  });
+  el.querySelectorAll('[data-wdel]').forEach(b=>b.onclick=async()=>{
+    const w=M.workers.find(x=>x.id===b.dataset.wdel);
+    if(!confirm(`「${w.name}」を消します。現場のスマホで選べなくなります。\nこれまでの出面は残ります。あとで戻せます。`)) return;
+    try{ await patchW(w,{active:false}); drawMaster(); } catch(e){ msg(errBox(e.message)); }
+  });
+  el.querySelectorAll('[data-wrev]').forEach(b=>b.onclick=async()=>{
+    const w=M.workers.find(x=>x.id===b.dataset.wrev);
+    try{ await patchW(w,{active:true}); drawMaster(); } catch(e){ msg(errBox(e.message)); }
+  });
+  document.getElementById('waAdd').onclick=async()=>{
+    const name=document.getElementById('waName').value.trim();
+    if(!name) return msg(errBox('名前を入れてください'));
+    if(M.workers.some(w=>w.name===name)) return msg(errBox('同じ名前の人がもういます（消した人も見てください）'));
+    const d=document.getElementById('waDay').value.trim(), h=document.getElementById('waHour').value.trim();
+    const row={ id:'wk-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), org_id:'seek', name,
+      kind:document.getElementById('waKind').value, pay_type:document.getElementById('waPay').value,
+      day_rate: d===''?null:numIn(d), hour_rate: h===''?null:numIn(h), sort_no:(M.workers.length+1)*10, active:true };
+    if([row.day_rate,row.hour_rate].some(v=>v!==null && (!isFinite(v)||v<0))) return msg(errBox('金額は0以上の数字で入れてください'));
+    try{
+      const res=await fetch(SB_URL+'/rest/v1/seek_workers',{method:'POST',
+        headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}), body: JSON.stringify([row])});
+      if(!res.ok) throw new Error('足せませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
+      M.workers.push((await res.json())[0]); drawMaster(); mMsg('wkMsg', okBox(`「${esc(name)}」を足しました。現場のスマホで選べます`));
+    }catch(e){ msg(errBox(e.message)); }
+  };
+  drawPay();
+}
+// 月ごとの支払い（人ごと）
+async function drawPay(){
+  const box=document.getElementById('payBox'); if(!box) return;
+  const ym=wkMonth, [Y,Mo]=ym.split('-').map(Number), last=new Date(Y,Mo,0).getDate();
+  box.innerHTML='<div class="muted">読み込んでいます…</div>';
+  let es=[];
+  try{ es=await sbFetchAll('seek_work_entries','select=*&work_date=gte.'+ym+'-01&work_date=lte.'+ym+'-'+String(last).padStart(2,'0')+'&order=work_date.asc'); }
+  catch(e){ box.innerHTML=`<div class="err">${esc(e.message)}</div>`; return; }
+  es = es.filter(e=>String(e.work_date).startsWith(ym));
+  const jobT = id => { const j=M.jobs.find(x=>x.id===id); return j ? String(j.title||'').replace(/^仮）/,'') : '（消した案件）'; };
+  const by=new Map();
+  es.forEach(e=>{ const c=entryCalc(e), k=c.w?c.w.id:'n:'+e.worker_name;
+    const s=by.get(k)||{name:c.w?c.w.name:e.worker_name, w:c.w, days:new Set(), pd:0, ot:0, pay:0, unknown:0, jobs:new Set(), list:[]};
+    s.days.add(e.work_date); s.pd+=c.days; s.ot+=c.otMin; if(c.pay==null) s.unknown++; else s.pay+=c.pay; s.jobs.add(e.job_id); s.list.push({e,c});
+    by.set(k,s); });
+  const list=[...by.values()].sort((a,b)=>b.pay-a.pay);
+  const tot=list.reduce((a,s)=>a+s.pay,0);
+  box.innerHTML = `
+    <div class="row" style="align-items:center;gap:10px"><h2 style="margin:0">月ごとの支払い</h2>
+      <input type="month" id="payM" value="${esc(ym)}">
+      <span class="muted small">現場のスマホで入れた出面から出しています</span>
+      <span class="spacer"></span><b>合計 ${yen(tot)}円</b></div>
+    <div class="scroll" style="margin-top:8px"><table class="tight">
+      <thead><tr><th>名前</th><th class="n">出た日</th><th class="n">人日</th><th class="n">残業</th><th class="n">金額</th><th>現場</th></tr></thead>
+      <tbody>${list.map((s,i)=>`<tr>
+        <td><b>${esc(s.name)}</b>${s.w?` <span class="muted small">${esc(s.w.kind||'')}・${esc(s.w.pay_type||'日当')}</span>`:' <span class="tag w">作業員に未登録</span>'}</td>
+        <td class="n">${s.days.size}日</td><td class="n">${dayStr(s.pd)}</td><td class="n">${s.ot?hmS(s.ot):'—'}</td>
+        <td class="n"><b>${yen(s.pay)}</b>${s.unknown?`<div class="small" style="color:var(--warn)">単価なし ${s.unknown}日</div>`:''}</td>
+        <td class="small"><details><summary>${s.jobs.size}現場</summary>${s.list.map(({e,c})=>`<div>${esc(String(e.work_date).slice(5).replace('-','/'))}
+          ${esc(jobT(e.job_id))}　${esc(String(e.start_time).slice(0,5))}〜${esc(String(e.end_time).slice(0,5))}
+          ${c.otMin?`（残業 ${hmS(c.otMin)}）`:''}　${c.pay==null?'<span style="color:var(--warn)">単価なし</span>':yen(c.pay)}</div>`).join('')}</details></td></tr>`).join('')
+        || `<tr><td colspan="6" class="muted">${esc(ym.replace('-','年'))}月の出面はまだありません</td></tr>`}</tbody></table></div>`;
+  document.getElementById('payM').onchange=e=>{ wkMonth=e.target.value||today().slice(0,7); drawPay(); };
 }
 
 /* ============================================================

@@ -143,6 +143,16 @@ button.card:active{background:var(--panel-2);transform:scale(.995)}
 .step .v small{font-size:13px;color:var(--muted);font-weight:700;margin-left:3px}
 
 /* 明細（品名・数量だけ。金額は出さない） */
+/* 今日の作業：入った人 */
+.wk{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:6px;background:var(--panel)}
+.wk.on{border-color:var(--pri-2);background:var(--pri-soft)}
+.wk.lock{opacity:.7}
+.wk-n{display:flex;align-items:center;gap:8px;font-size:15px}
+.wk-n input{width:22px;height:22px}
+.wk-n small{color:var(--muted);font-weight:700}
+.wk-t{display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:700}
+.wk-t input{flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:#fff}
+.wk-by{font-size:11.5px;color:var(--muted);margin-top:4px}
 .item{display:flex;align-items:baseline;gap:10px;padding:11px 14px;border-top:1px solid var(--line)}
 .item:first-child{border-top:none}
 .item .nm{flex:1;font-size:14.5px;font-weight:600;line-height:1.4}
@@ -438,7 +448,7 @@ const NEXT_LABEL = {'受注':'手配に進める','手配':'着手する','施�
 /* ============================================================
    状態
    ============================================================ */
-const M = { jobs:[], logs:[], loadedAt:null };
+const M = { jobs:[], logs:[], workers:null, loadedAt:null };
 let screen='today', jobId=null, stack=[];
 
 async function loadAll(){
@@ -446,11 +456,13 @@ async function loadAll(){
      2026-09-09 第2段: 現場は seek_jobs に直接さわれない。
      読むのは seek_field_jobs（金額の列を持たないビュー）。
      状態が受注〜施工完了の行だけがそもそも入っている。 */
-  const [jobs, logs] = await Promise.all([
+  const [jobs, logs, workers] = await Promise.all([
     sbGet('seek_field_jobs', 'select=*&order=open_date.asc.nullslast'),
-    sbGet('seek_worklogs','select=*&order=work_date.desc&limit=400')
+    sbGet('seek_worklogs','select=*&order=work_date.desc&limit=400'),
+    // 作業員の名前（金額の列を持たないビュー）。_SEEK_17 を流す前は無いので、そのときは人数だけの入力にする
+    sbGet('seek_field_workers','select=*&order=sort_no.asc,name.asc').catch(e=>{ if(e.reauth) throw e; return null; })
   ]);
-  M.jobs=jobs; M.logs=logs; M.loadedAt=new Date();
+  M.jobs=jobs; M.logs=logs; M.workers=workers; M.loadedAt=new Date();
 }
 
 /* ============================================================
@@ -743,7 +755,9 @@ function drawJob(){
 
   <div class="sec">今日の作業を記録する</div>
   ${doneToday? '<div class="note">今日の分はもう入っています。押すと上書きします。</div>':''}
-  <button class="btn pri wide" id="b-log" style="margin-bottom:12px">👷 人工と進み具合を入れる</button>
+  <button class="btn pri wide" id="b-log" style="margin-bottom:12px">👷 ${M.workers?'入った人と進み具合を入れる':'人工と進み具合を入れる'}</button>
+
+  <div id="ents"></div>
 
   <div class="sec">写真</div>
   <div class="btns" style="margin-bottom:12px">
@@ -781,14 +795,25 @@ function drawJob(){
 async function loadJobDetail(j){
   try{
     // ⛔ 単価・金額は取らない
-    const [items, files] = await Promise.all([
+    const [items, files, ents] = await Promise.all([
       // 明細も現場用のビューから。単価・金額の列がそもそも無い。
       sbGet('seek_field_items','select=id,name,qty,unit,section&job_id=eq.'
         + encodeURIComponent(j.id) + '&order=section.asc,line_no.asc'),
-      sbGet('seek_files','select=*&job_id=eq.'+encodeURIComponent(j.id)+'&order=created_at.desc')
+      sbGet('seek_files','select=*&job_id=eq.'+encodeURIComponent(j.id)+'&order=created_at.desc'),
+      M.workers ? sbGet('seek_work_entries','select=*&job_id=eq.'+encodeURIComponent(j.id)+'&order=work_date.desc,worker_name.asc').catch(()=>[]) : Promise.resolve([])
     ]);
     if(jobId!==j.id) return;               // その間に別の画面へ移っていたら捨てる
     jobItems=items; jobFiles=files;
+    // だれが入ったか（日ごと）
+    const eb=$('ents');
+    if(eb && ents.length){
+      const ds=[...new Set(ents.map(e=>String(e.work_date)))];
+      eb.innerHTML='<div class="sec">だれが入ったか</div>'+ds.slice(0,14).map(d=>{
+        const es=ents.filter(e=>String(e.work_date)===d);
+        return `<div class="card"><div class="in"><div class="row"><b>${esc(fmtDate(d))}</b><span class="sp"></span><b>${es.length}人</b></div>
+          <div class="meta">${es.map(e=>esc(e.worker_name)+' <span style="color:var(--muted)">'+esc(String(e.start_time).slice(0,5))+'〜'+esc(String(e.end_time).slice(0,5))+'</span>').join('<br>')}</div></div></div>`;
+      }).join('');
+    }
     const box=$('items');
     if(box){
       box.innerHTML = items.length
@@ -850,8 +875,108 @@ async function advance(j){
   };
 }
 
-/* ---------- 人工と進み具合 ---------- */
-function logSheet(j){
+/* ---------- 今日の作業（だれが・何時から何時まで） ----------
+   2026-10-01 9/30打ち合わせ「今日の現場に 高や・智也 が入った、8時〜18時。早く帰った人は何時まで」。
+   名前を選んで、時刻を直すだけ。金額はここでは出さない（事務所の画面が作業員の単価で計算する）。
+   ほかの人が入れた行は直せない（その人の分として見せるだけ）。 */
+const STD_S='08:00', STD_E='18:00';
+async function logSheet(j, date){
+  if(!M.workers) return logSheetOld(j);
+  const mine=(sbSession()||{}).email||'';
+  const d=date||today();
+  busy(true,'読み込み中…');
+  let cur=[];
+  try{ cur=await sbGet('seek_work_entries','select=*&job_id=eq.'+encodeURIComponent(j.id)+'&work_date=eq.'+d); }
+  catch(e){ busy(false); toast(e.message,1); if(e.reauth) render(); return; }
+  busy(false);
+  const log=M.logs.find(l=>l.job_id===j.id && l.work_date===d && l.created_by===mine);
+  // 名前の一覧＝作業員＋この日に入っている名前（作業員にいない人も）
+  const rows=M.workers.map(w=>({id:w.id, name:w.name, kind:w.kind}));
+  cur.forEach(e=>{ if(!rows.some(r=>r.name===e.worker_name)) rows.push({id:e.worker_id||null, name:e.worker_name}); });
+  const st=new Map(rows.map(r=>{ const e=cur.find(x=>x.worker_name===r.name);
+    return [r.name, { on:!!e, s:e?String(e.start_time).slice(0,5):STD_S, t:e?String(e.end_time).slice(0,5):STD_E,
+                      lock: !!(e && e.created_by && e.created_by!==mine), by:e?e.created_by:'', id:e?e.id:null }]; }));
+  const prog0=log? (log.progress||j.status) : j.status;
+  let progVal=({'受注':'着手','手配':'着手','施工中':'施工中','施工完了':'完了'}[prog0]||prog0||'施工中'), noteVal=log?log.note||'':'';
+  const keep=()=>{ if($('l-prog')) progVal=$('l-prog').value; if($('l-note')) noteVal=$('l-note').value; };
+  const rowHtml=r=>{ const s=st.get(r.name);
+    return `<div class="wk${s.on?' on':''}${s.lock?' lock':''}" data-wn="${esc(r.name)}">
+      <label class="wk-n"><input type="checkbox" ${s.on?'checked':''} ${s.lock?'disabled':''}> <b>${esc(r.name)}</b>${r.kind&&r.kind!=='社員'?` <small>${esc(r.kind)}</small>`:''}</label>
+      ${s.on?`<div class="wk-t"><input type="time" class="ts" value="${esc(s.s)}" ${s.lock?'disabled':''}> 〜 <input type="time" class="te" value="${esc(s.t)}" ${s.lock?'disabled':''}></div>`:''}
+      ${s.lock?`<div class="wk-by">${esc(s.by)} が入れた分</div>`:''}</div>`; };
+  const draw=()=>{
+    const n=[...st.values()].filter(s=>s.on).length;
+    sheet(`<h3>今日の作業</h3>
+      <div class="sub">${esc(j.title||'')}</div>
+      <label class="fld"><div class="lb">日付</div><input type="date" id="l-d" value="${esc(d)}"></label>
+      <div class="fld"><div class="lb">入った人（${n}人）　押すと選べます。早く帰った人は時刻を直してください</div>
+        <div id="l-wk">${rows.map(rowHtml).join('')}</div>
+        <div class="row" style="gap:6px;margin-top:6px"><input id="l-add" placeholder="ほかの人の名前" style="flex:1">
+          <button class="btn gh sm" id="l-addb">足す</button></div></div>
+      <label class="fld"><div class="lb">進み具合</div>
+        <select id="l-prog">
+          ${['着手','施工中','完了'].map(p=>`<option ${p===progVal?'selected':''}>${p}</option>`).join('')}
+        </select></label>
+      <label class="fld"><div class="lb">メモ（あれば）</div>
+        <textarea id="l-note" placeholder="雨で午後中断 など">${esc(noteVal)}</textarea></label>
+      <button class="btn pri wide" id="l-ok">記録する</button>
+      <button class="btn gh wide" id="l-no" style="margin-top:8px">やめる</button>`);
+    // 打った時刻を覚えておく（描き直しで消えないように）
+    document.querySelectorAll('#l-wk .wk').forEach(el=>{
+      const s=st.get(el.dataset.wn);
+      const cb=el.querySelector('input[type=checkbox]');
+      if(cb) cb.onchange=()=>{ keep(); s.on=cb.checked; draw(); };
+      const ts=el.querySelector('.ts'), te=el.querySelector('.te');
+      if(ts) ts.oninput=ts.onchange=()=>{ s.s=ts.value; }; if(te) te.oninput=te.onchange=()=>{ s.t=te.value; };
+    });
+    $('l-d').onchange=()=>{ const v=$('l-d').value; if(v && v!==d){ closeSheet(); logSheet(j, v); } };
+    $('l-addb').onclick=()=>{ keep(); const nm=$('l-add').value.trim(); if(!nm) return;
+      if(!st.has(nm)){ rows.push({id:null, name:nm}); st.set(nm,{on:true, s:STD_S, t:STD_E, lock:false, by:'', id:null}); }
+      else if(!st.get(nm).lock) st.get(nm).on=true;
+      draw(); };
+    $('l-no').onclick=closeSheet;
+    $('l-ok').onclick=save;
+  };
+  const save=async()=>{
+    const note=$('l-note').value.trim(), progress=$('l-prog').value;
+    const on=rows.filter(r=>st.get(r.name).on && !st.get(r.name).lock);
+    for(const r of on){ const s=st.get(r.name);
+      if(!s.s || !s.t || s.t<=s.s) return toast(r.name+' の時刻を確かめてください（終わりが始まりより前）',1); }
+    const del=rows.filter(r=>{ const s=st.get(r.name); return !s.on && s.id && !s.lock; });
+    const total=[...st.values()].filter(s=>s.on).length;
+    closeSheet(); busy(true,'記録中…');
+    try{
+      if(on.length) await sbPost('seek_work_entries?on_conflict=job_id,work_date,worker_name',
+        on.map(r=>{ const s=st.get(r.name); return { id: s.id || ('we-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)),
+          org_id:'seek', job_id:j.id, work_date:d, worker_id:r.id, worker_name:r.name, start_time:s.s, end_time:s.t, created_by:mine }; }),
+        'resolution=merge-duplicates,return=minimal');
+      if(del.length){
+        const res=await fetch(SB_URL+'/rest/v1/seek_work_entries?id=in.('+del.map(r=>encodeURIComponent(st.get(r.name).id)).join(',')+')',
+          {method:'DELETE', headers: await H({Prefer:'return=minimal'})});
+        if(res.status===401) throw expired();
+        if(!res.ok) throw new Error('外した人を消せませんでした（'+res.status+'）');
+      }
+      // 人数と進み具合は、これまでどおり seek_worklogs にも1行（予定表の👷と事務所の画面が使う）
+      const row={ id: log? log.id : ('w-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)),
+        org_id:'seek', job_id:j.id, work_date:d, workers:total, progress, note:note||null, created_by:mine||null };
+      const saved=await sbPost('seek_worklogs?on_conflict=job_id,work_date,created_by', [row], 'resolution=merge-duplicates,return=representation');
+      const got=(saved&&saved[0])||row;
+      const i=M.logs.findIndex(l=>l.id===got.id || (l.job_id===got.job_id && l.work_date===got.work_date && l.created_by===got.created_by));
+      i>=0? M.logs[i]=got : M.logs.unshift(got);
+      toast(total+'人を記録しました');
+      const want = progress==='完了' ? '施工完了' : (progress==='着手'||progress==='施工中') ? '施工中' : null;
+      if(want && j.status!==want && FIELD.indexOf(want)>FIELD.indexOf(j.status)){
+        const r=await sbAdvance(j.id, want, j.version);
+        if(r && r.ok){ j.status=r.status; j.version=r.version; toast(want+'にしました'); }
+      }
+      render();
+    }catch(e){ toast(e.message,1); if(e.reauth) render(); }
+    finally{ busy(false); }
+  };
+  draw();
+}
+/* ---------- 人工と進み具合（作業員の表が無いときの、人数だけの入力） ---------- */
+function logSheetOld(j){
   const mine=(sbSession()||{}).email||'';
   const cur=M.logs.find(l=>l.job_id===j.id && l.work_date===today() && l.created_by===mine);
   let n = cur? Number(cur.workers)||0 : 1;
