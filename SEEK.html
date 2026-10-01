@@ -369,6 +369,41 @@ button.btn.sm{padding:6px 12px;font-size:12px;border-radius:var(--r-xs)}
 .jd-act .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
 .jd-act .btns{display:flex;gap:6px;flex-wrap:wrap}
 .lrow{margin-bottom:8px}
+/* 案件の画面の上（2026-10-01） */
+.jd-hero{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-bottom:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.jd-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding:18px 20px 16px;flex-wrap:wrap}
+.jd-main{min-width:0;flex:1}
+.jd-meta{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.jd-meta .no{font-size:12px;color:var(--muted);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.jd-cl{font-size:21px;font-weight:800;letter-spacing:.01em;line-height:1.3;margin-bottom:12px}
+.jd-hero .jd-facts{display:flex;flex-wrap:wrap;gap:0}
+.jd-hero .jd-facts>div{display:flex;flex-direction:column;gap:2px;padding:0 22px 0 0;margin-right:22px;border-right:1px solid var(--line)}
+.jd-hero .jd-facts>div:last-child{border-right:0;margin-right:0}
+.jd-hero .jd-facts .k{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.jd-hero .jd-facts .v{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.jd-site{margin-top:12px}
+.jd-site .row{margin-bottom:0!important}
+.jd-hero .jd-amt{text-align:right;padding-left:24px;border-left:1px solid var(--line);min-width:200px}
+.jd-hero .jd-amt .k{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.jd-hero .jd-amt .v{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums;margin:2px 0 4px}
+.jd-hero .jd-amt .sub{font-size:12px;color:var(--muted);display:flex;gap:10px;justify-content:flex-end;font-variant-numeric:tabular-nums}
+.jd-hero .jd-amt .gp{font-weight:800}
+.jd-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line);background:var(--panel-2)}
+.jd-bar .sep{width:1px;height:22px;background:var(--line);margin:0 6px}
+.jd-bar .lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.jd-bar .ib{display:inline-flex;align-items:center;gap:6px}
+.jd-bar .ib svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.jd-bar button.btn.danger{color:var(--danger)}
+.jd-bar button.btn.danger:hover{background:var(--danger-soft);border-color:var(--danger)}
+.docseg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--panel)}
+.docseg button{border:0;border-left:1px solid var(--line);background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:6px 13px;cursor:pointer}
+.docseg button:first-child{border-left:0}
+.docseg button:hover{background:var(--panel-2);color:var(--ink)}
+.docseg button.on{background:var(--pri-soft);color:var(--pri);font-weight:800}
+@media(max-width:760px){.jd-hero .jd-amt{border-left:0;padding-left:0;text-align:left}.jd-hero .jd-amt .sub{justify-content:flex-start}}
+/* 進み具合の段：済んだ線は色を付ける */
+.flow-steps .ln.done{background:var(--ok)}
+.flow-steps .fs.cur .dot{box-shadow:0 0 0 4px var(--pri-soft)}
 /* マスタの「＋ 足す」の1行 */
 .madd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:var(--r-sm);background:var(--panel-2)}
 .madd b{color:var(--pri)}
@@ -1160,7 +1195,7 @@ async function saveJob(job, items){
     let msg = text.slice(0,300);
     try{ const j = JSON.parse(text); msg = j.message || j.hint || msg; }catch(e){}
     const e = new Error(/CONFLICT/.test(msg)
-      ? 'この案件は別の端末で更新されています。画面を読み直してから保存してください。'
+      ? 'この案件は別の端末で更新されています。画面を再読み込みしてから保存してください。'
       : ('保存に失敗しました（'+res.status+'）'+msg));
     e.conflict = /CONFLICT/.test(msg);
     throw e;
@@ -1188,7 +1223,7 @@ const setMeta = () => { const b=document.getElementById('barMeta');
 const STATUSES = ['見積提出','受注','手配','施工中','施工完了','請求済','入金済','失注','キャンセル'];
 // 全体工程表に並べる順（失注・キャンセルは流れから外れるので入れない）
 const FLOW = ['見積提出','受注','手配','施工中','施工完了','請求済','入金済'];
-const VIEWS = [['dash','ダッシュボード'],['find','案件を探す'],['make','見積をつくる'],['master','マスタ'],['check','初期設定']];
+const VIEWS = [['dash','ダッシュボード'],['find','案件検索'],['make','見積作成'],['master','マスタ'],['check','初期設定']];
 let view = 'dash';
 
 // サイドナビのアイコン（外部ファイルを増やさないよう、線画をその場で描く）
@@ -1689,7 +1724,7 @@ async function drawDash(){
     <div class="b warn"><div class="v">${oku(gp)}<em>億円</em></div>
       <div class="l">粗利益（<b style="color:var(--warn)">参考値</b>）</div>
       <div class="s">利益率 ${gpr.toFixed(1)}%。<b>いまの原価データはそのままでは使えません</b>
-        <button class="btn ghost sm" data-gocheck="data" style="margin-left:6px">理由を見る</button></div></div>
+        <button class="btn ghost sm" data-gocheck="data" style="margin-left:6px">詳細を見る</button></div></div>
     <div class="b"><div class="v">${M.clients.length}<em>社</em></div><div class="l">お取引先</div>
       <div class="s">上位5社で ${(top5/Math.max(1,sum(activeJ))*100).toFixed(0)}% を占める</div></div>
     <div class="b"><div class="v">${man(sum(activeJ)/Math.max(1,activeJ.length))}<em>万円</em></div><div class="l">1案件あたりの平均</div>
@@ -1781,7 +1816,7 @@ async function drawDash(){
     return `<div class="card">
       <h2>売掛（請求済で入金の記録が無いもの）</h2>
       <div class="small muted" style="margin-bottom:10px">
-        「入金を記録する」を押すと、この一覧から外れます。</div>
+        「入金を登録」を押すと、この一覧から外れます。</div>
       <div class="scroll"><table class="rank">
         <thead><tr><th></th><th class="n">件数</th><th class="n">金額（税抜）</th></tr></thead>
         <tbody>
@@ -1796,7 +1831,7 @@ async function drawDash(){
         <b>${yen(mig.reduce((a,j)=>a+ex(j),0))}円</b> の売掛が消えません。
         まとめて「入金済」にすると、上の段が<b>これから請求する分だけ</b>になります。</span>
         <div class="row" style="margin-top:8px">
-          <button class="btn sm" id="migPaid">Excelから移した ${mig.length}件 をまとめて入金済にする</button>
+          <button class="btn sm" id="migPaid">Excelから移した ${mig.length}件 を一括で入金済にする</button>
           <span class="muted small" id="migMsg"></span>
         </div>
         <div class="small muted" style="margin-top:6px">
@@ -2031,12 +2066,12 @@ function drawTrash(){
   const el=document.getElementById('fres'); if(!el) return;
   const t=(M.trash||[]);
   el.innerHTML = `<div class="row" style="margin:12px 0 6px"><b>ゴミ箱 ${t.length}件</b>
-      <span class="muted small">削除した案件です。一覧・集計・予定表・現場のスマホには出ていません。「戻す」で元の状態に戻ります</span></div>
+      <span class="muted small">削除した案件です。一覧・集計・予定表・現場のスマホには出ていません。「復元」で元の状態に戻ります</span></div>
     <div class="scroll tall"><table class="tight"><thead><tr><th>案件番号</th><th>顧客</th><th>案件名</th><th>削除した日</th><th>削除した人</th><th class="n">税抜合計</th><th></th></tr></thead>
     <tbody>${t.map(j=>`<tr><td class="small">${esc(j.job_no||'')}</td><td>${esc(j.client_name||'')}</td><td>${esc(j.title||'')}</td>
       <td class="small">${esc(String(j.data.deleted_at||'').slice(0,10))}</td><td class="small muted">${esc(j.data.deleted_by||'')}</td>
       <td class="n">${yen(j.total_ex_tax)}</td>
-      <td><button class="btn sm" data-restore="${esc(j.id)}">戻す</button></td></tr>`).join('')
+      <td><button class="btn sm" data-restore="${esc(j.id)}">復元</button></td></tr>`).join('')
       || '<tr><td colspan="7" class="muted">ゴミ箱は空です</td></tr>'}</tbody></table></div>`;
   el.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{
     const j=M.trash.find(x=>x.id===b.dataset.restore); b.disabled=true;
@@ -2068,8 +2103,8 @@ function vFind(){
       <button class="btn ghost sm" id="fclear">クリア</button>
       <span class="spacer"></span>
       ${(M.trash||[]).length?`<button class="btn ghost sm" id="ftrash">${fTrash?'← 案件の一覧に戻る':`ゴミ箱 ${M.trash.length}`}</button>`:''}
-      <button class="btn ghost sm" id="fbulk">まとめて状態を変える</button>
-      <button class="btn ghost sm" id="freload">サーバーから読み直す</button>
+      <button class="btn ghost sm" id="fbulk">状態の一括変更</button>
+      <button class="btn ghost sm" id="freload">再読み込み</button>
     </div>
     <div id="fbulkbox"></div>
     <div id="fres"></div></div>`;
@@ -2091,7 +2126,7 @@ function drawBulk(){
       <label class="f">変更後の状態<select id="bkTo">
         ${STATUSES.map(s=>`<option ${s==='失注'?'selected':''}>${s}</option>`).join('')}</select></label>
       <button class="btn sm" id="bkGo" ${hit.length?'':'disabled'}>${hit.length}件を変更する</button>
-      <button class="btn ghost sm" id="bkCancel">やめる</button>
+      <button class="btn ghost sm" id="bkCancel">キャンセル</button>
       <span class="muted small">元に戻すには、同じ絞り込みで状態を戻してください</span>
     </div>
     <div id="bkMsg"></div></div>`;
@@ -2315,7 +2350,7 @@ function openSchedule(j){
     <b>駐車場オープン予定日 ${esc(j.open_date)}</b>　${when}<br>
     <span class="small">${rows.join('　/　')}</span>
     ${anyProvisional?`<br><span class="muted small">「仮」は村山さんに確認できていない日数です
-      （電力申請の代行業者のリードタイム、部品の納期）。確認できたらマスタの設定で直します。</span>`:''}
+      （電力申請の代行業者のリードタイム、部品の納期）。確認できたらマスタの設定で修正します。</span>`:''}
   </div>`;
 }
 
@@ -2362,51 +2397,59 @@ async function openJob(id){
     return costOnly ? '<span class="muted small">（原価だけの行）</span>'
                     : `${esc(nm||'—')} ${it.memo ? '' : conds(it)}`;   // 摘要に同じことが書いてあれば札は出さない
   };
+  /* 案件の画面の上（2026-10-01 大嶺さん「ボタンの位置・表示方法が見にくい。美しい見た目に」）
+     ・1枚のカードに「状態・番号 → 顧客 → 日付と現場」、右に金額。カードの下の帯に操作をまとめる
+     ・操作は1行：編集・複製 ｜ 書類（つながったボタン。いまの状態で次に使う書類を色付き）｜ 図面・添付 …… 削除は右端に控えめに */
+  const IC = {
+    edit:'<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/>',
+    copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+    clip:'<path d="M20 11.5l-8.2 8.2a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/>',
+    trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3"/>' };
+  const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
+  const docSeg = (key, label, attr) =>
+    `<button class="${key===next?'on':''}" ${attr}${key===next?' title="いまの状態で次に使う書類です"':''}>${label}</button>`;
   document.getElementById('dlgB').innerHTML = `
-    <div class="jd-head">
-      <div>
-        <div class="jd-who">
-          <span class="tag ${stTone}">${esc(st||'—')}</span>
-          <span class="cl">${esc(j.client_name||'—')}</span>
-          <span class="muted small">案件番号 ${esc(j.job_no||'—')}</span>
+    <div class="jd-hero">
+      <div class="jd-top">
+        <div class="jd-main">
+          <div class="jd-meta"><span class="tag ${stTone}">${esc(st||'—')}</span><span class="no">No. ${esc(j.job_no||'—')}</span></div>
+          <div class="jd-cl">${esc(j.client_name||'—')}</div>
+          <div class="jd-facts">
+            <div><span class="k">見積日</span><span class="v">${esc(j.quoted_at||'—')}</span></div>
+            <div><span class="k">施工</span><span class="v">${esc(build)}</span></div>
+            <div><span class="k">請求日</span><span class="v">${esc(j.invoiced_at||'—')}</span></div>
+            <div><span class="k">入金日</span><span class="v">${esc(j.paid_at||'—')}</span></div>
+          </div>
+          <div class="jd-site">${siteRow(j)}</div>
         </div>
-        <div class="jd-facts">
-          <div><div class="k">見積日</div><div class="v">${esc(j.quoted_at||'—')}</div></div>
-          <div><div class="k">施工</div><div class="v">${esc(build)}</div></div>
-          <div><div class="k">請求日</div><div class="v">${esc(j.invoiced_at||'—')}</div></div>
-          <div><div class="k">入金日</div><div class="v">${esc(j.paid_at||'—')}</div></div>
+        <div class="jd-amt">
+          <div class="k">総合計（税込）</div>
+          <div class="v">¥${yen(j.total_in_tax)}</div>
+          <div class="sub">税抜 ${yen(ex)}${gpr!=null?`<span class="gp" style="color:${gcol}">粗利 ${gpr.toFixed(1)}%</span>`:''}</div>
         </div>
       </div>
-      <div class="jd-amt">
-        <div class="k">総合計（税込）</div>
-        <div class="v">¥${yen(j.total_in_tax)}</div>
-        ${gpr!=null?`<div class="small">粗利 <b style="color:${gcol}">${gpr.toFixed(1)}%</b>
-          <span class="muted">（${yen(ex-cost)}）</span></div>`:''}
+      <div class="jd-bar">
+        <button class="btn sm ib" id="editJob">${ico('edit')}編集</button>
+        <button class="btn sm ghost ib" id="copyJob" title="この見積の明細をそのまま使って、新しい見積を作ります（この案件は変わりません）">${ico('copy')}見積書複製</button>
+        <span class="sep"></span>
+        <span class="lbl">書類</span>
+        <div class="docseg">
+          ${docSeg('quote','見積書','data-print="quote"')}
+          ${docSeg('power','電力申請','id="powerDoc"')}
+          ${docSeg('handover','引渡書','id="handoverDoc"')}
+          ${docSeg('invoice','請求書','data-print="invoice"')}
+        </div>
+        <span class="sep"></span>
+        <button class="btn sm ghost ib" id="gotoFiles">${ico('clip')}図面・添付</button>
+        <span class="spacer"></span>
+        <button class="btn sm ghost ib danger" id="delJob" title="一覧から削除します（案件検索 → ゴミ箱 から復元できます）">${ico('trash')}削除</button>
       </div>
     </div>
 
     ${flowHtml(j)}
-    <div class="jd-act">
-      <div class="grp"><div class="lbl">この案件</div><div class="btns">
-        <button class="btn sm" id="editJob">直す</button>
-        <button class="btn sm ghost" id="copyJob" title="この見積の明細をそのまま使って、新しい見積を作ります（この案件は変わりません）">見積書複製</button>
-        <button class="btn sm ghost" id="delJob" style="color:var(--danger)" title="一覧から消します（案件を探す → ゴミ箱 から戻せます）">削除</button>
-      </div></div>
-      <div class="grp"><div class="lbl">書類を出す</div><div class="btns">
-        ${docBtn('quote','見積書','data-print="quote"')}
-        ${docBtn('power','電力申請','id="powerDoc"')}
-        ${docBtn('handover','引渡書','id="handoverDoc"')}
-        ${docBtn('invoice','請求書','data-print="invoice"')}
-      </div></div>
-      <div class="grp"><div class="lbl">ファイル</div><div class="btns">
-        <button class="btn sm ghost" id="gotoFiles">図面・添付</button>
-      </div></div>
-    </div>
-
-    ${siteRow(j)}
     ${openSchedule(j)}
     ${j.amounts_locked?`<div class="note" style="margin:0 0 12px">Excelから移した案件です。
-      <b>当時の金額のまま固定</b>しています（明細を直しても合計は変わりません）。</div>`:''}
+      <b>当時の金額のまま固定</b>しています（明細を変更しても合計は変わりません）。</div>`:''}
 
     <div class="scroll"><table class="mktbl tight">
       <thead><tr><th colspan="6" class="gq">見積書<span>お客様に出る</span></th>
@@ -2502,7 +2545,7 @@ async function patchJobData(jobId, mutate){
     }
     // version が変わっていた＝その間に誰かが直した。読み直してもう一度
   }
-  throw new Error('ほかの人が同時にこの案件を直していたため保存できませんでした。もう一度押してください');
+  throw new Error('ほかの人が同時にこの案件を編集していたため保存できませんでした。もう一度押してください');
 }
 async function uploadBillFile(jobId, billId, file){
   if(file.size > MAX_FILE) throw new Error(`${file.name} は ${(file.size/1048576).toFixed(1)}MB あります（上限25MB）`);
@@ -2552,10 +2595,10 @@ function drawBills(jobId, plan){
         <td class="n">${yen(b.amount_ex)}${b.tax_mode==='税込'?`<div class="small muted">税込 ${yen(b.amount_in)}</div>`:''}</td>
         <td class="small muted">${esc(b.memo||'')}</td>
         <td>${b.file?`<button class="btn ghost sm" data-bopen="${esc(b.id)}">開く</button>`:'<span class="muted small">なし</span>'}</td>
-        <td><button class="btn ghost sm" data-bdel="${esc(b.id)}" title="この請求を消す">×</button></td></tr>`).join('')}</tbody></table></div>`
+        <td><button class="btn ghost sm" data-bdel="${esc(b.id)}" title="この請求を削除">×</button></td></tr>`).join('')}</tbody></table></div>`
     : `<div class="muted small" style="margin:6px 0 2px">まだ請求は入っていません。${plan.cost?`見込みの原価は <b>${yen(plan.cost)}</b>（税抜）です。`:''}</div>`}
     <div class="bill-form">
-      <label class="f">外注先<input id="bVendor" list="bVendorList" value="${esc(defVendor)}" placeholder="選ぶか打つ" style="width:150px"></label>
+      <label class="f">外注先<input id="bVendor" list="bVendorList" value="${esc(defVendor)}" placeholder="選択または入力" style="width:150px"></label>
       <datalist id="bVendorList">${laborVendorNames().map(v=>`<option value="${esc(v.name)}">`).join('')}</datalist>
       <label class="f">請求日<input id="bDate" type="date" value="${today()}"></label>
       <label class="f">内容<select id="bKind">${BILL_KINDS.map(k=>`<option ${k===(defVendor?'人工':'外注工事')?'selected':''}>${k}</option>`).join('')}</select></label>
@@ -2574,9 +2617,9 @@ function drawBills(jobId, plan){
     const billed_at = document.getElementById('bDate').value;
     const amt = numIn(document.getElementById('bAmt').value);
     const tax_mode = document.getElementById('bTax').value;
-    if(!vendor) return msg('<div class="err">外注先を入れてください</div>');
-    if(!billed_at) return msg('<div class="err">請求日を入れてください</div>');
-    if(!(amt>0)) return msg('<div class="err">金額を入れてください</div>');
+    if(!vendor) return msg('<div class="err">外注先を入力してください</div>');
+    if(!billed_at) return msg('<div class="err">請求日を入力してください</div>');
+    if(!(amt>0)) return msg('<div class="err">金額を入力してください</div>');
     const btn = document.getElementById('bAdd'); btn.disabled = true; btn.textContent = '保存中…';
     const id = 'vb-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
     const f = (document.getElementById('bFile').files||[])[0];
@@ -2605,7 +2648,7 @@ function drawBills(jobId, plan){
   });
   box.querySelectorAll('[data-bdel]').forEach(b=>b.onclick = async () => {
     const x = bills.find(y=>y.id===b.dataset.bdel);
-    if(!confirm(`${x.vendor} の請求（${x.billed_at}・税抜 ${yen(x.amount_ex)}）を消します。よろしいですか。`)) return;
+    if(!confirm(`${x.vendor} の請求（${x.billed_at}・税抜 ${yen(x.amount_ex)}）を削除します。よろしいですか。`)) return;
     try{
       await patchJobData(jobId, d => { d.vendor_bills = (d.vendor_bills||[]).filter(y=>y.id!==x.id); });
       if(x.file) try{ await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${x.file.path}`,{method:'DELETE',headers:await H()}); }catch(_){}
@@ -2664,7 +2707,7 @@ async function patchJobFields(jobId, cols, dataPatch){
     const rows = await p.json();
     if(rows.length){ const i=M.jobs.findIndex(x=>x.id===jobId); if(i>=0) M.jobs[i]=Object.assign({}, M.jobs[i], rows[0]); return rows[0]; }
   }
-  throw new Error('ほかの人が同時にこの案件を直していたため保存できませんでした。もう一度押してください');
+  throw new Error('ほかの人が同時にこの案件を編集していたため保存できませんでした。もう一度押してください');
 }
 function flowHtml(j){
   const idx = flowIndex(j.status), stopped = idx<0;
@@ -2676,35 +2719,35 @@ function flowHtml(j){
       const dt = f.date(j);
       return `<div class="fs ${cls}"><span class="dot">${k<idx&&!stopped?'✓':k+1}</span>
         <b>${f.label}</b><span class="d">${dt?esc(String(dt).slice(5).replace('-','/')):''}</span></div>`;
-    }).join('<span class="ln"></span>')}</div>
+    }).map((h,k)=> k ? `<span class="ln${!stopped && k<=idx ? ' done' : ''}"></span>`+h : h).join('')}</div>
     <div class="flow-act">
       ${stopped ? `<span>この案件は <b>${esc(j.status)}</b> です。</span>
           <button class="btn ghost sm" data-flowto="0">見積提出に戻す</button>`
       : next ? `<label class="f">日付<input type="date" id="flowDate" value="${today()}"></label>
           <button class="btn" data-flowgo="${idx+1}">${next.label}にする</button>
-          ${idx>0?`<button class="btn ghost sm" data-flowto="${idx-1}" title="状態だけ前に戻します（入れた日付は消しません）">ひとつ戻す</button>`:''}
+          ${idx>0?`<button class="btn ghost sm" data-flowto="${idx-1}" title="状態だけ前に戻します（入力した日付は削除しません）">前の状態に戻す</button>`:''}
           <span class="spacer"></span>
           ${idx<=1?`<button class="btn ghost sm" data-flowlost="1" title="受注できなかった案件">失注にする</button>`:''}
           ${idx>=1&&idx<=3?`<button class="btn ghost sm" data-flowcancel="1" title="受注したが、取りやめになった案件">キャンセルにする</button>`:''}`
       : `<span class="ok-inline">✓ 入金まで終わった案件です</span>
-          <button class="btn ghost sm" data-flowto="${idx-1}">ひとつ戻す</button>`}
+          <button class="btn ghost sm" data-flowto="${idx-1}">前の状態に戻す</button>`}
     </div>
     ${idx===1 ? `<div class="flow-next">
       <b>受注しました。次にやること</b>
       <div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px">
-        <span class="small">① 日程を入れる（施工の期間が予定表に横棒で出ます）</span>
+        <span class="small">① 日程を登録（施工の期間が予定表に横棒で出ます）</span>
         <label class="f">施工開始<input type="date" id="flowBs" value="${esc(D.build_start||'')}"></label>
         <label class="f">完工予定日<input type="date" id="flowBe" value="${esc(D.build_end||'')}"></label>
         <label class="f">オープン予定日<input type="date" id="flowOd" value="${esc(j.open_date||'')}"></label>
-        <button class="btn sm" id="flowBsave">日程を入れる</button>
+        <button class="btn sm" id="flowBsave">日程を登録</button>
       </div>
       <div class="row" style="gap:8px;align-items:center;margin-top:8px">
-        <span class="small">② 電力申請の必要事項を出す</span>
+        <span class="small">② 電力申請の必要事項を作成</span>
         <button class="btn ghost sm" id="flowPower">電力申請</button>
       </div>
       <div class="row" style="gap:8px;align-items:center;margin-top:8px">
         <span class="small">③ 外注に連絡する（現場・日程・オープン日・図面をメールで）</span>
-        <button class="btn ghost sm" id="flowSub">外注に連絡</button>
+        <button class="btn ghost sm" id="flowSub">外注先へ連絡</button>
       </div>
       <div id="subMailBox"></div></div>` : ''}
   </div>`;
@@ -2729,7 +2772,7 @@ function bindFlow(j){
     const billed = /請求済|入金済/.test(j.status||'');
     if(!confirm(`「${j.title||''}」（${j.job_no||'番号なし'}）を削除します。\n`
       + (billed?'⚠ 請求済みの案件です。売上の集計からも外れます。\n':'')
-      + `\n一覧・予定表・現場のスマホから消えます。\n「案件を探す」→「ゴミ箱」からいつでも戻せます。よろしいですか。`)) return;
+      + `\n一覧・予定表・現場のスマホから消えます。\n「案件検索」→「ゴミ箱」からいつでも戻せます。よろしいですか。`)) return;
     dj.disabled=true;
     try{
       const row = await patchJobFields(j.id, {status:'キャンセル'},
@@ -2737,7 +2780,7 @@ function bindFlow(j){
       const k=M.jobs.findIndex(x=>x.id===j.id); const moved = k>=0 ? M.jobs.splice(k,1)[0] : row;
       (M.trash=M.trash||[]).unshift(Object.assign({}, moved, row));
       try{ dlg.close(); }catch(e){}
-      render(); setBar(`削除しました（${j.job_no||j.title||''}）。「案件を探す」→「ゴミ箱」から戻せます`);
+      render(); setBar(`削除しました（${j.job_no||j.title||''}）。「案件検索」→「ゴミ箱」から戻せます`);
     }catch(e){ dj.disabled=false; alert(e.message); }
   };
   root.querySelectorAll('[data-flowlost]').forEach(b=>b.onclick=()=>{
@@ -2747,7 +2790,7 @@ function bindFlow(j){
   const bs=document.getElementById('flowBsave'); if(bs) bs.onclick=()=>{
     const s=document.getElementById('flowBs').value, e=document.getElementById('flowBe').value||s,
           o=document.getElementById('flowOd').value;
-    if(!s && !e && !o) return alert('施工開始・完工予定日・オープン予定日のどれかを入れてください');
+    if(!s && !e && !o) return alert('施工開始・完工予定日・オープン予定日のどれかを入力してください');
     if(s && e && e < s) return alert('完工予定日が施工開始より前になっています');
     bs.disabled=true;
     const dataP = {}; if(s) dataP.build_start=s; if(e) dataP.build_end=e; if(!s && e) dataP.build_start=e;
@@ -2839,9 +2882,11 @@ async function openMailForm(j, kind, fileName){
   let src=null;                    // 見積依頼メール（あれば返信にする）
   try{ const r=await sbFetchAll('seek_inbox','select=from_email,from_name,thread_id,subject&job_id=eq.'+encodeURIComponent(j.id)); src=r[0]||null; }catch(e){}
   const c=clientMap.get(j.client_id)||{};
-  const to = src ? (src.from_email||'') : '';
+  // 見積依頼メールが無ければ、顧客マスタのメール・担当者を使う（2026-10-01）
+  const cd = (c && c.data) || {};
+  const to = src ? (src.from_email||'') : (cd.email||'');
   const subj = src ? 'Re: '+(src.subject||'') : `【${isQ?'御見積書':'請求書'}】${j.title||''}（${co}）`;
-  const who = src && src.from_name ? src.from_name+' 様' : '';
+  const who = src && src.from_name ? src.from_name+' 様' : (cd.contact ? cd.contact+' 様' : '');
   const body = `${c.formal_name||j.client_name||''} 御中\n${who?who+'\n':''}\nいつもお世話になっております。${co}の${S.stampName||'村山'}です。\n\n`
     + `${j.title||''}の${isQ?'御見積書':'請求書'}をお送りいたします。\n添付のPDFをご確認ください。\n\n`
     + `ご不明な点がございましたら、お気軽にお問い合わせください。\n何卒よろしくお願い申し上げます。\n\n`
@@ -2853,8 +2898,8 @@ async function openMailForm(j, kind, fileName){
     <label class="f">件名<input id="mfSubj" value="${esc(subj)}"></label>
     <label class="f">本文<textarea id="mfBody" rows="9">${esc(body)}</textarea></label>
     <div class="row" style="gap:8px;margin-top:8px">
-      <button class="btn" id="mfGo">Gmailの下書きを作る</button>
-      <button class="btn ghost sm" id="mfCancel">やめる</button>
+      <button class="btn" id="mfGo">Gmailの下書きを作成</button>
+      <button class="btn ghost sm" id="mfCancel">キャンセル</button>
       <span class="muted small">添付：${esc(fileName)}.pdf</span></div>
     <div id="mfMsg"></div></div>`;
   box.scrollIntoView({behavior:'smooth', block:'nearest'});
@@ -2862,7 +2907,7 @@ async function openMailForm(j, kind, fileName){
   document.getElementById('mfGo').onclick=async()=>{
     const btn=document.getElementById('mfGo'), m=document.getElementById('mfMsg');
     const toV=document.getElementById('mfTo').value.trim();
-    if(!src && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(toV)) return m.innerHTML='<div class="err">宛先のメールアドレスを入れてください</div>';
+    if(!src && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(toV)) return m.innerHTML='<div class="err">宛先のメールアドレスを入力してください</div>';
     btn.disabled=true; btn.textContent='PDFを作っています…';
     try{
       const blob = await paperToPdfBlob(document.querySelector('#dlgB .paper'));
@@ -2887,7 +2932,7 @@ async function openMailForm(j, kind, fileName){
       box.innerHTML = `<div class="ok"><b>✓ Gmail の下書きにするよう頼みました。</b>
         <span class="small">5分以内に、村山さんの Gmail の「下書き」に ${esc(fileName)}.pdf 入りで入ります。中身を見てから送信してください。
         この案件の画面の「送ったメール」で、下書きになったかを見られます。</span></div>`;
-    }catch(e){ btn.disabled=false; btn.textContent='Gmailの下書きを作る'; m.innerHTML=`<div class="err">${esc(e.message)}</div>`; }
+    }catch(e){ btn.disabled=false; btn.textContent='Gmailの下書きを作成'; m.innerHTML=`<div class="err">${esc(e.message)}</div>`; }
   };
 }
 /* 受注したら外注に連絡（2026-10-01 村山さん「受注 → メールそのまま飛ばせるように」）。
@@ -2913,7 +2958,7 @@ async function openSubMail(j){
   const big = draws.reduce((a,f)=>a+Number(f.byte_size||0),0) > 20*1024*1024;
   box.innerHTML=`<div class="mailform" style="margin-top:10px">
     <div class="mf-h"><b>外注に連絡（Gmailの下書き）</b><span class="muted small">選んだ外注先ごとに、村山さんの Gmail に下書きを作ります。送信は Gmail で中身を見てから。</span></div>
-    <div class="f">外注先${sups.length?'':'：まだ登録がありません（マスタ → 外注先・仕入先 で足してください）'}
+    <div class="f">外注先${sups.length?'':'：まだ登録がありません（マスタ → 外注先・仕入先 で登録してください）'}
       <div class="row" style="gap:12px;flex-wrap:wrap;margin-top:4px">${sups.map(s=>`<label class="subchk${s.email?'':' off'}">
         <input type="checkbox" data-subto="${esc(s.id)}" ${s.email?'':'disabled'}>${esc(s.name)}${s.category?`（${esc(s.category)}）`:''}${s.email?'':' ・メール未登録'}</label>`).join('')}</div></div>
     <div class="f">添付する図面${draws.length?'':'：この案件にはまだ図面がありません（案件の「図面・添付」から入れられます）'}
@@ -2922,7 +2967,7 @@ async function openSubMail(j){
       ${big?'<div class="small" style="color:var(--warn)">図面の合計が20MBを超えています。Gmailは25MBまでなので、いくつか外してください</div>':''}</div>
     <label class="f">件名<input id="subSubj" value="${esc(`【施工のご依頼】${String(j.title||'').replace(/^仮\s*[）)]\s*/,'')}（${co}）`)}"></label>
     <label class="f">本文（外注先の名前は、外注先ごとに入れ替わります）<textarea id="subBody" rows="12">${esc(bodyFor(sups.find(s=>s.email)||{name:'○○'}))}</textarea></label>
-    <div class="row" style="gap:8px"><button class="btn" id="subGo">下書きを作る</button><button class="btn ghost sm" id="subCancel">やめる</button></div>
+    <div class="row" style="gap:8px"><button class="btn" id="subGo">下書きを作成</button><button class="btn ghost sm" id="subCancel">キャンセル</button></div>
     <div id="subMsg"></div></div>`;
   document.getElementById('subCancel').onclick=()=>{ box.innerHTML=''; };
   document.getElementById('subGo').onclick=async()=>{
@@ -2983,7 +3028,7 @@ async function drawWork(j){
         <div><div class="k">見積の人工</div><div class="v">${est?est+'人日':'—'}</div><div class="s">${est?(pd>est?`<span style="color:var(--danger)">${dayStr(pd-est)}人日 多い</span>`:`あと ${dayStr(est-pd)}人日`):''}</div></div>
         <div><div class="k">人工の金額（実績）</div><div class="v">${yen(pay)}</div><div class="s">${estCost?(pay>estCost?`<span style="color:var(--danger)">見積 ${yen(estCost)} より ${yen(pay-estCost)} 多い</span>`:`見積 ${yen(estCost)}`):''}${unknown?`<br><span style="color:var(--warn)">単価が入っていない ${unknown}人日ぶんは0円で数えています</span>`:''}</div></div>
         <div><div class="k">最後の入力</div><div class="v" style="font-size:15px">${esc(last.d.slice(5).replace('-','/'))} ${esc((last.log&&last.log.progress)||'')}</div><div class="s">${last.es.length}人</div></div></div>
-      <div class="scroll" style="margin-top:8px"><table class="tight"><thead><tr><th>日</th><th>入った人</th><th class="n">人日</th><th class="n">金額</th><th>進み具合・メモ</th></tr></thead>
+      <div class="scroll" style="margin-top:8px"><table class="tight"><thead><tr><th>日</th><th>入った人</th><th class="n">人日</th><th class="n">金額</th><th>進捗・メモ</th></tr></thead>
         <tbody>${days.map(x=>`<tr><td>${esc(x.d)}</td>
           <td class="small">${x.es.map(({e,c})=>`${esc(e.worker_name||(c.w&&c.w.name)||'')} <span class="muted">${esc(String(e.start_time).slice(0,5))}〜${esc(String(e.end_time).slice(0,5))}${c.otMin?'・残業'+hmS(c.otMin):''}</span>${c.pay==null?' <span style="color:var(--warn)">単価なし</span>':''}`).join('<br>')}</td>
           <td class="n">${dayStr(x.dpd)}</td><td class="n">${yen(x.dpay)}</td>
@@ -2991,7 +3036,7 @@ async function drawWork(j){
     return;
   }
   if(!rows.length){ box.innerHTML = /受注|手配|施工中|施工完了/.test(j.status)
-    ? `<div class="card" style="margin-top:16px"><h2>現場の人工</h2><div class="muted small">まだ入っていません。現場のスマホの「👷 人工と進み具合を入れる」から入ります。${est?`見積の人工は ${est}人日 です。`:''}</div></div>` : ''; return; }
+    ? `<div class="card" style="margin-top:16px"><h2>現場の人工</h2><div class="muted small">まだ入っていません。現場のスマホの「👷 作業員と進捗を登録」から入力します。${est?`見積の人工は ${est}人日 です。`:''}</div></div>` : ''; return; }
   const sum=rows.reduce((a,w)=>a+Number(w.workers||0),0), unit=laborUnitOfJob(j);
   const last=rows[rows.length-1];
   box.innerHTML=`<div class="card" style="margin-top:16px"><div class="row" style="align-items:baseline"><h2 style="margin:0">現場の人工（スマホから）</h2>
@@ -3001,7 +3046,7 @@ async function drawWork(j){
       <div><div class="k">見積の人工</div><div class="v">${est?est+'人日':'—'}</div><div class="s">${est?(sum>est?`<span style="color:var(--danger)">${sum-est}人日 多い</span>`:`あと ${est-sum}人日`):''}</div></div>
       <div><div class="k">人工の金額（実績）</div><div class="v">${yen(sum*unit)}</div><div class="s">${yen(unit)}／人日</div></div>
       <div><div class="k">最後の入力</div><div class="v" style="font-size:15px">${esc(String(last.work_date).slice(5).replace('-','/'))} ${esc(last.progress||'')}</div><div class="s">${esc(last.workers)}人</div></div></div>
-    <div class="scroll" style="margin-top:8px"><table class="tight"><thead><tr><th>日</th><th class="n">人数</th><th>進み具合</th><th>メモ</th><th>入れた人</th></tr></thead>
+    <div class="scroll" style="margin-top:8px"><table class="tight"><thead><tr><th>日</th><th class="n">人数</th><th>進捗</th><th>メモ</th><th>入れた人</th></tr></thead>
       <tbody>${rows.map(w=>`<tr><td>${esc(w.work_date)}</td><td class="n">${esc(w.workers)}</td><td class="small">${esc(w.progress||'')}</td>
         <td class="small muted">${esc(w.note||'')}</td><td class="small muted">${esc(w.created_by||'')}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
@@ -3028,14 +3073,15 @@ async function drawFiles(jobId){
   try{ files = await listFiles(jobId); }
   catch(e){ box.innerHTML=`<h2>図面・添付</h2><div class="err">${esc(e.message)}</div>`; return; }
   const btn=document.getElementById('gotoFiles');
-  if(btn) btn.textContent = files.length ? `図面・添付 ${files.length}` : '図面を添付';
+  // 文字だけ差し替える（ボタンの頭のクリップの絵は残す）
+  if(btn){ const svg=btn.querySelector('svg'); btn.textContent = files.length ? `図面・添付 ${files.length}` : '図面を添付'; if(svg) btn.prepend(svg); }
   box.innerHTML = `<h2>図面・添付（${files.length}件）</h2>
     <div class="row" style="margin-bottom:10px">
       <label class="f">種類<select id="fkind">
         ${['図面','着工前写真','完了後写真','写真','納品書','見積書','その他'].map(k=>`<option>${k}</option>`).join('')}</select></label>
       <label class="f">ファイル<input type="file" id="fpick" multiple></label>
       <button class="btn sm" id="fup">追加する</button>
-      <span class="muted small">メールに添付されてきた図面PDFをそのまま入れてください（1つ25MBまで）</span>
+      <span class="muted small">メールに添付されてきた図面PDFをそのまま添付してください（1つ25MBまで）</span>
     </div>
     <div id="fmsg"></div>
     ${files.length ? `<div class="scroll"><table>
@@ -3549,11 +3595,11 @@ function printPower(j){
       </table>
       <div style="margin-top:10px;font-size:10px;color:#555">
         ※ 顧客マスタと案件の現場住所から作っています。赤字の欄はマスタに入っていないので、
-        マスタ（顧客）か案件を直してから出し直してください。</div>
+        マスタ（顧客）か案件を修正してから出し直してください。</div>
     </div>
     <div class="row" style="margin-top:12px">
-      <button class="btn sm" id="pwprint">印刷／PDFにする</button>
-      <button class="btn sm ghost" id="pwcopy">文字でコピーする</button>
+      <button class="btn sm" id="pwprint">印刷・PDF</button>
+      <button class="btn sm ghost" id="pwcopy">テキストをコピー</button>
       <button class="btn sm ghost" id="pwback">案件に戻る</button>
       <span class="muted small" id="pwmsg"></span>
     </div>`;
@@ -3728,7 +3774,7 @@ async function printHandover(j, items){
     </div>
 
     <div class="row" style="margin-top:12px">
-      <button class="btn sm" id="hoprint">印刷／PDFにする</button>
+      <button class="btn sm" id="hoprint">印刷・PDF</button>
       <button class="btn sm ghost" id="hoback">案件に戻る</button>
       <span class="muted small">
         写真は着工前・完了後をそれぞれ最大${MAXP}枚まで載せます${nin?'／これまでの人工 '+nin+'人日':''}</span>
@@ -3839,7 +3885,7 @@ async function drawUsers(el){
     <span class="small">それまでは Supabase の画面（Authentication → Users）から作ってください。</span></div>`:''}
 
   <div class="row" style="margin:12px 0">
-    <button class="btn sm" id="uAdd" ${off}>＋ 利用者を追加する</button>
+    <button class="btn sm" id="uAdd" ${off}>＋ 利用者を追加</button>
     <span class="spacer"></span>
     <span class="muted small">管理者 ${admins}人 ／ 全部で ${rows.length}人</span>
   </div>
@@ -3856,8 +3902,8 @@ async function drawUsers(el){
       <td>${r.active?'<span class="tag ok">使える</span>':'<span class="tag">止めている</span>'}</td>
       <td class="small muted">${esc(String(r.last_sign_in_at||'').slice(0,10)||'まだ')}</td>
       <td>
-        <button class="btn ghost sm" data-upw="${esc(r.user_id)}" ${off}>パスワードを作り直す</button>
-        <button class="btn ghost sm" data-uact="${esc(r.user_id)}" ${off}>${r.active?'止める':'使えるようにする'}</button>
+        <button class="btn ghost sm" data-upw="${esc(r.user_id)}" ${off}>パスワードを再発行</button>
+        <button class="btn ghost sm" data-uact="${esc(r.user_id)}" ${off}>${r.active?'無効にする':'有効にする'}</button>
       </td></tr>`).join('')}
     </tbody></table></div>
   ${notReady ? setupCard : ''}
@@ -3896,7 +3942,7 @@ async function drawUsers(el){
    パスワードはここに出すだけ。保存もログもしない。 */
 function userDialog(el, edit){
   const pw = makePassword();
-  document.getElementById('dlgT').textContent = edit ? 'パスワードを作り直す' : '利用者を追加する';
+  document.getElementById('dlgT').textContent = edit ? 'パスワードを再発行' : '利用者を追加';
   document.getElementById('dlgB').innerHTML = `
     ${edit ? `<div class="note"><b>${esc(edit.name)}</b>（${esc(edit.email)}）の
       パスワードを新しくします。<b>いまのパスワードは使えなくなります。</b></div>`
@@ -3915,8 +3961,8 @@ function userDialog(el, edit){
     <label class="f" style="display:block;margin-bottom:6px">パスワード
       <input id="uPw" value="${esc(pw)}" style="width:100%;font-family:ui-monospace,Consolas,monospace"></label>
     <div class="row" style="margin-bottom:12px">
-      <button class="btn ghost sm" id="uGen">別のを作る</button>
-      <button class="btn ghost sm" id="uCopy">コピーする</button>
+      <button class="btn ghost sm" id="uGen">再生成</button>
+      <button class="btn ghost sm" id="uCopy">コピー</button>
       <span class="muted small" id="uCopyMsg"></span>
     </div>
     <div class="note">
@@ -3926,8 +3972,8 @@ function userDialog(el, edit){
     </div>
     <div id="uDlgMsg"></div>
     <div class="row" style="margin-top:12px">
-      <button class="btn" id="uOk">${edit?'この内容にする':'追加する'}</button>
-      <button class="btn ghost sm" id="uCancel">やめる</button>
+      <button class="btn" id="uOk">${edit?'更新':'追加'}</button>
+      <button class="btn ghost sm" id="uCancel">キャンセル</button>
     </div>`;
   dlg.showModal();
 
@@ -4208,7 +4254,7 @@ async function editJob(id){
   const j = M.jobs.find(x=>x.id===id); if(!j) return;
   if(j.amounts_locked && !confirm(
     'この案件はExcelから移行したもので、当時の金額を凍結しています。\n'+
-    '明細を直すと合計が合わなくなります（合計は凍結されたまま）。\n続けますか。')) return;
+    '明細を変更すると合計が合わなくなります（合計は凍結されたまま）。\n続けますか。')) return;
   let items;
   try{ items = await loadItems(id, true); }catch(e){ alert(e.message); return; }
   resetMake();
@@ -4296,24 +4342,24 @@ function vMake(){
       <div><b>✓ 保存しました</b>　案件番号 <b>${esc(lastSaved.job_no||'')}</b>　${esc(lastSaved.title||'')}
         <span class="muted">（総合計 ${yen(lastSaved.total_in_tax)} 円）</span></div>
       <div class="row" style="gap:6px;margin-top:8px">
-        <button class="btn sm" id="svPdf">見積書を出す（PDF）</button>
+        <button class="btn sm" id="svPdf">見積書を表示（PDF）</button>
         <button class="btn ghost sm" id="svOpen">この案件を開く</button>
-        <span class="muted small">「案件を探す」のいちばん上にも出ています</span>
+        <span class="muted small">「案件検索」のいちばん上にも出ています</span>
         <span class="spacer"></span>
         <button class="btn ghost sm" id="svClose">閉じる</button></div></div>`:''}
-  ${ed?`<div class="hint"><b>${esc(mk.job.job_no||'')} ${esc(mk.job.title||'')}</b> を直しています
+  ${ed?`<div class="hint"><b>${esc(mk.job.job_no||'')} ${esc(mk.job.title||'')}</b> を編集中です
     （version ${mk.job.version}）
-    <button class="btn ghost sm" id="mkcancel">やめて新規に戻す</button>
-    ${mk.job.amounts_locked?'<br><b>この案件は金額が凍結されています。</b>明細を直しても合計は変わりません。':''}</div>`
+    <button class="btn ghost sm" id="mkcancel">編集をやめる</button>
+    ${mk.job.amounts_locked?'<br><b>この案件は金額が凍結されています。</b>明細を変更しても合計は変わりません。':''}</div>`
   : copiedFrom ? `<div class="hint">
       <b>${esc(copiedFrom.title||'')}</b>（${esc(copiedFrom.quoted_at||'')}）をもとに<b>新しい見積</b>を作っています。
-      明細 ${mk.lines.length}行を引き継ぎました。<b>案件名と台数を、今回の現場に直してください。</b><br>
+      明細 ${mk.lines.length}行を引き継ぎました。<b>案件名と台数を、今回の現場に修正してください。</b><br>
       <span class="muted small">元の案件はそのまま残ります。保存すると新しい案件番号が振られます。</span>
-      <button class="btn ghost sm" id="mkcancel">やめて白紙に戻す</button></div>` : ''}
+      <button class="btn ghost sm" id="mkcancel">複製をやめる</button></div>` : ''}
   <div class="card${ed?' hidden':''}">
     <div class="row"><h2 style="margin:0">① 見積依頼のメールを取り込む</h2>
       <span class="spacer"></span>
-      <button class="btn ghost sm" id="mkfold">${mkFolded?'メールを貼り付けて読み取る ▾':'たたむ ▴'}</button></div>
+      <button class="btn ghost sm" id="mkfold">${mkFolded?'メールを貼り付けて読み取る ▾':'閉じる ▴'}</button></div>
     <!-- 受信箱は畳んでも出す。隠すと「メールが来たこと」に気づけないため（2026-09-09） -->
     <div id="inboxBox"></div>
     <div id="mkpasteWrap" ${mkFolded?'hidden':''}>
@@ -4326,20 +4372,20 @@ BP泊第6駐車場 設置工事のお見積り依頼
 株式会社おきなわブレイク 〇〇です。
 添付の図面のとおり、12台でロック板・精算機・場内灯の設置をお願いします。">${esc(mk.paste)}</textarea>
     <div class="row" style="margin-top:8px">
-      <button class="btn" id="mkread">読み取る</button>
+      <button class="btn" id="mkread">読み取り</button>
       <button class="btn ghost sm" id="mkclear">クリア</button>
     </div>
     <div class="row" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
       <label class="f" style="min-width:280px">メールに添付されてきた図面（PDF・任意）
         <input type="file" id="mkfiles" multiple accept=".pdf,.png,.jpg,.jpeg,.heic,.dwg,.xlsx,.xlsm"></label>
-      <span class="muted small">保存したあとに案件へ添付します。<br>あとから「案件を探す」で開いて追加・削除もできます</span>
+      <span class="muted small">保存したあとに案件へ添付します。<br>あとから「案件検索」で開いて追加・削除もできます</span>
     </div>
     <div id="mkread_out"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2>② 見積をつくる</h2>
+    <h2>② 見積作成</h2>
     <!-- 2026-09-29 大嶺さん「この画面もみにくい」。
          11個の欄が同じ重さで並んでいたのを、仕事の順（お客様と件名 → 現場 → 日程 → 請求・入金）に分けた。
          請求・入金は見積のときには使わないので、施工完了より前はたたんでおく（中身は1行で見せる）。 -->
@@ -4367,7 +4413,7 @@ BP泊第6駐車場 設置工事のお見積り依頼
         <div class="mkf-g g2">
           <label class="f">〒<input id="mkspc" value="${esc(mk.site_postal_code)}" placeholder="例：902-0062"></label>
           <label class="f">住所<input id="mksa" value="${esc(mk.site_address)}" placeholder="例：那覇市松川770"></label>
-          <label class="f">建物名・部屋番号<input id="mksb" value="${esc(mk.site_building)}" placeholder="あれば"></label>
+          <label class="f">建物名・部屋番号<input id="mksb" value="${esc(mk.site_building)}" placeholder="任意"></label>
           <button class="btn ghost sm" id="mkmap">🗺 地図で見る</button>
         </div>
       </div>
@@ -4400,10 +4446,10 @@ BP泊第6駐車場 設置工事のお見積り依頼
           <label class="f">入金日<input type="date" id="mkpd" value="${esc(mk.paid_at)}"></label>
         </div>
         <div class="row" style="margin-top:10px;gap:8px">
-          <button class="btn ghost sm" id="mkbill">請求書にする</button>
-          <button class="btn ghost sm" id="mkpaid">入金を記録する</button>
+          <button class="btn ghost sm" id="mkbill">請求書を作成</button>
+          <button class="btn ghost sm" id="mkpaid">入金を登録</button>
           <span class="muted small">「請求書にする」＝請求日を今日・支払期日を月末＋1ヶ月・状態を「請求済」に。
-            「入金を記録する」＝入金日を今日・状態を「入金済」に。どちらもあとから直せます。</span>
+            「入金を登録」＝入金日を今日・状態を「入金済」に。どちらもあとから直せます。</span>
         </div>
       </details>`;
       })()}
@@ -4475,7 +4521,7 @@ function drawInbox(){
     <b>📥 受信箱に ${inbox.length}件</b>
     <span class="small">Gmailで「見積依頼」ラベルを付けたメールが自動で入ります。
       押すと本文が読み取られた状態で下に入り、図面も一緒に付きます。</span>
-    <button class="btn ghost sm" id="inboxToggle" style="float:right">${inboxOpen?'たたむ ▴':`届いたメールを見る（${inbox.length}件） ▾`}</button>
+    <button class="btn ghost sm" id="inboxToggle" style="float:right">${inboxOpen?'閉じる ▴':`届いたメールを見る（${inbox.length}件） ▾`}</button>
   </div>
   ${inboxOpen?`<div class="scroll" style="max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:12px">
     <table><thead><tr><th>受信</th><th>差出人</th><th>件名</th><th class="n">図面</th><th></th></tr></thead>
@@ -4489,7 +4535,7 @@ function drawInbox(){
           ${same.length>1?`<br><span class="tag q">同じやりとりが ${same.length}件（図面の差し替えかもしれません）</span>`:''}</td>
         <td class="n">${att(r)?`<b>${att(r)}</b>`:'<span class="muted">—</span>'}</td>
         <td style="white-space:nowrap">
-          <button class="btn sm" data-inbox="${esc(r.id)}">これで見積をつくる</button>
+          <button class="btn sm" data-inbox="${esc(r.id)}">この内容で見積作成</button>
           <button class="btn ghost sm" data-inbox-skip="${esc(r.id)}">無視</button></td></tr>`;
     }).join('')}</tbody></table></div>`:''}`;
 
@@ -4541,7 +4587,7 @@ function drawRead(){
   if(!r){ el.innerHTML=''; return; }
   const cands=candidatesFor(r.kind, new Set(r.hits.map(h=>h.id)));
   el.innerHTML = `
-  <div class="ok" style="margin-top:12px">読み取り結果（違っていればここで直してください）</div>
+  <div class="ok" style="margin-top:12px">読み取り結果（違っていればここで修正してください）</div>
   <div class="row" style="margin:10px 0">
     <label class="f">工事の種類
       <select id="rkind">${['','設置','撤去','入替','補修'].map(k=>
@@ -4584,7 +4630,7 @@ function drawRead(){
       }).join('')}
     </tbody></table></div>
   <div class="row" style="margin-top:10px">
-    <button class="btn" id="rapply">✓を付けた ${mk.picks.size} 件を明細にする</button>
+    <button class="btn" id="rapply">選択した ${mk.picks.size} 件を明細に追加</button>
     <span class="muted small">依頼の行から数量が取れたものはその数量で入ります。
       取れなかった「台」の行には、上の「全体の台数」を入れます</span>
   </div>`;
@@ -4615,7 +4661,7 @@ const isExpenseLine = l => {
 function addWelfare(){
   const wt = M.wts.find(w=>/^法定福利費$/.test(w.name)) || M.wts.find(w=>/福利/.test(w.name));
   const base = mk.lines.filter(l=>!isExpenseLine(l)).reduce((a,l)=>a+Number(l.amount||0),0);
-  if(base<=0){ alert('先に工事の明細を入れてください。\n法定福利費は「諸経費を除いた工事の小計」の4%です。'); return; }
+  if(base<=0){ alert('先に工事の明細を入力してください。\n法定福利費は「諸経費を除いた工事の小計」の4%です。'); return; }
   const amt = Math.round(base*WELFARE_RATE);
   const at = mk.lines.findIndex(l=>/福利/.test(l.name||''));
   const line = { work_type_id: wt?wt.id:null, name: wt?wt.name:'法定福利費', section:2,
@@ -4646,7 +4692,7 @@ function drawProfit(){
   const laborRow = `<div class="lrow">
       <div class="row" style="gap:6px;align-items:center;margin-bottom:6px">
         <span class="muted small" style="width:30px">人工</span>
-        <input id="mklvendor" list="mklvlist" value="${esc(mk.labor_vendor||'')}" placeholder="外注先（選ぶか打つ）"
+        <input id="mklvendor" list="mklvlist" value="${esc(mk.labor_vendor||'')}" placeholder="外注先（選択または入力）"
           style="flex:1;min-width:0" title="人工を頼む外注先。選ぶと登録した単価が入ります。新しい名前もそのまま打てます">
         <datalist id="mklvlist">${laborVendorNames().map(v=>
           `<option value="${esc(v.name)}">${v.rate?yen(v.rate)+'円/人日':''}</option>`).join('')}</datalist>
@@ -4668,7 +4714,7 @@ function drawProfit(){
       <div class="phead">この見積が通ったら</div>
       ${laborRow}
       <div class="note" style="margin:0">原価がまだ入っていないので、粗利は出せません。<br>
-        <span class="small">明細の「原価単価」か、人工の人日を入れてください。
+        <span class="small">明細の「原価単価」か、人工の人日を入力してください。
         原価0のまま「粗利100%」と出すのは嘘になるので出しません。</span></div>
     </div>`;
   }
@@ -4707,7 +4753,7 @@ function drawProfit(){
       return over.length?`<div class="small" style="margin-top:6px;color:var(--danger)">
         ⚠ ${over.length}行は、Excelの原価が<b>単価より高い</b>ため自動で入れていません（機器代が工事の行に入っています）
         （${over.slice(0,3).map(l=>esc(l.name)).join('・')}${over.length>3?' ほか':''}）。
-        実際の原価を手で入れてください。</div>`:'';
+        実際の原価を手で入力してください。</div>`:'';
     })()}
   </div>`;
 }
@@ -4781,7 +4827,7 @@ function aMake(){
   const mm=document.getElementById('mkmap');
   if(mm) mm.onclick=()=>{
     const a=(document.getElementById('mksa')||{}).value||'';
-    if(!a.trim()){ alert('現場住所を入れてください。'); return; }
+    if(!a.trim()){ alert('現場住所を入力してください。'); return; }
     openMap(mapQuery({site_address:a}));
   };
   const cancel=document.getElementById('mkcancel');
@@ -4987,8 +5033,8 @@ function drawMake(){
     if(!cur) return '';
     const tg = carTargets(cur), inTitle=/(\d+)台/.test(((document.getElementById('mkt')||{}).value||mk.title||'').normalize('NFKC'));
     return `<div class="carcnt">
-      <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">台数をまとめて変える：いま <b>${cur}台</b>${inTitle?'（案件名から）':''} →
-        <input id="mkcar" style="width:64px;text-align:right" placeholder="${cur}"> 台に <button class="btn ghost sm" id="mkcarGo">変える</button></div>
+      <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">台数の一括変更：いま <b>${cur}台</b>${inTitle?'（案件名から）':''} →
+        <input id="mkcar" style="width:64px;text-align:right" placeholder="${cur}"> 台に <button class="btn ghost sm" id="mkcarGo">変更</button></div>
       ${tg.length ? `<div class="carlist">${tg.map(t=>`<label class="subchk"><input type="checkbox" data-carline="${t.i}" ${t.l._carOff?'':'checked'}>
           ${esc(t.l.name||'（工種なし）')} <span class="muted">${xfNum(t.l.qty)}${esc(t.l.unit||'')}</span><b class="carto" data-carto="${t.i}"></b></label>`).join('')}</div>
         <div class="small muted">数量が5以上の行と、いまの台数と同じ数の行です。違う数の行は差の分だけ増減します。変えない行はチェックを外してください</div>`
@@ -5010,13 +5056,13 @@ function drawMake(){
   </div>
   <!-- 備考（2026-09-30 村山さん「行ごとの備考はいらない。下に備考欄を書けるように」）。見積書に載る -->
   <label class="f mknote">備考 <span class="muted small">見積書に載ります（例：土間撤去は含まれておりません）</span>
-    <textarea id="mknote" rows="2" placeholder="なければ空のままで">${esc(mk.note||'')}</textarea></label>
+    <textarea id="mknote" rows="2" placeholder="任意">${esc(mk.note||'')}</textarea></label>
   <div class="mksplit"><div class="mkq">
   <div class="row" style="justify-content:flex-end;gap:8px">
     <button class="btn sm ghost" id="mkwelfare" title="工事の小計の4%。紙の見積書3枚と実データ199件で確認">＋ 法定福利費（4%）</button>
-    <button class="btn sm ghost" id="mkround">端数を落とす</button>
+    <button class="btn sm ghost" id="mkround">端数切り捨て</button>
     <label class="f">値引き<input id="mkdisc" style="width:110px;text-align:right"
-      value="${Math.abs(Number(mk.discount)||0)}" title="いくら引くかを入れてください"></label>
+      value="${Math.abs(Number(mk.discount)||0)}" title="いくら引くかを入力してください"></label>
   </div>
     <div class="ptot">
       <div><span>小計</span><span>${yen(sub)}</span></div>
@@ -5039,7 +5085,7 @@ function drawMake(){
     })()}
     <span class="spacer"></span>
     <button class="btn ghost" id="mkpdf" title="いま入れている内容で御見積書を開きます（保存はしません）">見積書で確認（PDF）</button>
-    <button class="btn" id="mksave" ${mk.saving?'disabled':''}>${mk.saving?'保存中…':'保存する'}</button>
+    <button class="btn" id="mksave" ${mk.saving?'disabled':''}>${mk.saving?'保存中…':'保存'}</button>
   </div>
   <div class="small muted" style="margin-top:8px">
     保存すると案件番号がサーバー側で採番されます${
@@ -5107,7 +5153,7 @@ function drawMake(){
   document.querySelectorAll('[data-carline]').forEach(c=>c.onchange=()=>{ const l=mk.lines[+c.dataset.carline]; if(l) l._carOff=!c.checked; carPreview(); });
   const cg=document.getElementById('mkcarGo'); if(cg) cg.onclick=()=>{
     const cur=carCountOf(), to=numIn(carIn.value);
-    if(!(to>0) || to!==Math.round(to)) return alert('台数を入れてください（整数）');
+    if(!(to>0) || to!==Math.round(to)) return alert('台数を入力してください（整数）');
     let n=0;
     carTargets(cur).forEach(({l})=>{ if(l._carOff) return;
       const q=carNewQty(Number(l.qty)||0, cur, to); if(q===Number(l.qty)) return;
@@ -5367,11 +5413,11 @@ function lineRow(l,i,avail){
   return `<tr class="itemrow">
     <td>${(l.work_type_id || l._pick)
       ? `<input class="wtp-in${l._pick&&!l.work_type_id?' empty':''}" data-wtp="${i}" value="${esc(l.work_type_id?l.name:'')}"
-           placeholder="工種を選ぶ（打つと絞り込み）" autocomplete="off" spellcheck="false" title="クリックすると、この顧客でよく使う工種が出ます。打つと絞り込めます">`
+           placeholder="工種を選択（入力で絞り込み）" autocomplete="off" spellcheck="false" title="クリックすると、この顧客でよく使う工種が出ます。打つと絞り込めます">`
       : `<input data-li="${i}" data-f="name" value="${esc(l.name)}" placeholder="品名を入力">`}
       ${l._pick && !l.work_type_id ? ''
         : !l.work_type_id ? '<span class="pill">自由入力</span>'
-        : l._from ? `<span class="pill" style="color:var(--warn);border-color:var(--warn)" title="この顧客の単価表に無いので、${esc(l._from)}の単価を入れました。必要なら直してください">${esc(l._from)}の単価</span>`
+        : l._from ? `<span class="pill" style="color:var(--warn);border-color:var(--warn)" title="この顧客の単価表に無いので、${esc(l._from)}の単価を入れました。必要なら修正してください">${esc(l._from)}の単価</span>`
         : l._sample===undefined ? ''                       /* 保存済みの行。単価は入っているのでバッジを出さない */
         : l._sample ? `<span class="pill">実績 ${l._sample}件${l._exact?'':' / 近い条件'}</span>`
         : '<span class="pill">実績なし</span>'}
@@ -5384,7 +5430,7 @@ function lineRow(l,i,avail){
     <td class="n"><input style="width:96px;text-align:right" data-li="${i}" data-f="unit_price" value="${l.unit_price}">
       ${(!l.unit_price && l._median) ? `<div class="small muted" style="white-space:nowrap">参考 ${yen(l._median)}</div>`:''}</td>
     <td class="n">${yen(l.amount)}</td>
-    <td><button class="btn ghost sm" data-del="${i}" title="この行を消す">×</button></td>
+    <td><button class="btn ghost sm" data-del="${i}" title="この行を削除">×</button></td>
     <td class="n c c1"><input style="width:96px;text-align:right" data-li="${i}" data-f="cost_unit" value="${l.cost_unit??''}" placeholder="原価単価">
       ${(()=>{
         const m=l._costMaster; if(!m) return '';
@@ -5464,7 +5510,7 @@ async function doSave(){
       }
       if(ok.length) fileMsg += `<br>図面 ${ok.length}件を添付しました（${ok.map(esc).join(' / ')}）`;
       if(ng.length) fileMsg += `<br><b>図面 ${ng.length}件は添付できませんでした。</b>`
-        + `案件は保存できているので、「案件を探す」から開いて追加してください。`
+        + `案件は保存できているので、「案件検索」から開いて追加してください。`
         + `<br>${ng.map(esc).join('<br>')}`;
     }
     // 受信箱から来た案件は、メールの添付を案件に付け替えて、受信箱から外す。
@@ -5530,7 +5576,7 @@ let mTab='mprice', mQ='';
    これで 847件 → 576件 になった（2026-09-07 実測）。 */
 /* マスタ＝村山さんが普段直すところ（2026-10-01 確認作業と最初に1回だけやる設定は「初期設定」へ分けた） */
 const MTABS = [
-  ['直す・足す・消す', [
+  ['基本データ', [
     ['mprice','単価表',          ()=>null],
     ['wt',    '工種',            ()=>null],
     ['mclient','顧客',           ()=>null],
@@ -5553,8 +5599,8 @@ const SEARCHABLE = new Set(['mprice','mcost','sup','wt','mclient','worker']);   
 function masterHead(){
   if(!MTAB_ALL.some(([k])=>k===mTab)) mTab='mprice';
   const left = checkLeft(), done = (M.settings||{}).setupDone;
-  return `<div class="small muted" style="margin-bottom:12px">ふだん直すところです。直すとその場で保存され、次に作る見積から使われます。
-      ${done ? `<button class="btn ghost sm" id="setupAgain" title="終えた初期設定を、もう一度メニューに出します">初期設定をもう一度出す</button>`
+  return `<div class="small muted" style="margin-bottom:12px">日常的に編集するデータです。変更はその場で保存され、次に作る見積から使われます。
+      ${done ? `<button class="btn ghost sm" id="setupAgain" title="終えた初期設定を、もう一度メニューに出します">初期設定を再表示</button>`
              : `Excelから移した中身の確認やメール取込などは <button class="btn ghost sm" data-gocheck="price">初期設定${left?`（あと ${left.toLocaleString()}件）`:''}</button>`}</div>
     <div class="row" style="align-items:flex-end;gap:18px">
       ${MTABS.map(([g,ts])=>`<div>
@@ -5693,8 +5739,8 @@ function drawPrices(el, q){
     return [...groups.entries()].sort((a,b)=>b[1].length-a[1].length).map(([k,g])=>{
       const s = cstat.get(k) || {n:g.length, todo:0, odd:0};
       return `<tr class="pgrp"><td colspan="6"><b>${esc(g[0].c)}</b>
-        <span class="muted small">　${s.n}行${g.length<s.n?`（ここに出ているのは ${g.length}行。「この会社だけ見る」で全部）`:''}${s.todo?`・未確定 ${s.todo}`:''}${s.odd?`・<span style="color:var(--danger)">⚠ 直近とずれ ${s.odd}</span>`:''}</span>
-        <button class="btn ghost sm" data-pc="${esc(k)}" style="float:right">この会社だけ見る</button></td></tr>`
+        <span class="muted small">　${s.n}行${g.length<s.n?`（ここに出ているのは ${g.length}行。「この会社で絞り込み」で全部）`:''}${s.todo?`・未確定 ${s.todo}`:''}${s.odd?`・<span style="color:var(--danger)">⚠ 直近とずれ ${s.odd}</span>`:''}</span>
+        <button class="btn ghost sm" data-pc="${esc(k)}" style="float:right">この会社で絞り込み</button></td></tr>`
         + g.map(fn).join('');
     }).join('');
   };
@@ -5702,7 +5748,7 @@ function drawPrices(el, q){
   el.innerHTML = `
   <div class="note">
     この表は<b>過去の見積から機械が拾った初期値</b>です。正解ではありません。<br>
-    <b>合っていれば「確定」、違えば単価を直してから「確定」</b>を押してください。
+    <b>合っていれば「確定」、違えば単価を修正してから「確定」</b>を押してください。
     一から入力する必要はありません。
   </div>
   <div class="row" style="margin:10px 0 6px">
@@ -5715,11 +5761,11 @@ function drawPrices(el, q){
         `<button data-pf="${k}" class="${pFilter===k?'on':''}">${l}</button>`).join('')}
     </div>
     <div class="seg">
-      <button data-prec="1" class="${pRecentOnly?'on':''}">直近1年で使うもの</button>
-      <button data-prec="0" class="${pRecentOnly?'':'on'}">古いものも</button>
+      <button data-prec="1" class="${pRecentOnly?'on':''}">直近1年</button>
+      <button data-prec="0" class="${pRecentOnly?'':'on'}">すべての期間</button>
     </div>
     <button class="btn sm" id="pAllOk" ${rows.filter(r=>!r.p.confirmed_at).length?'':'disabled'}>
-      表示中の ${rows.filter(r=>!r.p.confirmed_at).length}行 をまとめて確定</button>
+      表示中の ${rows.filter(r=>!r.p.confirmed_at).length}行 を一括確定</button>
   </div>
 
   ${(()=>{
@@ -5740,7 +5786,7 @@ function drawPrices(el, q){
         いちばん多かった金額を出しているので、<b>昔の金額に引きずられている</b>ことがあります。
         実データでは<b>推奨125,000／直近はずっと10,000</b>という行がありました。</span>
       <div class="row" style="margin-top:8px">
-        <button class="btn sm" id="pOdd">この ${oddR.length}行 を先に見る</button>
+        <button class="btn sm" id="pOdd">この ${oddR.length}行 を先に表示</button>
       </div></div>`:''}
 
     <div class="note" style="margin-bottom:10px">
@@ -5755,13 +5801,13 @@ function drawPrices(el, q){
           「いつもこの単価」${solid.length}行 だけ表示</button>
         <button class="btn sm ghost" id="pShaky" ${shaky.length?'':'disabled'}>
           「ばらついている」${shaky.length}行 だけ表示</button>
-        ${pSure!=='all' ? `<button class="btn sm ghost" id="pAllSure">全部を表示</button>`:''}
+        ${pSure!=='all' ? `<button class="btn sm ghost" id="pAllSure">すべて表示</button>`:''}
       </div>
     </div>`;
   })()}
   ${pRecentOnly && later ? `<div class="small muted" style="margin:-2px 0 8px">
     ほかに <b>${later}行</b> ありますが、<b>直近1年で1度も使っていない単価</b>なので後回しで構いません。
-    次に使うときに画面が「未確定」と出します。「古いものも」で見られます。</div>`:''}
+    次に使うときに画面が「未確定」と出します。「すべての期間」で見られます。</div>`:''}
   <div id="pMsg"></div>
   <div class="pwrap">
     <div class="plist">
@@ -5774,23 +5820,23 @@ function drawPrices(el, q){
       ${cur ? (()=>{
         const c = clientMap.get(pClient), hidden = c && c.active===false;
         return `<div class="phead row" style="gap:10px;align-items:baseline">
-          <span><b>${esc(cur.name)}</b> の単価表${hidden?' <span class="tag">見積の顧客一覧から隠しています</span>':''}
+          <span><b>${esc(cur.name)}</b> の単価表${hidden?' <span class="tag">顧客一覧で非表示中</span>':''}
           <span class="muted small">　${cur.n}行${cur.todo?`・未確定 ${cur.todo}`:'・すべて確定済み'}</span></span>
           <span class="spacer"></span>
-          ${hiddenN||pShowHidden?`<button class="btn ghost sm" id="pHid">${pShowHidden?'← 単価表に戻る':`消した行 ${hiddenN}`}</button>`:''}
-          ${c?`<button class="btn ghost sm" id="pHideClient" title="見積をつくるの「顧客」の一覧に出さない（マスタには残る。いつでも戻せます）">${hidden?'顧客一覧に戻す':'この顧客を一覧から隠す'}</button>`:''}
+          ${hiddenN||pShowHidden?`<button class="btn ghost sm" id="pHid">${pShowHidden?'← 単価表に戻る':`削除済み ${hiddenN}`}</button>`:''}
+          ${c?`<button class="btn ghost sm" id="pHideClient" title="見積作成の「顧客」の一覧に出さない（マスタには残る。いつでも戻せます）">${hidden?'顧客一覧に再表示':'顧客一覧で非表示'}</button>`:''}
         </div>
-        ${pShowHidden?'':`<details class="padd"><summary>＋ この会社に工種を足す</summary>
+        ${pShowHidden?'':`<details class="padd"><summary>＋ この会社に工種を追加</summary>
           <div class="row" style="gap:8px;align-items:flex-end;margin-top:8px;flex-wrap:wrap">
-            <label class="f">工種<input id="paName" list="paList" placeholder="打つと候補が出ます（無ければ新しく作ります）" style="width:300px"></label>
+            <label class="f">工種<input id="paName" list="paList" placeholder="入力で候補を表示（未登録なら新規作成）" style="width:300px"></label>
             <datalist id="paList">${(M.wts||[]).filter(w=>w.active!==false).map(w=>`<option value="${esc(w.name)}">`).join('')}</datalist>
             <label class="f">単位<input id="paUnit" placeholder="式" style="width:60px"></label>
             <label class="f">単価<input id="paPrice" placeholder="0" style="width:100px;text-align:right"></label>
-            <label class="f">原価<input id="paCost" placeholder="空なら原価マスタ" style="width:120px;text-align:right"></label>
-            <button class="btn sm" id="paAdd">足す</button>
+            <label class="f">原価<input id="paCost" placeholder="空欄なら共通の原価" style="width:120px;text-align:right"></label>
+            <button class="btn sm" id="paAdd">追加</button>
           </div></details>`}`;
-      })() : (pShowHidden?`<div class="phead row"><b>消した行</b><span class="spacer"></span><button class="btn ghost sm" id="pHid">← 単価表に戻る</button></div>`
-                         : (hiddenN?`<div class="phead row"><span class="spacer"></span><button class="btn ghost sm" id="pHid">消した行 ${hiddenN}</button></div>`:''))}
+      })() : (pShowHidden?`<div class="phead row"><b>削除済み</b><span class="spacer"></span><button class="btn ghost sm" id="pHid">← 単価表に戻る</button></div>`
+                         : (hiddenN?`<div class="phead row"><span class="spacer"></span><button class="btn ghost sm" id="pHid">削除済み ${hiddenN}</button></div>`:''))}
       <div class="scroll taller"><table class="tight">
     <thead><tr><th>工種</th><th>単位</th>
       <th class="n">単価</th><th class="n" title="この顧客のときの原価。空なら工種の原価マスタを使います">原価</th><th>過去の実績</th><th></th></tr></thead>
@@ -5826,16 +5872,16 @@ function drawPrices(el, q){
           h += ` <span style="color:${same?'var(--muted)':'var(--danger)'}">`
              + `直近3件はずっと <b>${yen(v.value)}</b>${same?'（一致）':''}</span>`;
           if(!same) h += ` <button class="btn sm" data-fitrecent="${esc(r.p.id)}"
-              data-v="${Number(v.value)}">直近に合わせる</button>`;
+              data-v="${Number(v.value)}">直近の単価に合わせる</button>`;
         }
         return h;
       })()}</td>
       <td style="white-space:nowrap">${pShowHidden
-        ? `<button class="btn sm" data-revive="${esc(r.p.id)}">単価表に戻す</button>`
+        ? `<button class="btn sm" data-revive="${esc(r.p.id)}">復元</button>`
         : (r.p.confirmed_at
-        ? `<span class="tag b">確定</span> <button class="btn ghost sm" data-undo="${esc(r.p.id)}">戻す</button>`
+        ? `<span class="tag b">確定</span> <button class="btn ghost sm" data-undo="${esc(r.p.id)}">確定を取消</button>`
         : `<button class="btn sm" data-ok="${esc(r.p.id)}">確定</button>`)
-        + ` <button class="btn ghost sm" data-pdel="${esc(r.p.id)}" title="単価表から消す（見積で出なくなる。あとで戻せます）">消す</button>`}</td></tr>`)
+        + ` <button class="btn ghost sm" data-pdel="${esc(r.p.id)}" title="単価表から削除（見積で出なくなります。あとで復元できます）">削除</button>`}</td></tr>`)
       || '<tr><td colspan="6" class="muted">該当する行がありません</td></tr>'}</tbody></table></div>
     </div>
   </div>
@@ -5849,10 +5895,10 @@ function drawPrices(el, q){
   // 消す（active=false）／戻す。消しても行は残るので、いつでも戻せる
   el.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=async()=>{
     const row=find(b.dataset.pdel); const nm=(wtMap.get(row.work_type_id)||{}).name||'';
-    if(!confirm(`「${nm}」（${yen(row.unit_price)}）を単価表から消します。\n見積をつくるで出なくなります。「消した行」からいつでも戻せます。`)) return;
+    if(!confirm(`「${nm}」（${yen(row.unit_price)}）を単価表から削除します。\n見積作成で出なくなります。「削除済み」からいつでも復元できます。`)) return;
     b.disabled=true;
     try{ await savePrice(row,{active:false}); reindex(); drawMaster();
-         const pm=document.getElementById('pMsg'); if(pm) pm.innerHTML=`<div class="ok">「${esc(nm)}」を消しました（「消した行」から戻せます）</div>`; }
+         const pm=document.getElementById('pMsg'); if(pm) pm.innerHTML=`<div class="ok">「${esc(nm)}」を削除しました（「削除済み」から復元できます）</div>`; }
     catch(e){ b.disabled=false; msg(`<div class="err">${esc(e.message)}</div>`); }
   });
   el.querySelectorAll('[data-revive]').forEach(b=>b.onclick=async()=>{
@@ -5866,7 +5912,7 @@ function drawPrices(el, q){
   const ph=document.getElementById('pHid'); if(ph) ph.onclick=()=>{ pShowHidden=!pShowHidden; drawMaster(); };
   const phc=document.getElementById('pHideClient'); if(phc) phc.onclick=async()=>{
     const c=clientMap.get(pClient); if(!c) return; const hide = c.active!==false;
-    if(hide && !confirm(`「${c.name}」を、見積をつくるの顧客の一覧から隠します。\nマスタと過去の案件には残ります。いつでも戻せます。`)) return;
+    if(hide && !confirm(`「${c.name}」を、見積作成の顧客の一覧で非表示にします。\nマスタと過去の案件には残ります。いつでも戻せます。`)) return;
     phc.disabled=true;
     try{ await patchClient(c,{active:!hide}); reindex(); drawMaster(); }
     catch(e){ phc.disabled=false; msg(`<div class="err">${esc(e.message)}</div>`); }
@@ -5878,15 +5924,15 @@ function drawPrices(el, q){
     const name=paName.value.trim(), unit=document.getElementById('paUnit').value.trim();
     const price=numIn(document.getElementById('paPrice').value), ct=document.getElementById('paCost').value.trim();
     const cost = ct==='' ? null : numIn(ct);
-    if(!name) return msg('<div class="err">工種を入れてください</div>');
-    if(!(price>=0) || !isFinite(price)) return msg('<div class="err">単価を入れてください</div>');
+    if(!name) return msg('<div class="err">工種を入力してください</div>');
+    if(!(price>=0) || !isFinite(price)) return msg('<div class="err">単価を入力してください</div>');
     if(cost!==null && (!isFinite(cost) || cost<0)) return msg('<div class="err">原価は0以上の数字か、空にしてください</div>');
     const isNew = !(M.wts||[]).some(x=>String(x.name).trim()===name);
-    if(isNew && !confirm(`「${name}」は工種の一覧にありません。新しい工種として作って、この会社の単価表に足します。よろしいですか。`)) return;
+    if(isNew && !confirm(`「${name}」は工種の一覧にありません。新しい工種として登録し、この会社の単価表に追加します。よろしいですか。`)) return;
     paAdd.disabled=true;
     try{ const r=await addPriceRow(pClient==='_'?null:pClient, name, unit, price, cost);
          drawMaster();
-         const pm=document.getElementById('pMsg'); if(pm) pm.innerHTML=`<div class="ok">「${esc(r.w.name)}」を ${yen(price)} で${r.revived?'単価表に戻して直しました':'足しました'}${isNew?'（工種も新しく作りました）':''}。見積をつくるですぐ使えます。</div>`; }
+         const pm=document.getElementById('pMsg'); if(pm) pm.innerHTML=`<div class="ok">「${esc(r.w.name)}」を ${yen(price)} で${r.revived?'単価表に復元して更新しました':'追加しました'}${isNew?'（工種も新しく作りました）':''}。見積作成ですぐ使えます。</div>`; }
     catch(e){ paAdd.disabled=false; msg(`<div class="err">${esc(e.message)}</div>`); }
   };
   el.querySelectorAll('[data-prec]').forEach(b=>b.onclick=()=>{ pRecentOnly=b.dataset.prec==='1'; drawMaster(); });
@@ -5909,12 +5955,12 @@ function drawPrices(el, q){
   // 単価を直したら、その場で保存する（確定はしない＝直しただけの状態を残す）
   el.querySelectorAll('[data-price]').forEach(inp=>inp.onchange=async()=>{
     const row=find(inp.dataset.price); const v=numIn(inp.value);
-    if(!isFinite(v) || v<0){ inp.value=Number(row.unit_price); msg('<div class="err">単価は0以上の数字で入れてください（カンマは入れても大丈夫です）</div>'); return; }
+    if(!isFinite(v) || v<0){ inp.value=Number(row.unit_price); msg('<div class="err">単価は0以上の数字で入力してください（カンマは入れても大丈夫です）</div>'); return; }
     if(v===Number(row.unit_price)) return;
     const before=Number(row.unit_price);
     inp.disabled=true;
     try{ await savePrice(row,{unit_price:v, source:'手入力'});
-         msg(`<div class="ok">${esc((wtMap.get(row.work_type_id)||{}).name||'')} の単価を ${yen(before)} → <b>${yen(v)}</b> に直しました</div>`); }
+         msg(`<div class="ok">${esc((wtMap.get(row.work_type_id)||{}).name||'')} の単価を ${yen(before)} → <b>${yen(v)}</b> に変更しました</div>`); }
     catch(e){ inp.value=before; msg(`<div class="err">${esc(e.message)}</div>`); }
     finally{ inp.disabled=false; }
   });
@@ -5923,7 +5969,7 @@ function drawPrices(el, q){
   el.querySelectorAll('[data-cost]').forEach(inp=>inp.onchange=async()=>{
     const row=find(inp.dataset.cost); const t=inp.value.trim();
     const v = t==='' ? null : numIn(t);
-    if(v!==null && (!isFinite(v) || v<0)){ inp.value=row.cost_unit??''; msg('<div class="err">原価は0以上の数字で入れてください（空にすると工種の原価マスタを使います）</div>'); return; }
+    if(v!==null && (!isFinite(v) || v<0)){ inp.value=row.cost_unit??''; msg('<div class="err">原価は0以上の数字で入力してください（空にすると工種の原価マスタを使います）</div>'); return; }
     const before = row.cost_unit==null||row.cost_unit==='' ? null : Number(row.cost_unit);
     if(v===before) return;
     inp.disabled=true;
@@ -5957,7 +6003,7 @@ function drawPrices(el, q){
     const todo=rows.filter(r=>!r.p.confirmed_at).map(r=>r.p);
     if(!todo.length) return;
     if(!confirm(`いま表示している ${todo.length}行 を「確定」にします。\n`
-      +`画面で直した単価はそのまま保存されます。よろしいですか。`)) return;
+      +`画面で変更した単価はそのまま保存されます。よろしいですか。`)) return;
     allBtn.disabled=true;
     let ok=0; const ng=[];
     for(const row of todo){
@@ -6029,7 +6075,7 @@ function drawClients(el, q){
   el.innerHTML = `
   <div class="note">
     Excelの「御中」欄の<b>100通りの書き方を ${M.clients.length}社</b>にまとめてあります。<br>
-    <b>違う会社を一緒にしていないか</b>だけ見てください。まとめ方が違う社は「分ける」で直せます。
+    <b>違う会社を一緒にしていないか</b>だけ見てください。まとめ方が違う社は「分割」で修正できます。
   </div>
   ${(()=>{
     /* 顧客の確認も、単価表と同じで「見なくてよいもの」が大半。
@@ -6049,9 +6095,9 @@ function drawClients(el, q){
       </span>
       <div class="row" style="margin-top:8px">
         <button class="btn sm" id="cOnlyMerged" ${two.length?'':'disabled'}>
-          まとめた ${two.length}社 だけ見る</button>
+          統合した ${two.length}社 だけ表示</button>
         <button class="btn sm ghost" id="cOneOk" ${one.length?'':'disabled'}>
-          1通りだけの ${one.length}社 をまとめて確認済にする</button>
+          1通りだけの ${one.length}社 を一括で確認済にする</button>
         <span class="muted small" id="cBulkMsg"></span>
       </div>
     </div>`;
@@ -6079,15 +6125,15 @@ function drawClients(el, q){
           <div class="small muted">${esc(c.formal_name||'')}</div></td>
         <td class="small">${vs.length>1
           ? vs.map(v=>`${esc(v)} <button class="btn ghost sm" data-split="${esc(c.id)}"
-              data-v="${esc(v)}" title="この書き方を別の会社として分ける">分ける</button>`).join('<br>')
+              data-v="${esc(v)}" title="この書き方を別の会社として分ける">分割</button>`).join('<br>')
           : `<span class="muted">${esc(vs[0]||'—')}</span>`}</td>
         <td class="n">${n}</td>
         <td class="n">${wtsByClient.get(c.id)?.size||0}</td>
         <td style="white-space:nowrap">
           ${c.data&&c.data.reviewed_at
-            ? `<button class="btn ghost sm" data-unrev="${esc(c.id)}">戻す</button>`
-            : `<button class="btn sm" data-rev="${esc(c.id)}">確認した</button>`}
-          <button class="btn ghost sm" data-merge="${esc(c.id)}">まとめる</button>
+            ? `<button class="btn ghost sm" data-unrev="${esc(c.id)}">確認を取消</button>`
+            : `<button class="btn sm" data-rev="${esc(c.id)}">確認済みにする</button>`}
+          <button class="btn ghost sm" data-merge="${esc(c.id)}">統合</button>
         </td></tr>`;
     }).join('') || '<tr><td colspan="5" class="muted">該当する社がありません</td></tr>'}</tbody></table></div>
   ${list.length>300?`<div class="small muted" style="margin-top:8px">表示は先頭300社（該当 ${list.length}社）</div>`:''}`;
@@ -6173,18 +6219,18 @@ function openMerge(from){
   const cands = M.clients.filter(c=>c.id!==from.id)
     .map(c=>({c, score: similar(from.name, c.name)}))
     .sort((a,b)=>b.score-a.score).slice(0, 40);
-  document.getElementById('dlgT').textContent = `「${from.name}」を別の会社にまとめる`;
+  document.getElementById('dlgT').textContent = `「${from.name}」を別の会社に統合`;
   document.getElementById('dlgB').innerHTML = `
     <div class="note"><b>${esc(from.name)}</b>（案件 ${clientJobs(from).length}件）を、選んだ会社に吸収させます。<br>
       案件と「Excelでの書き方」は移ります。<b>単価表は、相手にまだ無い行だけ移ります</b>
       （同じ工種の単価が両方にある場合は、相手側の単価を残します）。<br>
-      元の会社は<b>使わない状態</b>にします（消しません）。</div>
+      元の会社は<b>使わない状態</b>にします（削除しません）。</div>
     <div class="row" style="margin:10px 0">
       <label class="f" style="flex:1;min-width:280px">まとめ先
         <select id="mgTo">${cands.map(({c,score})=>
           `<option value="${esc(c.id)}">${esc(c.name)}（案件${clientJobs(c).length}件）${
             score>0.5?'　← 名前が似ています':''}</option>`).join('')}</select></label>
-      <button class="btn" id="mgGo">まとめる</button>
+      <button class="btn" id="mgGo">統合</button>
     </div>
     <div id="mgMsg"></div>`;
   dlg.showModal();
@@ -6251,11 +6297,11 @@ function supForm(s){
   return `<div class="supform">${SUP_FIELDS.map(([k,l,ph])=>`<label class="f">${l}
       <input data-sf="${k}" value="${esc((s&&s[k])||'')}" placeholder="${esc(ph)}"${k==='email'?' type="email"':''}></label>`).join('')}
     <div class="row" style="gap:8px;align-items:flex-end">
-      <button class="btn sm" id="supSave">${s?'保存する':'足す'}</button>
-      <button class="btn ghost sm" id="supCancel">やめる</button></div></div>`;
+      <button class="btn sm" id="supSave">${s?'保存':'追加'}</button>
+      <button class="btn ghost sm" id="supCancel">キャンセル</button></div></div>`;
 }
 async function saveSupplier(s, vals){
-  if(!String(vals.name||'').trim()) throw new Error('呼び名を入れてください');
+  if(!String(vals.name||'').trim()) throw new Error('呼び名を入力してください');
   if(vals.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(vals.email)) throw new Error('メールアドレスの形が正しくありません');
   const body = Object.assign({}, vals);
   Object.keys(body).forEach(k=>{ if(body[k]==='') body[k]=null; }); body.name=String(vals.name).trim();
@@ -6275,15 +6321,15 @@ function drawSuppliers(el, q){
   <div class="row"><b>${sups.length}社</b>
     <span class="muted small">外注先（人工・電気・ライン・看板など）と仕入先です。メールを入れておくと、あとで図面やオープン日を送れるようになります。</span>
     <span class="spacer"></span>
-    <button class="btn sm" id="supAdd">＋ 外注先を足す</button></div>
+    <button class="btn sm" id="supAdd">＋ 外注先を追加</button></div>
   <div id="supMsg"></div>
-  ${supEdit==='new'?`<div class="card" style="margin-top:12px"><h2>外注先を足す</h2>${supForm(null)}</div>`:''}
-  ${!sups.length && supEdit!=='new' ? `<div class="note" style="margin-top:12px">まだ1社も入っていません。「＋ 外注先を足す」から入れてください。</div>`:''}
+  ${supEdit==='new'?`<div class="card" style="margin-top:12px"><h2>外注先を追加</h2>${supForm(null)}</div>`:''}
+  ${!sups.length && supEdit!=='new' ? `<div class="note" style="margin-top:12px">まだ1社も入っていません。「＋ 外注先を追加」から登録してください。</div>`:''}
   ${sups.map(s=>{
     const ps = prices.filter(p=>p.supplier_id===s.id)
                      .sort((a,b)=>String(a.valid_from||'').localeCompare(String(b.valid_from||'')) || a.id.localeCompare(b.id));
     const terms = [...new Set(ps.map(p=>p.valid_from).filter(Boolean))];
-    if(supEdit===s.id) return `<div class="card" style="margin-top:12px"><h2>${esc(s.name)} を直す</h2>${supForm(s)}</div>`;
+    if(supEdit===s.id) return `<div class="card" style="margin-top:12px"><h2>${esc(s.name)} を編集</h2>${supForm(s)}</div>`;
     return `<div class="card" style="margin-top:12px">
       <div class="row" style="gap:20px">
         <div><div class="muted small">外注先</div><b style="font-size:15px">${esc(s.name)}</b>
@@ -6294,7 +6340,7 @@ function drawSuppliers(el, q){
         ${s.tel?`<div><div class="muted small">TEL</div>${esc(s.tel)}</div>`:''}
         ${s.lead_days!=null?`<div><div class="muted small">段取り</div>${s.lead_days}日</div>`:''}
         <span class="spacer"></span>
-        <button class="btn ghost sm" data-supedit="${esc(s.id)}">直す</button>
+        <button class="btn ghost sm" data-supedit="${esc(s.id)}">編集</button>
       </div>
       ${s.note?`<div class="small muted" style="margin-top:6px">${esc(s.note)}</div>`:''}
       ${ps.length?`
@@ -6323,7 +6369,7 @@ function drawSuppliers(el, q){
     const s = supEdit==='new' ? null : (M.suppliers||[]).find(x=>x.id===supEdit);
     save.disabled=true;
     try{ const row=await saveSupplier(s, vals); supEdit=null; drawMaster();
-         smsg(`<div class="ok">${esc(row.name)} を${s?'直しました':'足しました'}</div>`); }
+         smsg(`<div class="ok">${esc(row.name)} を${s?'更新しました':'追加しました'}</div>`); }
     catch(e){ save.disabled=false; smsg(`<div class="err">${esc(e.message)}</div>`); }
   };
 }
@@ -6401,7 +6447,7 @@ function drawBackup(el){
   </div>
 
   <div class="card" style="margin-top:12px">
-    <h2>戻す</h2>
+    <h2>復元</h2>
     <div class="note w" style="margin:6px 0 10px">
       <b>これは中身を入れ替える操作です。</b>
       いまのデータに、控えの内容を上書きします（同じIDの行は控えの内容で置き換わります）。<br>
@@ -6466,7 +6512,7 @@ function drawBackup(el){
         <td class="n">${r.now==null?'—':r.now.toLocaleString()}</td></tr>`).join('')}
       </tbody></table></div>
       <div class="row" style="margin-top:10px">
-        <button class="btn" id="bkRestore" style="background:var(--danger)">この内容で上書きする</button>
+        <button class="btn" id="bkRestore" style="background:var(--danger)">上書きで復元</button>
         <span class="muted small">押すと戻せません。先にいまの控えを取っておいてください。</span>
       </div>
       <div id="bkRestoreLog"></div>`;
@@ -6509,7 +6555,7 @@ async function restoreBackup(data){
   log.innerHTML = `<div class="${ng.length?'err':'ok'}" style="margin-top:10px">
     ${ok.toLocaleString()}行を戻しました。
     ${ng.length?`<br><b>${ng.length}か所で失敗しました。</b><br>${ng.slice(0,5).map(esc).join('<br>')}`:''}
-    <br><span class="small">画面を読み直してください。</span></div>`;
+    <br><span class="small">画面を再読み込みしてください。</span></div>`;
   b.disabled = false;
 }
 
@@ -6562,7 +6608,7 @@ function drawGasSetup(el){
     <div class="row">
       <h2 style="margin:0">貼り付けるコード（${tpl.split('\n').length}行）</h2>
       <span class="spacer"></span>
-      <button class="btn sm" id="gasCopy">コピーする</button>
+      <button class="btn sm" id="gasCopy">コピー</button>
       <span class="muted small" id="gasMsg"></span>
     </div>
     <textarea id="gasCode" readonly rows="16"
@@ -6710,8 +6756,8 @@ function drawCostPrices(el, all0){
         `<button data-cf="${k}" class="${costFilter===k?'on':''}">${l}</button>`).join('')}
     </div>
     <div class="seg">
-      <button data-crec="1" class="${cRecentOnly?'on':''}">直近1年で使うもの</button>
-      <button data-crec="0" class="${cRecentOnly?'':'on'}">古いものも</button>
+      <button data-crec="1" class="${cRecentOnly?'on':''}">直近1年</button>
+      <button data-crec="0" class="${cRecentOnly?'':'on'}">すべての期間</button>
     </div>
     <span class="muted small">見積りシートの「直接原価（単価）」の実績から、いちばん多かった金額を入れてあります。</span>
   </div>
@@ -6730,12 +6776,12 @@ function drawCostPrices(el, all0){
         「いつもこの原価」${solid.length}件 だけ表示</button>
       <button class="btn sm ghost" data-cf="shaky" ${shaky.length?'':'disabled'}>
         「ばらついている」${shaky.length}件 だけ表示</button>
-      ${costFilter!=='all' ? `<button class="btn sm ghost" data-cf="all">全部を表示</button>`:''}
+      ${costFilter!=='all' ? `<button class="btn sm ghost" data-cf="all">すべて表示</button>`:''}
     </div>
   </div>`:''}
   ${costFilter==='check'?`<div class="note">
     <b>案件ごとに金額がばらついている工種です。</b>いちばん多かった金額を出していますが、
-    そのまま使ってよいか分かりません。<b>直すか、確定にしてください。</b></div>`:''}
+    そのまま使ってよいか分かりません。<b>修正するか、確定にしてください。</b></div>`:''}
   <div class="scroll taller"><table class="tight">
     <thead><tr><th>工種</th><th>単位</th><th class="n">直接原価（単価）</th>
       <th>過去の実績</th><th></th></tr></thead>
@@ -6754,8 +6800,8 @@ function drawCostPrices(el, all0){
       })()}</td>
       <td style="white-space:nowrap">${c.confirmed_at
         ? `<span class="muted small">${esc(String(c.confirmed_at).slice(0,10))} 確定</span>
-           <button class="btn ghost sm" data-cundo="${esc(c.id)}">戻す</button>`
-        : `<button class="btn ghost sm" data-cok="${esc(c.id)}">これでOK</button>`}</td>
+           <button class="btn ghost sm" data-cundo="${esc(c.id)}">確定を取消</button>`
+        : `<button class="btn ghost sm" data-cok="${esc(c.id)}">確定</button>`}</td>
     </tr>`).join('') || '<tr><td colspan="5" class="muted">該当なし</td></tr>'}</tbody></table></div>
   ${pick.length>400?`<div class="muted small">表示は先頭400件です（該当 ${pick.length}件）</div>`:''}
   <div class="small muted" style="margin-top:8px">
@@ -6769,7 +6815,7 @@ function drawCostPrices(el, all0){
     const row=(M.costPrices||[]).find(x=>x.id===inp.dataset.cost); if(!row) return;
     const v=numIn(inp.value); if(!Number.isFinite(v)||v<0){ inp.value=Number(row.cost_unit); return; }
     inp.disabled=true;
-    try{ await saveCostPrice(row,{cost_unit:v, source:'手入力', updated_at:new Date().toISOString()}); setBar('原価を直しました'); }
+    try{ await saveCostPrice(row,{cost_unit:v, source:'手入力', updated_at:new Date().toISOString()}); setBar('原価を更新しました'); }
     catch(e){ alert(e.message); inp.value=Number(row.cost_unit); }
     inp.disabled=false;
   });
@@ -6902,8 +6948,8 @@ function drawDocSettings(el){
         <input id="dsStamp" value="${esc(S.stampName||'村山')}" style="width:120px"></label>
     </div>
     <div class="row" style="margin-top:14px;gap:8px">
-      <button class="btn" id="dsSave">保存する</button>
-      ${S.sealCompany?'<button class="btn ghost sm" id="dsDel">会社印を外す</button>':''}
+      <button class="btn" id="dsSave">保存</button>
+      ${S.sealCompany?'<button class="btn ghost sm" id="dsDel">会社印を削除</button>':''}
     </div>`;
     document.getElementById('dsSeal').onchange = async e => {
       const f = e.target.files && e.target.files[0]; if(!f) return;
@@ -6963,10 +7009,10 @@ function drawLaborSettings(el){
         <tbody>${rows.map((r,i)=>`<tr>
           <td><input data-ln="${i}" value="${esc(r.name)}" placeholder="外注先の名前" style="width:220px"></td>
           <td class="n"><input data-lu="${i}" value="${esc(r.unit_price)}" placeholder="15000" style="width:110px;text-align:right"></td>
-          <td><button class="btn ghost sm" data-ld="${i}" title="この行を消す">×</button></td></tr>`).join('')
+          <td><button class="btn ghost sm" data-ld="${i}" title="この行を削除">×</button></td></tr>`).join('')
           || '<tr><td colspan="3" class="muted small">まだ登録がありません。</td></tr>'}</tbody></table></div>
       <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap">
-        <button class="btn ghost sm" id="lAdd">＋ 外注先を足す</button>
+        <button class="btn ghost sm" id="lAdd">＋ 外注先を追加</button>
         ${miss.length?`<span class="muted small" style="margin-left:8px">案件で使った未登録の外注先：</span>
           ${miss.slice(0,8).map(n=>`<button class="btn ghost sm" data-lq="${esc(n)}">＋ ${esc(n)}</button>`).join('')}`:''}
       </div>
@@ -6976,7 +7022,7 @@ function drawLaborSettings(el){
       <label class="f">外注先を入れないときの単価（円／人日）
         <input id="lDef" value="${def}" style="width:110px;text-align:right"></label>
     </div>
-    <div class="row" style="margin-top:14px"><button class="btn" id="lSave">保存する</button></div>`;
+    <div class="row" style="margin-top:14px"><button class="btn" id="lSave">保存</button></div>`;
     const sync = () => {                        // 描き直す前に、打った内容を拾っておく
       el.querySelectorAll('[data-ln]').forEach(x=>rows[+x.dataset.ln].name=x.value);
       el.querySelectorAll('[data-lu]').forEach(x=>rows[+x.dataset.lu].unit_price=x.value);
@@ -6991,12 +7037,12 @@ function drawLaborSettings(el){
       for(const r of rows){
         const n=String(r.name||'').trim(); if(!n) continue;
         const u=numIn(r.unit_price);
-        if(!(u>0)) return draw(`<div class="err">「${esc(n)}」の単価を入れてください（1人日あたりの円）</div>`);
+        if(!(u>0)) return draw(`<div class="err">「${esc(n)}」の単価を入力してください（1人日あたりの円）</div>`);
         if(seen.has(n)) return draw(`<div class="err">「${esc(n)}」が2回入っています</div>`);
         seen.add(n); clean.push({name:n, unit_price:u});
       }
       const d=numIn(def);
-      if(!(d>0)) return draw('<div class="err">既定の単価を入れてください</div>');
+      if(!(d>0)) return draw('<div class="err">既定の単価を入力してください</div>');
       try{ await saveSettings({ labor: Object.assign({}, L0, {unit_price:d, vendors:clean}) });
            rows = clean.map(x=>Object.assign({},x)); def=d;
            draw('<div class="ok">保存しました。次に作る見積から使われます。</div>'); }
@@ -7083,9 +7129,9 @@ function checkHead(){
       <div class="row" style="align-items:flex-start;gap:12px"><div style="flex:1">
       <b>初期設定${total?`（確認が あと ${total.toLocaleString()}件）`:''}</b><br>
       <span class="small">Excelから移した中身の確認（過去の見積から機械が拾った初期値なので、合っているかを見るところ）と、
-        最初に1回だけやる設定です。全部終わったら、このタブごとメニューから消します。
-        <b>普段の単価・工種・顧客の直し、足し、消しは「マスタ」</b>でできます。</span></div>
-      <button class="btn ghost sm" id="setupDone" title="メニューから「初期設定」を消します（マスタからもう一度出せます）">初期設定を終える</button></div></div>
+        最初に1回だけやる設定です。全部終わったら、このタブごとメニューから削除します。
+        <b>普段の単価・工種・顧客の編集は「マスタ」</b>でできます。</span></div>
+      <button class="btn ghost sm" id="setupDone" title="メニューから「初期設定」を削除します（マスタからもう一度出せます）">初期設定を完了</button></div></div>
     <div class="row" style="align-items:flex-end;gap:18px">
       <div class="seg">${CHK_TABS.map(([k,l,fn])=>{ const n=fn();
         return `<button data-ck="${k}" class="${chkTab===k?'on':''}">${l}${n?`<span class="tabn">${n.toLocaleString()}</span>`:''}</button>`; }).join('')}</div>
@@ -7102,9 +7148,9 @@ function bindCheckHead(){
   const sd=document.getElementById('setupDone');
   if(sd) sd.onclick=async()=>{
     const left=checkLeft();
-    if(!confirm(`初期設定を終えて、メニューから「初期設定」を消します。${left?`\n\n⚠ まだ確認していないものが ${left}件 あります（あとで見ても大丈夫です）。`:''}\n\nマスタの上の「初期設定をもう一度出す」で戻せます。よろしいですか。`)) return;
+    if(!confirm(`初期設定を終えて、メニューから「初期設定」を削除します。${left?`\n\n⚠ まだ確認していないものが ${left}件 あります（あとで見ても大丈夫です）。`:''}\n\nマスタの上の「初期設定を再表示」で戻せます。よろしいですか。`)) return;
     sd.disabled=true;
-    try{ await saveSettings({setupDone:true}); view='master'; render(); setBar('初期設定を終えました。メニューから消しました'); }
+    try{ await saveSettings({setupDone:true}); view='master'; render(); setBar('初期設定を完了しました。メニューから非表示にしました'); }
     catch(e){ sd.disabled=false; alert(e.message); }
   };
   const q=document.getElementById('mq'); if(q) q.oninput=()=>{ mQ=q.value; drawCheck(); };
@@ -7156,7 +7202,7 @@ function drawWtDup(el){
   const prN = id => M.prices.filter(p=>p.work_type_id===id && p.active!==false).length;
   const merged = (M.wts||[]).filter(w=>w.active===false && w.data && w.data.merged_into);
   el.innerHTML = `
-    <div class="small muted">書き方の違いで同じ工種が2つ以上になっているものです。残す名前を選んで「まとめる」と、見積の選択肢がすっきりします（過去の見積は変わりません）</div>
+    <div class="small muted">書き方の違いで同じ工種が2つ以上になっているものです。残す名前を選んで「統合」すると、見積の選択肢がすっきりします（過去の見積は変わりません）</div>
     <div class="seg" style="margin:10px 0">
       <button data-wdt="A" class="${wtDupTab==='A'?'on':''}">字の違いだけ ${G.A.length}</button>
       <button data-wdt="B" class="${wtDupTab==='B'?'on':''}">工・工事の違い ${G.B.length}</button>
@@ -7169,8 +7215,8 @@ function drawWtDup(el){
       ${g.map((w,wi)=>`<label class="wd-row"><input type="radio" name="wd${gi}" value="${esc(w.id)}" ${wi===0?'checked':''}>
         <b>${esc(w.name)}</b><span class="muted small">実績 ${w.sample_count||0}件・単価表 ${prN(w.id)}行</span></label>`).join('')}
       <div class="row" style="gap:6px;margin-top:6px">
-        <button class="btn sm" data-wdmerge="${gi}">選んだ名前にまとめる</button>
-        <button class="btn ghost sm" data-wdign="${gi}">別物なので出さない</button></div></div>`).join('')
+        <button class="btn sm" data-wdmerge="${gi}">選んだ名前に統合</button>
+        <button class="btn ghost sm" data-wdign="${gi}">別物として除外</button></div></div>`).join('')
       : '<div class="muted small">このなかには、もうありません。</div>'}
     ${merged.length?`<div class="small muted" style="margin-top:12px">まとめて外した工種 ${merged.length}種：${merged.slice(0,30).map(w=>esc(w.name)+' → '+esc((wtMap.get(w.data.merged_into)||{}).name||'')).join('、')}</div>`:''}`;
   const wmsg = m => { const b=document.getElementById('wdMsg'); if(b) b.innerHTML=m; };
@@ -7178,10 +7224,10 @@ function drawWtDup(el){
   el.querySelectorAll('[data-wdmerge]').forEach(b=>b.onclick=async()=>{
     const g=list[+b.dataset.wdmerge], kid=(el.querySelector(`input[name="wd${b.dataset.wdmerge}"]:checked`)||{}).value;
     const keep=g.find(w=>w.id===kid), drops=g.filter(w=>w.id!==kid);
-    if(!confirm(`「${keep.name}」にまとめます。\n\n外す：${drops.map(w=>w.name).join('、')}\n\n外す方の単価表の行は「${keep.name}」へ移ります（同じ顧客にもう行があれば、外す方の行は「消した行」にします）。\n過去の見積の品名と金額は変わりません。よろしいですか。`)) return;
+    if(!confirm(`「${keep.name}」にまとめます。\n\n外す：${drops.map(w=>w.name).join('、')}\n\n外す方の単価表の行は「${keep.name}」へ移ります（同じ顧客にもう行があれば、外す方の行は削除済みにします）。\n過去の見積の品名と金額は変わりません。よろしいですか。`)) return;
     b.disabled=true;
     try{ const r=await mergeWorkTypes(keep, drops); drawMaster(); refreshMasterHead();
-         wmsg(`<div class="ok">「${esc(keep.name)}」にまとめました（単価表の行 ${r.moved}行を移し、${r.hidden}行は重なるので消した行にしました）</div>`); }
+         wmsg(`<div class="ok">「${esc(keep.name)}」にまとめました（単価表の行 ${r.moved}行を移し、${r.hidden}行は重なるので削除済みにしました）</div>`); }
     catch(e){ b.disabled=false; wmsg(`<div class="err">${esc(e.message)}</div>`); }
   });
   el.querySelectorAll('[data-wdign]').forEach(b=>b.onclick=async()=>{
@@ -7237,17 +7283,17 @@ function drawMPrices(el, q){
       <div class="phead row" style="gap:10px;align-items:baseline">
         <span><b>${esc(cur.name)}</b> の単価表 <span class="muted small">${cur.n}行</span></span>
         <span class="spacer"></span>
-        ${hiddenN||mpHidden?`<button class="btn ghost sm" id="mpHid">${mpHidden?'← 単価表に戻る':`消した行 ${hiddenN}`}</button>`:''}
-        ${c?`<button class="btn ghost sm" id="mpHideC" title="見積をつくるの「顧客」の一覧に出さない（いつでも戻せます）">見積の顧客一覧から隠す</button>`:''}
+        ${hiddenN||mpHidden?`<button class="btn ghost sm" id="mpHid">${mpHidden?'← 単価表に戻る':`削除済み ${hiddenN}`}</button>`:''}
+        ${c?`<button class="btn ghost sm" id="mpHideC" title="見積作成の「顧客」の一覧に出さない（いつでも戻せます）">顧客一覧で非表示</button>`:''}
       </div>
       ${mpHidden?'':`<div class="madd">
-        <b class="small">＋ 足す</b>
-        <input id="maName" list="maList" placeholder="工種（打つと候補。無ければ新しく作ります）" style="flex:1;min-width:220px">
+        <b class="small">＋ 追加</b>
+        <input id="maName" list="maList" placeholder="工種（入力で候補を表示・未登録なら新規作成）" style="flex:1;min-width:220px">
         <datalist id="maList">${(M.wts||[]).filter(w=>w.active!==false).map(w=>`<option value="${esc(w.name)}">`).join('')}</datalist>
         <input id="maUnit" placeholder="単位" style="width:60px">
         <input id="maPrice" placeholder="単価" style="width:100px;text-align:right">
-        <input id="maCost" placeholder="原価（空でよい）" style="width:120px;text-align:right">
-        <button class="btn sm" id="maAdd">足す</button></div>`}
+        <input id="maCost" placeholder="原価（任意）" style="width:120px;text-align:right">
+        <button class="btn sm" id="maAdd">追加</button></div>`}
       <div id="mpMsg"></div>
       <div class="scroll taller"><table class="tight">
         <thead><tr><th>工種</th><th>単位</th><th class="n">単価</th>
@@ -7260,10 +7306,10 @@ function drawMPrices(el, q){
           <td class="n"><input data-mpk="${esc(p.id)}" value="${has?Number(p.cost_unit):''}" placeholder="${mc?Number(mc.cost_unit):''}"
               style="width:100px;text-align:right" title="空なら共通の原価（${mc?yen(mc.cost_unit):'なし'}）を使います" ${mpHidden?'disabled':''}></td>
           <td style="white-space:nowrap">${mpHidden
-            ? `<button class="btn sm" data-mprev="${esc(p.id)}">戻す</button>`
-            : `<button class="btn ghost sm" data-mpdel="${esc(p.id)}">消す</button>`}</td></tr>`; }).join('')
-          || `<tr><td colspan="5" class="muted">${mpHidden?'消した行はありません':'まだ行がありません。上の「＋ 足す」から入れてください'}</td></tr>`}</tbody></table></div>
-      <div class="small muted" style="margin-top:8px">直すと、その場で保存されます。次に作る見積から使われます（保存済みの見積は変わりません）。
+            ? `<button class="btn sm" data-mprev="${esc(p.id)}">復元</button>`
+            : `<button class="btn ghost sm" data-mpdel="${esc(p.id)}">削除</button>`}</td></tr>`; }).join('')
+          || `<tr><td colspan="5" class="muted">${mpHidden?'削除済みの行はありません':'まだ行がありません。上の「＋ 追加」から登録してください'}</td></tr>`}</tbody></table></div>
+      <div class="small muted" style="margin-top:8px">変更はその場で保存されます。次に作る見積から使われます（保存済みの見積は変わりません）。
         原価が灰色の行は、共通の原価（「原価」のタブ）を使っています。</div>`}
     </div>
   </div>`;
@@ -7271,7 +7317,7 @@ function drawMPrices(el, q){
   el.querySelectorAll('[data-mpc]').forEach(b=>b.onclick=()=>{ mpClient=b.dataset.mpc; mpHidden=false; drawMaster(); });
   const hb=document.getElementById('mpHid'); if(hb) hb.onclick=()=>{ mpHidden=!mpHidden; drawMaster(); };
   const hc=document.getElementById('mpHideC'); if(hc) hc.onclick=async()=>{
-    if(!confirm(`「${c.name}」を、見積をつくるの顧客の一覧から隠します。\n過去の案件と単価表は残ります。「顧客」のタブの「隠している顧客」から戻せます。`)) return;
+    if(!confirm(`「${c.name}」を、見積作成の顧客の一覧で非表示にします。\n過去の案件と単価表は残ります。「顧客」のタブの「非表示の顧客」から再表示できます。`)) return;
     hc.disabled=true;
     try{ await patchClient(c,{active:false}); reindex(); mpClient=null; drawMaster(); }
     catch(e){ hc.disabled=false; mMsg('mpMsg', errBox(e.message)); }
@@ -7285,7 +7331,7 @@ function drawMPrices(el, q){
   };
   el.querySelectorAll('[data-mpp]').forEach(inp=>inp.onchange=async()=>{
     const row=find(inp.dataset.mpp), v=numIn(inp.value), before=Number(row.unit_price);
-    if(!isFinite(v) || v<0){ inp.value=before; return mMsg('mpMsg', errBox('単価は0以上の数字で入れてください')); }
+    if(!isFinite(v) || v<0){ inp.value=before; return mMsg('mpMsg', errBox('単価は0以上の数字で入力してください')); }
     if(v===before) return;
     if(!await save(inp, row, {unit_price:v}, `${esc(nm(row))} の単価を ${yen(before)} → <b>${yen(v)}</b> にしました`)) inp.value=before;
   });
@@ -7303,16 +7349,16 @@ function drawMPrices(el, q){
   });
   el.querySelectorAll('[data-mpdel]').forEach(b=>b.onclick=async()=>{
     const row=find(b.dataset.mpdel);
-    if(!confirm(`「${nm(row)}」（${yen(row.unit_price)}）を、この会社の単価表から消します。\n見積をつくるで出なくなります。「消した行」から戻せます。`)) return;
+    if(!confirm(`「${nm(row)}」（${yen(row.unit_price)}）を、この会社の単価表から削除します。\n見積作成で出なくなります。「削除済み」から復元できます。`)) return;
     b.disabled=true;
-    try{ await savePrice(row,{active:false}); reindex(); drawMaster(); mMsg('mpMsg', okBox(`「${esc(nm(row))}」を消しました（「消した行」から戻せます）`)); }
+    try{ await savePrice(row,{active:false}); reindex(); drawMaster(); mMsg('mpMsg', okBox(`「${esc(nm(row))}」を削除しました（「削除済み」から復元できます）`)); }
     catch(e){ b.disabled=false; mMsg('mpMsg', errBox(e.message)); }
   });
   el.querySelectorAll('[data-mprev]').forEach(b=>b.onclick=async()=>{
     const row=find(b.dataset.mprev); b.disabled=true;
     try{ await savePrice(row,{active:true}); reindex();
          if(!M.prices.some(p=>pKey(p)===mpClient && p.active===false)) mpHidden=false;
-         drawMaster(); mMsg('mpMsg', okBox(`「${esc(nm(row))}」を単価表に戻しました`)); }
+         drawMaster(); mMsg('mpMsg', okBox(`「${esc(nm(row))}」を単価表に復元しました`)); }
     catch(e){ b.disabled=false; mMsg('mpMsg', errBox(e.message)); }
   });
   const an=document.getElementById('maName');
@@ -7322,14 +7368,14 @@ function drawMPrices(el, q){
     const name=an.value.trim(), unit=document.getElementById('maUnit').value.trim();
     const price=numIn(document.getElementById('maPrice').value), ct=document.getElementById('maCost').value.trim();
     const cost = ct==='' ? null : numIn(ct);
-    if(!name) return mMsg('mpMsg', errBox('工種を入れてください'));
-    if(!(price>=0) || !isFinite(price)) return mMsg('mpMsg', errBox('単価を入れてください'));
+    if(!name) return mMsg('mpMsg', errBox('工種を入力してください'));
+    if(!(price>=0) || !isFinite(price)) return mMsg('mpMsg', errBox('単価を入力してください'));
     if(cost!==null && (!isFinite(cost) || cost<0)) return mMsg('mpMsg', errBox('原価は0以上の数字か、空にしてください'));
     const isNew = !(M.wts||[]).some(x=>String(x.name).trim()===name);
-    if(isNew && !confirm(`「${name}」は工種の一覧にありません。新しい工種として作って、この会社の単価表に足します。よろしいですか。`)) return;
+    if(isNew && !confirm(`「${name}」は工種の一覧にありません。新しい工種として登録し、この会社の単価表に追加します。よろしいですか。`)) return;
     aa.disabled=true;
     try{ const r=await addPriceRow(mpClient==='_'?null:mpClient, name, unit, price, cost); drawMaster();
-         mMsg('mpMsg', okBox(`「${esc(r.w.name)}」を ${yen(price)} で${r.revived?'単価表に戻して直しました':'足しました'}${isNew?'（工種も新しく作りました）':''}。見積をつくるですぐ使えます`)); }
+         mMsg('mpMsg', okBox(`「${esc(r.w.name)}」を ${yen(price)} で${r.revived?'単価表に復元して更新しました':'追加しました'}${isNew?'（工種も新しく作りました）':''}。見積作成ですぐ使えます`)); }
     catch(e){ aa.disabled=false; mMsg('mpMsg', errBox(e.message)); }
   };
 }
@@ -7345,26 +7391,26 @@ function drawMCosts(el, q){
   <div class="row" style="gap:10px;align-items:baseline"><b>共通の原価 ${all.filter(c=>c.active!==false).length}件</b>
     <span class="muted small">お客様に出す単価ではなく、こちらの原価です。会社ごとに違う原価は「単価表」の原価の欄に入れます。ここは、その欄が空のときに使います。</span>
     <span class="spacer"></span>
-    ${hiddenN||mcHidden?`<button class="btn ghost sm" id="mcHid">${mcHidden?'← 戻る':`消した行 ${hiddenN}`}</button>`:''}</div>
-  ${mcHidden?'':`<div class="madd" style="margin-top:10px"><b class="small">＋ 足す</b>
+    ${hiddenN||mcHidden?`<button class="btn ghost sm" id="mcHid">${mcHidden?'← 戻る':`削除済み ${hiddenN}`}</button>`:''}</div>
+  ${mcHidden?'':`<div class="madd" style="margin-top:10px"><b class="small">＋ 追加</b>
     <input id="mcName" list="mcList" placeholder="工種" style="flex:1;min-width:220px">
     <datalist id="mcList">${(M.wts||[]).filter(w=>w.active!==false).map(w=>`<option value="${esc(w.name)}">`).join('')}</datalist>
     <input id="mcUnit" placeholder="単位" style="width:60px">
     <input id="mcCost" placeholder="原価" style="width:110px;text-align:right">
-    <button class="btn sm" id="mcAdd">足す</button></div>`}
+    <button class="btn sm" id="mcAdd">追加</button></div>`}
   <div id="mcMsg"></div>
   <div class="scroll taller" style="margin-top:8px"><table class="tight" style="max-width:760px">
     <thead><tr><th>工種</th><th>単位</th><th class="n">原価（単価）</th><th></th></tr></thead>
     <tbody>${rows.slice(0,800).map(c=>`<tr><td>${esc(c.name)}</td>
       <td><input data-mcu="${esc(c.id)}" value="${esc(c.unit||'')}" style="width:56px" ${mcHidden?'disabled':''}></td>
       <td class="n"><input data-mck="${esc(c.id)}" value="${Number(c.cost_unit)}" style="width:110px;text-align:right" ${mcHidden?'disabled':''}></td>
-      <td>${mcHidden?`<button class="btn sm" data-mcrev="${esc(c.id)}">戻す</button>`:`<button class="btn ghost sm" data-mcdel="${esc(c.id)}">消す</button>`}</td></tr>`).join('')
+      <td>${mcHidden?`<button class="btn sm" data-mcrev="${esc(c.id)}">復元</button>`:`<button class="btn ghost sm" data-mcdel="${esc(c.id)}">削除</button>`}</td></tr>`).join('')
       || '<tr><td colspan="4" class="muted">該当なし</td></tr>'}</tbody></table></div>`;
   const find=id=>all.find(c=>c.id===id);
   const hb=document.getElementById('mcHid'); if(hb) hb.onclick=()=>{ mcHidden=!mcHidden; drawMaster(); };
   el.querySelectorAll('[data-mck]').forEach(inp=>inp.onchange=async()=>{
     const row=find(inp.dataset.mck), v=numIn(inp.value), before=Number(row.cost_unit);
-    if(!isFinite(v) || v<0){ inp.value=before; return mMsg('mcMsg', errBox('原価は0以上の数字で入れてください')); }
+    if(!isFinite(v) || v<0){ inp.value=before; return mMsg('mcMsg', errBox('原価は0以上の数字で入力してください')); }
     if(v===before) return; inp.disabled=true;
     try{ await saveCostPrice(row,{cost_unit:v, source:'手入力', confirmed_at:new Date().toISOString()}); reindex();
          mMsg('mcMsg', okBox(`${esc(row.name)} の原価を ${yen(before)} → <b>${yen(v)}</b> にしました`)); }
@@ -7379,9 +7425,9 @@ function drawMCosts(el, q){
   });
   el.querySelectorAll('[data-mcdel]').forEach(b=>b.onclick=async()=>{
     const row=find(b.dataset.mcdel);
-    if(!confirm(`「${row.name}」の共通の原価（${yen(row.cost_unit)}）を消します。\n見積に原価が自動で入らなくなります。「消した行」から戻せます。`)) return;
+    if(!confirm(`「${row.name}」の共通の原価（${yen(row.cost_unit)}）を削除します。\n見積に原価が自動で入らなくなります。「削除済み」から復元できます。`)) return;
     b.disabled=true;
-    try{ await saveCostPrice(row,{active:false}); reindex(); drawMaster(); mMsg('mcMsg', okBox(`「${esc(row.name)}」を消しました`)); }
+    try{ await saveCostPrice(row,{active:false}); reindex(); drawMaster(); mMsg('mcMsg', okBox(`「${esc(row.name)}」を削除しました`)); }
     catch(e){ b.disabled=false; mMsg('mcMsg', errBox(e.message)); }
   });
   el.querySelectorAll('[data-mcrev]').forEach(b=>b.onclick=async()=>{
@@ -7392,8 +7438,8 @@ function drawMCosts(el, q){
   const ca=document.getElementById('mcAdd'); if(ca) ca.onclick=async()=>{
     const name=document.getElementById('mcName').value.trim(), unit=document.getElementById('mcUnit').value.trim();
     const cost=numIn(document.getElementById('mcCost').value);
-    if(!name) return mMsg('mcMsg', errBox('工種を入れてください'));
-    if(!isFinite(cost) || cost<0) return mMsg('mcMsg', errBox('原価を入れてください'));
+    if(!name) return mMsg('mcMsg', errBox('工種を入力してください'));
+    if(!isFinite(cost) || cost<0) return mMsg('mcMsg', errBox('原価を入力してください'));
     const same=all.find(c=>String(c.name).trim()===name);
     ca.disabled=true;
     try{
@@ -7408,7 +7454,7 @@ function drawMCosts(el, q){
         if(!res.ok) throw new Error('足せませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
         (M.costPrices=M.costPrices||[]).push((await res.json())[0]);
       }
-      reindex(); drawMaster(); mMsg('mcMsg', okBox(`「${esc(name)}」の原価を ${yen(cost)} で${same?'直しました':'足しました'}`));
+      reindex(); drawMaster(); mMsg('mcMsg', okBox(`「${esc(name)}」の原価を ${yen(cost)} で${same?'更新しました':'追加しました'}`));
     }catch(e){ ca.disabled=false; mMsg('mcMsg', errBox(e.message)); }
   };
 }
@@ -7430,14 +7476,14 @@ function drawWtMaster(el, q){
     .sort((a,b)=>a.name.localeCompare(b.name,'ja'));
   el.innerHTML = `
   <div class="row" style="gap:10px;align-items:baseline"><b>工種 ${all.filter(w=>w.active!==false).length}種</b>
-    <span class="muted small">名前を直しても、過去の見積の品名は変わりません。似た名前のまとめは「初期設定」→「同じかもしれない工種」で。</span>
+    <span class="muted small">名前を変更しても、過去の見積の品名は変わりません。似た名前のまとめは「初期設定」→「同じかもしれない工種」で。</span>
     <span class="spacer"></span>
-    ${off.length||mwHidden?`<button class="btn ghost sm" id="mwHid">${mwHidden?'← 戻る':`消した工種 ${off.length}`}</button>`:''}</div>
-  ${mwHidden?'':`<div class="madd" style="margin-top:10px"><b class="small">＋ 足す</b>
+    ${off.length||mwHidden?`<button class="btn ghost sm" id="mwHid">${mwHidden?'← 戻る':`削除済みの工種 ${off.length}`}</button>`:''}</div>
+  ${mwHidden?'':`<div class="madd" style="margin-top:10px"><b class="small">＋ 追加</b>
     <input id="mwName" placeholder="工種の名前" style="flex:1;min-width:220px">
     <input id="mwCat" placeholder="分類（設置・撤去など）" style="width:150px">
     <input id="mwUnit" placeholder="単位" style="width:60px">
-    <button class="btn sm" id="mwAdd">足す</button></div>`}
+    <button class="btn sm" id="mwAdd">追加</button></div>`}
   <div id="mwMsg"></div>
   <div class="scroll taller" style="margin-top:8px"><table class="tight">
     <thead><tr><th>工種</th><th>分類</th><th>既定の単位</th><th class="n">単価表に載せている会社</th><th></th></tr></thead>
@@ -7446,7 +7492,7 @@ function drawWtMaster(el, q){
       <td><input data-mwc="${esc(w.id)}" value="${esc(w.category||'')}" style="width:110px" ${mwHidden?'disabled':''}></td>
       <td><input data-mwu="${esc(w.id)}" value="${esc(w.default_unit||'')}" style="width:56px" ${mwHidden?'disabled':''}></td>
       <td class="n">${nC(w.id)||'<span class="muted">—</span>'}</td>
-      <td>${mwHidden?`<button class="btn sm" data-mwrev="${esc(w.id)}">戻す</button>`:`<button class="btn ghost sm" data-mwdel="${esc(w.id)}">消す</button>`}</td></tr>`).join('')
+      <td>${mwHidden?`<button class="btn sm" data-mwrev="${esc(w.id)}">復元</button>`:`<button class="btn ghost sm" data-mwdel="${esc(w.id)}">削除</button>`}</td></tr>`).join('')
       || '<tr><td colspan="5" class="muted">該当なし</td></tr>'}</tbody></table></div>`;
   const find=id=>all.find(w=>w.id===id);
   const hb=document.getElementById('mwHid'); if(hb) hb.onclick=()=>{ mwHidden=!mwHidden; drawMaster(); };
@@ -7462,22 +7508,22 @@ function drawWtMaster(el, q){
   edit('mwn','name','名前'); edit('mwc','category','分類'); edit('mwu','default_unit','既定の単位');
   el.querySelectorAll('[data-mwdel]').forEach(b=>b.onclick=async()=>{
     const w=find(b.dataset.mwdel), ps=M.prices.filter(p=>p.work_type_id===w.id && p.active!==false);
-    if(!confirm(`「${w.name}」を工種の一覧から消します。\n見積をつくるの選択肢に出なくなります${ps.length?`。\nこの工種が載っている単価表の行（${ps.length}行）も消します`:''}。\n過去の見積は変わりません。「消した工種」から戻せます。`)) return;
+    if(!confirm(`「${w.name}」を工種の一覧から削除します。\n見積作成の選択肢に出なくなります${ps.length?`。\nこの工種が載っている単価表の行（${ps.length}行）も削除します`:''}。\n過去の見積は変わりません。「削除済みの工種」から復元できます。`)) return;
     b.disabled=true;
     try{ for(const p of ps) await savePrice(p,{active:false});
-         await patchWt(w,{active:false}); drawMaster(); mMsg('mwMsg', okBox(`「${esc(w.name)}」を消しました`)); }
+         await patchWt(w,{active:false}); drawMaster(); mMsg('mwMsg', okBox(`「${esc(w.name)}」を削除しました`)); }
     catch(e){ b.disabled=false; mMsg('mwMsg', errBox(e.message)); }
   });
   el.querySelectorAll('[data-mwrev]').forEach(b=>b.onclick=async()=>{
     const w=find(b.dataset.mwrev); b.disabled=true;
     try{ await patchWt(w,{active:true}); if(!(M.wts||[]).some(x=>x.active===false && !(x.data&&x.data.merged_into))) mwHidden=false;
-         drawMaster(); mMsg('mwMsg', okBox(`「${esc(w.name)}」を戻しました（単価表の行は、単価表の「消した行」から戻してください）`)); }
+         drawMaster(); mMsg('mwMsg', okBox(`「${esc(w.name)}」を復元しました（単価表の行は、単価表の「削除済み」から復元してください）`)); }
     catch(e){ b.disabled=false; mMsg('mwMsg', errBox(e.message)); }
   });
   const wa=document.getElementById('mwAdd'); if(wa) wa.onclick=async()=>{
     const name=document.getElementById('mwName').value.trim();
-    if(!name) return mMsg('mwMsg', errBox('名前を入れてください'));
-    if(all.some(w=>String(w.name).trim()===name)) return mMsg('mwMsg', errBox('同じ名前の工種がもうあります（消した工種も見てください）'));
+    if(!name) return mMsg('mwMsg', errBox('名前を入力してください'));
+    if(all.some(w=>String(w.name).trim()===name)) return mMsg('mwMsg', errBox('同じ名前の工種がもうあります（削除済みの工種も確認してください）'));
     wa.disabled=true;
     try{
       const res=await fetch(SB_URL+'/rest/v1/seek_work_types',{method:'POST',
@@ -7487,51 +7533,57 @@ function drawWtMaster(el, q){
           sort_no:9999, sample_count:0, active:true }])});
       if(!res.ok) throw new Error('足せませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
       M.wts.push((await res.json())[0]); reindex(); drawMaster();
-      mMsg('mwMsg', okBox(`「${esc(name)}」を足しました。単価は「単価表」で会社ごとに入れてください`));
+      mMsg('mwMsg', okBox(`「${esc(name)}」を追加しました。単価は「単価表」で会社ごとに登録してください`));
     }catch(e){ wa.disabled=false; mMsg('mwMsg', errBox(e.message)); }
   };
 }
 
 /* ---------- 顧客 ---------- */
 const CLI_FIELDS = [['name','呼び名','例：沖縄ゼネラル'],['formal_name','正式名称（見積書の宛名）','例：有限会社沖縄ゼネラル'],
-  ['honorific','敬称','御中 / 様'],['tel','TEL',''],['postal_code','〒','例：900-0013'],['address','住所',''],['building','建物名',''],['note','メモ','']];
+  ['honorific','敬称','御中 / 様'],['contact','担当者','例：山城'],['email','メール','例：yamashiro@example.co.jp'],
+  ['tel','TEL',''],['postal_code','〒','例：900-0013'],['address','住所',''],['building','建物名',''],['note','メモ','']];
+// 担当者とメールは seek_clients に列が無いので data に入れる（2026-10-01 大嶺さん「顧客にメールアドレス・担当名を入れるところ」）。
+// 見積書・請求書を「メールで送る」ときの宛先と「○○様」に使う
+const CLI_DATA = new Set(['contact','email']);
+const cliVal = (c, k) => c ? (CLI_DATA.has(k) ? ((c.data||{})[k]) : c[k]) : null;
 let mcEdit = null;         // 直している顧客の id（'new' は新しく足す）
 let mclHidden = false;
 function cliForm(c){
   return `<div class="supform">${CLI_FIELDS.map(([k,l,ph])=>`<label class="f">${l}
-      <input data-clf="${k}" value="${esc((c&&c[k]!=null?c[k]:(k==='honorific'?'御中':'')))}" placeholder="${esc(ph)}"></label>`).join('')}
+      <input data-clf="${k}" value="${esc(cliVal(c,k)!=null?cliVal(c,k):(!c&&k==='honorific'?'御中':''))}" placeholder="${esc(ph)}"${k==='email'?' type="email"':''}></label>`).join('')}
     <div class="row" style="gap:8px;align-items:flex-end">
-      <button class="btn sm" id="cliSave">${c?'保存する':'足す'}</button>
-      <button class="btn ghost sm" id="cliCancel">やめる</button></div></div>`;
+      <button class="btn sm" id="cliSave">${c?'保存':'追加'}</button>
+      <button class="btn ghost sm" id="cliCancel">キャンセル</button></div></div>`;
 }
 function drawMClients(el, q){
   const pN = id => M.prices.filter(p=>p.client_id===id && p.active!==false).length;
   const off = M.clients.filter(c=>c.active===false && !(c.data&&c.data.merged_into));
   const rows = (mclHidden ? off : activeClients())
-    .filter(c=>!q || (c.name+' '+(c.formal_name||'')+' '+(c.address||'')+' '+(c.tel||'')).includes(q))
+    .filter(c=>!q || (c.name+' '+(c.formal_name||'')+' '+(c.address||'')+' '+(c.tel||'')+' '+((c.data||{}).contact||'')+' '+((c.data||{}).email||'')).includes(q))
     .map(c=>({c, n:clientJobs(c).length})).sort((a,b)=>b.n-a.n || a.c.name.localeCompare(b.c.name,'ja'));
   el.innerHTML = `
   <div class="row" style="gap:10px;align-items:baseline"><b>顧客 ${activeClients().length}社</b>
-    <span class="muted small">見積をつくるの「顧客」に出る会社です。正式名称が見積書・請求書の宛名になります。</span>
+    <span class="muted small">見積作成の「顧客」に出る会社です。正式名称が見積書・請求書の宛名になります。</span>
     <span class="spacer"></span>
-    ${off.length||mclHidden?`<button class="btn ghost sm" id="mclHid">${mclHidden?'← 戻る':`隠している顧客 ${off.length}`}</button>`:''}
-    ${mclHidden?'':'<button class="btn sm" id="cliAdd">＋ 顧客を足す</button>'}</div>
+    ${off.length||mclHidden?`<button class="btn ghost sm" id="mclHid">${mclHidden?'← 戻る':`非表示の顧客 ${off.length}`}</button>`:''}
+    ${mclHidden?'':'<button class="btn sm" id="cliAdd">＋ 顧客を追加</button>'}</div>
   <div id="cliMsg"></div>
-  ${mcEdit==='new'?`<div class="card" style="margin-top:12px"><h2>顧客を足す</h2>${cliForm(null)}</div>`:''}
+  ${mcEdit==='new'?`<div class="card" style="margin-top:12px"><h2>顧客を追加</h2>${cliForm(null)}</div>`:''}
   <div class="scroll taller" style="margin-top:10px"><table class="tight">
-    <thead><tr><th>呼び名</th><th>正式名称・敬称</th><th>TEL</th><th>住所</th><th class="n">案件</th><th class="n">単価表</th><th></th></tr></thead>
+    <thead><tr><th>呼び名</th><th>正式名称・敬称</th><th>担当者・メール</th><th>TEL</th><th>住所</th><th class="n">案件</th><th class="n">単価表</th><th></th></tr></thead>
     <tbody>${rows.slice(0,400).map(({c,n})=> mcEdit===c.id
-      ? `<tr><td colspan="7"><div style="padding:6px 0"><b>${esc(c.name)} を直す</b>${cliForm(c)}</div></td></tr>`
+      ? `<tr><td colspan="8"><div style="padding:6px 0"><b>${esc(c.name)} を編集</b>${cliForm(c)}</div></td></tr>`
       : `<tr><td><b>${esc(c.name)}</b></td>
         <td class="small">${esc(c.formal_name||'')} ${esc(c.honorific||'')}</td>
+        <td class="small">${esc((c.data||{}).contact||'')}${(c.data||{}).contact?' 様':''}${(c.data||{}).email?`<div class="muted">${esc(c.data.email)}</div>`:''}</td>
         <td class="small">${esc(c.tel||'')}</td>
         <td class="small">${esc([c.postal_code?'〒'+c.postal_code:'', c.address||'', c.building||''].filter(Boolean).join(' '))}</td>
         <td class="n">${n}</td><td class="n">${pN(c.id)}</td>
         <td style="white-space:nowrap">${mclHidden
-          ? `<button class="btn sm" data-clrev="${esc(c.id)}">一覧に戻す</button>`
-          : `<button class="btn ghost sm" data-cledit="${esc(c.id)}">直す</button>
-             <button class="btn ghost sm" data-clhide="${esc(c.id)}" title="見積をつくるの顧客の一覧に出さない（過去の案件は残ります）">隠す</button>`}</td></tr>`).join('')
-      || '<tr><td colspan="7" class="muted">該当なし</td></tr>'}</tbody></table></div>`;
+          ? `<button class="btn sm" data-clrev="${esc(c.id)}">再表示</button>`
+          : `<button class="btn ghost sm" data-cledit="${esc(c.id)}">編集</button>
+             <button class="btn ghost sm" data-clhide="${esc(c.id)}" title="見積作成の顧客の一覧に出さない（過去の案件は残ります）">非表示</button>`}</td></tr>`).join('')
+      || '<tr><td colspan="8" class="muted">該当なし</td></tr>'}</tbody></table></div>`;
   const find=id=>M.clients.find(c=>c.id===id);
   const hb=document.getElementById('mclHid'); if(hb) hb.onclick=()=>{ mclHidden=!mclHidden; mcEdit=null; drawMaster(); };
   const ad=document.getElementById('cliAdd'); if(ad) ad.onclick=()=>{ mcEdit='new'; drawMaster(); };
@@ -7539,36 +7591,38 @@ function drawMClients(el, q){
   const cc=document.getElementById('cliCancel'); if(cc) cc.onclick=()=>{ mcEdit=null; drawMaster(); };
   const cs=document.getElementById('cliSave'); if(cs) cs.onclick=async()=>{
     const vals={}; el.querySelectorAll('[data-clf]').forEach(i=>vals[i.dataset.clf]=i.value.trim());
-    if(!vals.name) return mMsg('cliMsg', errBox('呼び名を入れてください'));
+    if(!vals.name) return mMsg('cliMsg', errBox('呼び名を入力してください'));
     const dup=M.clients.find(c=>c.id!==mcEdit && c.name===vals.name);
-    if(dup) return mMsg('cliMsg', errBox(`「${vals.name}」はもうあります${dup.active===false?'（隠している顧客）':''}`));
+    if(dup) return mMsg('cliMsg', errBox(`「${vals.name}」はもうあります${dup.active===false?'（非表示の顧客）':''}`));
+    if(vals.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(vals.email)) return mMsg('cliMsg', errBox('メールアドレスの形が正しくありません'));
     Object.keys(vals).forEach(k=>{ if(vals[k]==='') vals[k]=null; });
+    const dv={}; CLI_DATA.forEach(k=>{ dv[k]=vals[k]; delete vals[k]; });
     cs.disabled=true;
     try{
       if(mcEdit==='new'){
         const res=await fetch(SB_URL+'/rest/v1/seek_clients',{method:'POST',
           headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}),
           body: JSON.stringify([Object.assign({id:'c-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6), org_id:'seek',
-            name_variants:[vals.formal_name||vals.name], active:true, data:{reviewed_at:new Date().toISOString(), created_in:'マスタ'}},
+            name_variants:[vals.formal_name||vals.name], active:true, data:Object.assign({reviewed_at:new Date().toISOString(), created_in:'マスタ'}, dv)},
             vals, {honorific: vals.honorific||'御中'})])});
         if(!res.ok) throw new Error('足せませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
         M.clients.push((await res.json())[0]);
-      } else await patchClient(find(mcEdit), vals);
+      } else { const c=find(mcEdit); await patchClient(c, Object.assign(vals, {data:Object.assign({}, c.data||{}, dv)})); }
       const wasNew=mcEdit==='new'; mcEdit=null; reindex(); drawMaster();
-      mMsg('cliMsg', okBox(`「${esc(vals.name)}」を${wasNew?'足しました。見積をつくるの顧客に出ます':'直しました'}`));
+      mMsg('cliMsg', okBox(`「${esc(vals.name)}」を${wasNew?'追加しました。見積作成の顧客に出ます':'更新しました'}`));
     }catch(e){ cs.disabled=false; mMsg('cliMsg', errBox(e.message)); }
   };
   el.querySelectorAll('[data-clhide]').forEach(b=>b.onclick=async()=>{
     const c=find(b.dataset.clhide);
-    if(!confirm(`「${c.name}」を、見積をつくるの顧客の一覧から隠します。\n過去の案件と単価表は残ります。「隠している顧客」から戻せます。`)) return;
+    if(!confirm(`「${c.name}」を、見積作成の顧客の一覧で非表示にします。\n過去の案件と単価表は残ります。「非表示の顧客」から再表示できます。`)) return;
     b.disabled=true;
-    try{ await patchClient(c,{active:false}); reindex(); drawMaster(); mMsg('cliMsg', okBox(`「${esc(c.name)}」を隠しました`)); }
+    try{ await patchClient(c,{active:false}); reindex(); drawMaster(); mMsg('cliMsg', okBox(`「${esc(c.name)}」を非表示にしました`)); }
     catch(e){ b.disabled=false; mMsg('cliMsg', errBox(e.message)); }
   });
   el.querySelectorAll('[data-clrev]').forEach(b=>b.onclick=async()=>{
     const c=find(b.dataset.clrev); b.disabled=true;
     try{ await patchClient(c,{active:true}); reindex(); if(!M.clients.some(x=>x.active===false && !(x.data&&x.data.merged_into))) mclHidden=false;
-         drawMaster(); mMsg('cliMsg', okBox(`「${esc(c.name)}」を一覧に戻しました`)); }
+         drawMaster(); mMsg('cliMsg', okBox(`「${esc(c.name)}」を再表示しました`)); }
     catch(e){ b.disabled=false; mMsg('cliMsg', errBox(e.message)); }
   });
 }
@@ -7637,7 +7691,7 @@ async function drawWorkers(el, q){
   el.innerHTML = `
   <div class="hint"><b>現場に入る人と、その人の単価です。</b><br>
     <span class="small">現場のスマホで「今日だれが何時から何時まで入ったか」を入れると、ここの単価で人工の金額が出ます。
-      単価を直すと、過去の分も新しい単価で計算し直します。</span></div>
+      単価を変更すると、過去の分も新しい単価で計算し直します。</span></div>
   <div class="card" style="margin-top:12px">
     <h2>定時</h2>
     <div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap">
@@ -7645,14 +7699,14 @@ async function drawWorkers(el, q){
       <label class="f">終わり<input type="time" id="wsE" value="${esc(S.end)}"></label>
       <label class="f">休憩（分）<input id="wsB" value="${S.brk}" style="width:70px;text-align:right"></label>
       <label class="f">残業の数え方<select id="wsT">${[15,30,60].map(n=>`<option value="${n}" ${S.step===n?'selected':''}>${n}分単位（切り捨て）</option>`).join('')}</select></label>
-      <button class="btn sm" id="wsSave">保存する</button>
+      <button class="btn sm" id="wsSave">保存</button>
       <span class="muted small">定時より前・後に働いた分が残業です。休憩は定時の中で5時間を超えて働いた日だけ引きます。</span>
     </div>
   </div>
   <div class="card" style="margin-top:12px">
     <div class="row" style="align-items:baseline"><h2 style="margin:0">作業員 ${rows.length}人</h2>
       <span class="muted small">日当＝定時いっぱい働いた1日分。時給＝時給の人の時給／日当の人は残業の時給</span>
-      <span class="spacer"></span>${off.length?`<span class="muted small">消した人 ${off.length}人：${off.map(w=>`${esc(w.name)} <button class="btn ghost sm" data-wrev="${esc(w.id)}">戻す</button>`).join(' ')}</span>`:''}</div>
+      <span class="spacer"></span>${off.length?`<span class="muted small">削除済み ${off.length}人：${off.map(w=>`${esc(w.name)} <button class="btn ghost sm" data-wrev="${esc(w.id)}">復元</button>`).join(' ')}</span>`:''}</div>
     <div id="wkMsg"></div>
     <div class="scroll" style="margin-top:8px"><table class="tight" style="max-width:860px">
       <thead><tr><th>名前</th><th>区分</th><th>払い方</th><th class="n">日当</th><th class="n">時給</th><th>メモ</th><th></th></tr></thead>
@@ -7663,22 +7717,22 @@ async function drawWorkers(el, q){
         <td class="n"><input data-wf="day_rate" data-wid="${esc(w.id)}" value="${w.day_rate!=null?Number(w.day_rate):''}" placeholder="${(w.pay_type||'日当')==='時給'?'—':'15000'}" style="width:90px;text-align:right"></td>
         <td class="n"><input data-wf="hour_rate" data-wid="${esc(w.id)}" value="${w.hour_rate!=null?Number(w.hour_rate):''}" placeholder="1900" style="width:80px;text-align:right"></td>
         <td><input data-wf="note" data-wid="${esc(w.id)}" value="${esc(w.note||'')}" style="width:160px"></td>
-        <td><button class="btn ghost sm" data-wdel="${esc(w.id)}">消す</button></td></tr>`).join('')
-        || '<tr><td colspan="7" class="muted">まだいません。下から足してください</td></tr>'}</tbody></table></div>
-    <div class="madd" style="margin-top:10px"><b class="small">＋ 足す</b>
+        <td><button class="btn ghost sm" data-wdel="${esc(w.id)}">削除</button></td></tr>`).join('')
+        || '<tr><td colspan="7" class="muted">まだ登録がありません。下の「＋ 追加」から登録してください</td></tr>'}</tbody></table></div>
+    <div class="madd" style="margin-top:10px"><b class="small">＋ 追加</b>
       <input id="waName" placeholder="名前（例：智也）" style="width:140px">
       <select id="waKind"><option>社員</option><option>バイト</option><option>外注</option></select>
       <select id="waPay"><option>日当</option><option>時給</option></select>
       <input id="waDay" placeholder="日当" style="width:90px;text-align:right">
       <input id="waHour" placeholder="時給" style="width:80px;text-align:right">
-      <button class="btn sm" id="waAdd">足す</button></div>
+      <button class="btn sm" id="waAdd">追加</button></div>
   </div>
   <div class="card" style="margin-top:12px" id="payBox"></div>`;
   const msg=m=>mMsg('wkMsg', m);
   document.getElementById('wsSave').onclick=async()=>{
     const s=document.getElementById('wsS').value, e=document.getElementById('wsE').value, b=numIn(document.getElementById('wsB').value);
     if(hm(s)==null || hm(e)==null || hm(e)<=hm(s)) return msg(errBox('始まりと終わりの時刻を確かめてください'));
-    if(!isFinite(b) || b<0) return msg(errBox('休憩は0以上の分で入れてください'));
+    if(!isFinite(b) || b<0) return msg(errBox('休憩は0以上の分で入力してください'));
     try{ await saveSettings({labor: Object.assign({}, (M.settings||{}).labor||{}, {std:{start:s, end:e, break_min:b, ot_step:+document.getElementById('wsT').value}})});
          drawMaster(); mMsg('wkMsg', okBox('定時を保存しました')); }
     catch(err){ msg(errBox(err.message)); }
@@ -7692,16 +7746,16 @@ async function drawWorkers(el, q){
   };
   el.querySelectorAll('[data-wf]').forEach(inp=>inp.onchange=async()=>{
     const w=M.workers.find(x=>x.id===inp.dataset.wid), f=inp.dataset.wf; let v=inp.value.trim();
-    if(f==='day_rate'||f==='hour_rate'){ v = v==='' ? null : numIn(v); if(v!==null && (!isFinite(v)||v<0)){ inp.value=w[f]??''; return msg(errBox('金額は0以上の数字で入れてください')); } }
+    if(f==='day_rate'||f==='hour_rate'){ v = v==='' ? null : numIn(v); if(v!==null && (!isFinite(v)||v<0)){ inp.value=w[f]??''; return msg(errBox('金額は0以上の数字で入力してください')); } }
     if(f==='name' && !v){ inp.value=w.name; return msg(errBox('名前を空にはできません')); }
     inp.disabled=true;
-    try{ await patchW(w, {[f]: v===''?null:v}); msg(okBox(`${esc(w.name)} を直しました`)); drawPay(); }
+    try{ await patchW(w, {[f]: v===''?null:v}); msg(okBox(`${esc(w.name)} を更新しました`)); drawPay(); }
     catch(e){ inp.value=w[f]??''; msg(errBox(e.message)); }
     finally{ inp.disabled=false; }
   });
   el.querySelectorAll('[data-wdel]').forEach(b=>b.onclick=async()=>{
     const w=M.workers.find(x=>x.id===b.dataset.wdel);
-    if(!confirm(`「${w.name}」を消します。現場のスマホで選べなくなります。\nこれまでの出面は残ります。あとで戻せます。`)) return;
+    if(!confirm(`「${w.name}」を削除します。現場のスマホで選べなくなります。\nこれまでの出面は残ります。あとで戻せます。`)) return;
     try{ await patchW(w,{active:false}); drawMaster(); } catch(e){ msg(errBox(e.message)); }
   });
   el.querySelectorAll('[data-wrev]').forEach(b=>b.onclick=async()=>{
@@ -7710,18 +7764,18 @@ async function drawWorkers(el, q){
   });
   document.getElementById('waAdd').onclick=async()=>{
     const name=document.getElementById('waName').value.trim();
-    if(!name) return msg(errBox('名前を入れてください'));
-    if(M.workers.some(w=>w.name===name)) return msg(errBox('同じ名前の人がもういます（消した人も見てください）'));
+    if(!name) return msg(errBox('名前を入力してください'));
+    if(M.workers.some(w=>w.name===name)) return msg(errBox('同じ名前の人がもういます（削除済みも確認してください）'));
     const d=document.getElementById('waDay').value.trim(), h=document.getElementById('waHour').value.trim();
     const row={ id:'wk-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), org_id:'seek', name,
       kind:document.getElementById('waKind').value, pay_type:document.getElementById('waPay').value,
       day_rate: d===''?null:numIn(d), hour_rate: h===''?null:numIn(h), sort_no:(M.workers.length+1)*10, active:true };
-    if([row.day_rate,row.hour_rate].some(v=>v!==null && (!isFinite(v)||v<0))) return msg(errBox('金額は0以上の数字で入れてください'));
+    if([row.day_rate,row.hour_rate].some(v=>v!==null && (!isFinite(v)||v<0))) return msg(errBox('金額は0以上の数字で入力してください'));
     try{
       const res=await fetch(SB_URL+'/rest/v1/seek_workers',{method:'POST',
         headers: await H({'Content-Type':'application/json', Prefer:'return=representation'}), body: JSON.stringify([row])});
       if(!res.ok) throw new Error('足せませんでした（'+res.status+'）'+(await res.text()).slice(0,120));
-      M.workers.push((await res.json())[0]); drawMaster(); mMsg('wkMsg', okBox(`「${esc(name)}」を足しました。現場のスマホで選べます`));
+      M.workers.push((await res.json())[0]); drawMaster(); mMsg('wkMsg', okBox(`「${esc(name)}」を追加しました。現場のスマホで選べます`));
     }catch(e){ msg(errBox(e.message)); }
   };
   drawPay();
@@ -7735,7 +7789,7 @@ async function drawPay(){
   try{ es=await sbFetchAll('seek_work_entries','select=*&work_date=gte.'+ym+'-01&work_date=lte.'+ym+'-'+String(last).padStart(2,'0')+'&order=work_date.asc'); }
   catch(e){ box.innerHTML=`<div class="err">${esc(e.message)}</div>`; return; }
   es = es.filter(e=>String(e.work_date).startsWith(ym));
-  const jobT = id => { const j=M.jobs.find(x=>x.id===id); return j ? String(j.title||'').replace(/^仮）/,'') : '（消した案件）'; };
+  const jobT = id => { const j=M.jobs.find(x=>x.id===id); return j ? String(j.title||'').replace(/^仮）/,'') : '（削除された案件）'; };
   const by=new Map();
   es.forEach(e=>{ const c=entryCalc(e), k=c.w?c.w.id:'n:'+e.worker_name;
     const s=by.get(k)||{name:c.w?c.w.name:e.worker_name, w:c.w, days:new Set(), pd:0, ot:0, pay:0, unknown:0, jobs:new Set(), list:[]};
@@ -7786,7 +7840,7 @@ document.getElementById('gBtn').onclick=async()=>{
   if(u&&k){ SB_URL=u.replace(/\/+$/,''); SB_KEY=k;
     try{ localStorage.setItem(LS.cfg, JSON.stringify({url:SB_URL,key:SB_KEY})); }catch(e){} }
   if(!SB_URL||!SB_KEY){ document.getElementById('gMsg').innerHTML='<div class="err">'
-      +'<b>先に接続先を入れてください。</b>下の「Supabase Project URL」と「publishable key」の2つです。'
+      +'<b>先に接続先を入力してください。</b>下の「Supabase Project URL」と「publishable key」の2つです。'
       +'</div>';
     document.getElementById('gateCfg').classList.remove('hidden'); return; }
   const btn=document.getElementById('gBtn'); btn.disabled=true; btn.textContent='ログイン中…';

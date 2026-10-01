@@ -230,7 +230,7 @@ button.card:active{background:var(--panel-2);transform:scale(.995)}
     <button class="back" id="hd-back" style="display:none">←</button>
     <img class="mk-img" id="hd-logo" src="seek_logo.png" alt="" onerror="this.remove()">
     <div class="ttl" id="hd-ttl"><span class="mk">SEEK</span> 現場</div>
-    <button class="sync" id="hd-sync">読み直す</button>
+    <button class="sync" id="hd-sync">再読み込み</button>
   </header>
   <div id="band"></div>
   <main id="scr"></main>
@@ -585,15 +585,15 @@ function drawGate(){
     <img src="seek_logo.png" alt="" onerror="this.remove()"
       style="width:66px;height:66px;display:block;margin:0 auto 10px;border-radius:14px;object-fit:contain">
     <div class="lg"><span>SEEK</span> 現場</div>
-    <div class="cap">${needCfg?'まず接続先を入れてください':'現場用の画面です'}</div>
+    <div class="cap">${needCfg?'まず接続先を入力してください':'現場用の画面です'}</div>
     ${needCfg? `
       <label class="fld"><div class="lb">Supabase の URL</div>
         <input id="g-url" inputmode="url" placeholder="https://xxxx.supabase.co" value="${esc(SB_URL)}"></label>
       <label class="fld"><div class="lb">publishable key</div>
         <input id="g-key" placeholder="sb_publishable_..." value="${esc(SB_KEY)}"></label>
-      <button class="btn pri wide" id="g-save">これで設定する</button>
+      <button class="btn pri wide" id="g-save">設定</button>
       <div class="note" style="margin-top:14px">
-        事務所のPC版と同じものを入れてください。分からなければ大嶺さんに聞いてください。</div>
+        事務所のPC版と同じものを入力してください。分からなければ大嶺さんに聞いてください。</div>
     ` : `
       <label class="fld"><div class="lb">メールアドレス</div>
         <input id="g-mail" type="email" inputmode="email" autocomplete="username"
@@ -601,7 +601,7 @@ function drawGate(){
       <label class="fld"><div class="lb">パスワード</div>
         <input id="g-pw" type="password" autocomplete="current-password" placeholder="••••••••"></label>
       <button class="btn pri wide" id="g-in">ログイン</button>
-      <button class="btn gh wide" id="g-cfg" style="margin-top:10px">接続先を変える</button>
+      <button class="btn gh wide" id="g-cfg" style="margin-top:10px">接続先を変更</button>
     `}
   </div>`;
 
@@ -609,7 +609,7 @@ function drawGate(){
     $('g-save').onclick=()=>{
       const u=$('g-url').value.trim().replace(/\/+$/,''), k=$('g-key').value.trim();
       if(!/^https:\/\/.+\.supabase\.co$/.test(u)) return toast('URLの形が違います', 1);
-      if(!k) return toast('key を入れてください', 1);
+      if(!k) return toast('key を入力してください', 1);
       SB_URL=u; SB_KEY=k;
       try{ localStorage.setItem(LS.cfg, JSON.stringify({url:u,key:k})); }catch(e){}
       render();
@@ -619,7 +619,7 @@ function drawGate(){
       try{ localStorage.removeItem(LS.cfg); }catch(e){} render(); };
     const doLogin=async()=>{
       const m=$('g-mail').value.trim(), p=$('g-pw').value;
-      if(!m||!p) return toast('メールとパスワードを入れてください',1);
+      if(!m||!p) return toast('メールとパスワードを入力してください',1);
       busy(true,'ログイン中…');
       try{ await sbLogin(m,p); await loadAll(); go('today'); toast('ログインしました'); }
       catch(e){ toast(e.message,1); }
@@ -670,7 +670,7 @@ function drawToday(){
     if(noDate.length){
       h+='<div class="sec">オープン日が未定（'+noDate.length+'）</div>'
        + `<div class="note w">オープン予定日が入っていないと、電力申請や部品の手配がいつまでか分かりません。
-            事務所で入れてもらってください。</div>`
+            事務所で登録してもらってください。</div>`
        + noDate.slice(0,20).map(j=>card(j)).join('');
     }
   }
@@ -687,7 +687,7 @@ function drawJobs(){
     ((j.title||'')+' '+(j.client_name||'')+' '+(j.site_address||'')+' '+(j.job_no||'')).toLowerCase().includes(q));
   const byStatus=s=>hit.filter(j=>j.status===s);
 
-  let h=`<label class="fld"><input id="q" placeholder="現場名・お客さん・住所でさがす"
+  let h=`<label class="fld"><input id="q" placeholder="現場名・顧客名・住所で検索"
       value="${esc(jobQ)}" autocapitalize="off"></label>`;
   let any=false;
   FIELD.forEach(s=>{
@@ -737,7 +737,7 @@ function drawJob(){
     <div class="jt" style="font-size:17px">${esc(j.title||'（案件名なし）')}</div>
     <div class="jc">${esc(j.client_name||'')}</div>
     <div class="meta">
-      ${addr? '📍 '+esc(addr) : '<span style="color:var(--warn)">📍 住所が入っていません（事務所で入れてもらってください）</span>'}
+      ${addr? '📍 '+esc(addr) : '<span style="color:var(--warn)">📍 住所が入っていません（事務所で登録してもらってください）</span>'}
       ${j.car_count? '<br>台数 <b>'+esc(j.car_count)+'台</b>':''}
       ${j.open_date? '<br>オープン予定 <b>'+esc(j.open_date)+'</b>':''}
       ${nin? '<br>これまでの人工 <b>'+nin+'人日</b>':''}
@@ -755,7 +755,7 @@ function drawJob(){
 
   <div class="sec">今日の作業を記録する</div>
   ${doneToday? '<div class="note">今日の分はもう入っています。押すと上書きします。</div>':''}
-  <button class="btn pri wide" id="b-log" style="margin-bottom:12px">👷 ${M.workers?'入った人と進み具合を入れる':'人工と進み具合を入れる'}</button>
+  <button class="btn pri wide" id="b-log" style="margin-bottom:12px">👷 ${M.workers?'作業員と進捗を登録':'人工と進捗を登録'}</button>
 
   <div id="ents"></div>
 
@@ -856,7 +856,7 @@ async function advance(j){
     <div class="sub">${esc(j.title||'')}<br>
       「${esc(j.status)}」から「${esc(to)}」に進めます。事務所の画面にもすぐ反映されます。</div>
     <button class="btn pri wide" id="s-ok">${esc(to)}にする</button>
-    <button class="btn gh wide" id="s-no" style="margin-top:8px">やめる</button>`);
+    <button class="btn gh wide" id="s-no" style="margin-top:8px">キャンセル</button>`);
   $('s-no').onclick=closeSheet;
   $('s-ok').onclick=async()=>{
     closeSheet(); busy(true,'更新中…');
@@ -864,7 +864,7 @@ async function advance(j){
       // version を渡して、事務所側が同時に直したときは上書きしない
       const r=await sbAdvance(j.id, to, j.version);
       if(!r || !r.ok){
-        toast('事務所で先に更新されています。読み直してください。',1);
+        toast('事務所で先に更新されています。再読み込みしてください。',1);
       }else{
         j.status=r.status; j.version=r.version;
         toast(to+'にしました');
@@ -909,18 +909,18 @@ async function logSheet(j, date){
     sheet(`<h3>今日の作業</h3>
       <div class="sub">${esc(j.title||'')}</div>
       <label class="fld"><div class="lb">日付</div><input type="date" id="l-d" value="${esc(d)}"></label>
-      <div class="fld"><div class="lb">入った人（${n}人）　押すと選べます。早く帰った人は時刻を直してください</div>
+      <div class="fld"><div class="lb">入った人（${n}人）　押すと選べます。早く帰った人は時刻を修正してください</div>
         <div id="l-wk">${rows.map(rowHtml).join('')}</div>
-        <div class="row" style="gap:6px;margin-top:6px"><input id="l-add" placeholder="ほかの人の名前" style="flex:1">
-          <button class="btn gh sm" id="l-addb">足す</button></div></div>
-      <label class="fld"><div class="lb">進み具合</div>
+        <div class="row" style="gap:6px;margin-top:6px"><input id="l-add" placeholder="その他の作業員の名前" style="flex:1">
+          <button class="btn gh sm" id="l-addb">追加</button></div></div>
+      <label class="fld"><div class="lb">進捗</div>
         <select id="l-prog">
           ${['着手','施工中','完了'].map(p=>`<option ${p===progVal?'selected':''}>${p}</option>`).join('')}
         </select></label>
       <label class="fld"><div class="lb">メモ（あれば）</div>
         <textarea id="l-note" placeholder="雨で午後中断 など">${esc(noteVal)}</textarea></label>
-      <button class="btn pri wide" id="l-ok">記録する</button>
-      <button class="btn gh wide" id="l-no" style="margin-top:8px">やめる</button>`);
+      <button class="btn pri wide" id="l-ok">登録</button>
+      <button class="btn gh wide" id="l-no" style="margin-top:8px">キャンセル</button>`);
     // 打った時刻を覚えておく（描き直しで消えないように）
     document.querySelectorAll('#l-wk .wk').forEach(el=>{
       const s=st.get(el.dataset.wn);
@@ -991,14 +991,14 @@ function logSheetOld(j){
         <button id="l-p">＋</button>
       </div>
     </div>
-    <label class="fld"><div class="lb">進み具合</div>
+    <label class="fld"><div class="lb">進捗</div>
       <select id="l-prog">
         ${['着手','施工中','完了'].map(p=>`<option ${p===({'受注':'着手','手配':'着手','施工中':'施工中','施工完了':'完了'}[prog]||'施工中')?'selected':''}>${p}</option>`).join('')}
       </select></label>
     <label class="fld"><div class="lb">メモ（あれば）</div>
       <textarea id="l-note" placeholder="雨で午後中断 など">${esc(cur?cur.note||'':'')}</textarea></label>
-    <button class="btn pri wide" id="l-ok">記録する</button>
-    <button class="btn gh wide" id="l-no" style="margin-top:8px">やめる</button>`);
+    <button class="btn pri wide" id="l-ok">登録</button>
+    <button class="btn gh wide" id="l-no" style="margin-top:8px">キャンセル</button>`);
 
   const show=()=>{ $('l-v').innerHTML=n.toFixed(1).replace(/\.0$/,'')+'<small>人日</small>'; };
   show();
@@ -1100,15 +1100,15 @@ function drawMenu(){
     <div class="meta">${M.loadedAt? esc(M.loadedAt.toLocaleString('ja-JP')) : '—'}
       ／ 現場 ${M.jobs.length}件</div>
   </div></div>
-  <button class="btn wide" id="m-sync" style="margin-bottom:10px">サーバーから読み直す</button>
+  <button class="btn wide" id="m-sync" style="margin-bottom:10px">再読み込み</button>
   <div class="note">
     この画面には<b>金額・単価・原価は出しません</b>。現場でお客さんに見られても困らないようにしています。
     見積・請求は事務所のPC版で行います。</div>
-  <button class="btn gh wide" id="m-cfg" style="margin-bottom:10px">接続先を変える</button>
+  <button class="btn gh wide" id="m-cfg" style="margin-bottom:10px">接続先を変更</button>
   <button class="btn gh wide" id="m-out">ログアウト</button>
   <div class="meta" style="text-align:center;margin-top:18px">${esc(VER)}</div>`;
   $('m-sync').onclick=sync;
-  $('m-cfg').onclick=()=>{ if(!confirm('接続先を消して入れ直しますか？')) return;
+  $('m-cfg').onclick=()=>{ if(!confirm('接続先をリセットして設定し直しますか？')) return;
     try{ localStorage.removeItem(LS.cfg); }catch(e){} SB_URL=''; SB_KEY=''; render(); };
   $('m-out').onclick=()=>{ sbSetSession(null); sbLog({logout:1}); location.reload(); };
 }
@@ -1118,11 +1118,11 @@ function drawMenu(){
    ============================================================ */
 async function sync(){
   if(!SB_URL||!SB_KEY||!sbSession()) return render();
-  busy(true,'読み直しています…');
-  try{ await loadAll(); band(''); toast('読み直しました'); render(); }
+  busy(true,'再読み込み中…');
+  try{ await loadAll(); band(''); toast('再読み込みしました'); render(); }
   catch(e){
     if(e.reauth){ render(); }
-    else{ band('つながりませんでした。電波が戻ったら「読み直す」を押してください。'); }
+    else{ band('つながりませんでした。電波が戻ったら「再読み込み」を押してください。'); }
   }
   finally{ busy(false); }
 }
@@ -1139,7 +1139,7 @@ window.addEventListener('offline',()=> band('いま電波がありません。�
   if(SB_URL && SB_KEY && sbSession()){
     busy(true,'読み込み中…');
     try{ await loadAll(); }
-    catch(e){ if(!e.reauth) band('読み込めませんでした。「読み直す」を押してください。'); }
+    catch(e){ if(!e.reauth) band('読み込めませんでした。「再読み込み」を押してください。'); }
     finally{ busy(false); }
   }
   render();
