@@ -454,7 +454,7 @@ a{color:var(--accent-light);text-decoration:none}
 
 <script>
 "use strict";
-const APP_VERSION = '2026-07-29';
+const APP_VERSION = '2026-10-02';
 const LS_KEY = 'denso_mgmt_v1';
 const TAX_DEFAULT = 10;
 const STATUSES = ['依頼','受注','部品手配','着荷済','作業中','作業完了','報告済','請求済','入金済','キャンセル'];
@@ -1635,6 +1635,7 @@ function groupJobs(key,month){
 /* 案件外の請求項目(配送費など) */
 function ecAmount(e){ return (num(e.qty||1)||1)*num(e.unitPrice); }
 function groupExtras(key,month){ return (DATA.extraCharges||[]).filter(e=> e.month===month && (e.clientId||('_'+e.clientName))===key); }
+function dInvNo(n){ return 'D-INV-'+String(n).padStart(4,'0'); }
 function generateInvoice(key,month,markInvoiced){
   const jobs=groupJobs(key,month); const extras=groupExtras(key,month);
   if(!jobs.length && !extras.length){ toast('対象がありません','err'); return; }
@@ -1643,12 +1644,12 @@ function generateInvoice(key,month,markInvoiced){
   if(markInvoiced && !st.company){ toast('先に⚙️設定で自社情報を入力してください','err'); openSettings(); return; }
   let invNo;
   if(markInvoiced){
-    const n=num(st.nextInvoiceNo)||1; invNo='INV-'+String(n).padStart(10,'0'); st.nextInvoiceNo=n+1; st._updatedAt=Date.now();
+    const n=num(st.nextDInvNo)||1; invNo=dInvNo(n); st.nextDInvNo=n+1; st._updatedAt=Date.now(); // 電装専用番号(レンタカーのINV-と重ならない)
     const issueDate=endOfMonth(month);
     jobs.forEach(j=>{ if(j.status!=='入金済') j.status='請求済'; j.invoiceNo=invNo; j.invoicedAt=issueDate; if(!j.billingMonth) j.billingMonth=month; stamp(j); });
     extras.forEach(e=>{ e.invoiceNo=invNo; e.invoicedAt=issueDate; e.updatedAt=Date.now(); });
     save();
-  } else { invNo=(jobs[0]||{}).invoiceNo || (extras[0]||{}).invoiceNo || ('INV-'+String(num(st.nextInvoiceNo)||1).padStart(10,'0')); }
+  } else { invNo=(jobs[0]||{}).invoiceNo || (extras[0]||{}).invoiceNo || dInvNo(num(st.nextDInvNo)||1); }
   openInvoiceWindow(client,jobs,month,invNo,extras);
   if(markInvoiced){ closeModal(); toast('請求書 '+invNo+' を発行しました','ok'); renderBilling(); }
 }
@@ -2412,7 +2413,7 @@ function openSettings(){
     <div class="field" style="flex:0 0 120px"><label>消費税率(%)</label><input id="st-tax" inputmode="numeric" value="${esc(s.taxRate)}"></div></div>
     <div class="field"><label>ETCセットアップ単価(1台・既定)</label><input id="st-etcfee" inputmode="numeric" value="${esc(s.etcSetupFee)}"><div class="hint">部品は取引先支給が基本。ETCセットアップのみ当社負担＝新規案件で使う既定単価</div></div>
     <div class="field"><label>備考(請求書下部)</label><textarea id="st-note">${esc(s.note)}</textarea></div>
-    <div class="field"><label>次の請求書番号</label><input id="st-invno" inputmode="numeric" value="${esc(s.nextInvoiceNo)}"><div class="hint">INV-0000000000 形式(10桁)で発行。例: 205 → INV-0000000205</div></div>
+    <div class="field"><label>次の請求書番号</label><input id="st-invno" inputmode="numeric" value="${esc(s.nextDInvNo||1)}"><div class="hint">D-INV-0001 形式で発行(電装専用・レンタカーの INV- 番号とは別)。例: 2 → D-INV-0002</div></div>
     <div class="field-row"><div class="field"><label>次の見積番号</label><input id="st-quoteno" inputmode="numeric" value="${esc(s.nextQuoteNo)}"><div class="hint">Q-000000 形式(6桁)。例: 1 → Q-000001</div></div>
     <div class="field" style="flex:0 0 140px"><label>見積有効期限(日数)</label><input id="st-quotevalid" inputmode="numeric" value="${esc(s.quoteValidDays)}"></div></div>
     <div class="field"><label>ロゴ(請求書右上・任意)</label>
@@ -2446,7 +2447,7 @@ function saveSettings(){
     company:g('st-company').trim(), company2:g('st-company2').trim(), zip:g('st-zip').trim(),
     address:g('st-address').trim(), tel:g('st-tel').trim(), fax:g('st-fax').trim(),
     regNo:g('st-reg').trim(), bank:g('st-bank'), subject:g('st-subject').trim(),
-    note:g('st-note'), taxRate:num(g('st-tax')), nextInvoiceNo:num(g('st-invno'))||1, etcSetupFee:num(g('st-etcfee'))||1800, nextQuoteNo:num(g('st-quoteno'))||1, quoteValidDays:num(g('st-quotevalid'))||30, person:g('st-person').trim(), _updatedAt:Date.now()
+    note:g('st-note'), taxRate:num(g('st-tax')), nextDInvNo:num(g('st-invno'))||1, etcSetupFee:num(g('st-etcfee'))||1800, nextQuoteNo:num(g('st-quoteno'))||1, quoteValidDays:num(g('st-quotevalid'))||30, person:g('st-person').trim(), _updatedAt:Date.now()
   });
   save(); closeModal(); toast('設定を保存','ok'); refresh();
 }
