@@ -3147,7 +3147,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-10-05a';
+const APP_VERSION = '2026-10-07a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -9447,7 +9447,12 @@ function renderDeadlineAlerts(){
   const ALERT_DAYS = 7;
   const items = [];
   DATA.cases.forEach(c => {
-    if(c.status==='入金済' || c.status==='請求済' || c.status==='返却済' || c.status==='キャンセル') return;
+    // ★2026-10-07: 「仮請求」と「回収完了済み」を除外に追加。
+    //   旧実装は 入金済/請求済/返却済/キャンセル だけを外していたため、2026-10-03 に
+    //   「返却済 かつ freee出力済」66件を仮請求へ一括変更した直後、車が戻っている案件が
+    //   17件このカードに並んだ (ユーザー報告)。車が戻った後の利用期限は現場の段取りに関係ない。
+    if(['入金済','請求済','仮請求','返却済','キャンセル'].includes(c.status)) return;
+    if(c.recoveryCompleted || c.isDeleted) return;
     const tryAdd = (kind, dateStr) => {
       if(!dateStr) return;
       const d = parseDate(dateStr); if(!d) return;
