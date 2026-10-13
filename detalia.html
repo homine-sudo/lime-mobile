@@ -2766,25 +2766,115 @@ function mergeById(local, remote){
   });
 }
 
+// ── 2026-10-13 消失対策（9/30〜10/12 の3件消失事故）──
+// 接続時に localStorage を data.json で丸ごと置き換えていたため、未接続中の入力が接続の瞬間に消えた。
+// 接続時もマージする。ただし未接続中は採番が「手元の最大+1」なので、別PCの別案件と番号が衝突しうる
+// (事故時: 手元の -0214 と Dropbox の -0214 が別の案件だった)。衝突したまま mergeById すると片方が消えるため、
+// 手元側を空き番号へ付け直してからマージする。
+// 同じidで「別のレコード」か：作成日時が違い、かつお客様/車種/受付日のどれかが違えば別物。
+// ※作成日時だけで判定しないこと: createdAt の無い旧案件は保存時に createdAt=今 が付くため、
+//   2台で同時に編集すると同じ案件でも createdAt が食い違う（→誤って複製される）。
+// createdAt の無いレコードは判定しない。迷ったら「別物ではない」側に倒す（従来どおりの動き）。
+function _isIdCollision(a,b){
+  if(!a||!b) return false;
+  const ca=String(a.createdAt||''), cb=String(b.createdAt||'');
+  if(!ca||!cb) return false;
+  const key = x => [x.customer||'', x.carModel||'', x.receptionDate||x.date||''].join('|');
+  if(key(a)===key(b)) return false;
+  // 予約の createdAt は日付のみ → 同日でも中身が違えば別物
+  return ca!==cb || ca.length<=10;
+}
+// 戻り値 {merged, renamed:[{from,to,label}]}。prefix は '-'(案件) / 'RES-'(予約) / 'Q-'(見積)
+function _mergeOnConnect(local, remote, prefix){
+  const toNum = id => parseInt(String(id||'').replace(/\D/g,''))||0;
+  const remoteById = new Map((remote||[]).filter(r=>r&&r.id).map(r=>[r.id,r]));
+  let maxN = 0;
+  (remote||[]).concat(local||[]).forEach(x=>{ const n=toNum(x&&x.id); if(n>maxN) maxN=n; });
+  const renamed=[];
+  const fixedLocal=(local||[]).map(l=>{
+    if(!l||!l.id) return l;
+    const r=remoteById.get(l.id);
+    if(!_isIdCollision(l,r)) return l;
+    maxN++;
+    const nid=prefix+String(maxN).padStart(4,'0');
+    renamed.push({from:l.id,to:nid,label:((l.customer||'')+' '+(l.carModel||'')).trim()});
+    return Object.assign({},l,{id:nid,updatedAt:new Date().toISOString()});
+  });
+  return { merged: mergeById(fixedLocal, remote), renamed };
+}
+// 手元にあって data.json に無い／data.json より新しいレコードの数（＝上書きすると失うもの）
+function _countLocalOnly(local, remote){
+  const toMs = ts => ts ? new Date(ts).getTime() : 0;
+  const rm = new Map((remote||[]).filter(r=>r&&r.id).map(r=>[r.id,r]));
+  return (local||[]).filter(l=>{
+    if(!l||!l.id) return false;
+    const r=rm.get(l.id);
+    return !r || _isIdCollision(l,r) || toMs(l.updatedAt)>toMs(r.updatedAt);
+  }).length;
+}
+
 // 案件を一覧・集計から隠すべきか（削除済み or キャンセル）。
 // ※パラメータ名は x（_caseHidden(c) の一括置換と衝突させないため）
 function _caseHidden(x){ return !!(x && (x.deleted || x.cancelled)); }
 
+// data.json を厳密に読む（2026-10-13 fail-closed 化）。
+// 旧実装は読取/解析の失敗を null にして「手元だけで全書込」していた。Dropbox が差し替え中の
+// 途切れ読みでも発動し、手元の古いデータで共有を丸ごと上書きする経路だった（LIMEOne 2026-07-03 と同型）。
+// 戻り値: {missing:true}=ファイル無し/空（初回のみ全書込してよい） / {data}=正常。それ以外は throw。
+async function _readDataStrict(){
+  let fh;
+  try{ fh=await dbxDirHandle.getFileHandle(DBX_DATA_FILE); }
+  catch(e){ if(e&&e.name==='NotFoundError') return {missing:true}; throw e; }
+  for(let i=0;i<2;i++){
+    try{
+      const t=await (await fh.getFile()).text();
+      if(!t.trim()) return {missing:true};
+      const d=JSON.parse(t);
+      if(!d||typeof d!=='object'||!Array.isArray(d.cases)) throw new Error('data.json の内容が想定外です');
+      return {data:d};
+    }catch(e){
+      if(e&&e.name==='NotAllowedError') throw e;
+      if(i===0){ await new Promise(r=>setTimeout(r,300)); continue; }
+      throw new Error('data.json を読み取れないため保存を中止しました（自動で再試行します）');
+    }
+  }
+}
+var dbxPendingWrite = false;   // 保存を中止した → ポーリングで再試行
+var _dbxWriteErrShown = false;
+
 async function writeToFile(){
   if(!dbxDirHandle) return;
   try{
-    // ① 保存前にファイルの最新版を読む
-    const remote = await readJsonFile(dbxDirHandle, DBX_DATA_FILE);
+    // ① 保存前にファイルの最新版を読む（読めなければ書かない）
+    const rd = await _readDataStrict();
+    const remote = rd.data || null;
     let finalCases = cases;
     let finalReservations = reservations;
     let finalQuotes = quotes;
+    let renamed = [];
     if(remote){
-      // ② IDベースでマージ（他PCの追加・編集を保持）。mergeByIdは org_id でフィルタ済
-      if(remote.cases) finalCases = _ensureOrgId(mergeById(cases, remote.cases));
-      if(remote.reservations) finalReservations = _ensureOrgId(mergeById(reservations, remote.reservations));
-      if(remote.quotes) finalQuotes = _ensureOrgId(mergeById(quotes, remote.quotes));
-      // ③ リモートに新しいデータがあればローカルも更新
-      const remoteHasNew = finalCases.length > cases.length
+      // ② IDベースでマージ（他PCの追加・編集を保持）。同時採番の番号衝突は手元側を付け直す
+      const mc = _mergeOnConnect(cases, remote.cases||[], '-');
+      const mr = _mergeOnConnect(reservations, remote.reservations||[], 'RES-');
+      const mq = _mergeOnConnect(quotes||[], remote.quotes||[], 'Q-');
+      finalCases = _ensureOrgId(mc.merged);
+      finalReservations = _ensureOrgId(mr.merged);
+      finalQuotes = _ensureOrgId(mq.merged);
+      renamed = mc.renamed.concat(mr.renamed, mq.renamed);
+      // ③ 消失ガード: data.json にあったレコードが1件でも欠けたら書かない
+      const _ofOrg = it => it && it.id && (!it.org_id || it.org_id===CURRENT_ORG_ID);
+      const lost = [];
+      [[remote.cases,finalCases],[remote.reservations,finalReservations],[remote.quotes,finalQuotes]].forEach(([r,f])=>{
+        const ids = new Set((f||[]).map(x=>x&&x.id));
+        (r||[]).filter(_ofOrg).forEach(x=>{ if(!ids.has(x.id)) lost.push(x.id); });
+      });
+      if(lost.length){
+        console.error('[消失ガード] マージ結果に欠落:', lost);
+        throw new Error('保存を中止しました（データ欠落を検出: '+lost.slice(0,5).join(',')+'）');
+      }
+      // ④ リモートに新しいデータがある／番号を付け直した → ローカルも更新
+      const remoteHasNew = renamed.length
+                       || finalCases.length > cases.length
                        || finalReservations.length > reservations.length
                        || finalQuotes.length > (quotes||[]).length;
       if(remoteHasNew){
@@ -2801,10 +2891,19 @@ async function writeToFile(){
       quotes: finalQuotes
     });
     dbxLastFileTs = now;
+    dbxPendingWrite = false; _dbxWriteErrShown = false;
     dbxUpdateSaveTime();
+    if(renamed.length){
+      toast('⚠️ 番号が他の案件と重なったため付け直しました: '+renamed.map(r=>r.from+'→'+r.to+(r.label?'（'+r.label+'）':'')).join('、'),'error');
+      renderCurrentPage();
+    }
   }catch(e){
-    if(e.name==='NotAllowedError') toast('アクセスが拒否されました。再接続してください','error');
-    else console.warn('writeToFile error',e);
+    if(e.name==='NotAllowedError'){ toast('アクセスが拒否されました。再接続してください','error'); dbxSetUI('warn',dbxDirHandle&&dbxDirHandle.name); }
+    else {
+      console.warn('writeToFile error',e);
+      dbxPendingWrite = true;   // 入力はこの端末に残っている。ポーリングで再試行
+      if(!_dbxWriteErrShown){ _dbxWriteErrShown = true; toast('⚠️ '+(e.message||'保存に失敗しました')+'（この端末には残っています）','error'); }
+    }
   }
 }
 
@@ -2814,6 +2913,7 @@ function startDbxPoll(){
   if(dbxPollTimer) clearInterval(dbxPollTimer);
   dbxPollTimer = setInterval(async function(){
     if(!dbxDirHandle) return;
+    if(dbxPendingWrite){ await writeToFile(); return; }   // 中止した保存の再試行（2026-10-13）
     try{
       var fh = await dbxDirHandle.getFileHandle(DBX_DATA_FILE);
       var file = await fh.getFile();
@@ -2853,7 +2953,22 @@ async function loadFromFile(){
   try{
     var data=await readJsonFile(dbxDirHandle,DBX_DATA_FILE);
     if(!data) return false;
-    if(data.cases&&data.cases.length){cases=_ensureOrgId(_migrateCaseNames(data.cases)); localStorage.setItem(STORAGE_KEY,JSON.stringify(cases));}
+    // ★2026-10-13 消失対策: 置き換えずにマージする（未接続中にこの端末で入力した分を残す）
+    //   ①失うものがあるなら、先に data.json と同じフォルダの「_接続前退避」へ書き出す（保険）
+    //   ②番号が衝突した手元の案件は空き番号へ付け直してからマージ
+    //   ③手元にしか無いものがあれば、接続後すぐ data.json へ書き戻す（connectDir / reloadFromFile）
+    var _localOnly = _countLocalOnly(cases, data.cases||[])
+                   + _countLocalOnly(reservations, data.reservations||[])
+                   + _countLocalOnly(quotes||[], data.quotes||[]);
+    if(_localOnly>0) await _backupLocalBeforeMerge(_localOnly);
+    var _renamed = [];
+    if(Array.isArray(data.cases)){
+      var _mc=_mergeOnConnect(cases, data.cases, '-');
+      _renamed=_renamed.concat(_mc.renamed);
+      cases=_ensureOrgId(_migrateCaseNames(_mc.merged)); localStorage.setItem(STORAGE_KEY,JSON.stringify(cases));
+    }
+    dbxNeedWriteAfterLoad = _localOnly>0;
+    dbxRenamedOnLoad = _renamed;
     if(data.settings){
       settings=Object.assign({},DEFAULT_SETTINGS,data.settings);
       if(!settings.serviceMenu||!settings.serviceMenu.length) settings.serviceMenu=DEFAULT_SETTINGS.serviceMenu;
@@ -2884,16 +2999,46 @@ async function loadFromFile(){
     if(data.reservations){
       // サイズ表記マイグレーション
       data.reservations.forEach(it=>{ if(it && it.size) it.size = _migrateSize(it.size); });
-      reservations=_ensureOrgId(data.reservations);
+      var _mr=_mergeOnConnect(reservations, data.reservations, 'RES-');
+      dbxRenamedOnLoad=dbxRenamedOnLoad.concat(_mr.renamed);
+      reservations=_ensureOrgId(_mr.merged);
       localStorage.setItem(RES_KEY,JSON.stringify(reservations));
     }
     if(data.quotes){
       data.quotes.forEach(q=>{ if(q && q.size) q.size = _migrateSize(q.size); });
-      quotes=_ensureOrgId(data.quotes);
+      var _mq=_mergeOnConnect(quotes||[], data.quotes, 'Q-');
+      dbxRenamedOnLoad=dbxRenamedOnLoad.concat(_mq.renamed);
+      quotes=_ensureOrgId(_mq.merged);
       localStorage.setItem(QUOTE_KEY,JSON.stringify(quotes));
     }
+    if(dbxRenamedOnLoad.length) dbxNeedWriteAfterLoad = true;
     return true;
   }catch(e){console.warn('loadFromFile error',e);return false;}
+}
+
+var dbxNeedWriteAfterLoad = false;
+var dbxRenamedOnLoad = [];
+// 接続前退避: マージ前の手元データを「システムデータ（D)/_接続前退避/」へ書き出す（失うものがある時だけ）
+async function _backupLocalBeforeMerge(n){
+  try{
+    var sub=await dbxDirHandle.getDirectoryHandle('_接続前退避',{create:true});
+    var ts=new Date().toISOString().replace(/[:.]/g,'-');
+    await writeJsonFile(sub, dbxPcId+'_'+ts+'.json', {pcId:dbxPcId, at:new Date().toISOString(), localOnly:n,
+      cases:cases, reservations:reservations, quotes:quotes});
+  }catch(e){ console.warn('[接続前退避] 失敗（マージは続行）',e); }
+}
+// 読み込み後の後始末: 手元にしか無かった分を data.json へ書き戻し、付け直した番号を知らせる
+async function _afterLoadSync(){
+  var renamed=dbxRenamedOnLoad||[];
+  if(dbxNeedWriteAfterLoad){
+    dbxNeedWriteAfterLoad=false;
+    await writeToFile();
+    toast('🛟 未接続の間にこの端末で入力した分を、共有データに合流しました','');
+  }
+  if(renamed.length){
+    toast('⚠️ 番号が他の案件と重なったため付け直しました: '+renamed.map(r=>r.from+'→'+r.to+(r.label?'（'+r.label+'）':'')).join('、'),'error');
+  }
+  dbxRenamedOnLoad=[];
 }
 
 async function connectDir(handle){
@@ -2906,6 +3051,7 @@ async function connectDir(handle){
   if(loaded) dbxLastFileTs=new Date().toISOString();
   await checkAndAcquireLock();
   dbxSetUI('on',handle.name);
+  if(loaded) await _afterLoadSync();
   startDbxPoll(); // 自動ポーリング開始
   return true;
 }
@@ -2931,7 +3077,7 @@ async function reconnectFolder(){
 async function reloadFromFile(){
   if(!dbxDirHandle){toast('フォルダが接続されていません','error');return;}
   var ok=await loadFromFile();
-  if(ok){toast('データを再読み込みしました');renderCurrentPage();}
+  if(ok){toast('データを再読み込みしました');await _afterLoadSync();renderCurrentPage();}
 }
 
 async function disconnectFolder(){
@@ -2984,6 +3130,25 @@ function dbxSetUI(state,folderName){
     if(dsBtnReload) dsBtnReload.style.display='none';
     if(dsBtnDisconnect) dsBtnDisconnect.style.display='none';
   }
+  _dbxBanner(state);
+}
+
+// 🚨 未接続の常設警告（2026-10-13）。ナビ隅の小さな表示だけでは気づかれず、
+//   9/30〜10/12 の入力が他PCに届かないまま接続時に消えた。接続するまで画面下に赤帯を出し続ける。
+function _dbxBanner(state){
+  var el=document.getElementById('dbx-offline-banner');
+  if(state==='on'){ if(el) el.remove(); return; }
+  if(!dbxSupported()) return;
+  if(!el){
+    el=document.createElement('div');
+    el.id='dbx-offline-banner';
+    el.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9000;background:#C53030;color:#fff;font-weight:bold;font-size:14px;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;box-shadow:0 -2px 10px rgba(0,0,0,.4)';
+    document.body.appendChild(el);
+  }
+  el.innerHTML='<span>⚠ Dropbox未接続 — ここで入力した内容は他のPCに共有されていません</span>'
+    +'<button type="button" style="background:#fff;color:#C53030;border:0;border-radius:6px;padding:6px 14px;font-weight:bold;cursor:pointer">'
+    +(state==='warn'?'🔓 再接続する':'📂 Dropboxフォルダを選ぶ')+'</button>';
+  el.querySelector('button').onclick=function(){ if(state==='warn') reconnectFolder(); else pickFolder(); };
 }
 
 function dbxNavClick(){
@@ -3063,6 +3228,7 @@ async function initApp(){
       }
       // パーミッション要求が必要 → 起動ポップアップ表示
       renderDashboard();
+      dbxSetUI('warn',handle.name);   // 接続されるまで赤帯を出す（2026-10-13）
       dbxShowStartupModal(handle);
       return;
     } else {
@@ -6096,7 +6262,7 @@ function saveCase(){
   if(dbxDirHandle){
     toast('保存しました');
   } else {
-    toast('⚠️ 共有フォルダ未接続 — この端末にのみ保存しました（共有されていません）。ナビの「データ未接続」からフォルダを接続して、もう一度保存してください。','error');
+    toast('⚠️ 共有フォルダ未接続 — この端末にのみ保存しました（共有されていません）。画面下の赤い帯から接続すると、自動で共有データに合流します。','error');
   }
   }catch(err){
     console.error('saveCase error:', err);
