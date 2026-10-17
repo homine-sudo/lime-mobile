@@ -13768,26 +13768,43 @@ function _branchSegmentsHTML(c){
   let totalDays = 0, totalAmt = 0, hasInUse = false;
   // ★行数を増やさない: 表組みにすると205px(A4の約19%)食い、PDFがA4にfit縮小されてFAXで潰れる
   //   (2026-10-17 実測)。1区間=1行の詰めた形にして、増分を1/3以下に抑える。
+  // ★A4 1ページを死守する (2026-10-17 実測): 印刷時 ■見出し=9mm / 1行=4mm、書面の素の高さは245〜248mm。
+  //   見出しを表の中の1行に畳み (9mm→4mm)、区間が多い時は行数を打ち切る。合計には必ず全区間を含める。
   const marks = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
-  const lines = segs.map((s, i) => {
+  const line = (s, i) => {
     const x = s.c;
     const a = calcAmounts(x);
     const inUse = !!(x.useStart && !x.useEnd);
-    if(inUse) hasInUse = true;
-    else { totalDays += Number(a.billDays || 0); totalAmt += Number(a.total || 0); }
     const veh = x.isBorrowed ? (x.borrowedVehicleInfo || '') : (x.vehicleName || '');
     const plate = x.isBorrowed ? (x.borrowedPlate || '')
                                : [x.plateNo, x.plateKana, x.plateTail].filter(Boolean).join(' ');
-    const self = (x.id === c.id);
     const amt = inUse ? '<span class="ho-sub">利用中</span>'
                       : `${Number(a.billDays || 0)} 日　<b>${fmtNum(Number(a.total || 0))}</b> 円`;
-    return `${marks[i] || ('(' + (i + 1) + ')')} <b>${esc(x.caseNo || '')}</b>${self ? '（この書面）' : ''}　`
+    return `${marks[i] || ('(' + (i + 1) + ')')} <b>${esc(x.caseNo || '')}</b>${x.id === c.id ? '（この書面）' : ''}　`
          + `${esc([veh, plate].filter(Boolean).join(' '))}　`
          + `${fmtMD(x.useStart)}〜${inUse ? '' : fmtMD(x.useEnd)}　${amt}`;
-  }).join('<br>');
+  };
+  segs.forEach(s => {                              // 合計は必ず全区間から (表示を打ち切っても金額は正しい)
+    const a = calcAmounts(s.c);
+    if(s.c.useStart && !s.c.useEnd) hasInUse = true;
+    else { totalDays += Number(a.billDays || 0); totalAmt += Number(a.total || 0); }
+  });
+  const MAX_SHOW = 3;
+  let body;
+  if(segs.length <= MAX_SHOW){
+    body = segs.map(line).join('<br>');
+  } else {
+    const shown = [0, 1];                           // 先頭2区間
+    const curIdx = segs.findIndex(s => s.c.id === c.id);
+    if(curIdx > 1) shown.push(curIdx);              // この書面の区間は必ず出す
+    const omitted = segs.length - shown.length;
+    body = [line(segs[0], 0), line(segs[1], 1),
+            `<span class="ho-sub">…他 ${omitted} 区間（合計に含む）</span>`]
+           .concat(curIdx > 1 ? [line(segs[curIdx], curIdx)] : []).join('<br>');
+  }
   return `
-      <div class="ho-section">■この貸渡の全区間（車両入替のため区間が分かれています）</div>
-      <table class="ho-table"><tr><td class="ho-sm" style="text-align:left;line-height:1.55">${lines}<br>
+      <table class="ho-table" style="margin-top:6pt"><tr><td class="ho-sm" style="text-align:left;line-height:1.35">
+        <b>■この貸渡の全区間（車両入替のため区間が分かれています）</b><br>${body}<br>
         <b>合計 ${totalDays} 日　${fmtNum(totalAmt)} 円 (税込)${hasInUse ? '　※利用中の区間を除く' : ''}</b>
         <span class="ho-sub">／ 各区間は受付Noごとに請求しています</span></td></tr></table>`;
 }
