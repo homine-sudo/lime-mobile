@@ -3147,7 +3147,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-10-07a';
+const APP_VERSION = '2026-10-17a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -13741,6 +13741,56 @@ function renderBorrowRequest(c){
     </div>`;
 }
 
+// ============================================================
+// ★2026-10-17 車両入替で枝番に分かれた貸渡の「全区間」表 (手配報告書兼請求書に追加)
+//   ユーザー報告「枝番ができた案件がレンタル終了した時に、前回-1の案件の請求が漏れることが多い」。
+//   1案件1枚の書面では前の区間が見えず、社内も取引先も漏れに気づけなかった。
+//   🚨 PC LIMEOne.html と モバイル index_mobile.html で完全同一に保つこと (書面は一字一句同じ)。
+//   ・枝番が無い単独の案件では何も出さない (従来の書面と1文字も変わらない)
+//   ・改番もれで「枝番なしの base」が残っている場合は第1区間として扱う (2026-08-12b と同じ考え方)
+//   ・利用中の区間は金額が確定しないので合計に入れない
+//   ・請求は従来どおり受付Noごと。合計での二重払いを招かないよう注記を必ず残すこと
+// ============================================================
+function _branchSegmentsHTML(c){
+  const m = String((c && c.caseNo) || '').match(/^(\d{4}-\d{2}-\d{4})(?:-(\d+))?$/);
+  if(!m) return '';
+  const base = m[1];
+  const segs = [];
+  ((typeof DATA !== 'undefined' && DATA && DATA.cases) || []).forEach(x => {
+    if(!x || x.status === 'キャンセル' || x.isDeleted || x.isHistorical) return;
+    const mm = String(x.caseNo || '').match(/^(\d{4}-\d{2}-\d{4})(?:-(\d+))?$/);
+    if(!mm || mm[1] !== base) return;
+    segs.push({ seq: mm[2] ? Number(mm[2]) : 1, c: x });
+  });
+  if(segs.length < 2) return '';
+  segs.sort((a, b) => a.seq - b.seq);
+  const fmtMD = v => { const d = parseDate(v); return d ? `${d.getMonth()+1}/${d.getDate()}` : '―'; };
+  let totalDays = 0, totalAmt = 0, hasInUse = false;
+  // ★行数を増やさない: 表組みにすると205px(A4の約19%)食い、PDFがA4にfit縮小されてFAXで潰れる
+  //   (2026-10-17 実測)。1区間=1行の詰めた形にして、増分を1/3以下に抑える。
+  const marks = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
+  const lines = segs.map((s, i) => {
+    const x = s.c;
+    const a = calcAmounts(x);
+    const inUse = !!(x.useStart && !x.useEnd);
+    if(inUse) hasInUse = true;
+    else { totalDays += Number(a.billDays || 0); totalAmt += Number(a.total || 0); }
+    const veh = x.isBorrowed ? (x.borrowedVehicleInfo || '') : (x.vehicleName || '');
+    const plate = x.isBorrowed ? (x.borrowedPlate || '')
+                               : [x.plateNo, x.plateKana, x.plateTail].filter(Boolean).join(' ');
+    const self = (x.id === c.id);
+    const amt = inUse ? '<span class="ho-sub">利用中</span>'
+                      : `${Number(a.billDays || 0)} 日　<b>${fmtNum(Number(a.total || 0))}</b> 円`;
+    return `${marks[i] || ('(' + (i + 1) + ')')} <b>${esc(x.caseNo || '')}</b>${self ? '（この書面）' : ''}　`
+         + `${esc([veh, plate].filter(Boolean).join(' '))}　`
+         + `${fmtMD(x.useStart)}〜${inUse ? '' : fmtMD(x.useEnd)}　${amt}`;
+  }).join('<br>');
+  return `
+      <div class="ho-section">■この貸渡の全区間（車両入替のため区間が分かれています）</div>
+      <table class="ho-table"><tr><td class="ho-sm" style="text-align:left;line-height:1.55">${lines}<br>
+        <b>合計 ${totalDays} 日　${fmtNum(totalAmt)} 円 (税込)${hasInUse ? '　※利用中の区間を除く' : ''}</b>
+        <span class="ho-sub">／ 各区間は受付Noごとに請求しています</span></td></tr></table>`;
+}
 function renderInstruction(){
   const id = $('is-select-case').value; if(!id){ renderInstructionPage(); return; }
   const c = findCaseById(id); if(!c) return;
@@ -13869,6 +13919,7 @@ function renderInstruction(){
         <tr><th>日額(税込)</th><td style="width:34%">${unitIn? `<b>${fmtNum(unitIn)}</b> 円　<span class="ho-sub">(税抜 ${fmtNum(unitEx)} 円)</span>`:''}</td><th>算出</th><td>${usageDays && unitIn? `${usageDays} 日 × ${fmtNum(unitIn)} 円 (税込)` : ''}</td></tr>
         <tr><th>利用金額</th><td colspan="3">${amountDisplay}${discountDisplay}</td></tr>
       </table>
+      ${_branchSegmentsHTML(c)}
       <div class="ho-footer">
         <div class="ho-bank">
           【振込先】<br>

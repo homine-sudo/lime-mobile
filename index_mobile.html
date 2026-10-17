@@ -2161,7 +2161,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-09-16a';
+const APP_VERSION = '2026-10-17a';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -7611,6 +7611,56 @@ function closeHandoverModal(){ $('m-handover-modal').classList.remove('active');
 // ============================================================
 // 手配書 HTML 生成
 // ============================================================
+// ============================================================
+// ★2026-10-17 車両入替で枝番に分かれた貸渡の「全区間」表 (手配報告書兼請求書に追加)
+//   ユーザー報告「枝番ができた案件がレンタル終了した時に、前回-1の案件の請求が漏れることが多い」。
+//   1案件1枚の書面では前の区間が見えず、社内も取引先も漏れに気づけなかった。
+//   🚨 PC LIMEOne.html と モバイル index_mobile.html で完全同一に保つこと (書面は一字一句同じ)。
+//   ・枝番が無い単独の案件では何も出さない (従来の書面と1文字も変わらない)
+//   ・改番もれで「枝番なしの base」が残っている場合は第1区間として扱う (2026-08-12b と同じ考え方)
+//   ・利用中の区間は金額が確定しないので合計に入れない
+//   ・請求は従来どおり受付Noごと。合計での二重払いを招かないよう注記を必ず残すこと
+// ============================================================
+function _branchSegmentsHTML(c){
+  const m = String((c && c.caseNo) || '').match(/^(\d{4}-\d{2}-\d{4})(?:-(\d+))?$/);
+  if(!m) return '';
+  const base = m[1];
+  const segs = [];
+  ((typeof DATA !== 'undefined' && DATA && DATA.cases) || []).forEach(x => {
+    if(!x || x.status === 'キャンセル' || x.isDeleted || x.isHistorical) return;
+    const mm = String(x.caseNo || '').match(/^(\d{4}-\d{2}-\d{4})(?:-(\d+))?$/);
+    if(!mm || mm[1] !== base) return;
+    segs.push({ seq: mm[2] ? Number(mm[2]) : 1, c: x });
+  });
+  if(segs.length < 2) return '';
+  segs.sort((a, b) => a.seq - b.seq);
+  const fmtMD = v => { const d = parseDate(v); return d ? `${d.getMonth()+1}/${d.getDate()}` : '―'; };
+  let totalDays = 0, totalAmt = 0, hasInUse = false;
+  // ★行数を増やさない: 表組みにすると205px(A4の約19%)食い、PDFがA4にfit縮小されてFAXで潰れる
+  //   (2026-10-17 実測)。1区間=1行の詰めた形にして、増分を1/3以下に抑える。
+  const marks = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
+  const lines = segs.map((s, i) => {
+    const x = s.c;
+    const a = calcAmounts(x);
+    const inUse = !!(x.useStart && !x.useEnd);
+    if(inUse) hasInUse = true;
+    else { totalDays += Number(a.billDays || 0); totalAmt += Number(a.total || 0); }
+    const veh = x.isBorrowed ? (x.borrowedVehicleInfo || '') : (x.vehicleName || '');
+    const plate = x.isBorrowed ? (x.borrowedPlate || '')
+                               : [x.plateNo, x.plateKana, x.plateTail].filter(Boolean).join(' ');
+    const self = (x.id === c.id);
+    const amt = inUse ? '<span class="ho-sub">利用中</span>'
+                      : `${Number(a.billDays || 0)} 日　<b>${fmtNum(Number(a.total || 0))}</b> 円`;
+    return `${marks[i] || ('(' + (i + 1) + ')')} <b>${esc(x.caseNo || '')}</b>${self ? '（この書面）' : ''}　`
+         + `${esc([veh, plate].filter(Boolean).join(' '))}　`
+         + `${fmtMD(x.useStart)}〜${inUse ? '' : fmtMD(x.useEnd)}　${amt}`;
+  }).join('<br>');
+  return `
+      <div class="ho-section">■この貸渡の全区間（車両入替のため区間が分かれています）</div>
+      <table class="ho-table"><tr><td class="ho-sm" style="text-align:left;line-height:1.55">${lines}<br>
+        <b>合計 ${totalDays} 日　${fmtNum(totalAmt)} 円 (税込)${hasInUse ? '　※利用中の区間を除く' : ''}</b>
+        <span class="ho-sub">／ 各区間は受付Noごとに請求しています</span></td></tr></table>`;
+}
 function buildHandoverHTML(c, ins, s, upperOnly){
   const taxRate = Number(s.taxRate||10)/100;
   // 手配報告書兼請求書なので日額は請求単価(未設定なら貸渡料金)。PC版 renderInstruction と同じ (2026-08-04)
@@ -7706,6 +7756,7 @@ function buildHandoverHTML(c, ins, s, upperOnly){
         <tr><th>日額(税込)</th><td style="width:34%">${unitIn? `<b>${fmtNum(unitIn)}</b> 円　<span class="ho-sub">(税抜 ${fmtNum(unitEx)} 円)</span>`:''}</td><th>算出</th><td>${periodDays && unitIn? `${periodDays} 日 × ${fmtNum(unitIn)} 円 (税込)` : ''}</td></tr>
         <tr><th>利用金額</th><td colspan="3">${amountDisplay}</td></tr>
       </table>
+      ${_branchSegmentsHTML(c)}
       <div class="ho-footer">
         <div class="ho-bank">
           【振込先】<br>
