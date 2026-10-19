@@ -3242,11 +3242,16 @@ const xfR = (x1,y1,x2,y2,fill) =>
 const xfBox = (x1,y1,x2,y2,t=0.34,c='#000') =>
   xfH(x1,y1,x2,t,c)+xfH(x1,y2,x2,t,c)+xfV(x1,y1,y2,t,c)+xfV(x2,y1,y2,t,c);
 // 担当者印：赤い丸（1.25pt）の中に HGP行書体 12pt の縦書き。Excelの図形と同じ作り
-function xfStamp(x1,y1,x2,y2,name){
+function xfStamp(x1,y1,x2,y2,name,size=12){
   const n = String(name||'').trim(); if(!n) return '';
-  const pt = n.length<=2 ? 12 : Math.max(7, 24/n.length);
+  const pt = n.length<=2 ? size : Math.max(size*0.6, size*2/n.length);
   return `<div class="xstamp" style="left:${x1}mm;top:${y1}mm;width:${(x2-x1).toFixed(2)}mm;height:${(y2-y1).toFixed(2)}mm;font-size:${pt}pt"><span>${esc(n)}</span></div>`;
 }
+// 見積書の会社名の下に出す許可番号（新見積もり 10.19.xlsm の V14〜V17）。設定に licenses（改行区切り）があればそちら
+const XF_LICENSES = ['沖縄県（般－7）第15372号｜建築工事業・電気工事業・解体工事業',
+  '沖縄県（般－8）第15372号｜とび・土工工事業',
+  '電気工事業届出：沖縄県知事届出 第25G32971号',
+  '産業廃棄物収集運搬許可：04704243290号'];
 const xfSeal = (x1,y1,x2,y2,src) => src
   ? `<img class="xseal" alt="" src="${esc(src)}" style="left:${x1}mm;top:${y1}mm;width:${(x2-x1).toFixed(2)}mm;height:${(y2-y1).toFixed(2)}mm">` : '';
 
@@ -3255,7 +3260,7 @@ const XF = {
   quote: {
     left:18.6, right:190.8, head:[99.9,104.6], work:[104.6,26,4.319], expRow:[4.5,4.1],
     cols:[85.3,95.5,103.8,124.3,150.0], labelC:51.95,
-    hdr:[['品　　　名',51.95],['数量',90.4],['単位',99.65],['単　価',114.05],['金　額',137.15],['摘　要',170.4]], hdrY:100.7,
+    hdr:[['項　　　　目',51.95],['数量',90.4],['単位',99.65],['単　価',114.05],['金　額',137.15],['摘　要',170.4]], hdrY:100.7,
     txt:{name:19.4, qty:90.4, unit:99.65, price:123.7, amount:149.2, memo:150.8},
     rowLine:'#000', colLine:'#000', headT:0.34, rowDy:0.2, nameDy:0.3, bigAmtX:149.2,
   },
@@ -3345,37 +3350,37 @@ function xformHtml(d){
     out.push(xfT(57.05, 37.8, d.client, {pt:13, a:'c', w:77, max:76}), xfH(18.6,44.0,95.5,0.34));
     out.push(xfT(95.6, 38.0, '御中', {pt:12}));
     out.push(xfT(20.2, 45.7, '案件名：', {pt:9}), xfT(34.7, 46.0, d.title, {pt:7, max:61, w:62}));
+    /* 2026-10-19 大嶺さん「見積書の様式は 新見積もり 10.19.xlsm にして。左上にシークのマーク」。
+       前の様式からの違い：納入場所・納期・リース欄・右の承認／担当者の枠をやめ、
+       担当者の名前の横に担当者印、会社名の下に許可番号4行。有効期限は3ヶ月・取引方法は現金。
+       寸法は Excel のセル位置（pt）を PDF で測った mm に直したもの（縦 11.0+pt×0.318・横 13.5+pt×0.3268） */
+    out.push(`<img class="xlogo" alt="" src="seek_logo.png" style="left:15.6mm;top:7.4mm;width:20mm;height:20mm">`);
     out.push(xfT(19.6, 53.9, '下記の通りお見積り申し上げます。', {pt:10}));
     out.push(xfT(19.6, 57.8, '何卒ご用命賜りますよう、お願い申し上げます。', {pt:10}));
-    out.push(xfT(19.5, 65.8, '納 入 場 所'), xfT(19.5, 70.6, '納'), xfT(32.2, 70.6, '期'),
-             xfT(19.5, 75.4, '見積有効期限'), xfT(19.5, 80.1, '取 引 方 法'));
-    [69.8,74.5,79.2,84.2].forEach(y=>out.push(xfH(39.3,y,85.2,0.17)));
-    out.push(xfT(62.25, 65.5, '御社ご指定場所', {pt:10, a:'c', w:46}),
-             xfT(62.25, 70.2, '発注日より30日以内', {pt:10, a:'c', w:46}),
-             xfT(53.6, 75.0, '一ヶ月', {pt:10, a:'c', w:20}),
-             xfT(60.3, 75.7, '※ 期限後注文の節は一応御照会願います。', {pt:7}),
-             xfT(62.25, 79.8, '現金及びリース', {pt:10, a:'c', w:46}));
-    out.push(xfT(157.8, 44.8, co, {pt:14, a:'c', w:70}),
-             xfT(160.4, 51.1, S.address||'', {pt:10, a:'c', w:60}),
-             xfT(160.2, 55.9, 'TEL'+(S.tel||''), {pt:10, a:'c', w:60}),
-             xfT(160.2, 60.7, 'FAX'+(S.fax||''), {pt:10, a:'c', w:60}));
-    out.push(xfBox(129.4,64.9,190.8,84.2,0.34), xfV(149.9,64.9,84.2,0.34), xfV(170.3,64.9,84.2,0.34));
-    out.push(xfT(180.55, 65.2, '担当者', {pt:8, a:'c', w:20}));
-    out.push(xfStamp(173.7,69.3,187.8,83.7, d.stamp));
+    out.push(xfT(19.5, 66.0, '見積有効期限'), xfT(19.5, 70.7, '取 引 方 法'), xfT(19.5, 75.5, '担 当 者'));
+    [65.2,69.9,74.7,79.5,84.2].forEach(y=>out.push(xfH(39.3,y,85.6,0.17)));
+    out.push(xfT(59.5, 65.8, S.quoteValid||'3ヶ月', {pt:10, a:'r', w:20}),
+             xfT(60.0, 66.4, '※ 期限後注文の節は御照会願います。', {pt:7}),
+             xfT(62.45, 70.5, d.payTerms||'現金', {pt:10, a:'c', w:46}),
+             xfT(62.45, 75.3, S.staffName||'村山　大気', {pt:10, a:'c', w:46, max:30}));
+    out.push(xfStamp(76.3,72.4,85.1,81.4, d.stamp, 8));
+    out.push(xfT(155.6, 44.9, co, {pt:16, a:'c', w:72, max:71}),
+             xfT(155.6, 51.4, S.address||'', {pt:10, a:'c', w:72, max:71}),
+             xfT(155.6, 56.2, 'TEL'+(S.tel||''), {pt:10, a:'c', w:72}),
+             xfT(155.6, 60.9, 'FAX'+(S.fax||''), {pt:10, a:'c', w:72}));
+    (S.licenses ? String(S.licenses).split('\n').filter(s=>s.trim()) : XF_LICENSES).slice(0,4)
+      .forEach((t,i)=>out.push(xfT(155.6, 66.2+i*4.75, t.trim(), {pt:8, a:'c', w:72, max:71})));
     // お見積り金額の枠
-    out.push(xfBox(18.5,86.9,191.0,95.0,0.34), xfV(18.5,86.9,95.0,0.5), xfV(44.4,86.9,95.0,0.17));
-    out.push(xfT(31.45, 89.2, 'お見積り金額', {pt:10, a:'c', w:26}));
-    out.push(xfT(70.1, 88.8, '¥'+xfNum(d.total)+' -', {pt:12, a:'c', w:50}));
-    out.push(xfT(98.3, 87.6, '＜リース契約の場合＞', {pt:6}),
-             xfT(99.1, 91.3, 'リース期間：', {pt:8}), xfT(120.8, 91.3, 'ヶ月', {pt:8}),
-             xfT(135.0, 91.3, '月額リース料：', {pt:8}));
+    out.push(xfBox(18.5,87.1,191.0,95.2,0.34), xfV(18.5,87.1,95.2,0.5), xfV(44.4,87.1,95.2,0.17));
+    out.push(xfT(31.45, 89.4, 'お見積り金額', {pt:10, a:'c', w:26}));
+    out.push(xfT(70.1, 88.6, '¥'+xfNum(d.total)+' -', {pt:14, a:'c', w:50}));
     // 備考
     const bt = YE(260.9), bb = YE(277.7);
     out.push(xfBox(18.5,bt,191.0,bb,0.34), xfV(18.5,bt,bb,0.5), xfH(18.5,bb,191.0,0.5), xfV(29.0,bt,bb,0.17));
     out.push(xfT(23.85, bt+2.8, '備', {pt:10, a:'c', w:8}), xfT(23.85, bt+10.7, '考', {pt:10, a:'c', w:8}));
     if(d.note) out.push(xfT(30.5, bt+1.6, d.note, {pt:8, w:158, css:'white-space:pre-wrap;line-height:1.5'}));
     out.push(xfT(185.1, bt+12.6, '※ 上記以外の作業、部材等につきましては、別途御見積りとさせていただきます。', {pt:8, a:'r', w:120}));
-    out.push(xfSeal(167.1,43.3,190.3,64.3, d.seal));
+    out.push(xfSeal(177.8,51.6,192.9,65.2, d.seal));
   } else {
     out.push(xfR(144.6,14.4,195.9,23.5,XF_GRAY), xfBox(144.6,14.4,195.9,23.5,0.2,'#9c9c9c'), xfH(144.6,19.0,195.9,0.17,'#8c8c8c'));
     out.push(xfT(145.6, 14.9, '発行日', {pt:10}), xfT(159.6, 14.9, xfReiwa(d.date), {pt:10}));
@@ -3421,6 +3426,7 @@ const XF_CSS = `
 .xpage .xt{position:absolute;line-height:1;white-space:nowrap;overflow:visible;letter-spacing:0}
 .xpage .xl{position:absolute}
 .xpage .xseal{position:absolute;mix-blend-mode:multiply;object-fit:fill}
+.xpage .xlogo{position:absolute;object-fit:contain}
 .xpage .xstamp{position:absolute;box-sizing:border-box;border:1.25pt solid #f00;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:#f00;line-height:1;
   font-family:'HGP行書体','HGPGyoshotai','HG行書体','HGGyoshotai',serif}
@@ -3452,7 +3458,7 @@ function xformAvantHtml(d){
       <td class="n">${Number(it.amount)||exp?xfNum(it.amount||0):''}</td></tr>`;
   };
   const tags = isQ
-    ? ['納入　御社ご指定場所','納期　発注日より30日以内','有効期限　一ヶ月','現金及びリース']
+    ? ['有効期限　'+(S.quoteValid||'3ヶ月'), d.payTerms||'現金']
     : [d.delivered ? '納期　'+xfReiwa(d.delivered) : '', d.payTerms ? 'お支払方法　'+d.payTerms : '',
        d.due ? 'お支払期限　'+xfReiwa(d.due) : ''].filter(Boolean);
   const b = d.bank||{};
@@ -3577,8 +3583,9 @@ function printDoc(j, items, kind, opt={}){
   const gap = (sub1+sub2) - (ex - Number(j.discount||0));
   const date = isQ ? (j.quoted_at || today()) : (j.invoiced_at || today());
   const seal = S.sealCompany || '';
-  // 様式：前衛（既定）／Excelと同じ。プレビューの切り替え → 設定の既定 → 前衛 の順
-  const style = opt.style || docStyleNow || (M.settings||{}).docStyle || 'avant';
+  // 様式：前衛／Excelと同じ。プレビューの切り替え → 設定の既定 → 前衛 の順。
+  // 見積書は 新見積もり 10.19.xlsm の様式を既定にする（2026-10-19 大嶺さん）。前衛へはプレビューで切り替えられる
+  const style = opt.style || docStyleNow || (isQ ? 'excel' : ((M.settings||{}).docStyle || 'avant'));
   const html = (style==='excel' ? xformHtml : xformAvantHtml)({
     kind, date, client, title: j.title||'', no: j.job_no||'',
     total: Number(j.total_in_tax||0), sub1, sub2, discount: Number(j.discount||0), ex,
@@ -3601,7 +3608,7 @@ function printDoc(j, items, kind, opt={}){
     <div class="row" style="margin:0 0 12px">
       <div class="seg" title="マスタ → 帳票・印鑑 で、いつもの様式を決められます">
         <button data-dstyle="avant" class="${style!=='excel'?'on':''}">前衛</button>
-        <button data-dstyle="excel" class="${style==='excel'?'on':''}">Excelと同じ</button></div>
+        <button data-dstyle="excel" class="${style==='excel'?'on':''}">${isQ?'新見積（10.19）':'Excelと同じ'}</button></div>
       <button class="btn" id="doPrint">印刷 / PDFで保存</button>
       <button class="btn ghost" id="doMail" ${opt.draft?'disabled title="保存してから送れます"':''}>メールで送る</button>
       <span class="muted small">印刷画面で「PDFに保存」を選ぶとPDFになります（用紙 A4・余白なし）</span>
@@ -5894,7 +5901,7 @@ function drawPrices(el, q){
     // ばらついているものを見るときは「怪しい順」に。実績が多いのに割れている＝いちばん確認が要る
     .sort((a,b)=> pSure==='shaky'
       ? (Number(a.p.mode_share)-Number(b.p.mode_share)) || (b.p.sample_count-a.p.sample_count)
-      : b.p.sample_count-a.p.sample_count);
+      : a.w.localeCompare(b.w,'ja') || b.p.sample_count-a.p.sample_count);   // ふだんは工種名の順（マスタと同じ。2026-10-19）
   const rows = rowsNC.filter(r=>!pClient || pKey(r.p)===pClient);
   const pct = all.length ? Math.round(done/all.length*100) : 0;
   // 左の会社の一覧（いまの絞り込み＝未確定／直近1年／検索 を効かせた数）
@@ -6924,7 +6931,7 @@ function drawCostPrices(el, all0){
     // ばらついているものを見るときは、いちばん割れているものから
     .sort((a,b)=> (costFilter==='shaky'||costFilter==='check')
       ? (share(a)-share(b)) || (Number(b.sample_count)-Number(a.sample_count))
-      : Number(b.sample_count)-Number(a.sample_count));
+      : String(a.name).localeCompare(String(b.name),'ja') || Number(b.sample_count)-Number(a.sample_count));   // ふだんは工種名の順
   el.innerHTML = `
   <div class="row" style="margin-bottom:10px">
     <div class="seg">
@@ -7095,7 +7102,7 @@ function drawDocSettings(el){
     const seal = pending || S.sealCompany || '';
     el.innerHTML = `
     <div class="hint"><b>御見積書・請求書に押す印鑑と、請求書の登録番号です。</b><br>
-      <span class="small">帳票の様式はExcelと同じにしてあります（2026-09-29）。ここで入れたものが次に開く帳票から使われます。</span></div>
+      <span class="small">見積書は「新見積もり 10.19」の様式（左上にSEEKのマーク）で出ます。ここで入れたものが次に開く帳票から使われます。</span></div>
     ${msg}
     <div class="card" style="margin-top:12px">
       <h2>会社印</h2>
@@ -7123,6 +7130,8 @@ function drawDocSettings(el){
         <input id="dsReg" value="${esc(S.regNo||'')}" placeholder="T4360001026723" style="width:260px"></label>
       <label class="f" style="display:block">担当者印の名前（赤い丸の中に縦書き）
         <input id="dsStamp" value="${esc(S.stampName||'村山')}" style="width:120px"></label>
+      <label class="f" style="display:block;margin-top:10px">見積書の担当者（名前の横に担当者印）
+        <input id="dsStaff" value="${esc(S.staffName||'村山　大気')}" style="width:160px"></label>
     </div>
     <div class="row" style="margin-top:14px;gap:8px">
       <button class="btn" id="dsSave">保存</button>
@@ -7138,6 +7147,7 @@ function drawDocSettings(el){
     document.getElementById('dsSave').onclick = async () => {
       const patch = { regNo: document.getElementById('dsReg').value.trim(),
                       stampName: document.getElementById('dsStamp').value.trim() || '村山',
+                      staffName: document.getElementById('dsStaff').value.trim() || '村山　大気',
                       docStyle: (el.querySelector('#dsStyle .on')||{}).dataset?.v || 'avant' };
       if(pending) patch.sealCompany = pending;
       try{ await saveSettings(patch); pending=null; Object.assign(S, M.settings);
@@ -7255,7 +7265,9 @@ function wtDupGroups(){
   const C=grp(wtN3).filter(a=>!sA.has(wtKey(a)) && !sB.has(wtKey(a)));
   const keep=a=>!ign.has(wtKey(a));
   const byUse=a=>a.slice().sort((x,y)=>(y.sample_count||0)-(x.sample_count||0));
-  return { A:A.filter(keep).map(byUse), B:B.filter(keep).map(byUse), C:C.filter(keep).map(byUse) };
+  // まとまりは名前の順に並べる（2026-10-19 大嶺さん「初期設定の工種名をわかりやすいように並べて」）
+  const byName=L=>L.sort((x,y)=>wtN3(x[0].name).localeCompare(wtN3(y[0].name),'ja') || x[0].name.localeCompare(y[0].name,'ja'));
+  return { A:byName(A.filter(keep).map(byUse)), B:byName(B.filter(keep).map(byUse)), C:byName(C.filter(keep).map(byUse)) };
 }
 async function mergeWorkTypes(keep, drops){
   const same=(p,q)=>p.client_id===q.client_id && (p.supply_type||'材工')===(q.supply_type||'材工') && !!p.opt_gl_cut===!!q.opt_gl_cut && (p.opt_pole||'')===(q.opt_pole||'');
