@@ -3358,18 +3358,23 @@ function xformHtml(d){
     out.push(xfT(19.6, 53.9, '下記の通りお見積り申し上げます。', {pt:10}));
     out.push(xfT(19.6, 57.8, '何卒ご用命賜りますよう、お願い申し上げます。', {pt:10}));
     out.push(xfT(19.5, 66.0, '見積有効期限'), xfT(19.5, 70.7, '取 引 方 法'), xfT(19.5, 75.5, '担 当 者'));
-    [65.2,69.9,74.7,79.5,84.2].forEach(y=>out.push(xfH(39.3,y,85.6,0.17)));
+    [65.2,69.9,74.7,79.5].forEach(y=>out.push(xfH(39.3,y,85.6,0.17)));
     out.push(xfT(59.5, 65.8, S.quoteValid||'3ヶ月', {pt:10, a:'r', w:20}),
              xfT(60.0, 66.4, '※ 期限後注文の節は御照会願います。', {pt:7}),
              xfT(62.45, 70.5, d.payTerms||'現金', {pt:10, a:'c', w:46}),
              xfT(62.45, 75.3, S.staffName||'村山　大気', {pt:10, a:'c', w:46, max:30}));
-    out.push(xfStamp(76.3,72.4,85.1,81.4, d.stamp, 8));
-    out.push(xfT(155.6, 44.9, co, {pt:16, a:'c', w:72, max:71}),
-             xfT(155.6, 51.4, S.address||'', {pt:10, a:'c', w:72, max:71}),
-             xfT(155.6, 56.2, 'TEL'+(S.tel||''), {pt:10, a:'c', w:72}),
-             xfT(155.6, 60.9, 'FAX'+(S.fax||''), {pt:10, a:'c', w:72}));
+    out.push(xfStamp(74.0,72.6,82.6,81.6, d.stamp, 8));
+    /* 会社情報（2026-10-19 大嶺さん「バランスを整えて」）。Excelは行ごとに中央そろえで、
+       住所の右端が会社印に重なり、許可番号の1行目だけ縮んで字の大きさがそろわなかった。
+       → 左端をそろえた1つのかたまりにし、許可番号は同じ大きさ、会社印は住所・TEL・FAXの右の空きに置く */
+    const cx = 121.0;
+    out.push(xfT(cx, 44.6, co, {pt:16, w:70, max:56}),
+             xfT(cx+0.4, 51.3, S.address||'', {pt:9.5, w:52, max:52}),
+             xfT(cx+0.4, 55.5, 'TEL '+(S.tel||''), {pt:9.5, w:52}),
+             xfT(cx+0.4, 59.7, 'FAX '+(S.fax||''), {pt:9.5, w:52}));
+    out.push(xfH(cx+0.4, 64.6, 191.0, 0.17, '#999'));
     (S.licenses ? String(S.licenses).split('\n').filter(s=>s.trim()) : XF_LICENSES).slice(0,4)
-      .forEach((t,i)=>out.push(xfT(155.6, 66.2+i*4.75, t.trim(), {pt:8, a:'c', w:72, max:71})));
+      .forEach((t,i)=>out.push(xfT(cx+0.4, 66.0+i*4.3, t.trim(), {pt:6.3, w:70})));
     // お見積り金額の枠
     out.push(xfBox(18.5,87.1,191.0,95.2,0.34), xfV(18.5,87.1,95.2,0.5), xfV(44.4,87.1,95.2,0.17));
     out.push(xfT(31.45, 89.4, 'お見積り金額', {pt:10, a:'c', w:26}));
@@ -3378,9 +3383,10 @@ function xformHtml(d){
     const bt = YE(260.9), bb = YE(277.7);
     out.push(xfBox(18.5,bt,191.0,bb,0.34), xfV(18.5,bt,bb,0.5), xfH(18.5,bb,191.0,0.5), xfV(29.0,bt,bb,0.17));
     out.push(xfT(23.85, bt+2.8, '備', {pt:10, a:'c', w:8}), xfT(23.85, bt+10.7, '考', {pt:10, a:'c', w:8}));
-    if(d.note) out.push(xfT(30.5, bt+1.6, d.note, {pt:8, w:158, css:'white-space:pre-wrap;line-height:1.5'}));
-    out.push(xfT(185.1, bt+12.6, '※ 上記以外の作業、部材等につきましては、別途御見積りとさせていただきます。', {pt:8, a:'r', w:120}));
-    out.push(xfSeal(177.8,51.6,192.9,65.2, d.seal));
+    // 決まり文句は備考の1行目に、左をそろえて置く（前は右下の隅にあった。2026-10-19「備考の文言の位置」）
+    out.push(xfT(31.0, bt+2.0, '※ 上記以外の作業、部材等につきましては、別途御見積りとさせていただきます。', {pt:8, w:158}));
+    if(d.note) out.push(xfT(31.0, bt+6.3, d.note, {pt:8, w:158, css:'white-space:pre-wrap;line-height:1.5'}));
+    out.push(xfSeal(177.4,51.0,190.8,63.8, d.seal));
   } else {
     out.push(xfR(144.6,14.4,195.9,23.5,XF_GRAY), xfBox(144.6,14.4,195.9,23.5,0.2,'#9c9c9c'), xfH(144.6,19.0,195.9,0.17,'#8c8c8c'));
     out.push(xfT(145.6, 14.9, '発行日', {pt:10}), xfT(159.6, 14.9, xfReiwa(d.date), {pt:10}));
@@ -3584,8 +3590,9 @@ function printDoc(j, items, kind, opt={}){
   const date = isQ ? (j.quoted_at || today()) : (j.invoiced_at || today());
   const seal = S.sealCompany || '';
   // 様式：前衛／Excelと同じ。プレビューの切り替え → 設定の既定 → 前衛 の順。
-  // 見積書は 新見積もり 10.19.xlsm の様式を既定にする（2026-10-19 大嶺さん）。前衛へはプレビューで切り替えられる
-  const style = opt.style || docStyleNow || (isQ ? 'excel' : ((M.settings||{}).docStyle || 'avant'));
+  // 見積書は 新見積もり 10.19.xlsm の様式だけ（2026-10-19 大嶺さん「見積書の様式は前衛はなし。今回の様式のみ」）。
+  // 前衛・切り替えは請求書だけに残す
+  const style = isQ ? 'excel' : (opt.style || docStyleNow || (M.settings||{}).docStyle || 'avant');
   const html = (style==='excel' ? xformHtml : xformAvantHtml)({
     kind, date, client, title: j.title||'', no: j.job_no||'',
     total: Number(j.total_in_tax||0), sub1, sub2, discount: Number(j.discount||0), ex,
@@ -3606,9 +3613,9 @@ function printDoc(j, items, kind, opt={}){
   document.getElementById('dlgB').innerHTML = `
     ${warn.length?`<div class="note" style="margin-top:0">${warn.join('<br>')}</div>`:''}
     <div class="row" style="margin:0 0 12px">
-      <div class="seg" title="マスタ → 帳票・印鑑 で、いつもの様式を決められます">
+      ${isQ?'':`<div class="seg" title="マスタ → 帳票・印鑑 で、いつもの様式を決められます">
         <button data-dstyle="avant" class="${style!=='excel'?'on':''}">前衛</button>
-        <button data-dstyle="excel" class="${style==='excel'?'on':''}">${isQ?'新見積（10.19）':'Excelと同じ'}</button></div>
+        <button data-dstyle="excel" class="${style==='excel'?'on':''}">Excelと同じ</button></div>`}
       <button class="btn" id="doPrint">印刷 / PDFで保存</button>
       <button class="btn ghost" id="doMail" ${opt.draft?'disabled title="保存してから送れます"':''}>メールで送る</button>
       <span class="muted small">印刷画面で「PDFに保存」を選ぶとPDFになります（用紙 A4・余白なし）</span>
@@ -7118,11 +7125,11 @@ function drawDocSettings(el){
       </div>
     </div>
     <div class="card" style="margin-top:12px">
-      <h2>帳票の様式（いつもはこれで出す）</h2>
+      <h2>請求書の様式（いつもはこれで出す）</h2>
       <div class="seg" id="dsStyle">
         <button data-v="avant" class="${(S.docStyle||'avant')!=='excel'?'on':''}">前衛（SEEKのロゴ・赤い帯）</button>
         <button data-v="excel" class="${S.docStyle==='excel'?'on':''}">Excelと同じ</button></div>
-      <div class="small muted" style="margin-top:6px">プレビューの画面でも、その場で切り替えられます。</div>
+      <div class="small muted" style="margin-top:6px">請求書のプレビューでも、その場で切り替えられます。見積書は「新見積もり 10.19」の様式だけです。</div>
     </div>
     <div class="card" style="margin-top:12px">
       <h2>文字</h2>
