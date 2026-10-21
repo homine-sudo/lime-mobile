@@ -2161,7 +2161,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-10-17a';
+const APP_VERSION = '2026-10-21a';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -6537,7 +6537,27 @@ async function _sendInvoiceFaxSmart(pdfBlob, toEmail, filename, c, faxNumber){
     toast('.eml生成エラー: '+e.message, 'error');
   }
 }
-// 送信記録: PC recordFaxHistory と同形 (kind:'請求書')。PC同様ステータス/faxSentAt系は触らない
+// ============================================================
+// ★2026-10-21 請求書を実際に送った = 発行。発行日・支払期日・請求No・状態をそろえる。
+//   ユーザー報告「請求書発行しても仮請求のままになってる」(2026-09-0396)。請求書FAXは送信履歴を残すだけで、
+//   「請求済」へ進むのは案件画面の「請求書発行」ボタンだけだったため、FAXで送った案件が
+//   返却済/仮請求に取り残されていた (2026-10-21 時点で4件)。
+//   §4.13: 書類が外に出た証拠は invoiceIssuedAt と faxHistory ＝ 送付時に発行日を入れるのは正しい。
+//   🚨 PC LIMEOne.html と モバイル index_mobile.html で完全同一に保つこと。
+//   ・進めるのは 返却済/仮請求 のときだけ (入金済・請求済・利用中などは一切触らない)
+//   ・発行日/支払期日/請求No は空のときだけ入れる (既に入っている日付は上書きしない)
+//   戻り値: 状態を進めたら true
+// ============================================================
+function _applyInvoiceSent(c){
+  if(!c || !['返却済','仮請求'].includes(c.status)) return false;
+  if(!c.invoiceIssuedAt) c.invoiceIssuedAt = todayISO();
+  if(!c.paymentDueAt) c.paymentDueAt = addDays(c.invoiceIssuedAt, (DATA.settings && DATA.settings.payDueDays) || 45);
+  if(!c.invoiceNo && c.caseNo) c.invoiceNo = c.caseNo;
+  c.status = '請求済';
+  return true;
+}
+// 送信記録: PC recordFaxHistory と同形 (kind:'請求書')。faxSentAt系は触らない。
+//   ★2026-10-21: 返却済/仮請求 なら「請求済」へ進め、発行日・支払期日を補完する (_applyInvoiceSent・PCと同一)
 async function _recordInvoiceFax(c, toEmail, faxNum, filename){
   c.faxHistory = c.faxHistory || [];
   const now = new Date();
@@ -6546,10 +6566,15 @@ async function _recordInvoiceFax(c, toEmail, faxNum, filename){
     ts, kind: '請求書', to: toEmail, faxNumber: faxNum, filename,
     editor: (localStorage.getItem(LS_KEYS.editor)||'').trim() || 'mobile'
   });
+  const _before = JSON.parse(JSON.stringify(c));
+  const _advanced = _applyInvoiceSent(c);
   _stampUpdated(c);
   const _ok = await saveToDropbox();
   if(!_ok){
     toast('⚠️ FAXは送信できましたが送信記録の保存に失敗しました。必ず🔄同期して記録を確定してください（でないと二重送信の恐れ）', 'error');
+  } else if(_advanced){
+    try { _auditRecord('請求書送付', c, _before); } catch(_){}
+    toast('✅ 請求書の送信を記録し、状態を「請求済」にしました', 'success');
   }
   return _ok;
 }

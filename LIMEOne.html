@@ -3147,7 +3147,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-10-17a';
+const APP_VERSION = '2026-10-21a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -13218,6 +13218,25 @@ window.printAndRecordFax = function(kind){
   setTimeout(() => { window.removeEventListener('afterprint', onAfterPrint); }, 30000);
 };
 
+// ============================================================
+// ★2026-10-21 請求書を実際に送った = 発行。発行日・支払期日・請求No・状態をそろえる。
+//   ユーザー報告「請求書発行しても仮請求のままになってる」(2026-09-0396)。請求書FAXは送信履歴を残すだけで、
+//   「請求済」へ進むのは案件画面の「請求書発行」ボタンだけだったため、FAXで送った案件が
+//   返却済/仮請求に取り残されていた (2026-10-21 時点で4件)。
+//   §4.13: 書類が外に出た証拠は invoiceIssuedAt と faxHistory ＝ 送付時に発行日を入れるのは正しい。
+//   🚨 PC LIMEOne.html と モバイル index_mobile.html で完全同一に保つこと。
+//   ・進めるのは 返却済/仮請求 のときだけ (入金済・請求済・利用中などは一切触らない)
+//   ・発行日/支払期日/請求No は空のときだけ入れる (既に入っている日付は上書きしない)
+//   戻り値: 状態を進めたら true
+// ============================================================
+function _applyInvoiceSent(c){
+  if(!c || !['返却済','仮請求'].includes(c.status)) return false;
+  if(!c.invoiceIssuedAt) c.invoiceIssuedAt = todayISO();
+  if(!c.paymentDueAt) c.paymentDueAt = addDays(c.invoiceIssuedAt, (DATA.settings && DATA.settings.payDueDays) || 45);
+  if(!c.invoiceNo && c.caseNo) c.invoiceNo = c.caseNo;
+  c.status = '請求済';
+  return true;
+}
 // FAX送信履歴を案件に追加
 function recordFaxHistory(caseId, kind, to, faxNum, filename){
   const c = findCaseById(caseId); if(!c){ toast('案件が見つかりません','error'); return; }
@@ -13251,8 +13270,20 @@ function recordFaxHistory(caseId, kind, to, faxNum, filename){
       c.status = '手配書FAX済';
     }
   }
+  // ★2026-10-21: 請求書を送った = 発行 (返却済/仮請求 → 請求済・発行日/支払期日を補完)
+  let _advanced = false;
+  if(_kindLabel === '請求書'){
+    const _before = JSON.parse(JSON.stringify(c));
+    if(_applyInvoiceSent(c)){
+      _advanced = true;
+      c.updatedAt = Date.now();
+      c.updatedBy = _whoPC() + '(請求書送付)';
+      try { _auditRecord('請求書送付', c, _before); } catch(_){}
+    }
+  }
   save();
-  toast(`✅ FAX送信履歴を記録: ${_kindLabel} → ${faxNum}`, true);
+  toast(`✅ FAX送信履歴を記録: ${_kindLabel} → ${faxNum}${_advanced ? '（状態を「請求済」にしました）' : ''}`, true);
+  if(_advanced && typeof renderCases === 'function') renderCases();
 }
 // v2026.04.29bo: 違う案件が表示されるバグ修正
 //   showPage前にドロップダウンの古い選択値をクリアし、
