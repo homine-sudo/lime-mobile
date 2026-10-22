@@ -3147,7 +3147,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-10-21a';
+const APP_VERSION = '2026-10-22a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -6955,18 +6955,26 @@ function renderBiSummary(){
     return { sales: s, avgDays: n ? d/n : 0 };
   };
   const salesRange = (f,t) => statsRange(f,t).sales;
-  const mC = y => cntRange(`${y}-${mm}-01`, `${y}-${mm}-31`);
-  const mS = y => salesRange(`${y}-${mm}-01`, `${y}-${mm}-31`);
+  // 2026-10-22a: 月カードは ◁▷ で過去の月に切り替えられる (window._biSumOffset = 今月から何ヶ月前か・0以下)。
+  //   今月=従来どおり 1日〜本日の同日比較 / 過去の月=月間(1日〜月末)どうしで前年・前々年と比較。
+  //   今年度カードと ひと目の判定 の年度部分は切り替えない (常に本日基準)。
+  const off = Math.min(0, Math.round(Number(window._biSumOffset) || 0));
+  const selD = new Date(Y, monthNum - 1 + off, 1);
+  const sY = selD.getFullYear(), sMon = selD.getMonth() + 1, sMM = pad2(sMon);
+  const isCurMonth = off === 0;
+  const sTo = isCurMonth ? dd : '31';
+  const mC = y => cntRange(`${y}-${sMM}-01`, `${y}-${sMM}-31`);
+  const mS = y => salesRange(`${y}-${sMM}-01`, `${y}-${sMM}-31`);
   // 2026-08-04c: 今月の前年比較は「同じ経過日数(1日〜本日と同日)」で公平比較。
   //   従来は前年フル月と比べていたため月初ほど不当に悪く見えた。年度カードは元から同期比でOK。
-  const mCTo = y => cntRange(`${y}-${mm}-01`, `${y}-${mm}-${dd}`);
-  const mSTo = y => salesRange(`${y}-${mm}-01`, `${y}-${mm}-${dd}`);
-  const curMC = mC(Y), pMC = mCTo(Y-1), p2MC = mCTo(Y-2);
-  const curMS = mS(Y), pMS = mSTo(Y-1), p2MS = mSTo(Y-2);
+  const mCTo = y => cntRange(`${y}-${sMM}-01`, `${y}-${sMM}-${sTo}`);
+  const mSTo = y => salesRange(`${y}-${sMM}-01`, `${y}-${sMM}-${sTo}`);
+  const curMC = mC(sY), pMC = mCTo(sY-1), p2MC = mCTo(sY-2);
+  const curMS = mS(sY), pMS = mSTo(sY-1), p2MS = mSTo(sY-2);
   // 2026-08-04d: 平均貸出日数 (今月=当月フル/比較は同日まで・今年度=同期比。売上と同じ母集団)
-  const mD = y => statsRange(`${y}-${mm}-01`, `${y}-${mm}-31`).avgDays;
-  const mDTo = y => statsRange(`${y}-${mm}-01`, `${y}-${mm}-${dd}`).avgDays;
-  const curMD = mD(Y), pMD = mDTo(Y-1), p2MD = mDTo(Y-2);
+  const mD = y => statsRange(`${y}-${sMM}-01`, `${y}-${sMM}-31`).avgDays;
+  const mDTo = y => statsRange(`${y}-${sMM}-01`, `${y}-${sMM}-${sTo}`).avgDays;
+  const curMD = mD(sY), pMD = mDTo(sY-1), p2MD = mDTo(sY-2);
   const curFC = cntRange(`${curFy}-04-01`, today), pFC = cntRange(`${curFy-1}-04-01`, `${Y-1}-${mm}-${dd}`), p2FC = cntRange(`${curFy-2}-04-01`, `${Y-2}-${mm}-${dd}`);
   const curFS = salesRange(`${curFy}-04-01`, today), pFS = salesRange(`${curFy-1}-04-01`, `${Y-1}-${mm}-${dd}`), p2FS = salesRange(`${curFy-2}-04-01`, `${Y-2}-${mm}-${dd}`);
   const curFD = statsRange(`${curFy}-04-01`, today).avgDays, pFD = statsRange(`${curFy-1}-04-01`, `${Y-1}-${mm}-${dd}`).avgDays, p2FD = statsRange(`${curFy-2}-04-01`, `${Y-2}-${mm}-${dd}`).avgDays;
@@ -6993,15 +7001,25 @@ function renderBiSummary(){
   const arrow = v => v==null ? '—' : (v>0?`<span style="color:#2E7D32;font-weight:bold">↑ ${v}%</span>` : v<0?`<span style="color:#C0392B;font-weight:bold">↓ ${Math.abs(v)}%</span>` : '<span style="color:#888">±0%</span>');
   const vL = pMC>0 ? Math.round((curMC-pMC)/pMC*100) : null;
   const v2 = p2MC>0 ? Math.round((curMC-p2MC)/p2MC*100) : null;
+  const mLbl = isCurMonth ? '今月' : `${sY}年${sMon}月`;
+  const mPeer = isCurMonth ? '去年同日' : '去年同月';
   const verdict = `<div style="background:#fff;border:1px solid var(--border);border-left:3px solid var(--navy);padding:11px 14px;margin-bottom:12px">
-    <div style="font-size:12px;color:#888;margin-bottom:3px">🎯 ひと目の判定 — 今月（${monthNum}月）の受付 <span style="font-size:10px">※去年・一昨年も ${monthNum}/1〜${monthNum}/${Number(dd)} の同日までで公平比較</span></div>
-    <div style="font-size:15px;color:var(--navy)">今月 <b>${curMC}件</b>　・　去年同日比 ${arrow(vL)}　／　一昨年同日比 ${arrow(v2)}</div>
+    <div style="font-size:12px;color:#888;margin-bottom:3px">🎯 ひと目の判定 — ${isCurMonth ? `今月（${sMon}月）` : mLbl}の受付 <span style="font-size:10px">※${isCurMonth ? `去年・一昨年も ${sMon}/1〜${sMon}/${Number(dd)} の同日までで公平比較` : '去年・一昨年の同じ月(月間)と比較'}</span></div>
+    <div style="font-size:15px;color:var(--navy)">${mLbl} <b>${curMC}件</b>　・　${mPeer}比 ${arrow(vL)}　／　${mPeer.replace('去年','一昨年')}比 ${arrow(v2)}</div>
   </div>`;
+  const navBtn = (d, txt, dis) => `<button type="button" onclick="biSumShift(${d})" ${dis ? 'disabled' : ''} style="border:1px solid var(--border);background:#fff;border-radius:6px;padding:1px 9px;font-size:13px;line-height:1.5;cursor:${dis ? 'default' : 'pointer'};color:${dis ? '#ccc' : 'var(--navy)'}">${txt}</button>`;
+  const mTitle = `<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${navBtn(-1, '◁', false)}<span>${isCurMonth ? `今月（${sY}年${sMon}月・1〜${Number(dd)}日の同日比較）` : `${sY}年${sMon}月（月間・前年同月比較）`}</span>${navBtn(1, '▷', isCurMonth)}${isCurMonth ? '' : `<button type="button" onclick="biSumShift(0)" style="border:none;background:none;color:#2E7D32;font-size:12px;cursor:pointer;text-decoration:underline">今月に戻る</button>`}</span>`;
   host.innerHTML = verdict
     + `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">`
-    + card(`今月（${Y}年${monthNum}月・1〜${Number(dd)}日の同日比較）`, metric('受付件数', curMC, pMC, p2MC, '去年同日', 'count') + metric('売上（発生ベース・税込）', curMS, pMS, p2MS, '去年同日', 'yen') + metric('平均貸出日数（返却ベース）', curMD, pMD, p2MD, '去年同日', 'days'))
+    + card(mTitle, metric('受付件数', curMC, pMC, p2MC, mPeer, 'count') + metric('売上（発生ベース・税込）', curMS, pMS, p2MS, mPeer, 'yen') + metric('平均貸出日数（返却ベース）', curMD, pMD, p2MD, mPeer, 'days'))
     + card(`今年度（4月〜${monthNum}月・同期比）`, metric('受付件数', curFC, pFC, p2FC, '去年同期', 'count') + metric('売上（発生ベース・税込）', curFS, pFS, p2FS, '去年同期', 'yen') + metric('平均貸出日数（返却ベース）', curFD, pFD, p2FD, '去年同期', 'days'))
     + `</div>`;
+}
+// 月カードの ◁▷ (d=−1:前の月 / +1:次の月 / 0:今月に戻る)。今月より先へは進まない。
+function biSumShift(d){
+  const cur = Math.round(Number(window._biSumOffset) || 0);
+  window._biSumOffset = d === 0 ? 0 : Math.min(0, cur + d);
+  renderBiSummary();
 }
 // 📅 月別 前年比較 (12ヶ月) (2026-06-29f): 年度(4月〜翌3月)の各月を 今年度/前年度/前々年度 で並べる。
 //   ユーザー要望「12ヶ月見れるように」。件数⇄売上をトグル切替(window._biMonthMetric)。今月の行を強調。
