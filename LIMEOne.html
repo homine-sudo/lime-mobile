@@ -3149,7 +3149,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-10-28b';
+const APP_VERSION = '2026-10-30a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5115,6 +5115,7 @@ function _syncErrInfo(e){
 }
 async function saveToDirImmediate(){
   if(!dirHandle) return;
+  const _notifyUpTo = _notifySeq;  // この書込が成功したら、ここまでに積まれた通知を送る (2026-10-30a)
   try{
     const other = await checkOthersLock();
     if(other){
@@ -5258,6 +5259,7 @@ async function saveToDirImmediate(){
       });
     }
     window._dirSaveFailCount = 0;
+    try { _flushPendingNotify(_notifyUpTo); } catch(e){ console.warn('[notify] flush失敗', e); }
     if(conflictsToShow.length) showConflictDialog(conflictsToShow);
   }catch(e){
     console.error('Save to dir failed:', e);
@@ -5270,6 +5272,8 @@ async function saveToDirImmediate(){
     //   15秒後に自動再試行して大半はそれで通るため、赤いトーストを出すと「壊れた」と誤解される。
     //   状態行(updateSyncStatus)には即座に出るので見えなくなるわけではない。
     //   3回連続(=約30秒以上 保存できていない)なら一過性ではないので通常どおり出す。
+    // 2026-10-30a: LINE通知を保留中なら赤帯を常設 (一過性でも2回目=約15秒保存できなければ出す)
+    if(_notifyPending.length && (!_se.transient || window._dirSaveFailCount >= 2)) _renderNotifyPendingBanner('同期失敗: ' + _se.text);
     const _quiet = _se.transient && window._dirSaveFailCount < 3;
     if(!_quiet && (!window._dirSaveFailToastAt || now - window._dirSaveFailToastAt > 30000)){
       window._dirSaveFailToastAt = now;
@@ -5576,6 +5580,47 @@ window.save = function(){
  *   注: これは「共有フォルダへ書けるか」までの検知。Dropboxクラウドへのアップロード成否は
  *       PC版からは見えない(API非連携)ので別問題(容量対策で担保)。 */
 function _sharedFolderReady(){ return !!dirHandle; }
+
+/* 📮 外部通知(LINE/カレンダー)は「共有 data.json への書込が成功してから」送る (2026-10-30a)
+ *   なぜ: 従来は案件保存の直後に fire-and-forget で送っていたため、共有フォルダへの書込が失敗/未達でも
+ *     LINE だけ飛んでいた (2026-10-30 17:19 受付No 2026-10-0459「回収予定日 登録」が LINE に来たのに
+ *     data.json は 10-30 のまま。監査ログには変更あり)。
+ *   仕組み: 通知を _notifyPending に積む (payload は保存時点で確定)。saveToDirImmediate は開始時に
+ *     _notifySeq を控え、書込成功後に「開始時点までに積まれた通知」だけ送る (開始後に積まれた通知の
+ *     変更は、その書込に含まれていない可能性があるため次の書込を待つ)。
+ *     失敗中は画面上部に赤帯を常設し、15秒ごとの自動再試行で書けた時点でまとめて送る。 */
+var _notifySeq = 0;   // var: saveToDirImmediate (上方で定義) から参照するため TDZ を避ける
+var _notifyPending = [];
+function _sendAfterSharedSave(label, fn){
+  _notifyPending.push({ seq: ++_notifySeq, label, fn, at: Date.now() });
+}
+function _flushPendingNotify(upTo){
+  for(let i = 0; i < _notifyPending.length; ){
+    const p = _notifyPending[i];
+    if(p.seq > upTo){ i++; continue; }
+    _notifyPending.splice(i, 1);
+    try { p.fn(); } catch(e){ console.warn('[notify] 送信失敗', p.label, e); }
+  }
+  _renderNotifyPendingBanner();
+}
+function _renderNotifyPendingBanner(errText){
+  let el = document.getElementById('notify-pending-banner');
+  if(!_notifyPending.length){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'notify-pending-banner';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:100000;background:#C53030;color:#fff;font-weight:bold;font-size:14px;padding:10px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+    document.body.appendChild(el);
+  }
+  const mins = Math.floor((Date.now() - Math.min(..._notifyPending.map(p => p.at))) / 60000);
+  el.innerHTML = `⚠️ 共有フォルダに保存できていません — LINE通知 ${_notifyPending.length}件を保留中（保存でき次第 自動で送ります${mins ? '・' + mins + '分経過' : ''}）`
+    + (errText ? `<div style="font-size:11px;font-weight:normal;margin-top:2px">${esc(errText)}</div>` : '')
+    + ` <button class="btn btn-xs" style="margin-left:8px;background:#fff;color:#C53030;font-weight:bold" onclick="saveToDirImmediate()">今すぐ再保存</button>`;
+}
+window.addEventListener('beforeunload', e => {
+  if(!_notifyPending.length) return;
+  e.preventDefault(); e.returnValue = '共有フォルダに保存できていない変更があります（LINE通知も保留中）';
+});
 
 /* --- ステータス表示更新 --- */
 async function updateSyncStatus(msg){
@@ -12091,9 +12136,12 @@ function _fireCancelDeleteNotify(c, action){
   // 通知 OFF 設定なら何もしない (キャンセル/削除は重要なので新規案件通知の設定に紐付け)
   if(!s.notifyOnNewCase && !s.notifyOnRecoveryDate) return;
   const eventType = action === 'cancel' ? 'cancelCase' : 'deleteCase';
-  sendExternalNotify(eventType, _buildNotifyPayload(c, eventType))
+  const payload = _buildNotifyPayload(c, eventType);
+  const go = () => sendExternalNotify(eventType, payload)
     .then(r => r.ok ? console.log('[notify] '+eventType+' sent') : console.warn('[notify] '+eventType+' failed', r))
     .catch(()=>{});
+  // 2026-10-30a: 共有接続中は書込成功後に送る (未接続時は従来どおり即送信)
+  if(_sharedFolderReady()) _sendAfterSharedSave(eventType + ' ' + (c.caseNo||''), go); else go();
 }
 
 // 案件保存後に外部通知を発火
@@ -12108,9 +12156,13 @@ function _fireCaseNotifications(c, isNew, oldCase){
   }
   const s = DATA.settings || {};
   if(!s.gasWebAppUrl) return;  // 連携未設定なら何もしない
-  const _send = (t, diff) => sendExternalNotify(t, _buildNotifyPayload(c, t, diff))
-    .then(r => r.ok ? console.log('[notify] '+t+' sent') : console.warn('[notify] '+t+' failed', r))
-    .catch(()=>{});
+  // 2026-10-30a: 本文は保存時点で確定し、送信は共有 data.json への書込成功後 (_sendAfterSharedSave)
+  const _send = (t, diff) => {
+    const payload = _buildNotifyPayload(c, t, diff);
+    _sendAfterSharedSave(t + ' ' + (c.caseNo||''), () => sendExternalNotify(t, payload)
+      .then(r => r.ok ? console.log('[notify] '+t+' sent') : console.warn('[notify] '+t+' failed', r))
+      .catch(()=>{}));
+  };
   const newRecovery = c.recoveryCalledAt || '';
   const oldRecovery = (oldCase && oldCase.recoveryCalledAt) || '';
   // (配車日時の変更判定は _caseChangeSummary に移管・2026-08-24)
@@ -12416,7 +12468,8 @@ async function swapVehicleContinue(){
       const drv = c.driverName || c.contractorName || '';
       const txt = `🔄 車両乗り換え\n${c.caseNo} 〈${curVehLabel}〉を返却締め\n→ ${contNo} で新しい車を配車します\n` +
         [drv ? drv + '様' : '', ins.name || ''].filter(Boolean).join(' / ');
-      sendExternalNotify('updateCase', { line: { text: txt }, calendar: null }).catch(()=>{});
+      const go = () => sendExternalNotify('updateCase', { line: { text: txt }, calendar: null }).catch(()=>{});
+      if(_sharedFolderReady()) _sendAfterSharedSave('乗り換え ' + contNo, go); else go();  // 2026-10-30a: 書込成功後に送る
     } catch(e){}
   }
   closeCaseModal();
