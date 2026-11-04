@@ -3149,7 +3149,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-10-30a';
+const APP_VERSION = '2026-11-04a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -11643,7 +11643,12 @@ function assignVehicleToForm(v){
     }
   }
   if(v.name && !$('f-vehicleName').value) $('f-vehicleName').value = v.name;
-  autoFillClass();
+  // 2026-11-04a: 車両を割り当てただけで日額をクラス標準へ戻さない。
+  //   旧実装は無条件に autoFillClass() → 予約時に手入力した日額 (2026-11-0486: K 1,100円) が
+  //   割当の保存で 4,400円 に上書きされていた。日額が空の時だけクラスの標準日額を入れる (モバイルの車両割当と同じ規則)。
+  //   (クラスのプルダウンを手で変えた時は onchange の autoFillClass で従来どおり標準日額になる)
+  if(!Number($('f-unitPrice').value)) autoFillClass();
+  else recalcAmounts();
   checkVehicleConflict();
   renderAssignedVehicleChip();
   // 車両割当時に状態を進める:
