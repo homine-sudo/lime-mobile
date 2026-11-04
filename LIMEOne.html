@@ -3149,7 +3149,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-11-04a';
+const APP_VERSION = '2026-11-04b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -11933,6 +11933,7 @@ function markFreeeFromForm(){
   const _afBefore2 = { freeeExportedAt: c.freeeExportedAt, freeeExportedAmount: c.freeeExportedAmount };
   c.freeeExportedAt = todayISO();
   c.freeeExportedAmount = cur;
+  _advanceOnFreeeExport(c);   // 2026-11-04b 返却済→仮請求
   c.updatedAt = Date.now();  // 共有モードのマージで他PCの古い版に負けないように
   c.updatedBy = _whoPC()+'(freee登録)';
   _auditRecord('freee登録', c, Object.assign({}, c, _afBefore2));
@@ -13320,6 +13321,23 @@ function _applyInvoiceSent(c){
   if(!c.paymentDueAt) c.paymentDueAt = addDays(c.invoiceIssuedAt, (DATA.settings && DATA.settings.payDueDays) || 45);
   if(!c.invoiceNo && c.caseNo) c.invoiceNo = c.caseNo;
   c.status = '請求済';
+  return true;
+}
+// ============================================================
+// ★2026-11-04b freee に売上を登録した = 請求金額が確定して保険会社へ出た。返却済のままにせず「仮請求」へ進める。
+//   ユーザー指摘「🟠 請求は済んでいるが状態が返却済のまま — 設計がおかしいよね」。
+//   実運用は 返却時の手配書FAX + freee登録 で請求が終わるのに、状態を進める操作が
+//   「請求書発行」ボタン/請求書FAX しか無かったため、返却済のまま溜まっていた
+//   (2026-10-03 に手で66件を仮請求へ一括変更 → 11-04 時点で再び21件)。
+//   ・進めるのは 返却済 のときだけ (仮請求/請求済/入金済などは触らない)。請求済は請求日が要るので仮請求まで。
+//   ・NOC(雑収入)だけの登録では進めない (呼び出し側で本体の登録時だけ呼ぶ)
+//   ・開いている案件フォームの状態欄もそろえる (そのまま保存して返却済に戻さないため)
+// ============================================================
+function _advanceOnFreeeExport(c){
+  if(!c || c.isDeleted || c.status !== '返却済') return false;
+  c.status = '仮請求';
+  _auditRecord('freee登録→仮請求', c, Object.assign({}, c, { status: '返却済' }));
+  try{ if(editingCaseId === c.id){ const s = document.getElementById('f-status'); if(s) s.value = '仮請求'; } }catch(_){}
   return true;
 }
 // FAX送信履歴を案件に追加
@@ -19707,6 +19725,7 @@ async function freeePostDealsToApi(opts){
     } else {
       c.freeeExportedAt = today;
       c.freeeExportedAmount = t.amount;
+      _advanceOnFreeeExport(c);   // 2026-11-04b 返却済→仮請求
     }
     c.updatedAt = now;  // 共有モードのマージで他PCの古い版に負けないように
     marked++;
@@ -20136,6 +20155,7 @@ function markFreeeExported(){
     } else {
       c.freeeExportedAt = today;
       c.freeeExportedAmount = p.amount;
+      _advanceOnFreeeExport(c);   // 2026-11-04b 返却済→仮請求
     }
     c.updatedAt = now;  // 共有モードのマージで他PCの古い版に負けないように
     targetIds.push({ id: p.id, kind: p.kind });
@@ -20177,6 +20197,7 @@ function markSingleFreeeExported(caseId, amount, kind){
   } else {
     c.freeeExportedAt = todayISO();
     c.freeeExportedAmount = Number(amount) || 0;
+    _advanceOnFreeeExport(c);   // 2026-11-04b 返却済→仮請求
   }
   c.updatedAt = Date.now();  // 共有モードのマージで他PCの古い版に負けないように
   save();
@@ -20240,6 +20261,7 @@ function bulkMarkFreeeExported(){
     } else {
       c.freeeExportedAt = today;
       c.freeeExportedAmount = Number(cb.dataset.amount)||0;
+      _advanceOnFreeeExport(c);   // 2026-11-04b 返却済→仮請求
     }
     c.updatedAt = now;  // 共有モードのマージで他PCの古い版に負けないように
     targetIds.push({ id: cb.dataset.id, kind: cb.dataset.kind });
@@ -20532,6 +20554,7 @@ function applyFreeeReconcile(){
   p.A_newMark.forEach(x => {
     x.c.freeeExportedAt = x.info.date || today;
     x.c.freeeExportedAmount = x.info.amount;
+    _advanceOnFreeeExport(x.c);   // 2026-11-04b 返却済→仮請求
     x.c.updatedAt = now;  // 共有モードのマージで他PCの古い版に負けないように
     n++;
   });
