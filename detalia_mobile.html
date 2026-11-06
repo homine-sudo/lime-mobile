@@ -452,7 +452,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);bo
     <!-- 📋 案件一覧 -->
     <div class="page" id="page-cases">
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <input id="case-search" placeholder="🔍 顧客名・車名・受付No" oninput="renderCaseList()" style="font-size:14px;flex:1">
+        <input id="case-search" placeholder="🔍 顧客名・車名・車台番号・受付No" oninput="renderCaseList()" style="font-size:14px;flex:1">
         <button class="btn btn-primary" style="flex-shrink:0;padding:11px 14px" onclick="newCase()">＋ 新規</button>
       </div>
       <div id="case-list"></div>
@@ -1071,14 +1071,15 @@ function renderSnsHub(){
   }
 }
 
+// 検索用の正規化: 全角→半角・小文字・空白とハイフン類を除く（車台番号 MK53S-240535 を「mk53s240535」「２４０５３５」でも探せる）
+function _srchNorm(s){ return String(s==null?'':s).normalize('NFKC').toLowerCase().replace(/[\s\-‐－―ー−_]/g,''); }
+function _srchHit(hay,q){ if(!q) return true; const h=String(hay).toLowerCase(); if(h.includes(String(q).toLowerCase())) return true; const nq=_srchNorm(q); return !!nq && _srchNorm(hay).includes(nq); }
 function renderCaseList(){
   const q=(document.getElementById('case-search')?.value||'').toLowerCase().trim();
   const filtered=cases.filter(c=>{
     if(_caseHidden(c)) return false;
     if(!q) return true;
-    return (c.customer||'').toLowerCase().includes(q)
-        || (c.carModel||'').toLowerCase().includes(q)
-        || (c.id||'').toLowerCase().includes(q);
+    return _srchHit([c.customer||'', c.carModel||'', c.id||'', c.chassis||''].join(' '), q);
   }).sort((a,b)=>_caseSortKey(b).localeCompare(_caseSortKey(a)));
   const list=document.getElementById('case-list');
   list.innerHTML=filtered.length
