@@ -834,7 +834,7 @@ async function _bootSplashClick(e){
 <div class="page" id="page-cases">
   <div class="toolbar">
     <button class="btn btn-primary" onclick="openCaseModal()">＋ 新規案件</button>
-    <input id="search-text" placeholder="🔍 検索（ID/お客様/車種/担当）" style="width:220px" oninput="renderCases()">
+    <input id="search-text" placeholder="🔍 検索（ID/お客様/車種/車台番号/担当）" style="width:220px" oninput="renderCases()">
     <select id="filter-month" onchange="renderCases()"><option value="">月で絞込</option></select>
     <select id="filter-staff" onchange="renderCases()"><option value="">担当で絞込</option></select>
     <select id="filter-type" onchange="renderCases()"><option value="">区分</option><option>業販</option><option>一般</option></select>
@@ -5634,6 +5634,9 @@ function toggleCaseView(){
   renderCases();
 }
 
+// 検索用の正規化: 全角→半角・小文字・空白とハイフン類を除く（車台番号 MK53S-240535 を「mk53s240535」「２４０５３５」でも探せる）
+function _srchNorm(s){ return String(s==null?'':s).normalize('NFKC').toLowerCase().replace(/[\s\-‐－―ー−_]/g,''); }
+function _srchHit(hay,q){ if(!q) return true; const h=String(hay).toLowerCase(); if(h.includes(String(q).toLowerCase())) return true; const nq=_srchNorm(q); return !!nq && _srchNorm(hay).includes(nq); }
 function renderCases(){
   updateDropdowns();
   const q=(document.getElementById('search-text').value||'').toLowerCase();
@@ -5655,7 +5658,7 @@ function renderCases(){
     // フィルタで「キャンセル」を選んだ時だけキャンセル案件を表示。それ以外は通常どおり除外。
     if(fst==='キャンセル'){ if(!c.cancelled)return false; }
     else if(c.cancelled)return false;
-    if(q&&!(`${c.id} ${c.customer} ${c.carModel} ${c.workStaff} ${c.contact} ${c.receptionStaff}`.toLowerCase().includes(q)))return false;
+    if(q&&!_srchHit(`${c.id} ${c.customer} ${c.carModel} ${c.chassis||''} ${c.workStaff} ${c.contact} ${c.receptionStaff}`,q))return false;
     if(fm&&!(c.receptionDate||'').startsWith(fm))return false;
     if(fs&&c.workStaff!==fs)return false;
     if(ft&&c.category!==ft)return false;
