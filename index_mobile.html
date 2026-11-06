@@ -2161,7 +2161,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-10-21a';
+const APP_VERSION = '2026-11-06a';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -3251,6 +3251,7 @@ async function saveToDropbox(){
     toast('🧪 デモモード: 保存はスキップしました', 'success');
     return true;
   }
+  _sweepReturnedFreee();   // 2026-11-06a 返却済+freee登録済 → 仮請求
   // チェーン末尾 _saveTail に必ず連結する。実行中/予約中なら「後続1サイクル」
   // (_saveFollow) を全呼び出しで共有。これで _doSaveCycle は常に同時1本=厳密に
   // 直列化され、await は「自分の呼び出し以降に走るサイクル」の完了まで解決しない。
@@ -3671,6 +3672,25 @@ function _stampUpdated(c){
   }catch(_){}
   c.updatedAt = Date.now();
   c.updatedBy = localStorage.getItem(LS_KEYS.editor) || 'mobile';
+}
+
+// ★2026-11-06a 保存のたびに「返却済 かつ freee登録済」を仮請求へそろえる (saveToDropbox から呼ぶ)。
+//   freee登録(PC)の後にモバイルで回収完了すると 返却済 で止まり、毎朝GASの🟠に溜まっていた
+//   (2026-10-0435)。請求済は請求日が要るので仮請求まで。NOC(雑収入)だけの登録は freeeExportedAt に出ないので対象外。
+//   🚨 PC LIMEOne.html の _sweepReturnedFreee / _advanceOnFreeeExport と同じ規則に保つこと。
+function _sweepReturnedFreee(){
+  try{
+    if(!DATA || !Array.isArray(DATA.cases)) return 0;
+    const now = Date.now(); let n = 0;
+    DATA.cases.forEach(c => {
+      if(!c || c.isDeleted || c.isHistorical || !c.freeeExportedAt || c.status !== '返却済') return;
+      c.status = '仮請求';
+      _auditRecord('freee登録→仮請求', c, Object.assign({}, c, { status: '返却済' }));
+      c.updatedAt = now;
+      n++;
+    });
+    return n;
+  }catch(e){ try{ console.warn('[sweepReturnedFreee]', e); }catch(_){} return 0; }
 }
 
 // 2026-06-11: 回収完了等でメーターが入ったら、車両マスタ mileage を最新(最大)に追従させる。

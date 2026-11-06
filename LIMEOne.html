@@ -3149,7 +3149,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-11-04b';
+const APP_VERSION = '2026-11-06a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5569,6 +5569,7 @@ async function checkExternalChange(){
 /* --- save() 拡張 (共有モード時に自動書込) --- */
 const _origSave = save;
 window.save = function(){
+  _sweepReturnedFreee();   // 2026-11-06a 返却済+freee登録済 → 仮請求
   _origSave();
   if(dirHandle) saveToDir();
 };
@@ -13339,6 +13340,21 @@ function _advanceOnFreeeExport(c){
   _auditRecord('freee登録→仮請求', c, Object.assign({}, c, { status: '返却済' }));
   try{ if(editingCaseId === c.id){ const s = document.getElementById('f-status'); if(s) s.value = '仮請求'; } }catch(_){}
   return true;
+}
+// ★2026-11-06a 保存のたびに「返却済 かつ freee登録済」を仮請求へそろえる (window.save から呼ぶ)。
+//   11-04b は freee登録の時点で進めるだけだったので、freee登録→その後に返却完了 の順だと返却済に戻って止まった
+//   (2026-10-0435: 11/05 10:39:23 にfreee登録 → 3秒後に回収完了で 利用中→返却済)。
+//   返却済にする経路はフォーム/回収完了/一括変更/乗り換え/モバイルなど多数あるので、個別に直さず保存時に一括で見る。
+//   🚨 モバイル index_mobile.html の _sweepReturnedFreee と同じ規則に保つこと。
+function _sweepReturnedFreee(){
+  try{
+    const now = Date.now(); let n = 0;
+    ((DATA && DATA.cases) || []).forEach(c => {
+      if(!c || c.isHistorical || !c.freeeExportedAt || c.status !== '返却済') return;
+      if(_advanceOnFreeeExport(c)){ c.updatedAt = now; n++; }
+    });
+    return n;
+  }catch(e){ try{ console.warn('[sweepReturnedFreee]', e); }catch(_){} return 0; }
 }
 // FAX送信履歴を案件に追加
 function recordFaxHistory(caseId, kind, to, faxNum, filename){
