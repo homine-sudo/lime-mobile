@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="ht_logo.png">
 <link rel="apple-touch-icon" sizes="1024x1024" href="ht_logo.png">
 <link rel="icon" href="ht_logo.png">
+<link rel="manifest" href="admin-manifest.json">
 <!-- IWC Portugieser 42 — white dial, blued feuille hands, applied Arabic numerals
      Palette derived from the silvered/eggshell dial and blued steel hands. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -883,6 +884,33 @@
   .upd-bar .u-msg{flex:1}
   .upd-bar button{border:1px solid #3a4d72;background:transparent;color:var(--ink2);border-radius:8px;font-size:11px;padding:5px 10px}
   .upd-bar button.primary{background:var(--acc);border-color:var(--acc);color:#0c111c;font-weight:700}
+
+  /* ===== PC表示 (2026-11-10) — 幅1024px以上のときだけ効く。スマホ表示と集計には一切触れない =====
+     ・カードを2列(1600px以上は3列)の段組みに / 判定帯とHEROは全幅
+     ・Crown FAB の petal を、ヘッダー下の常時表示タブ列に並べ替える (ボタン自体は同じもの)
+     ・内訳シートは中央ダイアログ */
+  @media (min-width:1024px){
+    .hdr-row{padding-bottom:56px}
+    section.on{display:block;columns:2;column-gap:0;max-width:1360px;margin:0 auto;padding:10px 14px 60px !important}
+    section.on > *{break-inside:avoid}
+    section .card{margin:12px}
+    section.on > .verdict-card{column-span:all}
+    /* 分析タブは中身が自前のサブタブ構成なので段組みにしない (切替ボタンだけ左列に孤立するため) */
+    #sec-report.on{columns:1;max-width:1100px}
+    .crown{top:46px;left:0;right:0;bottom:auto;width:auto;height:42px;display:flex;justify-content:center;gap:2px;z-index:21;pointer-events:none}
+    .crown-btn,.crown-scrim{display:none}
+    .crown .petal,.crown.open .petal{position:static;margin:0;width:auto;height:42px;border-radius:0;border:0;border-bottom:2px solid transparent;
+      background:transparent;box-shadow:none;opacity:1;transform:none;pointer-events:auto;padding:0 24px;
+      font-size:14.5px;letter-spacing:.16em;color:var(--ink2);transition:color .2s,border-color .2s;transition-delay:0s}
+    .crown .petal:hover{color:var(--acc)}
+    .crown .petal.current{background:transparent;color:var(--acc);border-bottom-color:var(--acc)}
+    .drill-sheet{left:50%;right:auto;bottom:auto;top:50%;width:min(680px,92vw);max-height:80vh;border:1px solid var(--line2);border-top:2px solid var(--acc);
+      transform:translate(-50%,-47%);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+    .drill-sheet.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+  }
+  @media (min-width:1600px){
+    section.on{columns:3;max-width:1840px}
+  }
 </style>
 </head>
 <body>
@@ -1590,7 +1618,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-10-13';
+const APP_VERSION = '2026-11-10';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';

@@ -1,0 +1,15 @@
+{
+  "id": "./index_admin_mobile.html",
+  "name": "Hari Terrace 経営ダッシュボード",
+  "short_name": "HT経営",
+  "start_url": "./index_admin_mobile.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c111c",
+  "theme_color": "#0c111c",
+  "lang": "ja",
+  "icons": [
+    { "src": "ht-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "ht-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
