@@ -1061,11 +1061,11 @@
       <div class="bar bar-ticks" style="margin-top:14px"><i id="be-bar" style="width:0%"></i></div>
       <div class="sm ink3" id="be-sub" style="margin-top:6px">—</div>
       <div class="be-tiers" id="be-tiers" style="margin-top:11px">
-        <div><span class="dot" style="color:var(--acc)">●</span><span class="be-main">黒字 <b class="num">610万</b>/月</span><span class="be-sub">日20万・レンタカー稼働率50%</span></div>
-        <div><span class="dot" style="color:var(--warn)">●</span><span class="be-main">会計トントン <b class="num">470万</b>/月</span><span class="be-sub">絶対固定費のみ・日15.5万</span></div>
-        <div><span class="dot" style="color:var(--danger)">●</span><span class="be-main">現金下限 <b class="num">425万</b>/月</span><span class="be-sub">借入元金74万込み・日14万</span></div>
+        <div><span class="dot" style="color:var(--acc)">●</span><span class="be-main">黒字 <b class="num">651万</b>/月</span><span class="be-sub">日21.4万・レンタカー稼働率56%</span></div>
+        <div><span class="dot" style="color:var(--warn)">●</span><span class="be-main">会計トントン <b class="num">566万</b>/月</span><span class="be-sub">活動費ゼロ時・日18.6万</span></div>
+        <div><span class="dot" style="color:var(--danger)">●</span><span class="be-main">現金下限 <b class="num">551万</b>/月</span><span class="be-sub">借入元金83.5万込み・日18.1万</span></div>
       </div>
-      <div class="sm ink3" id="be-note" style="margin-top:9px">固定費 約545万 ÷ 限界利益率 89.4%（FY2026確定・暦日ベース・年1回見直し）</div>
+      <div class="sm ink3" id="be-note" style="margin-top:9px">固定費 約643万 ÷ 限界利益率 98.8%（税抜・2026年4〜10月実績・暦日ベース）</div>
       <!-- 受注ランレート (売上タブに埋没していた値を分岐点に接続・2026-07-04 第1波) -->
       <div class="sm" id="be-runrate" style="margin-top:8px;padding-top:8px;border-top:1px dotted var(--line)"></div>
       <!-- 売上ゼロ ランウェイ 1行サマリー (本体は資金タブ・2026-07-31) -->
@@ -1245,7 +1245,7 @@
           <!-- 文字盤 -->
           <circle class="ng-face" cx="50" cy="50" r="47"/>
           <circle class="ng-ring" cx="50" cy="50" r="47"/>
-          <!-- 損益分岐点ゾーン色帯 (JS生成: 赤0-35% / 黄35-50% / 青50-100%) -->
+          <!-- 損益分岐点ゾーン色帯 (JS生成: 赤0-47% / 黄47-56% / 青56-100%) -->
           <g id="ng-bands"></g>
           <!-- 目盛 (JS生成) -->
           <g id="ng-scale"></g>
@@ -1262,7 +1262,7 @@
         </svg>
         <div class="ng-cap" id="ng-cap">— / — 台 稼働中 · 空き —</div>
         <div class="sm" id="ng-verdict" style="text-align:center;margin-top:5px">—</div>
-        <div class="sm ink3" style="text-align:center;margin-top:4px"><span class="ng-sw" style="background:var(--acc)"></span>50%↑ 損益分岐点 ・ <span class="ng-sw" style="background:var(--warn)"></span>35–50% 要注意 ・ <span class="ng-sw" style="background:var(--danger)"></span>35%↓ 現金下限</div>
+        <div class="sm ink3" style="text-align:center;margin-top:4px"><span class="ng-sw" style="background:var(--acc)"></span>56%↑ 損益分岐点 ・ <span class="ng-sw" style="background:var(--warn)"></span>47–56% 要注意 ・ <span class="ng-sw" style="background:var(--danger)"></span>47%↓ 現金下限</div>
         <div class="sm ink3" style="text-align:center;margin-top:4px">※ 全社の黒字判断は損益分岐点カード（3事業合算）が主軸</div>
       </div>
     </div>
@@ -1550,7 +1550,7 @@
     <div class="card">
       <div class="lbl">資金繰り予定 · 今後12ヶ月（各月末の現金）</div>
       <svg class="cf-chart" id="cf-chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
-      <div class="fwd-legend"><span><span class="sw"></span>月末 現金残高</span><span><span class="swl" style="border-color:var(--danger)"></span>現金下限 425万</span></div>
+      <div class="fwd-legend"><span><span class="sw"></span>月末 現金残高</span><span><span class="swl" style="border-color:var(--danger)"></span>現金下限 551万</span></div>
       <div class="sm" id="cf-verdict" style="margin-top:8px;text-align:center"></div>
     </div>
 
@@ -1634,7 +1634,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-11-10c';
+const APP_VERSION = '2026-11-10d';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
@@ -2523,24 +2523,26 @@ function staffLoad(){
 }
 
 // ---------- RENDER ----------
-// 損益分岐点 (㈱Hari Terrace 全社・FY2026確定値) — memory project-lime-break-even / 損益分岐点分析_2026-06-16.md
-// 固定費 約545万/月 ÷ 限界利益率 89.4% = 月約610万・暦日ベース 日約20万。freee実額ベースの静的値=年1回見直し。
-// 3段階: 通常(全固定費545万)610万 / 限界(絶対固定費418万)470万 / 真の現金下限(元金返済74万込)425万
+// 損益分岐点 (㈱Hari Terrace 全社・税抜・本業売上=車両販売を除く) — 2026-11-10d: freee FY2026 4〜10月実績で再算定 (考え方は 損益分岐点分析_2026-10-14.md と同じ)
+// 固定費 約643万/月 ÷ 限界利益率 98.8% = 月約651万・暦日ベース(÷30.4) 日約21.4万。freee実額ベースの静的値。
+// 3段階: 通常(全固定費643万)651万 / 限界(活動費84万を除く559万)566万 / 真の現金下限(非現金182万を除き元金返済83.5万込)551万
+// ★稼働メーターの帯 (GAUGE_BE/GAUGE_CASH) と画面の文言 (be-tiers / be-note / 現金下限◯万) も一緒に直すこと。
 // 売上ゼロ時の月次現金流出(バーン) = fixedCash + 借入元金返済。
-//   fixedCash = 現金下限売上 425万 × 限界利益率 89.4% − 元金返済 74万 ≒ 306万/月
+//   fixedCash = 固定費 643万 − 非現金(減価償却・長期前払償却) 182万 ≒ 461万/月
 //   = 人件費・家賃・リース料・保険など「売上が止まっても出ていく現金」。減価償却は非現金なので含めない。
 //   ★MD(損益分岐点分析)の見直し時は monthly/limit/cash と一緒に fixedCash も更新すること。
 const BREAK_EVEN = {
-  monthly: 6100000, daily: 200000,        // 損益分岐点 (利益が出る)
-  limit:   4700000, limitDaily: 155000,   // 会計トントン (絶対固定費のみ・日15.5万=正本MD/レジェンドと一致)
-  cash:    4250000, cashDaily: 140000,     // 現金下限 (借入元金返済込み)
-  margin:  0.894,  fixedCash: 3060000      // 限界利益率 / 売上ゼロ時に出ていく現金固定費(月)
+  monthly: 6510000, daily: 214000,        // 損益分岐点 (利益が出る)
+  limit:   5660000, limitDaily: 186000,   // 会計トントン (活動費を除く固定費のみ)
+  cash:    5510000, cashDaily: 181000,     // 現金下限 (借入元金返済込み)
+  margin:  0.988,  fixedCash: 4610000      // 限界利益率 / 売上ゼロ時に出ていく現金固定費(月)
 };
+const GAUGE_BE=56, GAUGE_CASH=47;         // 稼働メーターの帯: 損益分岐点 / 現金下限 に当たるレンタカー稼働率(%)・上期実効単価 4,741円/台日・79台で換算
 // ===== 資金繰り (第4波・2026-07-04) 前提定数 =====
 // 借入元金返済 = 損益分岐点MD (freee B/S 連続月差で確定・元金74万/月)。営業CFはfreee営業利益÷経過月でライブ算出。
 // CASH_SPECIAL = 税金・賞与など特殊支出の月別予定 {YYYY-MM: 金額(正=支出)}。実額が分かり次第ここに追記して反映。
 //   現状は空 (推測で税額を入れて資金繰りを誤らせない)。UIに「未設定・要入力」と明示する。
-const CASH_CFG = { loanRepay: 740000, opCFfallback: 1400000, floor: 4250000 };
+const CASH_CFG = { loanRepay: 740000, opCFfallback: 1400000, floor: 5510000 };
 const CASH_SPECIAL = {}; // 例) '2027-05': 2500000  ← 法人税・消費税・賞与の予定を入れる
 // 資金イベント (借入実行・車両以外の設備投資) — 月キー YYYY-MM → 額
 // 🚨このHTMLは公開URLで配信される → 銀行名・商品名・金利・口座など契約の詳細は書かない (2026-07-29 機密除去の方針)。
@@ -2587,7 +2589,7 @@ function renderBreakEven(){
   const prog=Math.min(100, Math.round(mtd/BREAK_EVEN.monthly*100));
   const bar=document.getElementById('be-bar'); bar.style.width=prog+'%'; bar.className=barCls;
   const rest=Math.max(0, BREAK_EVEN.monthly-mtd);
-  document.getElementById('be-sub').innerHTML='当月売上 <b class="num">'+yen(mtd)+'</b>円 ／ 損益分岐点 6,100,000円'+(rest>0?'（あと '+yen(rest)+'円）':'（達成 ✓）');
+  document.getElementById('be-sub').innerHTML='当月売上 <b class="num">'+yen(mtd)+'</b>円 ／ 損益分岐点 '+yen(BREAK_EVEN.monthly)+'円'+(rest>0?'（あと '+yen(rest)+'円）':'（達成 ✓）');
   // 受注ランレート = 稼働中案件×日額単価 (売上タブに埋没していた先読み値を分岐点に接続・2026-07-04 第1波)
   const rr=document.getElementById('be-runrate');
   if(rr){
@@ -2761,7 +2763,7 @@ function renderAR(){
   $('ar-unbilled-sub').innerHTML='レンタカー 返却済・仮請求 '+a.unbRN+'件 '+yen(a.unbR)+'<br>電装 作業済み '+a.unbEN+'件 '+yen(a.unbE)+(a.unbECarry>0?'<br><span class="dn">うち月またぎ '+yen(a.unbECarry)+'円 — 発行漏れ疑い</span>':'');
   const totalAR=a.live+a.hist;
   const months=Math.round(totalAR/BREAK_EVEN.cash*10)/10;
-  $('ar-note').textContent= totalAR>0 ? ('未回収 計 '+yen(totalAR)+'円 ＝ 現金下限（425万/月）の約 '+months+' ヶ月分が社外に滞留') : '未回収なし ✓';
+  $('ar-note').textContent= totalAR>0 ? ('未回収 計 '+yen(totalAR)+'円 ＝ 現金下限（'+Math.round(BREAK_EVEN.cash/10000)+'万/月）の約 '+months+' ヶ月分が社外に滞留') : '未回収なし ✓';
   // 第3波: freee消込突合 — 「入力遅延なだけ」と「真の未回収」を区別 (paidStatus=受付Noキー)
   const fEl=$('ar-freee');
   if(fEl){
@@ -3482,7 +3484,7 @@ function _renderFreeeBS(){
   if(FREEE_BS.cash!=null) rows.push('<tr><td>現金・預金</td><td class="num" style="font-weight:700;color:var(--acc)">'+yen(FREEE_BS.cash)+' 円</td></tr>');
   if(FREEE_BS.loan) rows.push('<tr><td>借入金 残高</td><td class="num">'+yen(FREEE_BS.loan)+' 円</td></tr>');
   if(FREEE_BS.cash!=null&&FREEE_BS.loan) rows.push('<tr><td>実質有利子負債（借入−現預金）</td><td class="num">'+yen(FREEE_BS.loan-FREEE_BS.cash)+' 円</td></tr>');
-  if(FREEE_BS.cash!=null) rows.push('<tr><td>現預金 ＝ 現金下限（425万/月）の</td><td class="num">約 '+(Math.round(FREEE_BS.cash/BREAK_EVEN.cash*10)/10)+' ヶ月分</td></tr>');
+  if(FREEE_BS.cash!=null) rows.push('<tr><td>現預金 ＝ 現金下限（'+Math.round(BREAK_EVEN.cash/10000)+'万/月）の</td><td class="num">約 '+(Math.round(FREEE_BS.cash/BREAK_EVEN.cash*10)/10)+' ヶ月分</td></tr>');
   host.innerHTML=rows.join('');
 }
 // 分析タブの静的スナップショットに「本日のLIVE実測」を1行ずつ差し込む (第3波 — 陳腐化の解毒)
@@ -3977,7 +3979,7 @@ function utilColor(rate){
 }
 // メーター角度: 0%→-135°(左下) 〜 100%→+135°(右下) の 270°スイープ
 function gaugeAngle(pct){ return -135 + Math.max(0,Math.min(100,pct))/100*270; }
-// 損益分岐点ゾーンの色帯アーク (稼働率 50%=損益分岐点 / 35%=現金下限)
+// 損益分岐点ゾーンの色帯アーク (稼働率 GAUGE_BE=損益分岐点 / GAUGE_CASH=現金下限)
 function gaugeBand(p0,p1,col){
   const a0=gaugeAngle(p0), a1=gaugeAngle(p1);
   const [sx,sy]=polar(50,50,47,a0), [ex,ey]=polar(50,50,47,a1);
@@ -4339,10 +4341,10 @@ function renderOps(){
     });
     scaleEl.innerHTML=ticks;
   }
-  // 損益分岐点ゾーン色帯 (一度だけ): 赤 0-35% / 黄 35-50% / 青 50-100%
+  // 損益分岐点ゾーン色帯 (一度だけ): 赤 0-GAUGE_CASH / 黄 GAUGE_CASH-GAUGE_BE / 青 GAUGE_BE-100
   const bandsEl=document.getElementById('ng-bands');
   if(bandsEl && !bandsEl.children.length){
-    bandsEl.innerHTML = gaugeBand(0,35,'var(--danger)') + gaugeBand(35,50,'var(--warn)') + gaugeBand(50,100,'var(--acc)');
+    bandsEl.innerHTML = gaugeBand(0,GAUGE_CASH,'var(--danger)') + gaugeBand(GAUGE_CASH,GAUGE_BE,'var(--warn)') + gaugeBand(GAUGE_BE,100,'var(--acc)');
   }
   // 値まで塗る弧 (0% 始点 → 現在値)
   const arcEl=document.getElementById('ng-arc');
@@ -4357,14 +4359,14 @@ function renderOps(){
   if(nd) nd.setAttribute('transform','rotate('+gaugeAngle(pct).toFixed(1)+' 50 50)');
   $('ng-pct').textContent = pct+'%';
   $('ng-cap').textContent = s.inUse+' / '+s.tot+' 台 稼働中 · 空き '+s.free;
-  // 損益分岐点ゾーン判定 (稼働率 50%=損益分岐点 / 35%=現金下限)
+  // 損益分岐点ゾーン判定 (稼働率 GAUGE_BE=損益分岐点 / GAUGE_CASH=現金下限)
   const vEl=document.getElementById('ng-verdict');
   if(vEl){
     let vt,vc;
-    // ※ 50%=レンタカー単独で全社損益分岐点を埋める目安(他事業の寄与を含まない)。全社の黒字判断は損益分岐点カード(3事業合算)が主軸。
-    if(pct>=50){ vt='🟢 レンタカー稼働 良好（単独でも全社損益分岐点の水準）'; vc='var(--acc)'; }
-    else if(pct>=35){ vt='🟡 レンタカー稼働 中位（全社判断は損益分岐点カードで）'; vc='var(--warn)'; }
-    else { vt='🔴 レンタカー稼働 低調（35%未満）'; vc='var(--danger)'; }
+    // ※ GAUGE_BE=レンタカー単独で全社損益分岐点を埋める目安(他事業の寄与を含まない)。全社の黒字判断は損益分岐点カード(3事業合算)が主軸。
+    if(pct>=GAUGE_BE){ vt='🟢 レンタカー稼働 良好（単独でも全社損益分岐点の水準）'; vc='var(--acc)'; }
+    else if(pct>=GAUGE_CASH){ vt='🟡 レンタカー稼働 中位（全社判断は損益分岐点カードで）'; vc='var(--warn)'; }
+    else { vt='🔴 レンタカー稼働 低調（'+GAUGE_CASH+'%未満）'; vc='var(--danger)'; }
     vEl.textContent=vt; vEl.style.color=vc;
   }
 
