@@ -893,7 +893,7 @@
     .hdr-row{padding-bottom:56px}
     section.on{display:block;columns:2;column-gap:0;max-width:1360px;margin:0 auto;padding:10px 14px 60px !important}
     section.on > *{break-inside:avoid}
-    section .card{margin:12px}
+    section .card,section .card.hero{margin:12px}
     section.on > .verdict-card{column-span:all}
     /* 分析タブは中身が自前のサブタブ構成なので段組みにしない (切替ボタンだけ左列に孤立するため) */
     #sec-report.on{columns:1;max-width:1100px}
@@ -908,9 +908,10 @@
       transform:translate(-50%,-47%);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 20px 60px rgba(0,0,0,.55)}
     .drill-sheet.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
   }
-  @media (min-width:1600px){
-    section.on{columns:3;max-width:1840px}
-  }
+  /* 大画面は列を増やさず全体を拡大する (2026-11-10a)。
+     3列はカード数が少ないタブで列の高さが 320/1058/966 のように不ぞろいになり、文字も画面に対して小さすぎた */
+  @media (min-width:1600px){ body{zoom:1.15} }
+  @media (min-width:1900px){ body{zoom:1.3} }
 </style>
 </head>
 <body>
@@ -1618,7 +1619,7 @@
    - PIN gate + Dropbox PKCE auth
    - Reads BOTH rental & DETALIA data.json
    =========================================================== */
-const APP_VERSION = '2026-11-10';
+const APP_VERSION = '2026-11-10a';
 
 // Dropbox App key (PKCE = public)
 const DBX_APP_KEY = 'fly154tcdbz09x9';
