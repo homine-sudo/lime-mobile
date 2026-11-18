@@ -3048,6 +3048,7 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
       <div style="display:flex;gap:6px;align-items:center">
         <button class="btn btn-sm" id="gr-btn-handover" style="display:none;background:#2C5282;border:1px solid #1F3A5F;color:#fff;font-weight:bold" onclick="grMarkHandedOver()" title="お客様に車をお渡ししたら押す → 状態を「利用中」に進めます (貸出日が空なら本日をセット)">🚗 貸渡完了</button>
         <button class="btn btn-sm" id="gr-btn-return" style="display:none;background:#4F8A3E;border:1px solid #3E6E30;color:#fff;font-weight:bold" onclick="grMarkReturned()" title="車両の返却・回収が完了したら押す → 状態を「車両回収済」に進めます (返却日が空なら本日をセット)">✅ 返却・回収完了</button>
+        <button class="btn btn-outline btn-sm" id="gr-btn-dup" style="display:none" onclick="grDuplicateCase()" title="この案件をもとに新しい一般貸渡を作る (保存前に確認できます)">📄 複製</button>
         <button class="btn btn-outline btn-sm" id="gr-btn-print" style="display:none;background:#FFF7E6;border-color:#E69E50;color:#7A4500" onclick="grPrintContract()" title="貸渡書 (表: 貸渡証+車体チェック / 裏: 約款) をA4で印刷">📜 貸渡書印刷</button>
         <button class="btn btn-outline btn-sm" id="gr-btn-invoice" style="display:none" onclick="grPrintInvoice()" title="請求書を印刷">🧾 請求書</button>
       </div>
@@ -3103,7 +3104,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-11-18a';
+const APP_VERSION = '2026-11-18b';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -10549,6 +10550,50 @@ function grBillingUseBorrower(){
   toast('請求先を「'+nm+' 様」に設定しました');
 }
 
+// ★2026-11-18b 一般貸渡の複製 (ユーザー「複製できるようにもして」)
+//   損保の duplicateCase は即保存+通知だが、一般は「中身を入れた新規画面を開く → 確認して保存」にする
+//   (保存した時点で新規として通知・採番される。保存しなければ何も残らない)。
+//   [1] お客様だけ引き継ぐ = リピーター / [2] 日程・便も引き継ぐ = 同じ日にもう1台 (グループ等)
+//   どちらも 車両(ナンバー)・受付No・請求/入金・社内メモ・状態・担当 は引き継がない (二重割当・二重請求の防止)。
+const GR_DUP_CUSTOMER = ['contractorName','borrowerAddress','driverTel','driverName','driverAddress',
+  'driverBirthDate','driverLicenseType','driverLicenseNo','driverLicenseExpiry','driverLicenseAcquired',
+  'billingToName','billingToHonorific','hasCDW','hasWide','preferSmoke','preferAT','rentalNote','vehicleClass','unitPrice'];
+const GR_DUP_TRIP = ['useStart','useStartTime','useEnd','useEndTime','arrivalFlight','arrivalTime','departureFlight','departureTime',
+  'pickupLocation','pickupDetail','guestCount','usagePurpose','destination','discountDays','discount'];
+function grDuplicateCase(){
+  if(!_grEditingId){ toast('保存してから複製できます','error'); return; }
+  if(_grDirty && !confirm('未保存の変更があります。\n画面に入っている内容で複製しますか？ (元の案件の変更は保存されません)')) return;
+  const src = collectGRForm();
+  const fromNo = src.caseNo || '';
+  const ans = prompt(
+    '案件 ' + fromNo + '（' + (src.contractorName || '') + '）をもとに新しい一般貸渡を作ります。\n\n' +
+    '[1] お客様だけ引き継ぐ（日程・便・車は空）… リピーター\n' +
+    '[2] 日程・便も引き継ぐ（車だけ空）… 同じ日にもう1台\n\n' +
+    '番号を入力 (1 / 2):', '1');
+  if(!ans) return;
+  const mode = ans.trim();
+  if(mode !== '1' && mode !== '2'){ toast('1 か 2 を入力してください','error'); return; }
+  const keep = mode === '2' ? GR_DUP_CUSTOMER.concat(GR_DUP_TRIP) : GR_DUP_CUSTOMER;
+  _grDirty = false;
+  closeGeneralRentalModal();       // 元案件の編集ロックを解放
+  openGeneralRentalModal();        // 新規 (受付日=本日・担当=前回・状態=受付)
+  keep.forEach(k => {
+    const el = $('gr-' + k); if(!el) return;
+    if(el.type === 'checkbox') el.checked = !!src[k];
+    else el.value = (src[k] == null ? '' : src[k]);
+  });
+  onGRPickupChange();
+  _grAutoDays = 0;
+  updateGRPeriod();
+  grAutoExpandDetails();
+  grRefreshUI();
+  _grDirty = true;                 // 保存せずに閉じようとしたら確認を出す
+  const ind = $('gr-save-indicator');
+  if(ind){ ind.textContent = '⚠️ 未保存（複製）'; ind.style.color = '#C53030'; }
+  $('gr-modal-title').textContent = '一般貸渡 新規（' + fromNo + ' から複製）';
+  toast('📄 複製しました — ' + (mode === '2' ? '車を選んで' : '日程と車を入れて') + '保存してください');
+}
+
 // GR モーダル開く
 let _grEditingId = null;
 function openGeneralRentalModal(id){
@@ -10592,7 +10637,7 @@ function openGeneralRentalModal(id){
   const _grBody = document.querySelector('#gr-modal .modal-body'); if(_grBody) _grBody.scrollTo({top:0});
   $('gr-modal-title').textContent = id ? `一般貸渡 編集 ${c.caseNo||''}` : '一般貸渡 新規';
   // 削除・印刷・返却完了ボタンは既存案件のみ
-  ['gr-btn-delete','gr-btn-cancel','gr-btn-print','gr-btn-invoice','gr-btn-return','gr-btn-return-step','gr-btn-handover','gr-btn-handover-step'].forEach(b=>{
+  ['gr-btn-delete','gr-btn-cancel','gr-btn-print','gr-btn-invoice','gr-btn-return','gr-btn-return-step','gr-btn-handover','gr-btn-handover-step','gr-btn-dup'].forEach(b=>{
     const el = $(b); if(el) el.style.display = id ? '' : 'none';
   });
   // キャンセルボタンは「既にキャンセル / 入金済」では隠す (損保 canCancelCase と同条件)
@@ -10718,8 +10763,9 @@ function saveGeneralRental(closeAfter){
   _grEditingId = c.id;
   editingCaseId = c.id;
   fillGRForm(c);
+  if($('gr-modal-title')) $('gr-modal-title').textContent = '一般貸渡 編集 ' + (c.caseNo||'');   // 2026-11-18b 新規/複製を保存したら見出しも編集に
   // 削除・印刷・返却完了ボタン表示
-  ['gr-btn-delete','gr-btn-cancel','gr-btn-print','gr-btn-invoice','gr-btn-return','gr-btn-return-step','gr-btn-handover','gr-btn-handover-step'].forEach(b=>{
+  ['gr-btn-delete','gr-btn-cancel','gr-btn-print','gr-btn-invoice','gr-btn-return','gr-btn-return-step','gr-btn-handover','gr-btn-handover-step','gr-btn-dup'].forEach(b=>{
     const el = $(b); if(el) el.style.display = '';
   });
   if(typeof renderCases === 'function') renderCases();
