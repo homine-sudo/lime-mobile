@@ -1076,6 +1076,8 @@ body.kb-open .m-confirm-card{display:none}
 .m-qr-item .qr-body{flex:1;min-width:0}
 .m-qr-item .qr-ttl{font-size:13px;font-weight:700;color:var(--navy)}
 .m-qr-item .qr-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.m-qr-item .qr-dest{color:#2d5a3d}
+.m-qr-item .qr-dest b{font-weight:700}
 .m-qr-item .qr-tick{
   width:22px;height:22px;border-radius:50%;background:#E5EBDD;color:transparent;
   display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;
@@ -2050,7 +2052,7 @@ body.kb-open .m-confirm-card{display:none}
     <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px">利用中の案件に回収予定日を設定します</div>
     <div class="m-form-grp">
       <label>🔍 案件を検索</label>
-      <input type="text" id="m-qr-search" placeholder="契約者名 / 車両ナンバー など" oninput="renderQuickRecList()">
+      <input type="text" id="m-qr-search" placeholder="契約者名 / 車両ナンバー / 配車先 など" oninput="renderQuickRecList()">
     </div>
     <div class="m-form-grp">
       <label>該当の案件 (利用中)</label>
@@ -2161,7 +2163,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-11-06a';
+const APP_VERSION = '2026-11-19a';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -7506,6 +7508,7 @@ function renderQuickRecList(){
         <div class="qr-body">
           <div class="qr-ttl">${esc(c.caseNo||'')} ・ ${esc(c.contractorName||c.driverName||'')}</div>
           <div class="qr-meta">${esc(ins.name||'')} ${plate?`/ ${esc(plate)}`:''}</div>
+          ${(c.dispatchToName||c.dispatchToAddress) ? `<div class="qr-meta qr-dest">🏭 配車先: <b>${esc(c.dispatchToName||'')}</b>${c.dispatchToAddress ? ` <span>${esc(c.dispatchToAddress)}</span>` : ''}</div>` : ''}
           <div class="qr-meta">利用開始: ${esc(c.useStart||'')} ${c.recoveryCalledAt?` / 回収予定: ${esc(c.recoveryCalledAt)}`:''}</div>
         </div>
         <div class="qr-tick">✓</div>
