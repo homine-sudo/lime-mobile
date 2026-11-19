@@ -521,6 +521,10 @@ body.kb-open .m-confirm-card{display:none}
 }
 .m-card-row.m-card-memo .lbl{background:transparent;min-width:auto;padding:0}
 .m-card-row.m-card-memo .val{color:#5A3F00;font-size:12.5px}
+/* 2026-11-19b 交渉経緯 (PC の negotiationLog) をカードにも表示 */
+.m-card-row.m-card-nego{background:#FAF5FE;border-radius:6px;padding:4px 8px;margin-top:4px}
+.m-card-row.m-card-nego .lbl{background:transparent;min-width:auto;padding:0;color:#3D2459;font-weight:700}
+.m-card-row.m-card-nego .val{color:#3D2459;font-size:12.5px;white-space:pre-wrap;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 /* 🔧 回収カードの点検期日 (2026-09-15): 完了確認の「点検期日」行と同じ色味 */
 .m-card-row.m-card-due{background:#FFF9E6;border:1px solid #F0D58A;border-radius:7px;padding:6px 8px;margin-top:6px}
 .m-card-row.m-card-due .lbl{background:transparent;color:#7A4500;min-width:auto;padding:0}
@@ -2163,7 +2167,7 @@ body.kb-open .m-confirm-card{display:none}
 // アプリバージョン (アップデートチェックで比較する)
 //   ★ index_mobile.html を更新するたびに、ここの日付サフィックスを上げてからGitHubにアップロードする
 //   形式: 'YYYY-MM-DD' (1日に複数回上げる場合は a/b/c サフィックス)
-const APP_VERSION = '2026-11-19a';
+const APP_VERSION = '2026-11-19b';
 // ★これより古い版は全画面で更新を促す (通常の更新はバナーのまま)。
 //   事故対策など「入れないと危ない」版を出した時だけ、この値を新版の日付に上げる。
 //   ★上げるのは慎重に: 現場が更新できないと業務が止まる。必ず脱出口(3回失敗で継続可)を残すこと。
@@ -4520,6 +4524,7 @@ function _renderCaseCard(c, kind){
           ${_rd.address ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(_rd.address)} ${recMapsLink}</span></div>` : ''}
           ${c.category === '一般' && (c.useStart || c.useEnd) ? `<div class="m-card-row"><span class="lbl">貸渡</span><span class="val">${esc(c.useStart||'―')}${c.useEnd?' 〜 '+esc(c.useEnd):''}</span></div>` : ''}
           ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
+          ${c.negotiationLog ? `<div class="m-card-row m-card-nego"><span class="lbl">交渉経緯</span><span class="val">${esc(c.negotiationLog)}</span></div>` : ''}
           ${resendBtn}
         </div>
         <div class="m-card-right"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg></div>
@@ -4559,6 +4564,7 @@ function _renderCaseCard(c, kind){
         ${toLine ? `<div class="m-card-row"><span class="lbl">配車先</span><span class="val">${toLine}</span></div>` : ''}
         ${c.dispatchToAddress ? `<div class="m-card-row"><span class="lbl">住所</span><span class="val">${esc(c.dispatchToAddress)} ${mapsLink}</span></div>` : ''}
         ${c.internalMemo ? `<div class="m-card-row m-card-memo"><span class="lbl">メモ</span><span class="val">${esc(c.internalMemo)}</span></div>` : ''}
+        ${c.negotiationLog ? `<div class="m-card-row m-card-nego"><span class="lbl">交渉経緯</span><span class="val">${esc(c.negotiationLog)}</span></div>` : ''}
         ${resendBtn}
       </div>
       <div class="m-card-right"><svg class="m-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg></div>
@@ -4700,7 +4706,7 @@ function renderInfoBox(c, hostId, kind){
     <div class="m-info-row"><span class="lbl">保険会社</span><span class="val">${insLine}</span></div>
     ${_staffRow}
     <div class="m-info-row m-memo-edit-row" onclick="openMemoEdit('${c.id}')" style="cursor:pointer" title="タップで社内メモを編集"><span class="lbl">社内メモ</span><span class="val" style="color:#5A3F00;background:#FFF9E6;padding:6px 8px;border-radius:6px">${c.internalMemo?esc(c.internalMemo):'<span style="color:var(--muted);font-style:italic">＋ タップで追加</span>'} <span style="float:right;color:var(--muted)">${ic('<path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/>')}</span></span></div>
-    ${c.negotiationLog?`<div class="m-info-row"><span class="lbl">交渉記録</span><span class="val" style="color:#3D2459;background:#FAF5FE;padding:6px 8px;border-radius:6px;white-space:pre-wrap;line-height:1.6">${esc(c.negotiationLog)}</span></div>`:''}
+    ${c.negotiationLog?`<div class="m-info-row"><span class="lbl">交渉経緯</span><span class="val" style="color:#3D2459;background:#FAF5FE;padding:6px 8px;border-radius:6px;white-space:pre-wrap;line-height:1.6">${esc(c.negotiationLog)}</span></div>`:''}
     ${_detailLinkIB}
   `;
 }
