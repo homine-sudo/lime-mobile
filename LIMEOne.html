@@ -799,6 +799,10 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 .bi-tab-btn.active{background:var(--navy);color:#fff;font-weight:bold;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .bi-tab-pane{display:none}
 .bi-tab-pane.active{display:block}
+.chk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.chk-grid{grid-template-columns:1fr}}
+.chk-row{display:flex;align-items:center;gap:6px;padding:5px 12px;font-size:12.5px;border-radius:4px}
+.chk-click:hover{background:#EEF4FB}
 
 /* マスター画面レイアウト: 左サブナビ + 右コンテンツ */
 .mst-layout{display:grid;grid-template-columns:210px 1fr;gap:14px;min-height:70vh}
@@ -1744,7 +1748,8 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
 
   <!-- ==== サブタブバー (2026-08-04b 案B再構成: TOP/売上・予測/取引先/車両・稼働/詳細) ==== -->
   <div class="bi-tabbar no-print">
-    <button class="bi-tab-btn active" data-bitab="top" onclick="showBiTab('top')" title="今月・今年度を前年と比較 (固定表示)">🎯 TOP</button>
+    <button class="bi-tab-btn active" data-bitab="check" onclick="showBiTab('check')" title="請求漏れ・入金・freee一致・単価値引き・もうけ・データ を今の状態で (2026-11-20)">✅ チェック</button>
+    <button class="bi-tab-btn" data-bitab="top" onclick="showBiTab('top')" title="今月・今年度を前年と比較 (固定表示)">🎯 TOP</button>
     <button class="bi-tab-btn" data-bitab="kpi" onclick="showBiTab('kpi')" title="主要KPI・日額積み上げ・季節変動と予測">💹 売上・予測</button>
     <button class="bi-tab-btn" data-bitab="partner" onclick="showBiTab('partner')" title="保険会社・担当者・コール/配車先">🏢 取引先</button>
     <button class="bi-tab-btn" data-bitab="fleet" onclick="showBiTab('fleet')" title="クラス別件数・稼働率・車両別生涯ROI">🚗 車両・稼働</button>
@@ -1783,7 +1788,10 @@ tr.veh-maint-row td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
   </div>
 
   <!-- ==== 🎯 TOPタブ (固定・今月/今年度を前年比。期間セレクタ非連動) ==== -->
-  <div class="bi-tab-pane active" id="bi-tab-top">
+  <!-- ==== ✅ チェック (2026-11-20 既定タブ・読み取り専用。描画は renderBiCheck) ==== -->
+  <div class="bi-tab-pane active" id="bi-tab-check"><div id="bi-check-root"></div></div>
+
+  <div class="bi-tab-pane" id="bi-tab-top">
   <div class="bi-section-header">🎯 今、順調？ <span style="font-size:11px;color:#888;font-weight:normal">今月・今年度を前年・前々年と比較</span></div>
   <div id="bi-summary" style="margin-bottom:14px"></div>
 
@@ -3104,7 +3112,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-11-18d';
+const APP_VERSION = '2026-11-20a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -7218,13 +7226,15 @@ function renderBI(){
   window._biCtx = { range, cases, kpi, kpiPrev, util };
   renderBiSummary();       // 🎯 今、順調？ (TOP・今月/今年度を前年比)
   renderBiMonthYoY();      // 📅 月別 前年比較 (TOP・12ヶ月)
-  _renderBiTab(window._biTab || 'top');
+  _renderBiTab(window._biTab || 'check');
 }
 // タブごとの描画。非表示タブのチャートは描かない (canvas は非表示中に描くとサイズ0になるため、表示時に再描画する方式)
 function _renderBiTab(tab){
   const c = window._biCtx; if(!c) return;
   const { cases, kpi, kpiPrev, util } = c;
-  if(tab === 'kpi'){
+  if(tab === 'check'){
+    renderBiCheck();                           // ✅ チェック (2026-11-20)
+  } else if(tab === 'kpi'){
     renderBIKpis(kpi, kpiPrev, util);          // 💹 主要指標 (hero+補助を統合表示)
     renderBIForecast();                        // 🌡 日額積み上げ推移
     if(typeof renderBISeasonality === 'function') renderBISeasonality();  // 🔮 季節変動&予測
@@ -7249,9 +7259,456 @@ function showBiTab(t){
   window._biTab = t;
   document.querySelectorAll('#page-bi .bi-tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.bitab===t));
   document.querySelectorAll('#page-bi .bi-tab-pane').forEach(p=>p.classList.toggle('active', p.id==='bi-tab-'+t));
-  const bar = $('bi-period-bar'); if(bar) bar.style.display = (t==='top') ? 'none' : '';
+  const bar = $('bi-period-bar'); if(bar) bar.style.display = (t==='top' || t==='check') ? 'none' : '';
   setTimeout(()=>_renderBiTab(t), 30);  // 表示切替後にチャート描画 (サイズ確定を待つ)
 }
+/* ==================== 経営分析「✅ チェック」(2026-11-20) ====================
+   日々確認している所 (請求漏れ・入金・freee一致・単価値引き・もうけ・データ) を1画面で。
+   集計は純関数 chk*() (today と外部データを引数で受ける)、描画は renderBiCheck()。読み取り専用 (save しない)。
+   金額は calcAmounts() のみ。行の sev: bad=要対応 / warn=注意 / info=参考 / ok / na=取得できず */
+const CHK_OUT_ST = ['配車済','利用中','回収連絡','手配書FAX済'];
+function _chkActive(c){ return !!c && !c.isDeleted && !c.isCancelled && c.status!=='キャンセル'; }
+function _chkFyStart(today){ return getNendo(today)+'-04-01'; }
+// 古い台帳分 = 旧データ取込 (isHistorical) または 前年度より前の受付。毎日の要対応に混ぜず別行にする
+function _chkIsOld(c, today){
+  if(c.isHistorical) return true;
+  // 継続案件 (-2 等) は親の受付日を引き継ぐので、受付・利用開始・利用終了のうち一番新しい日で判定
+  const d = [c.receivedAt, c.useStart, c.useEnd].map(x=>String(x||'').slice(0,10)).filter(x=>/^d{4}-d{2}-d{2}$/.test(x)).sort().pop() || '';
+  return !!d && d < (getNendo(today)-1)+'-04-01';
+}
+function _chkAge(from, today){ const a=parseDate(String(from||'').slice(0,10)), b=parseDate(String(today).slice(0,10)); return (a&&b)? Math.floor((b-a)/86400000) : 0; }
+function _chkTotal(c){ try{ return Number(calcAmounts(c).total)||0; }catch(e){ return 0; } }
+function _chkRow(key, label, sev, cases, extra){
+  cases = cases||[];
+  return Object.assign({key, label, sev, count:cases.length, amount:cases.reduce((s,x)=>s+(Number(x.amount)||0),0), cases}, extra||{});
+}
+function _chkSecSev(rows){
+  const live = rows.filter(r=>r.sev!=='na');
+  if(rows.length && !live.length) return 'na';
+  if(live.some(r=>r.sev==='bad' && r.count>0)) return 'bad';
+  if(live.some(r=>r.sev==='warn' && r.count>0)) return 'warn';
+  return 'ok';
+}
+function _chkParent(no){ const m=String(no||'').match(/^(\d{4}-\d{2}-\d{4})-(\d+)$/); return m? {p:m[1], n:Number(m[2])} : null; }
+function _chkFmtYen(n){ return '¥'+Math.round(Number(n)||0).toLocaleString('ja-JP'); }
+
+// ① 請求漏れ: 返却したのに freee に出していない / 利用終了日を過ぎても出庫中 / 枝番の前区間が開いたまま
+function chkBilling(today){
+  const ret=[], retOld=[], late=[], branch=[];
+  const act = DATA.cases.filter(_chkActive);
+  act.forEach(c=>{
+    if(c.status==='返却済' && !c.freeeExportedAt){
+      const x = {c, amount:_chkTotal(c), note:`返却から${_chkAge(c.useEnd||c.returnedAt, today)}日`};
+      (_chkIsOld(c,today)? retOld : ret).push(x);
+    }
+    if(CHK_OUT_ST.includes(c.status) && c.useEnd && String(c.useEnd).slice(0,10) < today && !_chkIsOld(c,today))
+      late.push({c, amount:_chkTotal(c), note:`利用終了 ${fmtDate(c.useEnd)} から${_chkAge(c.useEnd,today)}日 ${c.status}`});
+  });
+  // 枝番: 同じ親番号 (完全一致) で後の区間がある → 前の区間は締めて請求できるはず
+  const byP = {};
+  act.forEach(c=>{ const b=_chkParent(c.caseNo); if(b) (byP[b.p]=byP[b.p]||[]).push({c, n:b.n}); });
+  act.forEach(c=>{ if(byP[c.caseNo]) byP[c.caseNo].push({c, n:1}); });   // 枝番なしの親番号 = -1 扱い (採番と同じ)
+  Object.keys(byP).forEach(p=>{
+    const g = byP[p]; const maxN = Math.max(...g.map(x=>x.n));
+    g.forEach(x=>{ if(x.n<maxN && CHK_OUT_ST.includes(x.c.status) && !_chkIsOld(x.c,today))
+      branch.push({c:x.c, amount:_chkTotal(x.c), note:`-${maxN} まで進んでいるのに -${x.n} が「${x.c.status}」のまま`}); });
+  });
+  const rows = [
+    _chkRow('ret',    '返却済なのに freee 未出力 (請求していない)', 'bad',  ret),
+    _chkRow('late',   '利用終了日を過ぎても出庫中のまま', 'warn', late),
+    _chkRow('branch', '枝番の前区間が締まっていない (後の区間あり)', 'warn', branch),
+    _chkRow('retOld', '古い台帳分: 返却済・未出力 (参考)', 'info', retOld)
+  ];
+  const n = ret.length+late.length+branch.length, amt = ret.reduce((s,x)=>s+x.amount,0);
+  return {key:'billing', title:'① 請求漏れ', sev:_chkSecSev(rows), rows,
+    headline: n? `未請求の疑い ${n}件 (返却済で未出力 ${_chkFmtYen(amt)})` : '請求漏れの疑いなし'};
+}
+
+// ② 入金: 未入金の経過日数 / freee は入金済なのに LIME が未入金 / 入金額≠請求額
+function chkPayment(today, paidMap){
+  const b = {a30:[], a60:[], a90:[], over90:[], old:[]}, fp=[], diff=[];
+  const fy = _chkFyStart(today);
+  DATA.cases.filter(_chkActive).forEach(c=>{
+    if(c.status==='仮請求' || c.status==='請求済'){
+      const base = c.invoiceIssuedAt || c.freeeExportedAt || c.useEnd;
+      const age = _chkAge(base, today), amount=_chkTotal(c);
+      const x = {c, amount, note:`${c.invoiceIssuedAt?'請求書':c.freeeExportedAt?'freee出力':'利用終了'} ${fmtDate(base)} から${age}日`};
+      if(_chkIsOld(c,today)) b.old.push(x);
+      else b[age>90?'over90':age>60?'a90':age>30?'a60':'a30'].push(x);
+    }
+    if(paidMap && c.status!=='入金済' && paidMap[c.caseNo])
+      fp.push({c, amount:_chkTotal(c), note:`freee 入金 ${fmtDate(paidMap[c.caseNo].date)} / LIME は「${c.status}」`});
+    if(c.status==='入金済' && String(c.useEnd||'').slice(0,10)>=fy && c.paidAmount!=null && c.paidAmount!=='' && String(c.paidAt||'').slice(0,10)>=fy){  // 当年度の売上 (利用終了が当年度) の入金差だけ
+      const t=_chkTotal(c), d=Number(c.paidAmount)-t;
+      if(Math.abs(d)>=1) diff.push({c, amount:d, note:`入金 ${_chkFmtYen(c.paidAmount)} / 請求 ${_chkFmtYen(t)} (差 ${d>0?'+':''}${Math.round(d).toLocaleString('ja-JP')})`});
+    }
+  });
+  const rows = [
+    _chkRow('freeePaid', 'freee は入金済なのに LIME が未入金', paidMap? 'bad' : 'na', fp, paidMap? {} : {note:'freee から取得できず'}),
+    _chkRow('over90', '未入金 90日超', 'bad',  b.over90),
+    _chkRow('a90',    '未入金 61〜90日', 'warn', b.a90),
+    _chkRow('a60',    '未入金 31〜60日', 'info', b.a60),
+    _chkRow('a30',    '未入金 30日以内', 'info', b.a30),
+    _chkRow('diff',   '入金額と請求額の差 (当年度・参考)', 'info', diff),
+    _chkRow('old',    '古い台帳分: 未入金 (参考)', 'info', b.old)
+  ];
+  const un = ['a30','a60','a90','over90'].flatMap(k=>b[k]);
+  return {key:'payment', title:'② 入金', sev:_chkSecSev(rows), rows,
+    headline:`未入金 ${un.length}件 ${_chkFmtYen(un.reduce((s,x)=>s+x.amount,0))}` + (b.over90.length? ` (90日超 ${b.over90.length}件)` : '') + (fp.length? ` / freee入金済で未反映 ${fp.length}件` : '')};
+}
+
+// ④ 単価・値引き: 値引き率 (当月・当年度・前年同期) / 配車後に日額が変わった / 日額0円
+function chkPricing(today, auditRows){
+  const ym = String(today).slice(0,7), fy=_chkFyStart(today);
+  const py = (Number(fy.slice(0,4))-1)+fy.slice(4), pToday=(Number(today.slice(0,4))-1)+today.slice(4);
+  const acc = {m:{g:0,d:0,n:0,k:0}, fy:{g:0,d:0,n:0,k:0}, pv:{g:0,d:0,n:0,k:0}};
+  const act = DATA.cases.filter(_chkActive);
+  act.forEach(c=>{
+    const e = String(c.useEnd||'').slice(0,10); if(!e || ['受付','配車予定'].includes(c.status)) return;
+    let a; try{ a=calcAmounts(c); }catch(_){ return; }
+    const add = k=>{ acc[k].g+=Number(a.gross)||0; acc[k].d+=Number(a.discount)||0; acc[k].n++; if(Number(a.discount)>0) acc[k].k++; };
+    if(e.slice(0,7)===ym && e<=today) add('m');
+    if(e>=fy && e<=today) add('fy');
+    if(e>=py && e<=pToday) add('pv');
+  });
+  const pct = o=> o.g? (o.d/o.g*100) : null;
+  const pf = v=> v==null? '—' : v.toFixed(1)+'%';
+  const rM=pct(acc.m), rFy=pct(acc.fy), rPv=pct(acc.pv);
+  // 前年は値引き欄をほぼ使っていない (2026年3月から使用) ので前年比では判定しない。今月が当年度平均より 2ポイント以上高ければ注意
+  const up = rM!=null && rFy!=null && acc.m.n>=5 && rM-rFy>=2;
+  // 日額の変更 (監査ログ・直近60日)
+  const since = (parseDate(today)||new Date()).getTime() - 60*86400000;
+  const byId = new Map(act.map(c=>[c.id,c]));
+  const changed=[], reset=[];
+  (auditRows||[]).forEach(r=>{
+    if(!r || !(Number(r.t)>=since)) return;
+    const c = byId.get(r.id); if(!c) return;
+    (r.ch||[]).forEach(ch=>{
+      if(ch.f!=='unitPrice') return;
+      const a=Number(ch.a), b=Number(ch.b);
+      if(!(a>0 && b>0) || a===b) return;
+      const when = new Date(Number(r.t));
+      const whenS = `${when.getMonth()+1}/${when.getDate()} ${pad2(when.getHours())}:${pad2(when.getMinutes())}`;
+      const x = {c, amount:(b-a), note:`日額 ${a.toLocaleString('ja-JP')}→${b.toLocaleString('ja-JP')} (${r.who||''}・${r.src||r.dev||''} ${whenS})`};
+      const disp = parseDate(c.dispatchDoneAt);
+      if(disp && Number(r.t) >= disp.getTime()) changed.push(x);
+      let def=0; try{ def = classDailyIncl(findClass(c.vehicleClass)); }catch(_){}
+      if(def && b===def && b>a) reset.push(x);
+    });
+  });
+  const zero = act.filter(c=>(CHK_OUT_ST.includes(c.status)||c.status==='返却済') && !c.isBorrowed && !_chkIsOld(c,today)
+      && !(Number(c.invoiceUnitPrice)||Number(c.unitPrice)))
+    .map(c=>({c, amount:0, note:`${c.status} で日額が未入力`}));
+  const rows = [
+    _chkRow('rateMonth', `値引き率 今月 (${acc.m.n}件中 値引き${acc.m.k}件)`, up?'warn':'info', [], {value:pf(rM), count:up?1:0, hint:'当年度平均より 2ポイント以上高いと注意'}),
+    _chkRow('rateFY',    `値引き率 当年度 (${acc.fy.n}件中 値引き${acc.fy.k}件)`, 'info', [], {value:pf(rFy)}),
+    _chkRow('ratePrev',  `値引き率 前年同期 (参考・値引き欄の使用前)`, 'info', [], {value:pf(rPv)}),
+    auditRows ? _chkRow('priceChanged', '配車後に日額が変わった (直近60日)', changed.length?'warn':'ok', changed)
+             : _chkRow('priceChanged', '配車後の日額変更 (変更履歴を読めず・共有フォルダ未接続)', 'na', []),
+    auditRows ? _chkRow('priceReset', '日額がクラス定価に戻された (値引き取り消しの疑い・直近60日)', 'warn', reset)
+             : _chkRow('priceReset', '日額の定価戻し (変更履歴を読めず)', 'na', []),
+    _chkRow('zero', '日額0円のまま出庫・返却 (他社借は除く)', 'bad', zero)
+  ];
+  return {key:'pricing', title:'④ 単価・値引き', sev:_chkSecSev(rows), rows,
+    headline:`値引き率 今月 ${pf(rM)} / 当年度 ${pf(rFy)}` + (changed.length? ` / 配車後の日額変更 ${changed.length}件` : '')};
+}
+
+// ⑥ データ: 既存のデータ点検 + 重複疑い (0515/0516 型) + 同期 (端末の沈黙・競合コピー)
+function chkData(today, sync){
+  const map = {red:'bad', orange:'warn', gray:'info'};
+  const rows = [], oldItems = [];
+  computeDataHealthRows().forEach((r,i)=>{
+    const live = [];
+    (r.items||[]).forEach(c=>{ if(!_chkActive(c)) return; (_chkIsOld(c,today)? oldItems : live).push({c, amount:_chkTotal(c), note:c.status}); });
+    if(live.length) rows.push(_chkRow('health'+i, `${r.icon||''} ${r.kind}`.trim(), map[r.sev]||'info', live));
+  });
+  // 重複疑い: 同じ事故No＋同じ車＋利用期間が重なる別番号 (枝番同士・別車両は正常)
+  const span = c=>[String(c.useStart||c.dispatchDoneAt||c.receivedAt||'').slice(0,10), String(c.useEnd||today).slice(0,10)];
+  const g = {};
+  DATA.cases.filter(_chkActive).forEach(c=>{
+    const k = String(c.accidentNo||'').trim(); if(!k || !c.vehicleId) return;
+    (g[k+'|'+c.vehicleId]=g[k+'|'+c.vehicleId]||[]).push(c);
+  });
+  const dupSet = new Map();
+  Object.values(g).forEach(arr=>{
+    for(let i=0;i<arr.length;i++) for(let j=i+1;j<arr.length;j++){
+      const a=arr[i], b=arr[j];
+      const pa=(_chkParent(a.caseNo)||{p:a.caseNo}).p, pb=(_chkParent(b.caseNo)||{p:b.caseNo}).p;
+      if(pa===pb) continue;
+      const [as,ae]=span(a), [bs,be]=span(b);
+      if(!as || !bs || as>be || bs>ae) continue;
+      dupSet.set(a.id,{c:a, amount:_chkTotal(a), note:`${b.caseNo} と同じ事故No・同じ車・期間が重なる`});
+      dupSet.set(b.id,{c:b, amount:_chkTotal(b), note:`${a.caseNo} と同じ事故No・同じ車・期間が重なる`});
+    }
+  });
+  rows.unshift(_chkRow('dup', '二重登録の疑い (同じ事故No・同じ車・期間が重なる)', 'bad', [...dupSet.values()]));
+  // 同期: 直近14日に記録のある端末が24時間以上沈黙 → 同期停止の疑い
+  if(!sync || !sync.connected){
+    rows.push(_chkRow('silent', '端末の同期 (共有フォルダ未接続のため確認できず)', 'na', []));
+    rows.push(_chkRow('conflict', '競合コピー (共有フォルダ未接続のため確認できず)', 'na', []));
+  } else {
+    const now = Date.now();
+    // 監査ログは「編集」の記録なので、たまにしか使わない端末や週末明けで誤警報にならないよう よく使う端末×48時間 に絞る
+    const quiet = (sync.devices||[]).filter(d=>!/^claude/.test(d.dev) && d.n14>=10 && now-Number(d.last) > 48*3600000)
+      .map(d=>({name:d.name||d.dev, dev:d.dev, hours:Math.floor((now-Number(d.last))/3600000), last:d.last}));
+    rows.push(_chkRow('silent', 'よく使う端末が48時間以上記録なし (同期停止の疑い)', quiet.length?'warn':'ok', [], {count:quiet.length, devices:quiet,
+      value: quiet.map(d=>`${d.name} ${d.hours}時間`).join(' / ') || '全端末OK'}));
+    const nc = Number(sync.conflicts)||0;
+    rows.push(_chkRow('conflict', '競合コピー (data の衝突ファイル)', nc?'warn':'ok', [], {count:nc, value:nc? nc+'件' : 'なし'}));
+  }
+  if(oldItems.length) rows.push(_chkRow('old', '古い台帳分 (参考・名前なし等)', 'info', oldItems));
+  const bad = rows.filter(r=>r.sev==='bad').reduce((s,r)=>s+r.count,0), warn=rows.filter(r=>r.sev==='warn').reduce((s,r)=>s+r.count,0);
+  return {key:'data', title:'⑥ データ', sev:_chkSecSev(rows), rows,
+    headline: (bad||warn)? `要対応 ${bad}件 / 注意 ${warn}件` : 'データの異常なし'};
+}
+// ---- ③⑤: freee の試算表 (GAS 読み取り API) ----
+const CHK_BREAK_EVEN_MONTH = 6510000;   // 損益分岐 月額 (税抜・全社・車両販売を除く)。admin の BREAK_EVEN と同じ値
+const CHK_LIME_SECS = ['代車レンタカー','一般レンタカー'];
+// freee report(type=pl, breakdown=section) の生応答 → 必要な数字だけ。売上原価には車両仕入が入る点に注意
+function _chkParsePl(raw, months){
+  const tp = raw && raw.report && raw.report.trial_pl;
+  if(!tp || !Array.isArray(tp.balances)) return null;
+  const B = tp.balances;
+  const tot = cat=>{ const b=B.find(x=>x.total_line && x.account_category_name===cat); return b? (Number(b.closing_balance)||0) : 0; };
+  const bySec = {}; let hasSec = false;
+  B.filter(x=>!x.total_line && x.account_category_name==='売上高').forEach(x=>{
+    (x.sections||[]).forEach(s=>{ hasSec = true; bySec[s.name]=(bySec[s.name]||0)+(Number(s.credit_amount)||0)-(Number(s.debit_amount)||0); });
+  });
+  const sales = tot('売上高'), secSum = Object.values(bySec).reduce((a,b)=>a+b,0);
+  return {months:Number(months)||0, sales, bySec, unsel: hasSec? sales-secSum : null, carSales: bySec['車両販売']||0,
+    cogs:tot('売上原価'), gross:tot('売上総損益金額'), sga:tot('販売管理費'), op:tot('営業損益金額')};
+}
+// ③ freee と一致: 当年度4月〜今日 の freee 売上 (代車＋一般レンタカー部門・税抜) と LIME の出力額の差と内訳
+//   fr = {pl:_chkParsePl(4月〜当月), ar:売掛金残高|null} | null
+function chkFreeeMatch(today, fr){
+  if(!fr || !fr.pl){
+    return {key:'freee', title:'③ freee と一致', sev:'na', headline:'freee から取得できず', rows:[_chkRow('na','freee から取得できず (通信・設定を確認)','na',[])]};
+  }
+  const fy=_chkFyStart(today), pl=fr.pl;
+  const freeeAmt = CHK_LIME_SECS.reduce((s,k)=>s+(pl.bySec[k]||0),0);
+  let limeExp = 0; const notExp=[], changed=[], counter=[];
+  DATA.cases.filter(_chkActive).forEach(c=>{
+    const e = String(c.useEnd||'').slice(0,10); if(!e || e<fy || e>today) return;
+    if(c.freeeExportedAt){
+      const ex = Number(c.freeeExportedAmount)||0; limeExp += Math.round(ex/1.1);
+      const t = _chkTotal(c);
+      if(ex && Math.abs(t-ex)>=1) changed.push({c, amount:t-ex, note:`freee出力 ${_chkFmtYen(ex)} → 今の請求額 ${_chkFmtYen(t)}`});
+    } else if(['返却済','仮請求','請求済','入金済'].includes(c.status)){
+      let ex=0; try{ ex = Number(calcAmounts(c).subExcl)||0; }catch(_){}
+      // 店頭精算 (現金・カード・QR) で入金済 = Airレジ等の経路で freee に入っているはず → 差の説明に使う (要対応ではない)
+      if(c.status==='入金済' && ['現金','カード','QR決済'].includes(c.paymentMethod)) counter.push({c, amount:ex, note:`店頭精算 (${c.paymentMethod}) ${fmtDate(c.paidAt)}`});
+      else notExp.push({c, amount:ex, note:`${c.status}・freee 未出力 (税抜)`});
+    }
+  });
+  const counterAmt = counter.reduce((a,x)=>a+x.amount,0);
+  const rest = freeeAmt - limeExp - counterAmt;
+  const restBad = freeeAmt && Math.abs(rest) >= freeeAmt*0.03;
+  const rows = [
+    _chkRow('sum', 'freee 売上 (代車＋一般レンタカー・税抜・当年度)', 'info', [], {value:_chkFmtYen(freeeAmt)}),
+    _chkRow('lime', 'LIME の freee 出力額 (税抜・利用終了日が当年度)', 'info', [], {value:_chkFmtYen(limeExp)}),
+    _chkRow('changed', 'freee 出力後に請求額が変わった (freee を直す)', 'warn', changed),
+    _chkRow('notExp', 'LIME にあって freee に未出力 (店頭精算を除く・税抜)', 'warn', notExp),
+    _chkRow('counter', '店頭精算分 (現金・カード・QR / Airレジ等で freee 入り・税抜)', 'info', counter),
+    _chkRow('rest', '残りの差 (freee だけの取引・現金売上・日付ずれ等)', restBad?'warn':'info', [], {value:(rest>=0?'+':'')+Math.round(rest).toLocaleString('ja-JP'), count:restBad?1:0, hint:'freee 売上の 3% 以上ずれていたら注意'}),
+    _chkRow('unsel', '部門「未選択」の売上 (Airレジ等・部門付けが必要)', pl.unsel? 'warn':'ok', [], {value:pl.unsel==null?'—':_chkFmtYen(pl.unsel), count:pl.unsel?1:0}),
+    _chkRow('ar', 'freee 売掛金残高 (参考・全事業)', 'info', [], {value: fr.ar==null? '取得できず' : _chkFmtYen(fr.ar)})
+  ];
+  return {key:'freee', title:'③ freee と一致', sev:_chkSecSev(rows), rows,
+    headline:`当年度 freee ${_chkFmtYen(freeeAmt)} / LIME ${_chkFmtYen(limeExp+counterAmt)} → 説明できない差 ${(rest>=0?'+':'')}${Math.round(rest).toLocaleString('ja-JP')}`};
+}
+// ⑤ もうけ: 本業売上 (売上高 − 車両販売) の月平均 vs 損益分岐、営業利益・販管費を前年同期 (同じ月範囲) と比べる
+function chkProfit(plCur, plPrev){
+  if(!plCur || !plCur.months){
+    return {key:'profit', title:'⑤ もうけ', sev:'na', headline:'freee から取得できず', rows:[_chkRow('na','freee から取得できず (年度の最初の月は前月までの実績がありません)','na',[])]};
+  }
+  const core = p=> p.sales - p.carSales;
+  const avg = core(plCur)/plCur.months;
+  const be = avg >= CHK_BREAK_EVEN_MONTH;
+  const pctOf = (a,b)=> b? Math.round(a/b*100)+'%' : '—';
+  const rows = [
+    _chkRow('be', `本業売上の月平均 (4月〜前月 ${plCur.months}か月・車両販売を除く)`, be?'ok':'bad', [], {value:`${_chkFmtYen(avg)} (損益分岐 ${_chkFmtYen(CHK_BREAK_EVEN_MONTH)} の ${pctOf(avg,CHK_BREAK_EVEN_MONTH)})`, count:be?0:1})
+  ];
+  if(plPrev && plPrev.months===plCur.months){
+    const opDown = plCur.op < plPrev.op;
+    rows.push(_chkRow('op', '営業利益 (前年同期と比べて)', opDown?'warn':'ok', [], {value:`${_chkFmtYen(plCur.op)} (前年 ${_chkFmtYen(plPrev.op)})`, count:opDown?1:0}));
+    rows.push(_chkRow('core', '本業売上 (前年同期と比べて)', 'info', [], {value:`${_chkFmtYen(core(plCur))} (前年比 ${pctOf(core(plCur),core(plPrev))})`}));
+    const sgaUp = plPrev.sga && plCur.sga > plPrev.sga*1.1;
+    rows.push(_chkRow('sga', '販管費 (前年同期と比べて・1割以上増えたら注意)', sgaUp?'warn':'info', [], {value:`${_chkFmtYen(plCur.sga)} (前年比 ${pctOf(plCur.sga,plPrev.sga)})`, count:sgaUp?1:0}));
+  } else {
+    rows.push(_chkRow('op', '営業利益 (前年同期は取得できず)', 'info', [], {value:_chkFmtYen(plCur.op)}));
+  }
+  rows.push(_chkRow('car', '車両販売の売上 (参考・原価に車両仕入を含む)', 'info', [], {value:_chkFmtYen(plCur.carSales)}));
+  return {key:'profit', title:'⑤ もうけ', sev:_chkSecSev(rows), rows,
+    headline:`本業売上 月平均 ${_chkFmtYen(avg)} (損益分岐の ${pctOf(avg,CHK_BREAK_EVEN_MONTH)})`};
+}
+
+// ---- 外部データの取得 (freee GAS の JSONP・監査ログ・共有フォルダ) → window._chkExt ----
+function _chkJsonp(params){
+  return new Promise(resolve=>{
+    const url = ((DATA.settings && DATA.settings.freeeApiUrl) || '').trim();
+    if(!url){ resolve(null); return; }
+    const cb = 'chkJsonp_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+    const script = document.createElement('script');
+    let done = false;
+    const fin = v=>{ if(done) return; done = true; clearTimeout(timer); try{ delete window[cb]; }catch(_){ window[cb]=undefined; } if(script.parentNode) script.parentNode.removeChild(script); resolve(v); };
+    const timer = setTimeout(()=>fin(null), 60000);
+    window[cb] = res=>fin(res && res.ok!==false ? res : null);
+    script.onerror = ()=>fin(null);
+    script.src = url + '?' + Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&')
+      + '&token=' + encodeURIComponent(_freeeToken()) + '&callback=' + cb;
+    document.head.appendChild(script);
+  });
+}
+// 監査ログ (audit/YYYY-MM_<端末>.jsonl) を直近3か月分読み、日額変更の材料と端末ごとの最終記録を作る
+async function _chkReadAudit(today){
+  if(!dirHandle) return {audit:null, sync:null};
+  const yms = []; const d0 = parseDate(today)||new Date();
+  for(let i=0;i<3;i++){ const d=new Date(d0.getFullYear(), d0.getMonth()-i, 1); yms.push(d.getFullYear()+'-'+pad2(d.getMonth()+1)); }
+  const audit = [], dev = {};
+  let conflicts = 0;
+  try {
+    const dir = await dirHandle.getDirectoryHandle('audit');
+    for await (const ent of dir.values()){
+      if(ent.kind!=='file' || !ent.name.endsWith('.jsonl') || !yms.includes(ent.name.slice(0,7))) continue;
+      let txt=''; try{ txt = await (await ent.getFile()).text(); }catch(_){ continue; }
+      txt.split('\n').forEach(line=>{ if(!line.trim()) return; try{ audit.push(JSON.parse(line)); }catch(_){} });
+    }
+  } catch(e){ return {audit:null, sync:null}; }
+  try {
+    for await (const ent of dirHandle.values()){
+      if(ent.kind==='file' && /^data .*(競合コピー|conflicted copy).*\.json$/i.test(ent.name)) conflicts++;
+    }
+  } catch(_){}
+  const now = Date.now(), d14 = now - 14*86400000;
+  audit.forEach(r=>{
+    if(!r || !r.dev || /^claude/.test(r.dev) || !(Number(r.t)>0)) return;
+    const x = dev[r.dev] = dev[r.dev] || {dev:r.dev, name:'', last:0, n14:0};
+    if(Number(r.t) > x.last){ x.last = Number(r.t); if(r.who) x.name = r.who + (String(r.dev).startsWith('mb-')?' (スマホ)':' (PC)'); }
+    if(Number(r.t) >= d14) x.n14++;
+  });
+  return {audit, sync:{connected:true, conflicts, devices:Object.values(dev)}};
+}
+async function _chkLoadExternal(){
+  const today = todayISO(); const ny = getNendo(today);
+  const mNow = (parseDate(today)||new Date()).getMonth()+1;
+  const mPrev = mNow===1 ? 12 : mNow-1;
+  const monthsDone = ((mNow+12-4)%12);             // 4月〜前月 の月数 (4月なら0)
+  const plParams = (fy,end)=>({action:'report', type:'pl', fiscal_year:fy, start_month:4, end_month:end, breakdown_display_type:'section'});
+  const since = (ny-1)+'-04-01';
+  const [paid, plNow, plCur, plPrev, bs, au] = await Promise.all([
+    _chkJsonp({action:'paidStatus', since}),
+    _chkJsonp(plParams(ny, mNow)),
+    monthsDone ? _chkJsonp(plParams(ny, mPrev)) : Promise.resolve(null),
+    monthsDone ? _chkJsonp(plParams(ny-1, mPrev)) : Promise.resolve(null),
+    _chkJsonp({action:'report', type:'bs', fiscal_year:ny, start_month:4, end_month:mNow}),
+    _chkReadAudit(today).catch(()=>({audit:null, sync:null}))
+  ]);
+  let ar = null;
+  try { const b = bs.report.trial_bs.balances.find(x=>!x.total_line && x.account_item_name==='売掛金'); if(b) ar = Number(b.closing_balance)||0; } catch(_){}
+  const pNow = _chkParsePl(plNow, monthsDone+1);
+  window._chkExt = {
+    paidMap: paid && paid.paid ? paid.paid : null,
+    fr: pNow ? {pl:pNow, ar} : null,
+    plCur: _chkParsePl(plCur, monthsDone), plPrev: _chkParsePl(plPrev, monthsDone),
+    audit: au.audit, sync: au.sync, at: Date.now()
+  };
+}
+// ---- 描画: ✅ チェック タブ (読み取り専用) ----
+let _chkLoading = false, _chkLastTry = 0;
+const CHK_TIPS = {
+  billing:'返却済になったら freee 出力 (請求) まで。枝番は前の区間を締めて出力',
+  payment:'「freee は入金済」は案件を開いて入金済に (freee 出力していない案件は自動では反映されません)',
+  freee:'「出力後に請求額が変わった」は freee 側の取引を直す。部門未選択は月次の部門付けで解消',
+  pricing:'配車後の日額変更・定価への戻しは、意図した変更か確認',
+  profit:'損益分岐 = 月 651万 (税抜・全社・車両販売を除く)',
+  data:'重複は片方を削除。端末が沈黙していたらその PC/スマホの Dropbox 同期を確認'
+};
+const _chkDot = (sev,count)=> sev==='na'? '⚪' : sev==='info'? '・' : (sev==='ok' || !count)? '🟢' : sev==='bad'? '🔴' : '🟠';
+function _chkSafe(fn, key, title){
+  try { return fn(); } catch(e){ console.warn('[チェック] '+title, e); return {key, title, sev:'na', headline:'集計エラー: '+e.message, rows:[]}; }
+}
+function chkReload(){ renderBiCheck(true); }
+function renderBiCheck(force){
+  const root = $('bi-check-root'); if(!root) return;
+  const ext = window._chkExt || {};
+  // freee・監査ログは開いた時に取りに行く (30分で古い扱い・失敗時は5分あける)
+  const stale = !window._chkExt || (Date.now() - ext.at > 30*60000);
+  if(!_chkLoading && (force || (stale && Date.now() - _chkLastTry > 5*60000))){
+    _chkLoading = true; _chkLastTry = Date.now();
+    _chkLoadExternal().catch(e=>console.warn('[チェック] 取得失敗', e))
+      .finally(()=>{ _chkLoading = false; if(($('bi-tab-check')||{}).classList && $('bi-tab-check').classList.contains('active')) renderBiCheck(); });
+  }
+  const today = todayISO();
+  const secs = [
+    _chkSafe(()=>chkBilling(today), 'billing', '① 請求漏れ'),
+    _chkSafe(()=>chkPayment(today, ext.paidMap||null), 'payment', '② 入金'),
+    _chkSafe(()=>chkFreeeMatch(today, ext.fr||null), 'freee', '③ freee と一致'),
+    _chkSafe(()=>chkPricing(today, ext.audit||null), 'pricing', '④ 単価・値引き'),
+    _chkSafe(()=>chkProfit(ext.plCur||null, ext.plPrev||null), 'profit', '⑤ もうけ'),
+    _chkSafe(()=>chkData(today, ext.sync||null), 'data', '⑥ データ')
+  ];
+  window._chkSecs = secs;
+  const sum = sev=> secs.reduce((s,x)=>s+(x.rows||[]).filter(r=>r.sev===sev).reduce((a,r)=>a+(r.count||0),0),0);
+  const nBad = sum('bad'), nWarn = sum('warn');
+  const at = ext.at ? new Date(ext.at) : null;
+  const status = _chkLoading ? '⏳ freee・変更履歴を取得中… (20秒ほど)' : at ? `freee ${ext.fr?'':'(取得できず) '}${pad2(at.getHours())}:${pad2(at.getMinutes())} 取得` + (ext.audit? '' : '・変更履歴は共有フォルダ未接続のため未取得') : 'freee・変更履歴 未取得';
+  const card = s=>{
+    const loadingNa = _chkLoading && s.sev==='na';
+    const head = `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:${s.sev==='bad'?'#FFF1F0':s.sev==='warn'?'#FFF8EC':'#F7FAF5'}">
+        <span style="font-size:18px">${loadingNa?'⏳':_chkDot(s.sev, 1)}</span>
+        <div style="flex:1;min-width:0"><div style="font-weight:bold;font-size:14px;color:var(--navy)">${esc(s.title)}</div>
+        <div style="font-size:12px;color:#444;margin-top:2px">${esc(loadingNa?'取得中…':s.headline)}</div></div></div>`;
+    const rows = (s.rows||[]).map((r,i)=>{
+      const click = (r.cases||[]).length ? `onclick="openChkList('${s.key}',${i})" style="cursor:pointer"` : '';
+      const right = r.value!=null && r.value!=='' ? esc(String(r.value))
+        : r.sev==='na' ? '—' : `<b>${r.count}件</b>${r.amount? ' <span style="color:#666">'+esc(_chkFmtYen(r.amount))+'</span>' : ''}`;
+      const muted = r.sev==='info' || r.sev==='na' || (!r.count && r.sev!=='ok');
+      return `<div class="chk-row${(r.cases||[]).length?' chk-click':''}" ${click} title="${esc(r.hint||'')}">
+          <span style="width:20px;text-align:center">${_chkDot(r.sev, r.count)}</span>
+          <span style="flex:1;${muted?'color:#666':''}">${esc(r.label)}${r.hint?`<span style="font-size:10.5px;color:#999;margin-left:6px">${esc(r.hint)}</span>`:''}</span>
+          <span style="text-align:right;white-space:nowrap;${muted?'color:#666':''}">${right}${(r.cases||[]).length?' <span style="color:#999">›</span>':''}</span></div>`;
+    }).join('');
+    return `<div class="card chk-card" style="padding:0;overflow:hidden">${head}<div style="padding:4px 0">${rows}</div>
+      <div style="font-size:11px;color:#777;padding:6px 12px 9px;border-top:1px dashed #E4E4E4">💡 ${esc(CHK_TIPS[s.key]||'')}</div></div>`;
+  };
+  root.innerHTML = `
+    <div class="card" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:bold;color:var(--navy)">✅ 今日のチェック</div>
+      <div style="font-size:14px">🔴 要対応 <b>${nBad}</b>件　🟠 注意 <b>${nWarn}</b>件</div>
+      <div style="flex:1"></div>
+      <div style="font-size:12px;color:#666">${esc(status)}</div>
+      <button class="btn btn-outline btn-sm no-print" onclick="chkReload()" ${_chkLoading?'disabled':''} style="font-size:12px">🔄 再取得</button>
+    </div>
+    <div class="chk-grid">${secs.map(card).join('')}</div>
+    <div style="font-size:11px;color:#888;margin:8px 2px">読み取り専用 (この画面はデータを変更しません)。行をクリックすると案件一覧 → 案件を開けます。古い台帳分 (前年度より前の受付・旧データ取込) は「参考」行にまとめています。</div>`;
+}
+function openChkList(secKey, rowIdx){
+  const sec = (window._chkSecs||[]).find(s=>s.key===secKey);
+  const r = sec && sec.rows[rowIdx];
+  if(!r || !(r.cases||[]).length) return;
+  let ov = $('chk-list-modal');
+  if(!ov){
+    ov = document.createElement('div'); ov.className = 'modal-overlay'; ov.id = 'chk-list-modal'; ov.style.zIndex = '95';  // 案件モーダル (100) の下
+    ov.innerHTML = `<div class="modal" style="max-width:920px"><div class="modal-header"><span class="modal-title" id="chk-list-title"></span>
+      <button class="modal-close" title="閉じる" onclick="closeModal('chk-list-modal');renderBiCheck()">✕</button></div><div class="modal-body" id="chk-list-body"></div></div>`;
+    ov.addEventListener('click', e=>{ if(e.target===ov){ closeModal('chk-list-modal'); renderBiCheck(); } });
+    document.body.appendChild(ov);
+  }
+  $('chk-list-title').textContent = `${sec.title} — ${r.label} (${r.cases.length}件)`;
+  const nm = c=> c.contractorName || c.driverName || '';
+  const ins = c=>{ try{ const i = c.insurerId && findInsurer(c.insurerId); return i ? (i.name||'') : (c.category||''); }catch(_){ return c.category||''; } };
+  $('chk-list-body').innerHTML = `<table class="tbl" style="width:100%;font-size:12.5px;border-collapse:collapse">
+    <thead><tr style="background:#F2F5F8"><th style="padding:6px;text-align:left">受付No</th><th style="text-align:left">名前</th><th style="text-align:left">保険会社/区分</th><th style="text-align:left">状態</th><th style="text-align:left">利用期間</th><th style="text-align:right">金額</th><th style="text-align:left;padding-left:10px">内容</th></tr></thead>
+    <tbody>${r.cases.map(x=>{ const c=x.c; return `<tr class="chk-click" style="cursor:pointer;border-top:1px solid #EEE" onclick="openCaseModal('${esc(c.id)}')">
+      <td style="padding:6px;white-space:nowrap;font-weight:bold;color:var(--navy)">${esc(c.caseNo||'')}</td><td>${esc(nm(c))}</td><td>${esc(ins(c))}</td><td>${esc(c.status||'')}</td>
+      <td style="white-space:nowrap">${esc(fmtDate(c.useStart))}〜${esc(fmtDate(c.useEnd))}</td>
+      <td style="text-align:right;white-space:nowrap">${x.amount? esc(_chkFmtYen(x.amount)) : ''}</td><td style="padding-left:10px">${esc(x.note||'')}</td></tr>`; }).join('')}</tbody></table>
+    <div style="font-size:11px;color:#888;margin-top:8px">行をクリックで案件を開きます。直したら一覧を閉じると反映されます。</div>`;
+  openModalAndFocus('chk-list-modal');
+}
+
+
+
 // 📊 日額積み上げ推移 (v24ag): 過去の日別売上累積をチャート表示
 // 対象期間内の各日について、稼働していた案件の日額を合計し、累積/日次の推移グラフを描画
 function renderBIForecast(){
@@ -16568,9 +17025,8 @@ function computeVehicleOperationMap(){
   return map;
 }
 // データ整合性・要対応案件チェック
-function renderDataHealth(){
-  const card = $('data-health-card'); const body = $('data-health-body'); const sub = $('data-health-sub');
-  if(!card || !body) return;
+// 2026-11-20: 集計部分を computeDataHealthRows() に切り出し (経営分析「✅ チェック」⑥ と共用・2実装にしない)
+function computeDataHealthRows(){
   const today = todayISO();
   // 2026-06-29b: 出庫中(=今その車が出ている)判定 + 自社保有車両ID集合 (受付No重複/割当漏れ/二重割当の点検用)
   const _out = c => c && c.status!=='キャンセル' && ['配車済','利用中','回収連絡','手配書FAX済'].includes(c.status)
@@ -16622,7 +17078,12 @@ function renderDataHealth(){
   if(issues.longUse.length) rows.push({icon:'⏰', sev:'orange', kind:'90日以上利用中のまま未返却', items:issues.longUse.map(x=>x.c)});
   if(issues.staleOut.length) rows.push({icon:'⌛', sev:'orange', kind:'損保代車が40日超で出庫中のまま (返却処理漏れ or 保険延長の確認を)', items:issues.staleOut});
   if(issues.noName.length) rows.push({icon:'👤', sev:'gray', kind:'契約者・運転者ともに未入力', items:issues.noName});
-
+  return rows;
+}
+function renderDataHealth(){
+  const card = $('data-health-card'); const body = $('data-health-body'); const sub = $('data-health-sub');
+  if(!card || !body) return;
+  const rows = computeDataHealthRows();
   if(!rows.length){
     card.style.display = 'none';
     return;
