@@ -3112,7 +3112,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-11-20a';
+const APP_VERSION = '2026-11-24a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -5544,6 +5544,13 @@ window.save = function(){
  *   注: これは「共有フォルダへ書けるか」までの検知。Dropboxクラウドへのアップロード成否は
  *       PC版からは見えない(API非連携)ので別問題(容量対策で担保)。 */
 function _sharedFolderReady(){ return !!dirHandle; }
+/* ★2026-11-24 自動処理は「ディスクと突き合わせ済み」になってから (巻き戻り事故の再発防止)。
+ *   11/24 9:46-47 に、ブラウザに10月上旬の古いデータを持つPCが起動直後に freee 入金照合 (applyFreeePaid) と
+ *   返却済→仮請求の整理 (_sweepReturnedFreee) を古いデータのまま実行 → updatedAt=今 を刻んだ古い版が
+ *   保存時のマージで正しい版に勝ち、60件が書き戻された (0351 が 165,000→187,000 等)。
+ *   autoAdvanceToInUse と同じく、共有運用中は _diskInSync まで案件を書き換える自動処理を走らせない。
+ *   共有フォルダを使わない単独PCは従来どおり。 */
+function _autoWriteReady(){ return !_sharedFolderReady() || _diskInSync; }
 
 /* 📮 外部通知(LINE/カレンダー)は「共有 data.json への書込が成功してから」送る (2026-10-30a)
  *   なぜ: 従来は案件保存の直後に fire-and-forget で送っていたため、共有フォルダへの書込が失敗/未達でも
@@ -13860,6 +13867,7 @@ function _advanceOnFreeeExport(c){
 //   🚨 モバイル index_mobile.html の _sweepReturnedFreee と同じ規則に保つこと。
 function _sweepReturnedFreee(){
   try{
+    if(!_autoWriteReady()) return 0;   // ★2026-11-24 未同期の古いデータで書き換えない (§_autoWriteReady)
     const now = Date.now(); let n = 0;
     ((DATA && DATA.cases) || []).forEach(c => {
       if(!c || c.isHistorical || !c.freeeExportedAt || c.status !== '返却済') return;
@@ -20317,6 +20325,11 @@ function _freeePaidSince(){
 //   =入金管理の入金月絞込・回収日数の集計から漏れていた (入金済410件中282件)。入金額は手入力の入金処理と同じく請求額。
 function applyFreeePaid(paidMap, opts){
   opts = opts || {};
+  if(!_autoWriteReady()){   // ★2026-11-24 未同期の古いデータで入金済にしない (§_autoWriteReady)
+    console.warn('[freee入金照合] 共有フォルダと未同期のため見送り');
+    if(!opts.silent) toast('💰 freee入金照合: 共有フォルダとの同期が済んでいないため見送りました。少し待ってからもう一度押してください', 'error');
+    return;
+  }
   let changed = 0;
   const today = todayISO();
   const now = Date.now();
@@ -20364,6 +20377,12 @@ function _freeeLogAuto(kind, count){
 function freeeAutoRun(){
   const s = DATA.settings || {};
   if(!s.freeeApiUrl) return;
+  // ★2026-11-24 共有フォルダと同期が済むまで待つ (「今日は実行済み」にもしない)。30秒おきに最大20回再挑戦 (§_autoWriteReady)
+  if(!_autoWriteReady()){
+    freeeAutoRun._retry = (freeeAutoRun._retry || 0) + 1;
+    if(freeeAutoRun._retry <= 20) setTimeout(()=>{ try { freeeAutoRun(); } catch(e){ console.warn('freeeAutoRun retry', e); } }, 30000);
+    return;
+  }
   const today = todayISO();
   let gate = false;
   if(s.freeeAutoLastPaid !== today){
