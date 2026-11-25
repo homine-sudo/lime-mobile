@@ -3112,7 +3112,7 @@ const LS_KEY = 'loanerCarMgmt_v1';
 //   PC版はDropbox同期で配布されるが開いたままのブラウザは旧コードを保持するため、
 //   版数を見て古ければ Ctrl+F5 する運用。LIMEOne.html を編集したら必ず上げること
 //   (同日複数回は a→b→c。モバイル §4.7 と同じ運用)。
-const APP_VERSION = '2026-11-24a';
+const APP_VERSION = '2026-11-25a';
 // ===== 生涯ROI 用 埋め込みデータ (正本=index_admin_mobile.html・車両管理.html にも複製あり・年1回3ファイル同時更新) =====
 // ===== 生涯ROI 用 車両別 過去実績売上 / 累計整備費 / 売却車 (2026-06-10 訂正版) =====
 // 2024-2025の車両別売上 (損保代車管理簿4冊の請求額ベース・受付NoでシステムCaseと突合済・特定率ほぼ100%・売却/金城記録ありは合算しない)。2026-06-10 Excel再集計。年1回更新。keyは _vplate。
@@ -15468,24 +15468,23 @@ function getRentalContractFrontHtml(c){
   const fmtDt = s => s ? String(s).replace('T', ' ').slice(0,16) : '';
   const today = todayISO();
   const f = v => esc(v||'');
-  // 料金計算: 単価 × 日数 - 値引額 = 合計金額
-  const unitPrice = Number(c.invoiceUnitPrice || c.unitPrice || 0);
-  let days = Number(c.invoiceDays || c.useDays || 0);
-  if(!days && c.useStart && c.useEnd){
-    // useStart/useEnd から自動計算 (貸渡日数=updateGRPeriod と同ロジックに統一)
-    const ts = new Date((c.useStart) + 'T' + (c.useStartTime||'10:00') + ':00');
-    const te = new Date((c.useEnd)   + 'T' + (c.useEndTime  ||'10:00') + ':00');
-    if(!isNaN(ts) && !isNaN(te) && te > ts){
-      // 2026-06-03: 旧 Math.ceil(ms/86400000) は 48h丁度の2泊3日が2日になり過少請求だった
-      const _h = Math.floor((te - ts) / 3600000);
-      const _nights = Math.round((new Date(c.useEnd) - new Date(c.useStart)) / 86400000);
-      days = (_h <= 24) ? 1 : Math.max(_nights + 1, Math.ceil(_h / 24));
-    }
-  }
-  const discount = Number(c.discount || 0);
-  const subtotal = unitPrice * days;
-  const total = Math.max(0, subtotal - discount);
+  // ★2026-11-25: 金額は calcAmounts() だけで出す (案件 2026-11-0514 で発覚)。
+  //   旧コードは「単価×日数−値引額」を独自計算しており、値引日数(無料サービス日数)を読まなかった。
+  //   そのため編集画面 33,000 / 貸渡証 44,000 と食い違っていた (2026-08-04 に請求書で起きた事故と同じ型)。
+  //   請求日数が空の時の「時間ベース日数(24h以内=1日)」補完も旧コードにあったが、請求書(calcAmounts)は
+  //   日付の両端を数えるため 1泊2日が 貸渡証1日 / 請求書2日 とずれていた。請求書と一字一句同じ数字を出すため撤去。
+  //   ※編集画面(updateGRPeriod)は保存時に請求日数へ時間ベースの日数を入れるので、新しい案件は従来どおり。
+  const _a = calcAmounts(c);
+  const unitPriceShown = _a.invUnit;
+  const daysShown = _a.billDays;
+  const discount = _a.discount;
+  const total = _a.total;
   const yen = n => '¥' + (Number(n)||0).toLocaleString();
+  // 値引欄の内訳: 無料サービス日数と値引額(円) を分けて見せる (編集画面の内訳と同じ言葉)
+  const discountNote = [
+    _a.dayDiscount > 0 ? `無料サービス${_a.discountDays}日` : '',
+    _a.lumpDiscount > 0 ? `値引額 ${yen(_a.lumpDiscount)}` : ''
+  ].filter(Boolean).join(' ＋ ');
   // 車体外観イラスト: 損保代車チェックシートと同じ画像を使用 (アップロード画像 > SVGデフォルト)
   const customIllust = (typeof getChecklistIllustration === 'function') ? getChecklistIllustration() : null;
   const bodyIllustHtml = customIllust
@@ -15517,11 +15516,11 @@ function getRentalContractFrontHtml(c){
       <tr><th>貸渡開始日時</th><td>${f((c.useStart||'') + (c.useStartTime?(' '+c.useStartTime):'') || fmtDt(c.dispatchAt))}</td><th>返還予定日時</th><td>${f((c.useEnd||'') + (c.useEndTime?(' '+c.useEndTime):'') || fmtDt(c.useDeadline))}</td></tr>
       <tr><th>受取場所</th><td colspan="3"><b>${f(c.pickupLocation||'-')}</b>${c.pickupDetail?'　'+f(c.pickupDetail):''}${(c.arrivalFlight||c.arrivalTime)?'　／　那覇着: '+f([c.arrivalFlight,c.arrivalTime?c.arrivalTime+'着':''].filter(Boolean).join(' ')):''}${(c.departureFlight||c.departureTime)?'　／　帰り便: '+f([c.departureFlight,c.departureTime?c.departureTime+'発':''].filter(Boolean).join(' ')):''}</td></tr>
       <tr>
-        <th>単価 (1日税込)</th><td><b>${Number(c.unitPrice||0)? yen(Number(c.unitPrice)):'-'}</b></td>
-        <th>日数</th><td>${days? days+'日':'-'}</td>
+        <th>単価 (1日税込)</th><td><b>${unitPriceShown? yen(unitPriceShown):'-'}</b></td>
+        <th>日数</th><td>${daysShown? daysShown+'日':'-'}</td>
       </tr>
       <tr>
-        <th>値引額</th><td>${discount? '− '+yen(discount):'¥0'}</td>
+        <th>値引額</th><td>${discount? '− '+yen(discount)+(discountNote?`<br><span style="font-size:8.5pt">（${discountNote}）</span>`:''):'¥0'}</td>
         <th class="rc-total-th">貸渡料金 (合計)</th>
         <td class="rc-total-td"><b>${yen(total)}</b></td>
       </tr>
